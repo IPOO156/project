@@ -1,0 +1,147 @@
+@use 'sass:color';
+
+// =============================================================================
+// 全局样式
+// =============================================================================
+
+// Element Plus 主题覆盖
+:root {
+  // 品牌色 - 覆盖 Element Plus 主色为深海蓝
+  --el-color-primary: #{$color-primary};
+  --el-color-primary-light-3: #{$color-primary-light};
+  --el-color-primary-light-5: #{$color-primary-lighter};
+  --el-color-primary-light-7: #c8d8e8;
+  --el-color-primary-light-8: #{rgba($color-primary, 0.1)};
+  --el-color-primary-light-9: #{rgba($color-primary, 0.06)};
+  --el-color-primary-dark-2: #{color.adjust($color-primary, $lightness: -8%)};
+
+  // 功能色
+  --el-color-success: #{$color-success};
+  --el-color-warning: #{$color-warning};
+  --el-color-danger: #{$color-danger};
+  --el-color-info: #{$color-info};
+
+  // 文字色
+  --el-text-color-primary: #{$color-text-primary};
+  --el-text-color-regular: #{$color-text-primary};
+  --el-text-color-secondary: #{$color-text-secondary};
+  --el-text-color-placeholder: #{$color-text-placeholder};
+
+  // 边框
+  --el-border-color: #{$color-border};
+  --el-border-color-light: #{$color-border};
+  --el-border-color-lighter: #f1f5f9;
+
+  // 背景
+  --el-bg-color: #fff;
+  --el-bg-color-page: #{$color-bg-page};
+  --el-fill-color: #f8fafc;
+  --el-fill-color-light: #f1f5f9;
+  --el-fill-color-lighter: #f8fafc;
+  --el-fill-color-extra-light: #fafafa;
+
+  // 字体
+  --el-font-size-base: #{$font-size-base};
+  --el-font-size-small: #{$font-size-sm};
+  --el-font-size-large: #{$font-size-lg};
+  --el-font-size-extra-large: #{$font-size-xl};
+
+  // 圆角
+  --el-border-radius-base: #{$radius-base};
+  --el-border-radius-small: #{$radius-sm};
+  --el-border-radius-large: #{$radius-lg};
+  --el-border-radius-round: 20px;
+
+  // 阴影
+  --el-box-shadow-light: #{$shadow-sm};
+  --el-box-shadow: #{$shadow-base};
+  --el-box-shadow-dark: #{$shadow-lg};
+}
+
+// Element Plus 组件样式微调
+.el-card {
+  border-radius: $radius-lg;
+  border: 1px solid $color-border;
+
+  &__header {
+    padding: 16px 20px;
+    border-bottom: 1px solid $color-border;
+    font-weight: 600;
+  }
+
+  &__body {
+    padding: 20px;
+  }
+}
+
+.el-table {
+  font-size: $font-size-base;
+
+  th.el-table__cell {
+    background-color: #f8fafc;
+    font-weight: 600;
+    color: $color-text-primary;
+  }
+
+  .el-table__row {
+    transition: background-color 0.15s;
+
+    &:hover {
+      background-color: rgba($color-primary, 0.02);
+    }
+  }
+}
+
+.el-button--primary {
+  --el-button-bg-color: #{$color-primary};
+  --el-button-border-color: #{$color-primary};
+  --el-button-hover-bg-color: #{$color-primary-light};
+  --el-button-hover-border-color: #{$color-primary-light};
+  --el-button-active-bg-color: #{color.adjust($color-primary, $lightness: -8%)};
+  --el-button-active-border-color: #{color.adjust($color-primary, $lightness: -8%)};
+}
+
+.el-breadcrumb {
+  font-size: $font-size-base;
+
+  &__inner {
+    color: $color-text-secondary;
+  }
+
+  &__item:last-child &__inner {
+    color: $color-text-primary;
+    font-weight: 500;
+  }
+}
+
+// 滚动条美化
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c9d4;
+  border-radius: 3px;
+
+  &:hover {
+    background: #a8b2be;
+  }
+}
+
+// 骨架动画
+@keyframes skeleton-loading {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 37%, #f0f0f0 63%);
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+  border-radius: 4px;
+}

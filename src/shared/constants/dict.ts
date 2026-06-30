@@ -1,0 +1,96 @@
+// 各申报模块的中文映射
+export const APPLICATION_TYPE_MAP: Record<string, string> = {
+  competition: '学科竞赛',
+  innovation: '创新创业',
+  research: '学术研究',
+  scholarship: '奖学金',
+  certificate: '荣誉证书',
+  internship: '实习经历',
+  organization: '组织履历',
+  training: '实训项目',
+  socialPractice: '社会实践',
+  bookReport: '图书心得',
+  competitionStar: '竞赛之星报名',
+  scientificProject: '科研项目',
+  softwareCopyright: '科研之星-软著',
+  paper: '科研之星-论文',
+}
+
+// 学期选项
+export const SEMESTER_OPTIONS = [
+  { label: '大一 (上)', value: '大一上' },
+  { label: '大一 (下)', value: '大一下' },
+  { label: '大二 (上)', value: '大二上' },
+  { label: '大二 (下)', value: '大二下' },
+  { label: '大三 (上)', value: '大三上' },
+  { label: '大三 (下)', value: '大三下' },
+  { label: '大四 (上)', value: '大四上' },
+  { label: '大四 (下)', value: '大四下' },
+] as const
+
+// 申请状态
+export const APPLICATION_STATUS = {
+  draft: { label: '草稿', color: 'info' },
+  submitted: { label: '已提交', color: 'warning' },
+  approved: { label: '已通过', color: 'success' },
+  rejected: { label: '已驳回', color: 'danger' },
+} as const
+
+// 竞赛类型
+export const COMPETITION_TYPES = [
+  { label: '国家级', value: 'national' },
+  { label: '省部级', value: 'provincial' },
+  { label: '校级', value: 'school' },
+  { label: '院级', value: 'college' },
+] as const
+
+// 获奖等级
+export const AWARD_LEVELS = [
+  { label: '一等奖', value: 'first' },
+  { label: '二等奖', value: 'second' },
+  { label: '三等奖', value: 'third' },
+  { label: '优秀奖', value: 'excellence' },
+  { label: '特等奖', value: 'special' },
+] as const
+
+// 项目级别
+export const PROJECT_LEVELS = [
+  { label: '国家级', value: 'national' },
+  { label: '省部级', value: 'provincial' },
+  { label: '校级', value: 'school' },
+  { label: '院级', value: 'college' },
+] as const
+
+// 证书类型
+export const CERTIFICATE_TYPES = [
+  { label: '技能证书', value: 'skill' },
+  { label: '语言证书', value: 'language' },
+  { label: '专业证书', value: 'professional' },
+  { label: '其他', value: 'other' },
+] as const
+
+// 组织级别
+export const ORGANIZATION_LEVELS = [
+  { label: '校级', value: 'school' },
+  { label: '院级', value: 'college' },
+  { label: '社团级', value: 'club' },
+  { label: '班级', value: 'class' },
+] as const
+
+// 行业类型
+export const INDUSTRY_TYPES = [
+  { label: '信息技术', value: 'it' },
+  { label: '教育培训', value: 'education' },
+  { label: '文化传媒', value: 'media' },
+  { label: '商贸服务', value: 'business' },
+  { label: '其他', value: 'other' },
+] as const
+
+// 奖学金等级
+export const SCHOLARSHIP_LEVELS = [
+  { label: '国家奖学金', value: 'national' },
+  { label: '省级奖学金', value: 'provincial' },
+  { label: '校级奖学金', value: 'school' },
+  { label: '院级奖学金', value: 'college' },
+  { label: '企业奖学金', value: 'enterprise' },
+] as const

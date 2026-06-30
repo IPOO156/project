@@ -1,0 +1,71 @@
+// =============================================================================
+// 设计 Token - 档案管理系统
+// 主色：深海蓝 #1e3a5f  辅色：琥珀金 #d4a574
+// =============================================================================
+
+// 品牌色
+$color-primary: #1e3a5f;
+$color-primary-light: #2d5a87;
+$color-primary-lighter: #4a7fb5;
+$color-primary-lightest: #e8eef5;
+
+// 辅助色
+$color-accent: #d4a574;
+$color-accent-light: #e3c4a0;
+
+// 功能色
+$color-success: #10b981;
+$color-warning: #f59e0b;
+$color-danger: #ef4444;
+$color-info: #64748b;
+
+// 中性色
+$color-text-primary: #1e293b;
+$color-text-secondary: #64748b;
+$color-text-placeholder: #94a3b8;
+$color-bg: #f1f5f9;
+$color-bg-page: #f8fafc;
+$color-border: #e2e8f0;
+
+// 字体
+$font-family-base:
+  'PingFang SC',
+  'Microsoft YaHei',
+  'Helvetica Neue',
+  Helvetica,
+  Arial,
+  sans-serif;
+$font-family-title: Georgia, 'Times New Roman', serif;
+
+// 字号
+$font-size-xs: 12px;
+$font-size-sm: 13px;
+$font-size-base: 14px;
+$font-size-lg: 16px;
+$font-size-xl: 20px;
+$font-size-2xl: 24px;
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 24px;
+$spacing-2xl: 32px;
+
+// 圆角
+$radius-sm: 4px;
+$radius-base: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+
+// 阴影
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+$shadow-base: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+// 布局
+$sidebar-width: 240px;
+$sidebar-collapsed-width: 64px;
+$header-height: 56px;
+$content-max-width: 1440px;
