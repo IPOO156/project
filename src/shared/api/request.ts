@@ -18,7 +18,7 @@ request.interceptors.request.use(
     }
     return config
   },
-  (error) => Promise.reject(error),
+  error => Promise.reject(error),
 )
 
 // 响应拦截器
@@ -47,9 +47,11 @@ request.interceptors.response.use(
         default:
           ElMessage.error(error.response.data?.message || '网络错误')
       }
-    } else if (error.code === 'ECONNABORTED') {
+    }
+    else if (error.code === 'ECONNABORTED') {
       ElMessage.error('请求超时，请检查网络')
-    } else {
+    }
+    else {
       ElMessage.error('网络异常，请检查网络连接')
     }
     return Promise.reject(error)

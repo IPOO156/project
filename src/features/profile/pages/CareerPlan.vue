@@ -1,11 +1,8 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { useUserStore } from '@/app/stores'
-import { FileText, Plus, Eye, Download } from 'lucide-vue-next'
+import { Download, Eye, Plus } from 'lucide-vue-next'
+import { reactive, ref } from 'vue'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
-
-const userStore = useUserStore()
 
 interface PlanRecord {
   id: string
@@ -21,7 +18,7 @@ const planForm = reactive({
   content: '',
 })
 
-const planFiles = ref<{ name: string; url: string }[]>([])
+const planFiles = ref<{ name: string, url: string }[]>([])
 const planRecords = ref<PlanRecord[]>([
   { id: '1', semester: '大二上', title: '大二学年成长规划', submitDate: '2025-09-15', status: 'submitted' },
   { id: '2', semester: '大一下', title: '大一学年总结与规划', submitDate: '2025-03-10', status: 'submitted' },

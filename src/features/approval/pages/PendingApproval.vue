@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref } from 'vue'
 import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 
 interface PendingItem {

@@ -1,5 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -167,9 +167,11 @@ router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('token')
   if (to.name !== 'Login' && !token) {
     next({ name: 'Login' })
-  } else if (to.name === 'Login' && token) {
+  }
+  else if (to.name === 'Login' && token) {
     next({ path: '/dashboard' })
-  } else {
+  }
+  else {
     next()
   }
 })

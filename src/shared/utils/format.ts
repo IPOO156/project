@@ -4,7 +4,8 @@ import dayjs from 'dayjs'
  * 格式化日期
  */
 export function formatDate(date: string | Date | undefined | null, template = 'YYYY-MM-DD'): string {
-  if (!date) return '-'
+  if (!date)
+    return '-'
   return dayjs(date).format(template)
 }
 
@@ -19,7 +20,8 @@ export function formatDateTime(date: string | Date | undefined | null): string {
  * 格式化金额/分数
  */
 export function formatScore(score: number | undefined | null, decimals = 2): string {
-  if (score === undefined || score === null) return '-'
+  if (score === undefined || score === null)
+    return '-'
   return Number(score).toFixed(decimals)
 }
 
@@ -27,7 +29,8 @@ export function formatScore(score: number | undefined | null, decimals = 2): str
  * 格式化绩点
  */
 export function formatGpa(gpa: number | undefined | null): string {
-  if (gpa === undefined || gpa === null) return '-'
+  if (gpa === undefined || gpa === null)
+    return '-'
   return Number(gpa).toFixed(2)
 }
 

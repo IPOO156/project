@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import {
   Award,
   BookOpen,
   Briefcase,
   Code,
-  Users,
   Star,
+  Users,
 } from 'lucide-vue-next'
+import { ref } from 'vue'
 
 interface TimelineEvent {
   semester: string
@@ -101,7 +101,7 @@ function getEventsForSemester(semester: string) {
               >
                 <div
                   class="timeline__event-icon"
-                  :style="{ background: getTypeColor(event.type) + '20', color: getTypeColor(event.type) }"
+                  :style="{ background: `${getTypeColor(event.type)}20`, color: getTypeColor(event.type) }"
                 >
                   <component :is="getTypeIcon(event.type)" :size="18" />
                 </div>

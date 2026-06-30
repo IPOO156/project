@@ -1,10 +1,9 @@
-import { ref } from 'vue'
 import type { DictOption } from '@/shared/types'
 
 /**
  * 字典转换 - 将后端字典值转为前端展示文本
  */
-export function useDict(dictMap: Record<string, { label: string; color?: string }>) {
+export function useDict(dictMap: Record<string, { label: string, color?: string }>) {
   function getLabel(value: string | number): string {
     return dictMap[value]?.label ?? String(value)
   }

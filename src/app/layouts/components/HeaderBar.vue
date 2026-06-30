@@ -1,17 +1,16 @@
 <script setup lang="ts">
+import { Bell, LogOut, Settings, User } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useUserStore, useAppStore } from '@/app/stores'
-import { Bell, User, Settings, LogOut } from 'lucide-vue-next'
+import { useUserStore } from '@/app/stores'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const appStore = useAppStore()
 
 const breadcrumbs = computed(() => {
-  const matched = route.matched.filter((r) => r.meta?.title)
-  return matched.map((r) => ({
+  const matched = route.matched.filter(r => r.meta?.title)
+  return matched.map(r => ({
     label: (r.meta?.title as string) || '',
     path: r.path === '/' ? undefined : r.path,
   }))

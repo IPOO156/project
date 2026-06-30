@@ -1,5 +1,5 @@
-import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { ref } from 'vue'
 import { request } from '@/shared/api'
 
 interface UploadOptions {
@@ -47,9 +47,11 @@ export function useUpload(options: UploadOptions = {}) {
       const url = res.data?.url ?? res.data
       uploadedUrls.value.push(url)
       return url
-    } catch {
+    }
+    catch {
       return null
-    } finally {
+    }
+    finally {
       uploading.value = false
       progress.value = 0
     }

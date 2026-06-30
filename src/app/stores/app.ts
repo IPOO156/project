@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
   // state
   const sidebarCollapsed = ref(false)
-  const breadcrumbList = ref<{ label: string; path?: string }[]>([])
+  const breadcrumbList = ref<{ label: string, path?: string }[]>([])
 
   // getters
   const isSidebarCollapsed = computed(() => sidebarCollapsed.value)
@@ -18,7 +18,7 @@ export const useAppStore = defineStore('app', () => {
     sidebarCollapsed.value = val
   }
 
-  function setBreadcrumb(list: { label: string; path?: string }[]) {
+  function setBreadcrumb(list: { label: string, path?: string }[]) {
     breadcrumbList.value = list
   }
 

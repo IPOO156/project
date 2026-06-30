@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { useUserStore } from '@/app/stores'
 import { GraduationCap } from 'lucide-vue-next'
+import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/app/stores'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -26,7 +26,7 @@ function handleLogin() {
   loading.value = true
   // 模拟登录 - 实际项目中替换为真实 API
   setTimeout(() => {
-    userStore.setToken('mock-token-' + Date.now())
+    userStore.setToken(`mock-token-${Date.now()}`)
     userStore.setUserInfo({
       id: '1',
       username: loginForm.username,
@@ -70,7 +70,7 @@ function handleLogin() {
           <el-input
             v-model="loginForm.username"
             placeholder="请输入学号/用户名"
-            :prefix-icon="'User'"
+            prefix-icon="User"
             size="large"
           />
         </el-form-item>
@@ -79,7 +79,7 @@ function handleLogin() {
             v-model="loginForm.password"
             type="password"
             placeholder="请输入密码"
-            :prefix-icon="'Lock'"
+            prefix-icon="Lock"
             size="large"
             show-password
           />

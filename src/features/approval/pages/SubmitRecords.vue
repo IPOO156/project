@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { APPLICATION_TYPE_MAP, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import { Eye } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
+import { APPLICATION_TYPE_MAP, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 
 interface SubmitRecord {
   id: string
@@ -28,9 +28,11 @@ const allRecords = ref<SubmitRecord[]>([
 ])
 
 const filteredRecords = computed(() => {
-  return allRecords.value.filter(r => {
-    if (semesterFilter.value && r.semester !== semesterFilter.value) return false
-    if (statusFilter.value && r.status !== statusFilter.value) return false
+  return allRecords.value.filter((r) => {
+    if (semesterFilter.value && r.semester !== semesterFilter.value)
+      return false
+    if (statusFilter.value && r.status !== statusFilter.value)
+      return false
     return true
   })
 })
@@ -40,7 +42,7 @@ function viewDetail(record: SubmitRecord) {
   detailVisible.value = true
 }
 
-const statusMap: Record<string, { label: string; type: string }> = {
+const statusMap: Record<string, { label: string, type: string }> = {
   approved: { label: '已通过', type: 'success' },
   rejected: { label: '已驳回', type: 'danger' },
   pending: { label: '待审批', type: 'warning' },

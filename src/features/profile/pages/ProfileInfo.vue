@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { ElMessage } from 'element-plus'
+import { AlertTriangle, Award, Info, Lightbulb, TrendingUp } from 'lucide-vue-next'
+import { ref } from 'vue'
 import { useUserStore } from '@/app/stores'
-import { Info, Award, Lightbulb, TrendingUp, AlertTriangle } from 'lucide-vue-next'
 
 const userStore = useUserStore()
 
@@ -168,14 +167,14 @@ const dimensions = ref([
           />
         </div>
         <el-alert
-          :title="'短板：' + item.weakness"
+          :title="`短板：${item.weakness}`"
           type="warning"
           :closable="false"
           show-icon
           style="margin-bottom: 8px"
         />
         <el-alert
-          :title="'建议：' + item.suggestion"
+          :title="`建议：${item.suggestion}`"
           type="success"
           :closable="false"
           show-icon

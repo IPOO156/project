@@ -1,18 +1,18 @@
 <script setup lang="ts">
+import {
+  ArrowRight,
+  Award,
+  BookOpen,
+  Clock,
+  FileText,
+  Star,
+  TrendingUp,
+  Trophy,
+  Users,
+} from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores'
-import {
-  Award,
-  Trophy,
-  FileText,
-  Clock,
-  TrendingUp,
-  BookOpen,
-  Users,
-  Star,
-  ArrowRight,
-} from 'lucide-vue-next'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -42,15 +42,6 @@ const recentActivities = ref([
   { type: 'approved', text: '荣誉证书登记已通过', time: '2026-06-15 11:30' },
 ])
 
-function getActivityIcon(type: string) {
-  switch (type) {
-    case 'submitted': return 'el-icon-upload'
-    case 'approved': return 'el-icon-circle-check'
-    case 'rejected': return 'el-icon-close'
-    default: return 'el-icon-info'
-  }
-}
-
 // 多维度画像（模拟数据）
 const profileDimensions = ref([
   { label: '学业成绩', score: 88, color: '#409eff' },
@@ -58,15 +49,6 @@ const profileDimensions = ref([
   { label: '科研创新', score: 60, color: '#e6a23c' },
   { label: '社会工作', score: 85, color: '#f56c6c' },
   { label: '综合素质', score: 80, color: '#9b59b6' },
-])
-
-// 学期绩点趋势 (模拟数据)
-const gpaTrend = ref([
-  { semester: '大一上', gpa: 3.2 },
-  { semester: '大一下', gpa: 3.4 },
-  { semester: '大二上', gpa: 3.6 },
-  { semester: '大二下', gpa: 3.8 },
-  { semester: '大三上', gpa: 3.82 },
 ])
 </script>
 
@@ -92,7 +74,7 @@ const gpaTrend = ref([
               <p class="stat-card__label">{{ card.label }}</p>
               <p class="stat-card__value">{{ card.value }}</p>
             </div>
-            <div class="stat-card__icon" :style="{ background: card.color + '15', color: card.color }">
+            <div class="stat-card__icon" :style="{ background: `${card.color}15`, color: card.color }">
               <component :is="card.icon" :size="24" />
             </div>
           </div>
@@ -138,7 +120,7 @@ const gpaTrend = ref([
                 @click="router.push(entry.path)"
               >
                 <div class="quick-entry__body">
-                  <div class="quick-entry__icon" :style="{ background: entry.color + '15', color: entry.color }">
+                  <div class="quick-entry__icon" :style="{ background: `${entry.color}15`, color: entry.color }">
                     <component :is="entry.icon" :size="20" />
                   </div>
                   <span class="quick-entry__label">{{ entry.label }}</span>

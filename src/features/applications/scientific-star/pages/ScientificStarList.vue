@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Eye, Edit, Delete, FileText, BookOpen } from 'lucide-vue-next'
+import { BookOpen, Delete, Edit, Eye, FileText } from 'lucide-vue-next'
+import { reactive, ref } from 'vue'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
 
 /** 软件著作权 */

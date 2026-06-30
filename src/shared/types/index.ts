@@ -28,11 +28,11 @@ export interface DictOption {
 }
 
 // 学期枚举
-export type Semester =
-  | '大一上' | '大一下'
-  | '大二上' | '大二下'
-  | '大三上' | '大三下'
-  | '大四上' | '大四下'
+export type Semester
+  = | '大一上' | '大一下'
+    | '大二上' | '大二下'
+    | '大三上' | '大三下'
+    | '大四上' | '大四下'
 
 // === 学生端核心类型 ===
 
@@ -142,7 +142,7 @@ export interface AcademicResearch extends ApplicationBase {
   projectLevel: string
   researchType: string
   teamRole: string
- 立项Date: string
+  立项Date: string
 }
 
 // 奖学金
@@ -216,7 +216,7 @@ export interface ScientificProject extends ApplicationBase {
   projectName: string
   projectLevel: string
   ranking: string
- 立项Date: string
+  立项Date: string
 }
 
 // 科研之星 - 软著
@@ -247,18 +247,18 @@ export interface ApprovalItem {
   content: any
 }
 
-export type ApplicationType =
-  | 'competition'
-  | 'innovation'
-  | 'research'
-  | 'scholarship'
-  | 'certificate'
-  | 'internship'
-  | 'organization'
-  | 'training'
-  | 'socialPractice'
-  | 'bookReport'
-  | 'competitionStar'
-  | 'scientificProject'
-  | 'softwareCopyright'
-  | 'paper'
+export type ApplicationType
+  = | 'competition'
+    | 'innovation'
+    | 'research'
+    | 'scholarship'
+    | 'certificate'
+    | 'internship'
+    | 'organization'
+    | 'training'
+    | 'socialPractice'
+    | 'bookReport'
+    | 'competitionStar'
+    | 'scientificProject'
+    | 'softwareCopyright'
+    | 'paper'

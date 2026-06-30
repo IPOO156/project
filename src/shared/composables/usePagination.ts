@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 export function usePagination(fetchFn: (params: any) => Promise<any>) {
   const pageNum = ref(1)
@@ -33,7 +33,8 @@ export function usePagination(fetchFn: (params: any) => Promise<any>) {
       list.value = res.data?.list ?? res.data ?? []
       total.value = res.data?.total ?? 0
       return res
-    } finally {
+    }
+    finally {
       loading.value = false
     }
   }

@@ -1,29 +1,29 @@
 <script setup lang="ts">
+import {
+  Award,
+  BarChart3,
+  BookOpen,
+  Briefcase,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  FilePen,
+  FlaskConical,
+  GraduationCap,
+  HeartHandshake,
+  Home,
+  Lightbulb,
+  Medal,
+  ScrollText,
+  ShieldCheck,
+  Star,
+  Trophy,
+  User,
+  Users,
+} from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/app/stores'
-import {
-  Home,
-  User,
-  Award,
-  Trophy,
-  Lightbulb,
-  FlaskConical,
-  GraduationCap,
-  Medal,
-  Briefcase,
-  Users,
-  BookOpen,
-  HeartHandshake,
-  BarChart3,
-  ShieldCheck,
-  Clock,
-  ChevronLeft,
-  ChevronRight,
-  ScrollText,
-  FilePen,
-  Star,
-} from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -80,7 +80,8 @@ const menuItems: MenuItem[] = [
 // 当前路由所属的顶级菜单，用于 el-menu 的 default-active
 const activeMenu = computed(() => {
   const path = route.path
-  if (path === '/dashboard') return '/dashboard'
+  if (path === '/dashboard')
+    return '/dashboard'
   // 返回当前路由 path，让 el-menu 高亮
   return path
 })

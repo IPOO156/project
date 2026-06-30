@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
+import { Delete, Edit, Eye, Plus } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Plus, Eye, Edit, Delete } from 'lucide-vue-next'
 import { useApplication } from '@/shared/composables/useApplication'
-import { SEMESTER_OPTIONS, COMPETITION_TYPES, AWARD_LEVELS } from '@/shared/constants/dict'
+import { AWARD_LEVELS, COMPETITION_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 
 interface CompetitionItem {
   id: string
@@ -92,7 +92,7 @@ function handleSubmit() {
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
-          <template #default="{ row }">
+          <template #default>
             <el-button text type="primary" :icon="Eye" size="small">查看</el-button>
             <el-button text type="primary" :icon="Edit" size="small">编辑</el-button>
             <el-button text type="danger" :icon="Delete" size="small">删除</el-button>

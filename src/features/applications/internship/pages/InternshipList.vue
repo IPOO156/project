@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Plus, Eye, Edit, Delete } from 'lucide-vue-next'
+import { Delete, Edit, Eye, Plus } from 'lucide-vue-next'
+import { ref } from 'vue'
 import { useApplication } from '@/shared/composables/useApplication'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
 
