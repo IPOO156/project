@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 import { Delete, Edit, Eye, Plus } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useApplication } from '@/shared/composables/useApplication'
-import { SCHOLARSHIP_LEVELS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import { SCHOLARSHIP_GRADES, SCHOLARSHIP_LEVELS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import StatusTag from '@/shared/ui/StatusTag.vue'
 
 interface ScholarshipItem {
@@ -32,8 +32,6 @@ const app = useApplication({
   proofMaterials: [],
 })
 
-const gradeMap: Record<string, string> = { first: '一等奖', second: '二等奖', third: '三等奖' }
-
 function handleSubmit() {
   ElMessage.success('申报提交成功')
   app.closeDialog()
@@ -56,7 +54,7 @@ function handleSubmit() {
           <template #default="{ row }">{{ SCHOLARSHIP_LEVELS.find(t => t.value === row.scholarshipLevel)?.label || row.scholarshipLevel }}</template>
         </el-table-column>
         <el-table-column label="级别" width="100">
-          <template #default="{ row }">{{ gradeMap[row.scholarshipGrade] || row.scholarshipGrade }}</template>
+          <template #default="{ row }">{{ SCHOLARSHIP_GRADES.find(t => t.value === row.scholarshipGrade)?.label || row.scholarshipGrade }}</template>
         </el-table-column>
         <el-table-column prop="acquireDate" label="获取时间" width="120" />
         <el-table-column prop="semester" label="学期" width="100" />
@@ -85,9 +83,7 @@ function handleSubmit() {
         </el-form-item>
         <el-form-item label="奖学金级别" required>
           <el-select v-model="app.formData.scholarshipGrade" placeholder="请选择" class="form-select">
-            <el-option label="一等奖" value="first" />
-            <el-option label="二等奖" value="second" />
-            <el-option label="三等奖" value="third" />
+            <el-option v-for="t in SCHOLARSHIP_GRADES" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="获取时间" required><el-date-picker v-model="app.formData.acquireDate" type="month" /></el-form-item>

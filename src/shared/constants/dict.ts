@@ -93,6 +93,21 @@ export const INDUSTRY_TYPES = [
   { label: '其他', value: 'other' },
 ] as const
 
+// 奖学金级别（一/二/三等奖）
+export const SCHOLARSHIP_GRADES = [
+  { label: '一等奖', value: 'first' },
+  { label: '二等奖', value: 'second' },
+  { label: '三等奖', value: 'third' },
+] as const
+
+// 创新创业企业类型
+export const INNOVATION_COMPANY_TYPES = [
+  { label: '创业实践', value: '创业实践' },
+  { label: '创业计划', value: '创业计划' },
+  { label: '实体注册', value: '实体注册' },
+  { label: '其他', value: '其他' },
+] as const
+
 // 奖学金等级
 export const SCHOLARSHIP_LEVELS = [
   { label: '国家奖学金', value: 'national' },

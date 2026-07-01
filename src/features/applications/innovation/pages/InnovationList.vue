@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 import { Delete, Edit, Eye, Plus } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useApplication } from '@/shared/composables/useApplication'
-import { INDUSTRY_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import { INDUSTRY_TYPES, INNOVATION_COMPANY_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import StatusTag from '@/shared/ui/StatusTag.vue'
 
 interface InnovationItem {
@@ -32,8 +32,6 @@ const app = useApplication({
   semester: '',
   proofMaterials: [],
 })
-
-const companyTypes = ['创业实践', '创业计划', '实体注册', '其他']
 
 function handleSubmit() {
   ElMessage.success('申报提交成功')
@@ -92,7 +90,7 @@ function handleSubmit() {
         </el-form-item>
         <el-form-item label="类型" required>
           <el-select v-model="app.formData.companyType" placeholder="请选择" class="form-select">
-            <el-option v-for="t in companyTypes" :key="t" :label="t" :value="t" />
+            <el-option v-for="t in INNOVATION_COMPANY_TYPES" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="团队角色" required>

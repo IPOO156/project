@@ -50,6 +50,15 @@ function viewDetail(record: SubmitRecord) {
   currentRecord.value = record
   detailVisible.value = true
 }
+
+// Element Plus 表格 slot 的 row 类型为 DefaultRow，通过脚本层函数做安全断言
+function statusOf(row: unknown): SubmitRecord['status'] {
+  return (row as SubmitRecord).status
+}
+
+function viewDetailByRow(row: unknown) {
+  viewDetail(row as SubmitRecord)
+}
 </script>
 
 <template>
@@ -88,12 +97,12 @@ function viewDetail(record: SubmitRecord) {
         <el-table-column prop="submitDate" label="提交时间" width="120" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <StatusTag :status="(row as SubmitRecord).status" size="small" />
+            <StatusTag :status="statusOf(row)" size="small" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
-            <el-button text type="primary" :icon="Eye" size="small" @click="viewDetail(row as SubmitRecord)">查看</el-button>
+            <el-button text type="primary" :icon="Eye" size="small" @click="viewDetailByRow(row)">查看</el-button>
           </template>
         </el-table-column>
       </el-table>

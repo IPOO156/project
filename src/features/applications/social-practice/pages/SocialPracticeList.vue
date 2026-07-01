@@ -79,7 +79,7 @@ function handleSubmit() { ElMessage.success('申报提交成功'); app.closeDial
         <el-form-item label="实践单位" required><el-input v-model="app.formData.organization" /></el-form-item>
         <el-form-item label="开始时间" required><el-date-picker v-model="app.formData.startDate" type="month" /></el-form-item>
         <el-form-item label="结束时间" required><el-date-picker v-model="app.formData.endDate" type="month" /></el-form-item>
-        <el-form-item label="志愿时长" required><el-input-number v-model="app.formData.volunteerHours" :min="0" style="width: 200px" /> 小时</el-form-item>
+        <el-form-item label="志愿时长" required><el-input-number v-model="app.formData.volunteerHours" :min="0" class="form-input-number" /> 小时</el-form-item>
         <el-form-item label="学期" required>
           <el-select v-model="app.formData.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
