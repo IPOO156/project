@@ -4,8 +4,10 @@ import { useRoute } from 'vue-router'
 
 import SidebarNav from '../components/layout/SidebarNav.vue'
 import TopBar from '../components/layout/TopBar.vue'
+import LineIcon from '../components/ui/LineIcon.vue'
+import NotificationPanel from '../components/layout/NotificationPanel.vue'
 
-const props = defineProps({
+defineProps({
   navGroups: {
     type: Array,
     required: true,
@@ -31,18 +33,18 @@ const section = computed(() => route.meta?.section ?? '')
     <aside class="sidebar">
       <div class="brand">
         <div class="brandMark">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-          </svg>
+          <LineIcon name="book" :size="20" />
         </div>
         <div class="brandText">
-          <div class="brandTitle">学校档案系统</div>
+          <div class="brandTitle">档案管理系统</div>
           <div class="brandSub">学生端</div>
         </div>
       </div>
       <div class="navWrap">
         <SidebarNav :groups="navGroups" :collapsed="sidebarCollapsed" />
+      </div>
+      <div class="sidebarFooter">
+        <span class="version">v1.0.0</span>
       </div>
     </aside>
 
@@ -73,9 +75,9 @@ const section = computed(() => route.meta?.section ?? '')
 }
 
 .sidebar {
-  border-right: 1px solid var(--border);
-  background: var(--panel);
-  padding: 20px 12px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  padding: 18px 12px;
   overflow: hidden;
   position: sticky;
   top: 0;
@@ -89,21 +91,20 @@ const section = computed(() => route.meta?.section ?? '')
   align-items: center;
   gap: 12px;
   padding: 8px 12px 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--sidebar-divider);
   margin-bottom: 16px;
 }
 
 .brandMark {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 100%);
+  border-radius: 10px;
+  background: var(--sidebar-brand);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
 }
 
 .brandText {
@@ -113,8 +114,8 @@ const section = computed(() => route.meta?.section ?? '')
 .brandTitle {
   font-weight: 700;
   font-size: 15px;
-  letter-spacing: -0.01em;
-  color: var(--text);
+  letter-spacing: 0;
+  color: #e8edf0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -123,7 +124,7 @@ const section = computed(() => route.meta?.section ?? '')
 .brandSub {
   margin-top: 2px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--sidebar-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -148,6 +149,22 @@ const section = computed(() => route.meta?.section ?? '')
 
 .navWrap::-webkit-scrollbar {
   width: 4px;
+}
+
+.navWrap::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+}
+
+.sidebarFooter {
+  padding: 12px 12px 0;
+  border-top: 1px solid var(--sidebar-divider);
+  margin-top: auto;
+}
+
+.version {
+  font-size: 11px;
+  color: rgba(255,255,255,0.25);
 }
 
 .main {

@@ -1,34 +1,99 @@
 <script setup>
-import { ref } from 'vue'
-import UiCard from '../../../components/ui/UiCard.vue'
+import { computed, reactive, ref, watch } from 'vue'
+
 import UiButton from '../../../components/ui/UiButton.vue'
+import UiCard from '../../../components/ui/UiCard.vue'
+import LineIcon from '../../../components/ui/LineIcon.vue'
 import UiTag from '../../../components/ui/UiTag.vue'
+import { downloadText, exportRecords, useArchiveStore } from '../archiveStore'
 
-const tab = ref('base')
+const { records, stats } = useArchiveStore()
+
 const activeNav = ref('base')
+const editMode = ref(false)
+const message = ref('')
 
-const userInfo = {
+const defaultUser = {
   name: '张同学',
   studentId: '20260001',
   college: '计算机学院',
   major: '软件工程',
-  class: '软工 2026 届 1 班',
+  className: '软工 2026 届 1 班',
   email: 'zhangstudent@university.edu.cn',
   phone: '138****8888',
-  avatar: null,
+  enrollmentYear: '2022 年',
 }
 
+function loadJson(key, fallback) {
+  if (typeof window === 'undefined') return fallback
+  try {
+    return { ...fallback, ...JSON.parse(window.localStorage.getItem(key) || '{}') }
+  } catch {
+    return fallback
+  }
+}
+
+const userInfo = reactive(loadJson('sa.profile', defaultUser))
+const noticeSettings = reactive(loadJson('sa.noticeSettings', {
+  audit: true,
+  supplement: true,
+  weekly: false,
+  announcement: true,
+}))
+
+watch(userInfo, (value) => {
+  if (typeof window !== 'undefined') window.localStorage.setItem('sa.profile', JSON.stringify(value))
+}, { deep: true })
+
+watch(noticeSettings, (value) => {
+  if (typeof window !== 'undefined') window.localStorage.setItem('sa.noticeSettings', JSON.stringify(value))
+}, { deep: true })
+
 const navItems = [
-  { key: 'base', label: '基本信息', icon: '👤' },
-  { key: 'security', label: '账号安全', icon: '🔒' },
-  { key: 'notice', label: '通知设置', icon: '🔔' },
-  { key: 'export', label: '数据导出', icon: '📤' },
+  { key: 'base', label: '基本信息', icon: 'user' },
+  { key: 'security', label: '账号安全', icon: 'lock' },
+  { key: 'notice', label: '通知设置', icon: 'bell' },
+  { key: 'export', label: '数据导出', icon: 'download' },
 ]
+
+const statItems = computed(() => [
+  { label: '档案条目', value: stats.value.total },
+  { label: '已通过', value: stats.value.ok },
+  { label: '完成度', value: `${stats.value.completion}%` },
+  { label: '毕业年份', value: '2026' },
+])
+
+function saveProfile() {
+  editMode.value = false
+  message.value = '资料已保存。'
+}
+
+function securityAction(text) {
+  message.value = `${text}已记录，本地演示环境不会发送验证码。`
+}
+
+function exportReport() {
+  const lines = [
+    `${userInfo.name}成长档案报告`,
+    `学号：${userInfo.studentId}`,
+    `学院专业：${userInfo.college} / ${userInfo.major}`,
+    `档案条目：${stats.value.total}`,
+    `已通过：${stats.value.ok}`,
+    '',
+    ...records.value.map((item) => `${item.date}｜${item.title}｜${item.files.length} 份材料`),
+  ]
+  downloadText('成长档案报告.txt', lines.join('\n'))
+  message.value = '成长档案报告已导出。'
+}
+
+function exportFiles() {
+  exportRecords(records.value, '成长档案材料清单.csv')
+  message.value = '材料清单已导出。'
+}
 </script>
 
 <template>
   <div class="profilePage">
-    <!-- 用户信息卡片 -->
     <UiCard padding="lg" class="userCard">
       <div class="userHeader">
         <div class="avatar">
@@ -42,90 +107,84 @@ const navItems = [
             <UiTag size="sm" tone="info">正式学生</UiTag>
           </div>
         </div>
-        <UiButton variant="secondary" size="sm">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
+        <UiButton variant="secondary" size="sm" @click="activeNav = 'base'; editMode = true">
+          <LineIcon name="edit" :size="14" />
           编辑资料
         </UiButton>
       </div>
       <div class="userStats">
-        <div class="stat">
-          <div class="statNum">12</div>
-          <div class="statLabel">档案条目</div>
-        </div>
-        <div class="stat">
-          <div class="statNum">5</div>
-          <div class="statLabel">已通过</div>
-        </div>
-        <div class="stat">
-          <div class="statNum">89%</div>
-          <div class="statLabel">完成度</div>
-        </div>
-        <div class="stat">
-          <div class="statNum">2026</div>
-          <div class="statLabel">毕业年份</div>
+        <div v-for="item in statItems" :key="item.label" class="stat">
+          <div class="statNum">{{ item.value }}</div>
+          <div class="statLabel">{{ item.label }}</div>
         </div>
       </div>
     </UiCard>
 
-    <!-- 设置区域 -->
+    <div v-if="message" class="message">{{ message }}</div>
+
     <div class="settingsGrid">
-      <!-- 侧边导航 -->
       <UiCard padding="sm" class="navCard">
         <nav class="sideNav">
-          <button 
-            v-for="item in navItems" 
+          <button
+            v-for="item in navItems"
             :key="item.key"
             class="navItem"
             :class="{ active: activeNav === item.key }"
             type="button"
             @click="activeNav = item.key"
           >
-            <span class="navIcon">{{ item.icon }}</span>
-            <span class="navLabel">{{ item.label }}</span>
+            <LineIcon :name="item.icon" :size="18" />
+            <span>{{ item.label }}</span>
           </button>
         </nav>
       </UiCard>
 
-      <!-- 设置内容 -->
       <div class="settingsContent">
-        <!-- 基本信息 -->
         <UiCard v-if="activeNav === 'base'" padding="lg">
           <div class="sectionHeader">
             <h3 class="sectionTitle">基本信息</h3>
-            <UiButton variant="secondary" size="sm">编辑</UiButton>
+            <div class="actions">
+              <UiButton v-if="!editMode" variant="secondary" size="sm" @click="editMode = true">编辑</UiButton>
+              <template v-else>
+                <UiButton variant="ghost" size="sm" @click="editMode = false">取消</UiButton>
+                <UiButton size="sm" @click="saveProfile">保存</UiButton>
+              </template>
+            </div>
           </div>
           <div class="infoGrid">
-            <div class="infoItem">
-              <label class="infoLabel">姓名</label>
-              <div class="infoValue">{{ userInfo.name }}</div>
-            </div>
-            <div class="infoItem">
-              <label class="infoLabel">学号</label>
-              <div class="infoValue">{{ userInfo.studentId }}</div>
-            </div>
-            <div class="infoItem">
-              <label class="infoLabel">学院</label>
-              <div class="infoValue">{{ userInfo.college }}</div>
-            </div>
-            <div class="infoItem">
-              <label class="infoLabel">专业</label>
-              <div class="infoValue">{{ userInfo.major }}</div>
-            </div>
-            <div class="infoItem">
-              <label class="infoLabel">班级</label>
-              <div class="infoValue">{{ userInfo.class }}</div>
-            </div>
-            <div class="infoItem">
-              <label class="infoLabel">入学年份</label>
-              <div class="infoValue">2022 年</div>
-            </div>
+            <label class="infoItem">
+              <span class="infoLabel">姓名</span>
+              <input v-if="editMode" v-model="userInfo.name" class="infoInput" />
+              <span v-else class="infoValue">{{ userInfo.name }}</span>
+            </label>
+            <label class="infoItem">
+              <span class="infoLabel">学号</span>
+              <input v-if="editMode" v-model="userInfo.studentId" class="infoInput" />
+              <span v-else class="infoValue">{{ userInfo.studentId }}</span>
+            </label>
+            <label class="infoItem">
+              <span class="infoLabel">学院</span>
+              <input v-if="editMode" v-model="userInfo.college" class="infoInput" />
+              <span v-else class="infoValue">{{ userInfo.college }}</span>
+            </label>
+            <label class="infoItem">
+              <span class="infoLabel">专业</span>
+              <input v-if="editMode" v-model="userInfo.major" class="infoInput" />
+              <span v-else class="infoValue">{{ userInfo.major }}</span>
+            </label>
+            <label class="infoItem">
+              <span class="infoLabel">班级</span>
+              <input v-if="editMode" v-model="userInfo.className" class="infoInput" />
+              <span v-else class="infoValue">{{ userInfo.className }}</span>
+            </label>
+            <label class="infoItem">
+              <span class="infoLabel">入学年份</span>
+              <input v-if="editMode" v-model="userInfo.enrollmentYear" class="infoInput" />
+              <span v-else class="infoValue">{{ userInfo.enrollmentYear }}</span>
+            </label>
           </div>
         </UiCard>
 
-        <!-- 账号安全 -->
         <UiCard v-else-if="activeNav === 'security'" padding="lg">
           <div class="sectionHeader">
             <h3 class="sectionTitle">账号安全</h3>
@@ -133,132 +192,105 @@ const navItems = [
           <div class="securityList">
             <div class="securityItem">
               <div class="securityLeft">
-                <div class="securityIcon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                  </svg>
-                </div>
-                <div class="securityInfo">
+                <div class="securityIcon"><LineIcon name="lock" :size="20" /></div>
+                <div>
                   <div class="securityTitle">登录密码</div>
                   <div class="securityDesc">上次修改于 3 个月前</div>
                 </div>
               </div>
-              <UiButton variant="ghost" size="sm">修改</UiButton>
+              <UiButton variant="ghost" size="sm" @click="securityAction('登录密码修改')">修改</UiButton>
             </div>
             <div class="securityItem">
               <div class="securityLeft">
-                <div class="securityIcon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                  </svg>
-                </div>
-                <div class="securityInfo">
+                <div class="securityIcon"><LineIcon name="mail" :size="20" /></div>
+                <div>
                   <div class="securityTitle">邮箱绑定</div>
                   <div class="securityDesc">{{ userInfo.email }}</div>
                 </div>
               </div>
-              <UiButton variant="ghost" size="sm">更换</UiButton>
+              <UiButton variant="ghost" size="sm" @click="securityAction('邮箱更换')">更换</UiButton>
             </div>
             <div class="securityItem">
               <div class="securityLeft">
-                <div class="securityIcon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                  </svg>
-                </div>
-                <div class="securityInfo">
+                <div class="securityIcon"><LineIcon name="phone" :size="20" /></div>
+                <div>
                   <div class="securityTitle">手机绑定</div>
                   <div class="securityDesc">{{ userInfo.phone }}</div>
                 </div>
               </div>
-              <UiButton variant="ghost" size="sm">更换</UiButton>
+              <UiButton variant="ghost" size="sm" @click="securityAction('手机号更换')">更换</UiButton>
             </div>
           </div>
         </UiCard>
 
-        <!-- 通知设置 -->
         <UiCard v-else-if="activeNav === 'notice'" padding="lg">
           <div class="sectionHeader">
             <h3 class="sectionTitle">通知设置</h3>
           </div>
           <div class="noticeList">
-            <div class="noticeItem">
-              <div class="noticeInfo">
-                <div class="noticeTitle">审核结果通知</div>
-                <div class="noticeDesc">当档案审核完成时，发送通知提醒</div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" checked />
+            <label class="noticeItem">
+              <span>
+                <span class="noticeTitle">审核结果通知</span>
+                <span class="noticeDesc">档案审核完成时提醒</span>
+              </span>
+              <span class="toggle">
+                <input v-model="noticeSettings.audit" type="checkbox" />
                 <span class="toggleSlider"></span>
-              </label>
-            </div>
-            <div class="noticeItem">
-              <div class="noticeInfo">
-                <div class="noticeTitle">材料补充提醒</div>
-                <div class="noticeDesc">档案被驳回后，定期提醒补充材料</div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" checked />
+              </span>
+            </label>
+            <label class="noticeItem">
+              <span>
+                <span class="noticeTitle">材料补充提醒</span>
+                <span class="noticeDesc">档案被驳回后提醒补充</span>
+              </span>
+              <span class="toggle">
+                <input v-model="noticeSettings.supplement" type="checkbox" />
                 <span class="toggleSlider"></span>
-              </label>
-            </div>
-            <div class="noticeItem">
-              <div class="noticeInfo">
-                <div class="noticeTitle">每周汇总</div>
-                <div class="noticeDesc">每周一发送本周档案动态汇总</div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" />
+              </span>
+            </label>
+            <label class="noticeItem">
+              <span>
+                <span class="noticeTitle">每周汇总</span>
+                <span class="noticeDesc">每周一发送档案动态</span>
+              </span>
+              <span class="toggle">
+                <input v-model="noticeSettings.weekly" type="checkbox" />
                 <span class="toggleSlider"></span>
-              </label>
-            </div>
-            <div class="noticeItem">
-              <div class="noticeInfo">
-                <div class="noticeTitle">系统公告</div>
-                <div class="noticeDesc">接收系统重要通知和公告</div>
-              </div>
-              <label class="toggle">
-                <input type="checkbox" checked />
+              </span>
+            </label>
+            <label class="noticeItem">
+              <span>
+                <span class="noticeTitle">系统公告</span>
+                <span class="noticeDesc">接收系统重要通知</span>
+              </span>
+              <span class="toggle">
+                <input v-model="noticeSettings.announcement" type="checkbox" />
                 <span class="toggleSlider"></span>
-              </label>
-            </div>
+              </span>
+            </label>
           </div>
         </UiCard>
 
-        <!-- 数据导出 -->
         <UiCard v-else-if="activeNav === 'export'" padding="lg">
           <div class="sectionHeader">
             <h3 class="sectionTitle">数据导出</h3>
           </div>
           <div class="exportGrid">
             <div class="exportItem">
-              <div class="exportIcon blue">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-              </div>
+              <div class="exportIcon blue"><LineIcon name="file" :size="24" /></div>
               <div class="exportInfo">
-                <div class="exportTitle">成长档案 PDF</div>
-                <div class="exportDesc">导出完整的成长档案报告</div>
+                <div class="exportTitle">成长档案报告</div>
+                <div class="exportDesc">包含基础信息和档案条目摘要</div>
               </div>
-              <UiButton variant="secondary" size="sm">导出</UiButton>
+              <UiButton variant="secondary" size="sm" @click="exportReport">导出</UiButton>
             </div>
             <div class="exportItem">
-              <div class="exportIcon green">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 15 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-              </div>
+              <div class="exportIcon green"><LineIcon name="download" :size="24" /></div>
               <div class="exportInfo">
-                <div class="exportTitle">材料压缩包</div>
-                <div class="exportDesc">下载所有已上传的材料文件</div>
+                <div class="exportTitle">材料清单</div>
+                <div class="exportDesc">包含所有附件名称和审核状态</div>
               </div>
-              <UiButton variant="secondary" size="sm">下载</UiButton>
+              <UiButton variant="secondary" size="sm" @click="exportFiles">下载</UiButton>
             </div>
           </div>
         </UiCard>
@@ -274,11 +306,9 @@ const navItems = [
   gap: 20px;
 }
 
-/* 用户卡片 */
 .userCard {
-  background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 100%);
-  border: none;
-  color: white;
+  background: #f0f5f7;
+  border-color: #d5e2e8;
 }
 
 .userHeader {
@@ -292,7 +322,8 @@ const navItems = [
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: #dce9ef;
+  color: var(--accent-dark);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -316,7 +347,7 @@ const navItems = [
 
 .userMeta {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--muted);
   margin-bottom: 8px;
 }
 
@@ -330,7 +361,7 @@ const navItems = [
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-top: 1px solid #d5e2e8;
 }
 
 .stat {
@@ -344,18 +375,25 @@ const navItems = [
 
 .statLabel {
   font-size: 13px;
-  opacity: 0.85;
+  color: var(--muted);
   margin-top: 4px;
 }
 
-/* 设置网格 */
+.message {
+  padding: 10px 12px;
+  border: 1px solid #d5e2e8;
+  background: #f7fbfc;
+  color: var(--accent-dark);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
 .settingsGrid {
   display: grid;
   grid-template-columns: 220px 1fr;
   gap: 20px;
 }
 
-/* 侧边导航 */
 .navCard {
   height: fit-content;
   position: sticky;
@@ -377,7 +415,7 @@ const navItems = [
   background: transparent;
   color: var(--muted);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   border-radius: var(--radius);
   cursor: pointer;
   transition: all var(--transition);
@@ -392,14 +430,8 @@ const navItems = [
 .navItem.active {
   background: var(--accent-light);
   color: var(--accent);
-  font-weight: 600;
 }
 
-.navIcon {
-  font-size: 18px;
-}
-
-/* 设置内容 */
 .settingsContent {
   display: flex;
   flex-direction: column;
@@ -410,6 +442,7 @@ const navItems = [
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
@@ -419,11 +452,16 @@ const navItems = [
   color: var(--text);
 }
 
-/* 信息网格 */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .infoGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  gap: 18px;
 }
 
 .infoItem {
@@ -436,8 +474,7 @@ const navItems = [
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0;
 }
 
 .infoValue {
@@ -446,19 +483,34 @@ const navItems = [
   font-weight: 500;
 }
 
-/* 安全列表 */
-.securityList {
+.infoInput {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  outline: none;
+}
+
+.infoInput:focus {
+  border-color: var(--accent);
+}
+
+.securityList,
+.noticeList {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.securityItem {
+.securityItem,
+.noticeItem {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 16px;
-  background: var(--bg);
+  background: #f8fafb;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
@@ -469,60 +521,38 @@ const navItems = [
 }
 
 .securityIcon {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: var(--radius);
   background: var(--panel);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--accent);
 }
 
-.securityTitle {
-  font-weight: 600;
-  font-size: 14px;
-  margin-bottom: 2px;
-}
-
-.securityDesc {
-  font-size: 13px;
-  color: var(--muted);
-}
-
-/* 通知列表 */
-.noticeList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.noticeItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  background: var(--bg);
-  border-radius: var(--radius);
-}
-
+.securityTitle,
 .noticeTitle {
-  font-weight: 600;
+  display: block;
+  font-weight: 700;
   font-size: 14px;
   margin-bottom: 2px;
 }
 
+.securityDesc,
 .noticeDesc {
+  display: block;
   font-size: 13px;
   color: var(--muted);
 }
 
-/* 开关 */
 .toggle {
   position: relative;
-  width: 48px;
+  width: 46px;
   height: 26px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .toggle input {
@@ -533,12 +563,9 @@ const navItems = [
 
 .toggleSlider {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: var(--border);
-  border-radius: 13px;
+  border-radius: 999px;
   transition: all var(--transition);
 }
 
@@ -548,11 +575,11 @@ const navItems = [
   width: 20px;
   height: 20px;
   left: 3px;
-  bottom: 3px;
+  top: 3px;
   background: white;
   border-radius: 50%;
   transition: all var(--transition);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
 }
 
 .toggle input:checked + .toggleSlider {
@@ -560,10 +587,9 @@ const navItems = [
 }
 
 .toggle input:checked + .toggleSlider::before {
-  transform: translateX(22px);
+  transform: translateX(20px);
 }
 
-/* 导出网格 */
 .exportGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -575,36 +601,38 @@ const navItems = [
   align-items: center;
   gap: 14px;
   padding: 18px;
-  background: var(--bg);
+  background: #f8fafb;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
 .exportIcon {
-  width: 52px;
-  height: 52px;
+  width: 50px;
+  height: 50px;
   border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
 }
 
 .exportIcon.blue {
-  background: var(--accent-light);
   color: var(--accent);
 }
 
 .exportIcon.green {
-  background: var(--success-light);
-  color: var(--success);
+  color: #047857;
 }
 
 .exportInfo {
   flex: 1;
+  min-width: 0;
 }
 
 .exportTitle {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
   margin-bottom: 2px;
 }
@@ -614,35 +642,31 @@ const navItems = [
   color: var(--muted);
 }
 
-/* 响应式 */
 @media (max-width: 980px) {
   .settingsGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .navCard {
     position: static;
   }
-  
+
   .sideNav {
     flex-direction: row;
     flex-wrap: wrap;
   }
-  
+
   .userStats {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 640px) {
-  .infoGrid {
-    grid-template-columns: 1fr;
-  }
-  
+  .infoGrid,
   .exportGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .userHeader {
     flex-direction: column;
     text-align: center;

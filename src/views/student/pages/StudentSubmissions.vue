@@ -1,232 +1,156 @@
 <script setup>
-import { ref } from 'vue'
-import UiCard from '../../../components/ui/UiCard.vue'
-import UiTag from '../../../components/ui/UiTag.vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
 import UiButton from '../../../components/ui/UiButton.vue'
+import UiCard from '../../../components/ui/UiCard.vue'
+import LineIcon from '../../../components/ui/LineIcon.vue'
+import UiTag from '../../../components/ui/UiTag.vue'
+import { getStudentArchiveCategory } from '../nav'
+import { statusMeta, useArchiveStore } from '../archiveStore'
+
+const router = useRouter()
+const { sortedRecords, resubmitRecord, fileSizeLabel } = useArchiveStore()
 
 const tab = ref('wait')
+const keyword = ref('')
+const detailId = ref('')
 
-const submissions = {
-  wait: [
-    { id: 1, title: '社会实践 — 志愿服务材料', date: '2026-03-03', files: 8, category: '社会实践' },
-    { id: 2, title: '学科竞赛 — 校赛报名表', date: '2026-02-28', files: 2, category: '学科竞赛' },
-  ],
-  ok: [
-    { id: 3, title: '实习经历 — 某某科技（合同/证明）', date: '2026-04-12', files: 3, category: '实习经历' },
-    { id: 4, title: '学业成绩 — 2025-2026第一学期', date: '2026-01-15', files: 5, category: '学业成绩' },
-    { id: 5, title: '学科竞赛 — 省赛获奖证明', date: '2025-12-20', files: 4, category: '学科竞赛' },
-  ],
-  no: [
-    { id: 6, title: '学术研究 — 论文投稿记录', date: '2026-02-01', files: 1, category: '学术研究', reason: '缺少期刊录用证明' },
-    { id: 7, title: '社会实践 — 暑期三下乡', date: '2025-08-15', files: 6, category: '社会实践', reason: '材料不完整' },
-  ],
+const tabItems = computed(() => [
+  { key: 'wait', label: '待审核', icon: 'clock', count: sortedRecords.value.filter((item) => item.status === 'wait').length },
+  { key: 'ok', label: '已通过', icon: 'check', count: sortedRecords.value.filter((item) => item.status === 'ok').length },
+  { key: 'no', label: '已驳回', icon: 'close', count: sortedRecords.value.filter((item) => item.status === 'no').length },
+])
+
+const filteredSubmissions = computed(() => {
+  const key = keyword.value.trim().toLowerCase()
+  return sortedRecords.value.filter((item) => {
+    const category = getStudentArchiveCategory(item.category)?.label ?? ''
+    const matchesTab = item.status === tab.value
+    const matchesKeyword =
+      !key ||
+      [item.title, item.organization, item.review, category].some((value) =>
+        String(value ?? '').toLowerCase().includes(key),
+      )
+    return matchesTab && matchesKeyword
+  })
+})
+
+const detailRecord = computed(() => sortedRecords.value.find((item) => item.id === detailId.value))
+
+function createSubmission() {
+  router.push('/student/archive/honor?new=1')
 }
 
-const getIcon = (category) => {
-  const icons = {
-    '社会实践': '🌱',
-    '学科竞赛': '🏆',
-    '实习经历': '💼',
-    '学业成绩': '📚',
-    '学术研究': '📝',
-  }
-  return icons[category] || '📄'
+function openArchive(item) {
+  router.push(`/student/archive/${item.category}?view=${item.id}`)
 }
 </script>
 
 <template>
   <div class="submissionsPage">
-    <!-- 页面标题 -->
     <div class="pageHeader">
-      <div class="headerLeft">
+      <div>
         <h1 class="pageTitle">提交记录</h1>
-        <p class="pageSub">管理你的所有档案提交</p>
+        <p class="pageSub">查看审核进度、审核意见，并处理被驳回的材料。</p>
       </div>
-      <UiButton variant="primary" size="sm">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
+      <UiButton variant="primary" size="sm" @click="createSubmission">
+        <LineIcon name="plus" :size="14" />
         新建提交
       </UiButton>
     </div>
 
-    <!-- 标签切换 -->
-    <div class="tabs">
-      <button 
-        class="tabItem" 
-        :class="{ active: tab === 'wait' }" 
-        type="button" 
-        @click="tab = 'wait'"
-      >
-        <span class="tabIcon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-        </span>
-        待审核
-        <span class="tabCount warning">2</span>
-      </button>
-      <button 
-        class="tabItem" 
-        :class="{ active: tab === 'ok' }" 
-        type="button" 
-        @click="tab = 'ok'"
-      >
-        <span class="tabIcon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-        </span>
-        已通过
-        <span class="tabCount success">3</span>
-      </button>
-      <button 
-        class="tabItem" 
-        :class="{ active: tab === 'no' }" 
-        type="button" 
-        @click="tab = 'no'"
-      >
-        <span class="tabIcon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
-          </svg>
-        </span>
-        已驳回
-        <span class="tabCount danger">2</span>
-      </button>
+    <div class="toolbar">
+      <div class="tabs">
+        <button
+          v-for="item in tabItems"
+          :key="item.key"
+          class="tabItem"
+          :class="{ active: tab === item.key }"
+          type="button"
+          @click="tab = item.key"
+        >
+          <LineIcon :name="item.icon" :size="16" />
+          {{ item.label }}
+          <span class="tabCount" :data-status="item.key">{{ item.count }}</span>
+        </button>
+      </div>
+      <label class="searchBox">
+        <LineIcon name="search" :size="16" />
+        <input v-model="keyword" placeholder="搜索标题、组织或审核意见" />
+      </label>
     </div>
 
-    <!-- 列表 -->
     <div class="list">
-      <template v-if="tab === 'wait'">
-        <UiCard 
-          v-for="item in submissions.wait" 
-          :key="item.id" 
-          padding="md" 
-          class="listItem"
-          hoverable
-        >
-          <div class="itemIcon blue">
-            {{ getIcon(item.category) }}
+      <UiCard
+        v-for="item in filteredSubmissions"
+        :key="item.id"
+        padding="md"
+        class="listItem"
+        hoverable
+      >
+        <div class="itemIcon" :data-status="item.status">
+          <LineIcon :name="getStudentArchiveCategory(item.category)?.icon ?? 'file'" :size="22" />
+        </div>
+        <div class="itemContent">
+          <h3 class="itemTitle">{{ item.title }}</h3>
+          <div class="itemMeta">
+            <span>{{ getStudentArchiveCategory(item.category)?.label }}</span>
+            <span>{{ item.date }}</span>
+            <span>{{ item.files.length }} 份材料</span>
           </div>
-          <div class="itemContent">
-            <h3 class="itemTitle">{{ item.title }}</h3>
-            <div class="itemMeta">
-              <span class="metaDate">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                {{ item.date }}
-              </span>
-              <span class="metaFiles">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                {{ item.files }} 份材料
-              </span>
-            </div>
+          <div v-if="item.status === 'no'" class="itemReason">
+            <LineIcon name="close" :size="12" />
+            驳回原因：{{ item.review }}
           </div>
-          <div class="itemActions">
-            <UiTag tone="warning">审核中</UiTag>
-            <UiButton variant="ghost" size="sm">查看</UiButton>
-          </div>
-        </UiCard>
-      </template>
+        </div>
+        <div class="itemActions">
+          <UiTag :tone="statusMeta[item.status].tone">{{ statusMeta[item.status].label }}</UiTag>
+          <UiButton variant="ghost" size="sm" @click="detailId = item.id">查看</UiButton>
+          <UiButton v-if="item.status === 'no'" variant="secondary" size="sm" @click="resubmitRecord(item.id)">重新提交</UiButton>
+        </div>
+      </UiCard>
 
-      <template v-else-if="tab === 'ok'">
-        <UiCard 
-          v-for="item in submissions.ok" 
-          :key="item.id" 
-          padding="md" 
-          class="listItem"
-          hoverable
-        >
-          <div class="itemIcon green">
-            {{ getIcon(item.category) }}
-          </div>
-          <div class="itemContent">
-            <h3 class="itemTitle">{{ item.title }}</h3>
-            <div class="itemMeta">
-              <span class="metaDate">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                {{ item.date }}
-              </span>
-              <span class="metaFiles">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                {{ item.files }} 份材料
-              </span>
-            </div>
-          </div>
-          <div class="itemActions">
-            <UiTag tone="success">已通过</UiTag>
-            <UiButton variant="ghost" size="sm">查看</UiButton>
-          </div>
-        </UiCard>
-      </template>
+      <UiCard v-if="filteredSubmissions.length === 0" padding="lg" class="empty">
+        <LineIcon name="search" :size="28" />
+        <div>
+          <strong>暂无匹配提交</strong>
+          <p>切换状态或修改关键词后再试。</p>
+        </div>
+      </UiCard>
+    </div>
 
-      <template v-else>
-        <UiCard 
-          v-for="item in submissions.no" 
-          :key="item.id" 
-          padding="md" 
-          class="listItem"
-          hoverable
-        >
-          <div class="itemIcon red">
-            {{ getIcon(item.category) }}
-          </div>
-          <div class="itemContent">
-            <h3 class="itemTitle">{{ item.title }}</h3>
-            <div class="itemMeta">
-              <span class="metaDate">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                {{ item.date }}
-              </span>
-              <span class="metaFiles">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                {{ item.files }} 份材料
-              </span>
-            </div>
-            <div class="itemReason">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              驳回原因：{{ item.reason }}
+    <div v-if="detailRecord" class="modalLayer" role="dialog" aria-modal="true">
+      <div class="drawer">
+        <div class="modalHead">
+          <h2>{{ detailRecord.title }}</h2>
+          <button class="closeBtn" type="button" aria-label="关闭" @click="detailId = ''">×</button>
+        </div>
+        <div class="detailMeta">
+          <UiTag :tone="statusMeta[detailRecord.status].tone">{{ statusMeta[detailRecord.status].label }}</UiTag>
+          <span>{{ getStudentArchiveCategory(detailRecord.category)?.label }}</span>
+          <span>{{ detailRecord.organization }}</span>
+          <span>{{ detailRecord.date }}</span>
+        </div>
+        <section class="detailSection">
+          <h3>审核意见</h3>
+          <p>{{ detailRecord.review }}</p>
+        </section>
+        <section class="detailSection">
+          <h3>附件材料</h3>
+          <div class="fileList">
+            <div v-for="file in detailRecord.files" :key="file.name" class="fileRow">
+              <LineIcon name="file" :size="15" />
+              <span>{{ file.name }}</span>
+              <small>{{ fileSizeLabel(file.size) }}</small>
             </div>
           </div>
-          <div class="itemActions">
-            <UiTag tone="danger">已驳回</UiTag>
-            <UiButton variant="secondary" size="sm">重新提交</UiButton>
-          </div>
-        </UiCard>
-      </template>
+        </section>
+        <div class="modalFoot">
+          <UiButton variant="secondary" @click="openArchive(detailRecord)">打开档案</UiButton>
+          <UiButton v-if="detailRecord.status === 'no'" @click="resubmitRecord(detailRecord.id)">重新提交</UiButton>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -249,7 +173,7 @@ const getIcon = (category) => {
   font-size: 24px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   margin-bottom: 4px;
 }
 
@@ -258,21 +182,28 @@ const getIcon = (category) => {
   color: var(--muted);
 }
 
-/* 标签切换 */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .tabs {
   display: flex;
-  gap: 8px;
-  padding: 6px;
+  gap: 6px;
+  padding: 5px;
   background: var(--panel);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
 }
 
 .tabItem {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 9px 13px;
   border: none;
   background: transparent;
   color: var(--muted);
@@ -293,35 +224,52 @@ const getIcon = (category) => {
   color: var(--accent);
 }
 
-.tabIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .tabCount {
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--muted);
 }
 
-.tabCount.warning {
+.tabCount[data-status='wait'] {
   background: var(--warning-light);
   color: #b45309;
 }
 
-.tabCount.success {
+.tabCount[data-status='ok'] {
   background: var(--success-light);
   color: #047857;
 }
 
-.tabCount.danger {
+.tabCount[data-status='no'] {
   background: var(--danger-light);
   color: #b91c1c;
 }
 
-/* 列表 */
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: min(320px, 100%);
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--muted);
+}
+
+.searchBox input {
+  min-width: 0;
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+}
+
 .list {
   display: flex;
   flex-direction: column;
@@ -335,24 +283,24 @@ const getIcon = (category) => {
 }
 
 .itemIcon {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
   flex-shrink: 0;
+  background: #f8fafb;
+  border: 1px solid var(--border);
+  color: var(--accent);
 }
 
-.itemIcon.blue {
-  background: var(--accent-light);
+.itemIcon[data-status='wait'] {
+  color: #b45309;
 }
-.itemIcon.green {
-  background: var(--success-light);
-}
-.itemIcon.red {
-  background: var(--danger-light);
+
+.itemIcon[data-status='no'] {
+  color: #b91c1c;
 }
 
 .itemContent {
@@ -362,22 +310,19 @@ const getIcon = (category) => {
 
 .itemTitle {
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .itemMeta {
   display: flex;
   align-items: center;
-  gap: 16px;
-}
-
-.metaDate,
-.metaFiles {
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 12px;
   font-size: 13px;
   color: var(--muted);
 }
@@ -385,14 +330,14 @@ const getIcon = (category) => {
 .itemReason {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   margin-top: 8px;
   padding: 8px 10px;
   background: var(--danger-light);
   color: #b91c1c;
   font-size: 12px;
   font-weight: 500;
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 
 .itemActions {
@@ -402,15 +347,131 @@ const getIcon = (category) => {
   flex-shrink: 0;
 }
 
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.empty strong {
+  display: block;
+  color: var(--text);
+}
+
+.modalLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  justify-items: end;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.28);
+}
+
+.drawer {
+  width: min(560px, 100%);
+  height: calc(100vh - 48px);
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 20px;
+}
+
+.modalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.modalHead h2 {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.closeBtn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.detailMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.detailSection {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.detailSection h3 {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.detailSection p {
+  color: var(--muted);
+}
+
+.fileList {
+  display: grid;
+  gap: 8px;
+}
+
+.fileRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #f8fafb;
+}
+
+.fileRow span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileRow small {
+  color: var(--muted);
+}
+
+.modalFoot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
 @media (max-width: 768px) {
   .listItem {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .itemActions {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
   }
 }
 </style>

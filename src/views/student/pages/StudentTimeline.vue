@@ -1,138 +1,130 @@
 <script setup>
-import UiCard from '../../../components/ui/UiCard.vue'
-import UiTag from '../../../components/ui/UiTag.vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
 import UiButton from '../../../components/ui/UiButton.vue'
+import UiCard from '../../../components/ui/UiCard.vue'
+import LineIcon from '../../../components/ui/LineIcon.vue'
+import UiTag from '../../../components/ui/UiTag.vue'
+import { studentArchiveCategories, getStudentArchiveCategory } from '../nav'
+import { downloadText, semesterOptions, statusMeta, useArchiveStore } from '../archiveStore'
+
+const router = useRouter()
+const { sortedRecords } = useArchiveStore()
+
+const selectedSemester = ref('')
+const selectedCategory = ref('')
+const keyword = ref('')
+
+const filteredRecords = computed(() => {
+  const key = keyword.value.trim().toLowerCase()
+  return sortedRecords.value.filter((item) => {
+    const category = getStudentArchiveCategory(item.category)?.label ?? ''
+    const matchesSemester = !selectedSemester.value || item.semester === selectedSemester.value
+    const matchesCategory = !selectedCategory.value || item.category === selectedCategory.value
+    const matchesKeyword =
+      !key ||
+      [item.title, item.organization, item.review, category].some((value) =>
+        String(value ?? '').toLowerCase().includes(key),
+      )
+
+    return matchesSemester && matchesCategory && matchesKeyword
+  })
+})
+
+function exportReport() {
+  const lines = [
+    '成长时间轴报告',
+    `生成时间：${new Date().toLocaleString()}`,
+    `筛选结果：${filteredRecords.value.length} 条`,
+    '',
+    ...filteredRecords.value.map((item) => {
+      const category = getStudentArchiveCategory(item.category)?.label ?? item.category
+      const status = statusMeta[item.status]?.label ?? item.status
+      return `${item.date}｜${category}｜${item.title}｜${status}｜材料 ${item.files.length} 份`
+    }),
+  ]
+
+  downloadText('成长时间轴报告.txt', lines.join('\n'))
+}
+
+function openDetail(item) {
+  router.push(`/student/archive/${item.category}?view=${item.id}`)
+}
 </script>
 
 <template>
   <div class="timelinePage">
-    <!-- 页面标题和筛选 -->
     <div class="pageHeader">
-      <div class="headerLeft">
+      <div>
         <h1 class="pageTitle">成长时间轴</h1>
-        <p class="pageSub">记录你的每一步成长足迹</p>
+        <p class="pageSub">按时间查看档案提交、审核和补充记录。</p>
       </div>
-      <div class="headerRight">
-        <UiButton variant="secondary" size="sm">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          导出报告
-        </UiButton>
-      </div>
+      <UiButton variant="secondary" size="sm" @click="exportReport">
+        <LineIcon name="download" :size="14" />
+        导出报告
+      </UiButton>
     </div>
 
-    <!-- 筛选区域 -->
     <UiCard padding="md" class="filters">
       <div class="filterGrid">
-        <div class="filterItem">
-          <label class="filterLabel">学期</label>
-          <select class="filterSelect">
-            <option>2025-2026 第2学期</option>
-            <option>2025-2026 第1学期</option>
-            <option>2024-2025 第2学期</option>
+        <label class="filterItem">
+          <span class="filterLabel">学期</span>
+          <select v-model="selectedSemester" class="filterSelect">
+            <option value="">全部学期</option>
+            <option v-for="semester in semesterOptions" :key="semester" :value="semester">{{ semester }}</option>
           </select>
-        </div>
-        <div class="filterItem">
-          <label class="filterLabel">分类</label>
-          <select class="filterSelect">
-            <option>全部</option>
-            <option>学业成绩</option>
-            <option>学科竞赛</option>
-            <option>社会实践</option>
-            <option>实习经历</option>
+        </label>
+        <label class="filterItem">
+          <span class="filterLabel">分类</span>
+          <select v-model="selectedCategory" class="filterSelect">
+            <option value="">全部分类</option>
+            <option v-for="category in studentArchiveCategories" :key="category.key" :value="category.key">
+              {{ category.label }}
+            </option>
           </select>
-        </div>
-        <div class="filterItem search">
-          <label class="filterLabel">关键词</label>
-          <div class="searchBox">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input class="searchInput" placeholder="搜索活动/证书/论文…" />
-          </div>
-        </div>
+        </label>
+        <label class="filterItem search">
+          <span class="filterLabel">关键词</span>
+          <span class="searchBox">
+            <LineIcon name="search" :size="16" />
+            <input v-model="keyword" class="searchInput" placeholder="搜索活动、证书、组织名称" />
+          </span>
+        </label>
       </div>
     </UiCard>
 
-    <!-- 时间轴 -->
     <div class="timeline">
       <div class="timelineLine"></div>
-      
-      <div class="tItem">
-        <div class="timelineDot blue"></div>
+
+      <div v-for="item in filteredRecords" :key="item.id" class="tItem">
+        <div class="timelineDot" :data-status="item.status"></div>
         <UiCard padding="md" class="timelineCard">
           <div class="tHeader">
             <div class="tMeta">
-              <span class="tDate">2026年4月12日</span>
-              <UiTag size="sm" tone="success">已通过</UiTag>
+              <span class="tDate">{{ item.date }}</span>
+              <UiTag size="sm" :tone="statusMeta[item.status].tone">{{ statusMeta[item.status].label }}</UiTag>
             </div>
-            <h3 class="tTitle">学科竞赛 — 省赛获奖证明</h3>
-            <p class="tDesc">全国大学生程序设计竞赛省级选拔赛二等奖</p>
+            <h3 class="tTitle">{{ getStudentArchiveCategory(item.category)?.label }} - {{ item.title }}</h3>
+            <p class="tDesc">{{ item.organization }} · {{ item.semester }}</p>
           </div>
           <div class="tFooter">
             <div class="tFiles">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-              上传材料 3 份
+              <LineIcon name="file" :size="14" />
+              上传材料 {{ item.files.length }} 份
             </div>
-            <UiButton variant="ghost" size="sm">查看详情</UiButton>
+            <UiButton variant="ghost" size="sm" @click="openDetail(item)">查看详情</UiButton>
           </div>
         </UiCard>
       </div>
 
-      <div class="tItem">
-        <div class="timelineDot orange"></div>
-        <UiCard padding="md" class="timelineCard">
-          <div class="tHeader">
-            <div class="tMeta">
-              <span class="tDate">2026年3月3日</span>
-              <UiTag size="sm" tone="warning">审核中</UiTag>
-            </div>
-            <h3 class="tTitle">社会实践 — 志愿服务照片</h3>
-            <p class="tDesc">社区敬老院志愿服务活动</p>
-          </div>
-          <div class="tFooter">
-            <div class="tFiles">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-              上传材料 8 份
-            </div>
-            <UiButton variant="ghost" size="sm">查看详情</UiButton>
-          </div>
-        </UiCard>
-      </div>
-
-      <div class="tItem">
-        <div class="timelineDot gray"></div>
-        <UiCard padding="md" class="timelineCard">
-          <div class="tHeader">
-            <div class="tMeta">
-              <span class="tDate">2026年2月1日</span>
-              <UiTag size="sm" tone="neutral">草稿</UiTag>
-            </div>
-            <h3 class="tTitle">学术研究 — 论文投稿记录</h3>
-            <p class="tDesc">基于深度学习的图像识别算法研究</p>
-          </div>
-          <div class="tFooter">
-            <div class="tFiles">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-              </svg>
-              编辑条目
-            </div>
-            <UiButton variant="ghost" size="sm">继续编辑</UiButton>
-          </div>
-        </UiCard>
-      </div>
+      <UiCard v-if="filteredRecords.length === 0" padding="lg" class="empty">
+        <LineIcon name="search" :size="28" />
+        <div>
+          <strong>没有找到匹配记录</strong>
+          <p>调整学期、分类或关键词后再试。</p>
+        </div>
+      </UiCard>
     </div>
   </div>
 </template>
@@ -155,18 +147,13 @@ import UiButton from '../../../components/ui/UiButton.vue'
   font-size: 24px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   margin-bottom: 4px;
 }
 
 .pageSub {
   font-size: 14px;
   color: var(--muted);
-}
-
-/* 筛选区域 */
-.filters {
-  background: var(--panel);
 }
 
 .filterGrid {
@@ -181,35 +168,32 @@ import UiButton from '../../../components/ui/UiButton.vue'
   gap: 6px;
 }
 
-.filterItem.search {
-  grid-column: span 1;
-}
-
 .filterLabel {
   font-size: 12px;
   font-weight: 600;
   color: var(--muted);
 }
 
-.filterSelect {
-  padding: 10px 12px;
+.filterSelect,
+.searchBox {
+  min-height: 40px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: var(--bg);
+  background: #f8fafb;
   color: var(--text);
   font-size: 14px;
-  cursor: pointer;
   transition: all var(--transition);
 }
 
-.filterSelect:hover {
-  border-color: var(--accent);
+.filterSelect {
+  padding: 9px 12px;
+  cursor: pointer;
 }
 
-.filterSelect:focus {
-  outline: none;
+.filterSelect:hover,
+.searchBox:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-light);
+  background: var(--panel);
 }
 
 .searchBox {
@@ -217,21 +201,12 @@ import UiButton from '../../../components/ui/UiButton.vue'
   align-items: center;
   gap: 10px;
   padding: 0 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg);
   color: var(--muted);
-  transition: all var(--transition);
-}
-
-.searchBox:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-light);
 }
 
 .searchInput {
   flex: 1;
-  padding: 10px 0;
+  padding: 9px 0;
   border: none;
   background: transparent;
   color: var(--text);
@@ -239,11 +214,6 @@ import UiButton from '../../../components/ui/UiButton.vue'
   outline: none;
 }
 
-.searchInput::placeholder {
-  color: var(--muted);
-}
-
-/* 时间轴 */
 .timeline {
   position: relative;
   padding-left: 28px;
@@ -255,13 +225,13 @@ import UiButton from '../../../components/ui/UiButton.vue'
   top: 20px;
   bottom: 20px;
   width: 2px;
-  background: linear-gradient(180deg, var(--accent) 0%, var(--border) 100%);
+  background: var(--border);
   border-radius: 1px;
 }
 
 .tItem {
   position: relative;
-  padding-bottom: 20px;
+  padding-bottom: 18px;
 }
 
 .tItem:last-child {
@@ -270,28 +240,30 @@ import UiButton from '../../../components/ui/UiButton.vue'
 
 .timelineDot {
   position: absolute;
-  left: -24px;
+  left: -25px;
   top: 22px;
   width: 14px;
   height: 14px;
   border-radius: 50%;
   border: 3px solid var(--panel);
   z-index: 1;
-}
-
-.timelineDot.blue {
-  background: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-light);
-}
-
-.timelineDot.orange {
-  background: var(--warning);
-  box-shadow: 0 0 0 4px var(--warning-light);
-}
-
-.timelineDot.gray {
   background: var(--muted);
-  box-shadow: 0 0 0 4px var(--bg);
+}
+
+.timelineDot[data-status='ok'] {
+  background: var(--success);
+}
+
+.timelineDot[data-status='wait'] {
+  background: var(--warning);
+}
+
+.timelineDot[data-status='no'] {
+  background: var(--danger);
+}
+
+.timelineDot[data-status='draft'] {
+  background: #98a2b3;
 }
 
 .timelineCard {
@@ -299,8 +271,7 @@ import UiButton from '../../../components/ui/UiButton.vue'
 }
 
 .timelineCard:hover {
-  transform: translateX(4px);
-  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
 }
 
 .tHeader {
@@ -348,11 +319,24 @@ import UiButton from '../../../components/ui/UiButton.vue'
   color: var(--muted);
 }
 
+.empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+
+.empty strong {
+  display: block;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
 @media (max-width: 768px) {
   .filterGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .pageHeader {
     flex-direction: column;
   }

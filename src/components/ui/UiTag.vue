@@ -17,7 +17,7 @@ const props = defineProps({
   align-items: center;
   gap: 4px;
   font-weight: 600;
-  border-radius: 20px;
+  border-radius: 999px;
   border: 1px solid transparent;
   white-space: nowrap;
 }

@@ -26,6 +26,7 @@ const props = defineProps({
   cursor: pointer;
   transition: all var(--transition);
   white-space: nowrap;
+  min-height: 36px;
 }
 
 .uiBtn[data-size='sm'] {
@@ -43,25 +44,21 @@ const props = defineProps({
   font-size: 15px;
 }
 
-/* Primary - 主要按钮 */
 .uiBtn[data-variant='primary'] {
   background: var(--accent);
   color: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  border: 1px solid var(--accent);
 }
 
 .uiBtn[data-variant='primary']:hover {
   background: var(--accent-dark);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-  transform: translateY(-1px);
+  border-color: var(--accent-dark);
 }
 
 .uiBtn[data-variant='primary']:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  transform: translateY(1px);
 }
 
-/* Secondary - 次要按钮 */
 .uiBtn[data-variant='secondary'] {
   background: var(--panel);
   color: var(--text);
@@ -74,7 +71,6 @@ const props = defineProps({
   background: var(--accent-light);
 }
 
-/* Ghost - 幽灵按钮 */
 .uiBtn[data-variant='ghost'] {
   background: transparent;
   color: var(--text);
@@ -84,16 +80,14 @@ const props = defineProps({
   background: var(--bg);
 }
 
-/* Danger - 危险按钮 */
 .uiBtn[data-variant='danger'] {
   background: var(--danger);
   color: white;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+  border: 1px solid var(--danger);
 }
 
 .uiBtn[data-variant='danger']:hover {
   background: #dc2626;
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-  transform: translateY(-1px);
+  border-color: #dc2626;
 }
 </style>

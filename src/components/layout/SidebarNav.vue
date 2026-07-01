@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
+import LineIcon from '../ui/LineIcon.vue'
+
 const props = defineProps({
   groups: { type: Array, required: true },
   collapsed: { type: Boolean, default: false },
@@ -26,7 +28,9 @@ const activePath = computed(() => route.path)
           :title="collapsed ? item.label : ''"
         >
           <span class="left">
-            <span class="icon" aria-hidden="true">{{ item.icon }}</span>
+            <span class="icon" aria-hidden="true">
+              <LineIcon :name="item.icon" :size="16" />
+            </span>
             <span v-if="!collapsed" class="label">{{ item.label }}</span>
           </span>
           <span v-if="!collapsed && item.pill" class="pill">{{ item.pill }}</span>
@@ -40,26 +44,26 @@ const activePath = computed(() => route.path)
 .nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .group {
-  padding: 4px;
+  padding: 2px 4px;
 }
 
 .groupTitle {
-  margin: 8px 12px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-  letter-spacing: 0.5px;
+  margin: 10px 12px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.3);
+  letter-spacing: 0.8px;
   text-transform: uppercase;
 }
 
 .items {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .item {
@@ -67,28 +71,29 @@ const activePath = computed(() => route.path)
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border-radius: var(--radius);
-  color: var(--text);
+  color: var(--sidebar-text);
   text-decoration: none;
   transition: all var(--transition);
   position: relative;
 }
 
 .item:hover {
-  background: var(--bg);
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-active-text);
 }
 
 .item[data-active='1'] {
-  background: var(--accent-light);
-  color: var(--accent-dark);
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
   font-weight: 600;
 }
 
 .item[data-active='1'] .icon {
-  background: var(--accent);
+  background: var(--sidebar-brand);
   color: white;
-  border-color: var(--accent);
+  border-color: var(--sidebar-brand);
 }
 
 .item[data-active='1']::before {
@@ -98,9 +103,9 @@ const activePath = computed(() => route.path)
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
-  height: 20px;
-  background: var(--accent);
-  border-radius: 0 2px 2px 0;
+  height: 18px;
+  background: var(--sidebar-brand);
+  border-radius: 0 3px 3px 0;
 }
 
 .left {
@@ -111,15 +116,14 @@ const activePath = computed(() => route.path)
 }
 
 .icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  font-size: 15px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
   flex-shrink: 0;
   transition: all var(--transition);
 }
@@ -132,12 +136,13 @@ const activePath = computed(() => route.path)
 }
 
 .pill {
-  font-size: 11px;
-  padding: 2px 8px;
+  font-size: 10px;
+  padding: 2px 7px;
   border-radius: 20px;
-  background: var(--accent-light);
-  color: var(--accent);
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.45);
   font-weight: 600;
   flex-shrink: 0;
+  letter-spacing: 0.3px;
 }
 </style>

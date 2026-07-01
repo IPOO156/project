@@ -1,5 +1,11 @@
 <script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
 import UiButton from '../ui/UiButton.vue'
+import LineIcon from '../ui/LineIcon.vue'
+import NotificationPanel from './NotificationPanel.vue'
+import { exportRecords, useArchiveStore } from '../../views/student/archiveStore'
 
 const props = defineProps({
   collapsed: { type: Boolean, required: true },
@@ -8,12 +14,29 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['toggle-sidebar'])
+
+const router = useRouter()
+const { records } = useArchiveStore()
+const showNotifications = ref(false)
+
+function exportAll() {
+  exportRecords(records.value, '全部成长档案.csv')
+}
+
+function createArchive() {
+  router.push('/student/archive/honor?new=1')
+}
 </script>
 
 <template>
   <header class="topbar">
     <div class="left">
-      <button class="iconBtn" type="button" :aria-label="collapsed ? '展开侧栏' : '收起侧栏'" @click="emit('toggle-sidebar')">
+      <button
+        class="iconBtn"
+        type="button"
+        :aria-label="collapsed ? '展开侧栏' : '收起侧栏'"
+        @click="emit('toggle-sidebar')"
+      >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line v-if="!collapsed" x1="3" y1="6" x2="21" y2="6"/>
           <line v-if="!collapsed" x1="3" y1="12" x2="21" y2="12"/>
@@ -30,21 +53,27 @@ const emit = defineEmits(['toggle-sidebar'])
     </div>
 
     <div class="right">
-      <UiButton variant="secondary">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
+      <UiButton variant="secondary" @click="exportAll">
+        <LineIcon name="download" :size="15" />
         导出
       </UiButton>
-      <UiButton variant="primary">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
+      <UiButton variant="primary" @click="createArchive">
+        <LineIcon name="plus" :size="15" :stroke-width="2.5" />
         新增档案
       </UiButton>
+
+      <div class="notifWrap">
+        <button
+          class="notifBtn"
+          type="button"
+          aria-label="通知"
+          @click="showNotifications = !showNotifications"
+        >
+          <LineIcon name="bell" :size="18" />
+          <span class="notifDot"></span>
+        </button>
+        <NotificationPanel v-if="showNotifications" @close="showNotifications = false" />
+      </div>
     </div>
   </header>
 </template>
@@ -107,7 +136,7 @@ const emit = defineEmits(['toggle-sidebar'])
 .big {
   font-size: 17px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -117,5 +146,41 @@ const emit = defineEmits(['toggle-sidebar'])
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.notifWrap {
+  position: relative;
+}
+
+.notifBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  position: relative;
+}
+
+.notifBtn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+.notifDot {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 7px;
+  height: 7px;
+  background: var(--danger);
+  border-radius: 50%;
+  border: 2px solid var(--panel);
 }
 </style>

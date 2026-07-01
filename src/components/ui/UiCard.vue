@@ -16,7 +16,6 @@ const props = defineProps({
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
   transition: all var(--transition);
 }
 
@@ -38,7 +37,6 @@ const props = defineProps({
 
 .uiCard[data-hoverable='1']:hover {
   border-color: var(--accent);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow);
 }
 </style>

@@ -1,16 +1,24 @@
 :root {
-  /* 核心配色 - 清新学术蓝 */
-  --bg: #f8fafc;
+  /* ── 主色（深墨绿/Teal 系，参考设计图）── */
+  --primary: #0d2b36;
+  --primary-light: #1a4a55;
+  --primary-dark: #081c24;
+
+  --accent: #1a8a7a;
+  --accent-light: #e0f2ef;
+  --accent-dark: #0f5c51;
+  --accent-subtle: #b8dfd8;
+
+  --link: #1a8a7a;
+
+  /* ── 页面背景与面板 ── */
+  --bg: #eef1f4;
   --panel: #ffffff;
-  --text: #1e293b;
+  --text: #1a2332;
   --muted: #64748b;
-  --border: #e2e8f0;
-  --accent: #3b82f6;
-  --accent-light: #dbeafe;
-  --accent-dark: #1d4ed8;
-  --link: #2563eb;
-  
-  /* 功能色 */
+  --border: #dde3ea;
+
+  /* ── 功能色 ── */
   --success: #10b981;
   --success-light: #d1fae5;
   --warning: #f59e0b;
@@ -19,28 +27,37 @@
   --danger-light: #fee2e2;
   --info: #06b6d4;
   --info-light: #cffafe;
-  
-  /* 阴影 */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  
-  /* 圆角 */
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-  
-  /* 字体 */
+
+  /* ── 侧栏专用（深色背景）── */
+  --sidebar-bg: #0a2029;
+  --sidebar-text: #a0b8c4;
+  --sidebar-active-bg: #16323e;
+  --sidebar-active-text: #e2edf3;
+  --sidebar-hover-bg: #112b35;
+  --sidebar-divider: #1a3845;
+  --sidebar-brand: #2a9d8f;
+
+  /* ── 阴影 ── */
+  --shadow-sm: 0 1px 2px rgba(10, 32, 41, 0.05);
+  --shadow: 0 3px 8px rgba(10, 32, 41, 0.07);
+  --shadow-md: 0 8px 18px rgba(10, 32, 41, 0.09);
+  --shadow-lg: 0 14px 28px rgba(10, 32, 41, 0.12);
+
+  /* ── 圆角 ── */
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+
+  /* ── 字体 ── */
   --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  
-  /* 过渡 */
+
+  /* ── 过渡 ── */
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   font: 15px/160% var(--sans);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color-scheme: light;
   color: var(--text);
   background: var(--bg);
@@ -63,11 +80,7 @@ body {
 
 body {
   margin: 0;
-  background:
-    radial-gradient(ellipse 80% 50% at 10% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 90% 5%, rgba(6, 182, 212, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse 70% 45% at 50% 100%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
-    var(--bg);
+  background: var(--bg);
 }
 
 #app {

@@ -1,276 +1,158 @@
 <script setup>
-import UiCard from '../../../components/ui/UiCard.vue'
-import UiTag from '../../../components/ui/UiTag.vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
 import UiButton from '../../../components/ui/UiButton.vue'
+import UiCard from '../../../components/ui/UiCard.vue'
+import LineIcon from '../../../components/ui/LineIcon.vue'
+import UiTag from '../../../components/ui/UiTag.vue'
+import { getStudentArchiveCategory } from '../nav'
+import { exportRecords, statusMeta, useArchiveStore } from '../archiveStore'
+
+const router = useRouter()
+const { records, stats, categorySummary, recentSubmissions, resetRecords } = useArchiveStore()
+const notice = ref('')
+
+const statCards = computed(() => [
+  { label: '档案条目', value: stats.value.total, icon: 'file', tone: 'blue', note: `${stats.value.fileTotal} 份材料` },
+  { label: '审核中', value: stats.value.wait, icon: 'clock', tone: 'orange', note: '等待处理' },
+  { label: '完成度', value: `${stats.value.completion}%`, icon: 'check', tone: 'green', note: `${stats.value.ok} 条已通过` },
+  { label: '需补充', value: stats.value.no, icon: 'close', tone: 'red', note: `${stats.value.draft} 条草稿` },
+])
+
+const recentRows = computed(() =>
+  recentSubmissions.value.slice(0, 3).map((item) => ({
+    ...item,
+    categoryInfo: getStudentArchiveCategory(item.category),
+    statusInfo: statusMeta[item.status],
+  })),
+)
+
+const featuredCategories = computed(() =>
+  categorySummary.value
+    .filter((item) => item.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4),
+)
+
+function goArchive(category = 'honor', create = false) {
+  router.push(`/student/archive/${category}${create ? '?new=1' : ''}`)
+}
+
+function exportAll() {
+  exportRecords(records.value, '成长档案总览.csv')
+  notice.value = '已生成成长档案总览 CSV。'
+}
+
+function syncData() {
+  resetRecords()
+  notice.value = '已恢复并同步默认演示数据。'
+}
 </script>
 
 <template>
   <div class="dashboard">
-    <!-- 欢迎横幅 -->
     <div class="welcome">
-      <div class="welcomeLeft">
+      <div>
         <h1 class="welcomeTitle">欢迎回来，张同学</h1>
-        <p class="welcomeSub">今天是充实的一天，继续加油整理你的成长档案吧</p>
+        <p class="welcomeSub">这里汇总了你的档案状态、最近提交和需要处理的材料。</p>
       </div>
-      <div class="welcomeRight">
-        <UiButton variant="secondary" size="sm">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-          2025-2026学年
+      <div class="welcomeActions">
+        <UiButton variant="secondary" size="sm" @click="exportAll">
+          <LineIcon name="download" :size="14" />
+          导出总览
+        </UiButton>
+        <UiButton variant="primary" size="sm" @click="goArchive('honor', true)">
+          <LineIcon name="plus" :size="14" />
+          新建档案
         </UiButton>
       </div>
     </div>
 
-    <!-- 统计卡片 -->
+    <div v-if="notice" class="notice">{{ notice }}</div>
+
     <div class="stats">
-      <UiCard class="statCard statBlue">
-        <div class="statIcon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-          </svg>
+      <UiCard v-for="card in statCards" :key="card.label" class="statCard">
+        <div class="statIcon" :data-tone="card.tone">
+          <LineIcon :name="card.icon" :size="22" />
         </div>
         <div class="statInfo">
-          <div class="statNum">12</div>
-          <div class="statLabel">档案条目</div>
+          <div class="statNum">{{ card.value }}</div>
+          <div class="statLabel">{{ card.label }}</div>
         </div>
-        <div class="statTrend up">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="18 15 12 9 6 15"/>
-          </svg>
-          +3
-        </div>
-      </UiCard>
-
-      <UiCard class="statCard statOrange">
-        <div class="statIcon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-        </div>
-        <div class="statInfo">
-          <div class="statNum">6</div>
-          <div class="statLabel">待审核</div>
-        </div>
-        <div class="statBadge">
-          <UiTag size="sm" tone="warning">尽快处理</UiTag>
-        </div>
-      </UiCard>
-
-      <UiCard class="statCard statGreen">
-        <div class="statIcon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22 4 12 14.01 9 11.01"/>
-          </svg>
-        </div>
-        <div class="statInfo">
-          <div class="statNum">89%</div>
-          <div class="statLabel">完成度</div>
-        </div>
-        <div class="statProgress">
-          <div class="progressBar">
-            <div class="progressFill" style="width: 89%"></div>
-          </div>
-        </div>
-      </UiCard>
-
-      <UiCard class="statCard statPurple">
-        <div class="statIcon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
-            <polyline points="17 6 23 6 23 12"/>
-          </svg>
-        </div>
-        <div class="statInfo">
-          <div class="statNum">5</div>
-          <div class="statLabel">已通过</div>
-        </div>
-        <div class="statTrend up">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="18 15 12 9 6 15"/>
-          </svg>
-          本月
-        </div>
+        <div class="statNote">{{ card.note }}</div>
       </UiCard>
     </div>
 
-    <!-- 主要内容区域 -->
     <div class="mainGrid">
-      <!-- 提交记录 -->
       <UiCard padding="lg" class="submissions">
         <div class="cardHeader">
           <h2 class="cardTitle">最近提交</h2>
-          <UiButton variant="ghost" size="sm">查看全部</UiButton>
+          <UiButton variant="ghost" size="sm" @click="router.push('/student/submissions')">查看全部</UiButton>
         </div>
         <div class="list">
-          <div class="row">
+          <div v-for="item in recentRows" :key="item.id" class="row">
             <div class="rowLeft">
-              <div class="rowIcon blue">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                  <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
+              <div class="rowIcon" :data-status="item.status">
+                <LineIcon :name="item.categoryInfo?.icon ?? 'file'" :size="17" />
               </div>
               <div class="rowInfo">
-                <div class="rowTitle">学科竞赛 — 国赛答辩资料</div>
-                <div class="rowMeta">提交于 2026-05-28 14:32</div>
+                <div class="rowTitle">{{ item.categoryInfo?.label }} - {{ item.title }}</div>
+                <div class="rowMeta">提交于 {{ item.date }} · {{ item.files.length }} 份材料</div>
               </div>
             </div>
-            <UiTag tone="success">已通过</UiTag>
-          </div>
-
-          <div class="row">
-            <div class="rowLeft">
-              <div class="rowIcon orange">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-              </div>
-              <div class="rowInfo">
-                <div class="rowTitle">实习经历 — 某某科技（合同/证明）</div>
-                <div class="rowMeta">提交于 2026-05-25 09:15</div>
-              </div>
-            </div>
-            <UiTag tone="warning">审核中</UiTag>
-          </div>
-
-          <div class="row">
-            <div class="rowLeft">
-              <div class="rowIcon red">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="15" y1="9" x2="9" y2="15"/>
-                  <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-              </div>
-              <div class="rowInfo">
-                <div class="rowTitle">社会实践 — 志愿服务照片材料</div>
-                <div class="rowMeta">提交于 2026-05-20 16:45 · 需补充获奖证书</div>
-              </div>
-            </div>
-            <UiTag tone="danger">已驳回</UiTag>
+            <UiTag :tone="item.statusInfo.tone">{{ item.statusInfo.label }}</UiTag>
           </div>
         </div>
       </UiCard>
 
-      <!-- 快捷操作 -->
       <UiCard padding="lg" class="quickActions">
         <div class="cardHeader">
           <h2 class="cardTitle">快捷操作</h2>
         </div>
         <div class="actionGrid">
-          <div class="actionItem">
-            <div class="actionIcon blue">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="12" y1="18" x2="12" y2="12"/>
-                <line x1="9" y1="15" x2="15" y2="15"/>
-              </svg>
-            </div>
-            <div class="actionLabel">新建档案</div>
-          </div>
-          <div class="actionItem">
-            <div class="actionIcon green">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-            </div>
-            <div class="actionLabel">上传材料</div>
-          </div>
-          <div class="actionItem">
-            <div class="actionIcon purple">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 23 10 17 10"/>
-                <polyline points="1 20 1 14 7 14"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-              </svg>
-            </div>
-            <div class="actionLabel">同步数据</div>
-          </div>
-          <div class="actionItem">
-            <div class="actionIcon orange">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-              </svg>
-            </div>
-            <div class="actionLabel">设置</div>
-          </div>
+          <button class="actionItem" type="button" @click="goArchive('honor', true)">
+            <span class="actionIcon blue"><LineIcon name="plus" :size="20" /></span>
+            <span class="actionLabel">新建档案</span>
+          </button>
+          <button class="actionItem" type="button" @click="goArchive('practice', true)">
+            <span class="actionIcon green"><LineIcon name="upload" :size="20" /></span>
+            <span class="actionLabel">上传材料</span>
+          </button>
+          <button class="actionItem" type="button" @click="syncData">
+            <span class="actionIcon slate"><LineIcon name="refresh" :size="20" /></span>
+            <span class="actionLabel">同步数据</span>
+          </button>
+          <button class="actionItem" type="button" @click="router.push('/student/profile')">
+            <span class="actionIcon orange"><LineIcon name="settings" :size="20" /></span>
+            <span class="actionLabel">设置</span>
+          </button>
         </div>
       </UiCard>
     </div>
 
-    <!-- 档案分类 -->
     <UiCard padding="lg" class="categories">
       <div class="cardHeader">
         <h2 class="cardTitle">档案分类</h2>
-        <UiButton variant="ghost" size="sm">管理分类</UiButton>
+        <UiButton variant="ghost" size="sm" @click="goArchive(featuredCategories[0]?.key ?? 'honor')">管理分类</UiButton>
       </div>
       <div class="categoryGrid">
-        <div class="categoryItem">
-          <div class="catIcon blue">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-            </svg>
-          </div>
-          <div class="catInfo">
-            <div class="catName">学业成绩</div>
-            <div class="catCount">4 项</div>
-          </div>
-          <UiTag size="sm" tone="success">已完成</UiTag>
-        </div>
-        <div class="categoryItem">
-          <div class="catIcon green">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-            </svg>
-          </div>
-          <div class="catInfo">
-            <div class="catName">学科竞赛</div>
-            <div class="catCount">3 项</div>
-          </div>
-          <UiTag size="sm" tone="warning">进行中</UiTag>
-        </div>
-        <div class="categoryItem">
-          <div class="catIcon purple">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-              <line x1="8" y1="21" x2="16" y2="21"/>
-              <line x1="12" y1="17" x2="12" y2="21"/>
-            </svg>
-          </div>
-          <div class="catInfo">
-            <div class="catName">社会实践</div>
-            <div class="catCount">2 项</div>
-          </div>
-          <UiTag size="sm" tone="danger">待补充</UiTag>
-        </div>
-        <div class="categoryItem">
-          <div class="catIcon orange">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-            </svg>
-          </div>
-          <div class="catInfo">
-            <div class="catName">实习经历</div>
-            <div class="catCount">1 项</div>
-          </div>
-          <UiTag size="sm" tone="info">审核中</UiTag>
-        </div>
+        <button
+          v-for="item in featuredCategories"
+          :key="item.key"
+          class="categoryItem"
+          type="button"
+          @click="goArchive(item.key)"
+        >
+          <span class="catIcon">
+            <LineIcon :name="item.icon" :size="20" />
+          </span>
+          <span class="catInfo">
+            <span class="catName">{{ item.label }}</span>
+            <span class="catCount">{{ item.count }} 项 · {{ item.files }} 份材料</span>
+          </span>
+          <UiTag size="sm" :tone="statusMeta[item.status].tone">{{ statusMeta[item.status].label }}</UiTag>
+        </button>
       </div>
     </UiCard>
   </div>
@@ -280,177 +162,147 @@ import UiButton from '../../../components/ui/UiButton.vue'
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
-/* 欢迎横幅 */
 .welcome {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 24px;
-  background: linear-gradient(135deg, var(--accent) 0%, #60a5fa 100%);
+  padding: 22px 24px;
+  background: #f0f5f7;
+  border: 1px solid #d5e2e8;
   border-radius: var(--radius-lg);
-  color: white;
 }
 
 .welcomeTitle {
   font-size: 22px;
   font-weight: 700;
   margin-bottom: 4px;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .welcomeSub {
   font-size: 14px;
-  opacity: 0.9;
+  color: var(--muted);
 }
 
-/* 统计卡片 */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
-
-.statCard {
+.welcomeActions {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px !important;
-  position: relative;
-  overflow: hidden;
-}
-
-.statCard::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-}
-
-.statBlue::before { background: var(--accent); }
-.statOrange::before { background: var(--warning); }
-.statGreen::before { background: var(--success); }
-.statPurple::before { background: #8b5cf6; }
-
-.statIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 10px;
   flex-shrink: 0;
 }
 
-.statBlue .statIcon {
+.notice {
+  padding: 10px 12px;
+  border: 1px solid #d5e2e8;
+  background: #f7fbfc;
+  color: var(--accent-dark);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.statCard {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 18px !important;
+}
+
+.statIcon,
+.rowIcon,
+.actionIcon,
+.catIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+.statIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+}
+
+.statIcon[data-tone='blue'] {
   background: var(--accent-light);
   color: var(--accent);
 }
-.statOrange .statIcon {
+
+.statIcon[data-tone='orange'] {
   background: var(--warning-light);
-  color: var(--warning);
+  color: #b45309;
 }
-.statGreen .statIcon {
+
+.statIcon[data-tone='green'] {
   background: var(--success-light);
-  color: var(--success);
+  color: #047857;
 }
-.statPurple .statIcon {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
+
+.statIcon[data-tone='red'] {
+  background: var(--danger-light);
+  color: #b91c1c;
 }
 
 .statInfo {
-  flex: 1;
   min-width: 0;
 }
 
 .statNum {
-  font-size: 26px;
+  font-size: 25px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  line-height: 1.1;
   color: var(--text);
 }
 
-.statLabel {
+.statLabel,
+.statNote {
   font-size: 13px;
   color: var(--muted);
-  margin-top: 2px;
 }
 
-.statTrend {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 20px;
+.statNote {
+  grid-column: 1 / -1;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
 }
 
-.statTrend.up {
-  background: var(--success-light);
-  color: var(--success);
-}
-
-.statBadge {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-}
-
-.statProgress {
-  position: absolute;
-  bottom: 14px;
-  left: 18px;
-  right: 18px;
-}
-
-.progressBar {
-  height: 4px;
-  background: var(--bg);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progressFill {
-  height: 100%;
-  background: var(--success);
-  border-radius: 2px;
-  transition: width 0.5s ease;
-}
-
-/* 主要内容网格 */
 .mainGrid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1.35fr 0.9fr;
+  gap: 18px;
 }
 
-/* 卡片通用 */
 .cardHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .cardTitle {
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
-/* 提交记录 */
-.submissions .list {
+.list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .row {
@@ -458,14 +310,10 @@ import UiButton from '../../../components/ui/UiButton.vue'
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px;
-  background: var(--bg);
+  padding: 13px;
+  background: #f8fafb;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  transition: all var(--transition);
-}
-
-.row:hover {
-  background: var(--accent-light);
 }
 
 .rowLeft {
@@ -479,15 +327,18 @@ import UiButton from '../../../components/ui/UiButton.vue'
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  background: var(--panel);
+  color: var(--accent);
+  border-color: var(--border);
 }
 
-.rowIcon.blue { background: var(--accent-light); color: var(--accent); }
-.rowIcon.orange { background: var(--warning-light); color: var(--warning); }
-.rowIcon.red { background: var(--danger-light); color: var(--danger); }
+.rowIcon[data-status='wait'] {
+  color: #b45309;
+}
+
+.rowIcon[data-status='no'] {
+  color: #b91c1c;
+}
 
 .rowInfo {
   min-width: 0;
@@ -501,13 +352,12 @@ import UiButton from '../../../components/ui/UiButton.vue'
   text-overflow: ellipsis;
 }
 
-.rowMeta {
+.rowMeta,
+.catCount {
   font-size: 12px;
   color: var(--muted);
-  margin-top: 2px;
 }
 
-/* 快捷操作 */
 .actionGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -516,34 +366,34 @@ import UiButton from '../../../components/ui/UiButton.vue'
 
 .actionItem {
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 18px 12px;
-  background: var(--bg);
+  padding: 14px;
+  background: #f8fafb;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
+  text-align: left;
   transition: all var(--transition);
 }
 
-.actionItem:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+.actionItem:hover,
+.categoryItem:hover {
+  border-color: var(--accent);
+  background: #f7fbfc;
 }
 
 .actionIcon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  background: var(--panel);
 }
 
-.actionIcon.blue { background: var(--accent-light); color: var(--accent); }
-.actionIcon.green { background: var(--success-light); color: var(--success); }
-.actionIcon.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-.actionIcon.orange { background: var(--warning-light); color: var(--warning); }
+.actionIcon.blue { color: var(--accent); }
+.actionIcon.green { color: #047857; }
+.actionIcon.slate { color: #475467; }
+.actionIcon.orange { color: #b45309; }
 
 .actionLabel {
   font-size: 13px;
@@ -551,7 +401,6 @@ import UiButton from '../../../components/ui/UiButton.vue'
   color: var(--text);
 }
 
-/* 档案分类 */
 .categoryGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -563,33 +412,26 @@ import UiButton from '../../../components/ui/UiButton.vue'
   align-items: center;
   gap: 12px;
   padding: 14px;
-  background: var(--bg);
+  background: #f8fafb;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  transition: all var(--transition);
   cursor: pointer;
-}
-
-.categoryItem:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
+  text-align: left;
+  transition: all var(--transition);
 }
 
 .catIcon {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  background: var(--panel);
+  color: var(--accent);
+  border-color: var(--border);
 }
 
-.catIcon.blue { background: var(--accent-light); color: var(--accent); }
-.catIcon.green { background: var(--success-light); color: var(--success); }
-.catIcon.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-.catIcon.orange { background: var(--warning-light); color: var(--warning); }
-
 .catInfo {
+  display: grid;
+  gap: 2px;
   flex: 1;
   min-width: 0;
 }
@@ -597,37 +439,30 @@ import UiButton from '../../../components/ui/UiButton.vue'
 .catName {
   font-weight: 600;
   font-size: 14px;
+  color: var(--text);
 }
 
-.catCount {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 2px;
-}
-
-/* 响应式 */
 @media (max-width: 1200px) {
-  .stats {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .mainGrid {
-    grid-template-columns: 1fr;
-  }
+  .stats,
   .categoryGrid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mainGrid {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .stats {
+  .stats,
+  .categoryGrid,
+  .actionGrid {
     grid-template-columns: 1fr;
   }
-  .categoryGrid {
-    grid-template-columns: 1fr;
-  }
+
   .welcome {
+    align-items: flex-start;
     flex-direction: column;
-    text-align: center;
   }
 }
 </style>
