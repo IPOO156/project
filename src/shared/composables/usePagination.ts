@@ -1,14 +1,20 @@
+import type { PaginatedData, PaginationParams } from '@/shared/types'
 import { computed, ref } from 'vue'
 
-export function usePagination(fetchFn: (params: any) => Promise<any>) {
+export interface PaginationOptions<T> {
+  fetchFn: (params: PaginationParams) => Promise<PaginatedData<T> | T[]>
+  immediate?: boolean
+}
+
+export function usePagination<T>(fetchFn: (params: PaginationParams) => Promise<PaginatedData<T> | T[]>) {
   const pageNum = ref(1)
   const pageSize = ref(10)
   const total = ref(0)
   const loading = ref(false)
-  const list = ref<any[]>([])
+  const list = ref<T[]>([])
 
   const pagination = computed(() => ({
-    pageNum: pageNum.value,
+    currentPage: pageNum.value,
     pageSize: pageSize.value,
     total: total.value,
     onChange: (page: number) => {
@@ -22,7 +28,7 @@ export function usePagination(fetchFn: (params: any) => Promise<any>) {
     },
   }))
 
-  async function fetchData(extraParams?: Record<string, any>) {
+  async function fetchData(extraParams?: Record<string, unknown>) {
     loading.value = true
     try {
       const res = await fetchFn({
@@ -30,8 +36,14 @@ export function usePagination(fetchFn: (params: any) => Promise<any>) {
         pageSize: pageSize.value,
         ...extraParams,
       })
-      list.value = res.data?.list ?? res.data ?? []
-      total.value = res.data?.total ?? 0
+      if (Array.isArray(res)) {
+        list.value = res
+        total.value = res.length
+      }
+      else {
+        list.value = res.list ?? []
+        total.value = res.total ?? 0
+      }
       return res
     }
     finally {

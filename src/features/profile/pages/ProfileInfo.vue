@@ -1,18 +1,20 @@
 <script setup lang="ts">
+import type { TagProps } from 'element-plus'
 import { AlertTriangle, Award, Info, Lightbulb, TrendingUp } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useUserStore } from '@/app/stores'
+import { useDict } from '@/shared/composables'
+import { INTEREST_LEVEL } from '@/shared/constants/dict'
 
 const userStore = useUserStore()
 
-// 个人兴趣
+// ── Mock 数据（接口联调后替换） ──
 const interests = ref([
-  { category: '编程开发', content: 'Web 前端开发、人工智能应用', level: '熟练' },
-  { category: '语言能力', content: '英语（CET-6）、日语（N3）', level: '良好' },
-  { category: '运动爱好', content: '篮球、跑步', level: '一般' },
+  { category: '编程开发', content: 'Web 前端开发、人工智能应用', level: 'proficient' },
+  { category: '语言能力', content: '英语（CET-6）、日语（N3）', level: 'good' },
+  { category: '运动爱好', content: '篮球、跑步', level: 'general' },
 ])
 
-// 学期成绩（模拟数据）
 const grades = ref([
   { semester: '大一上', courses: 8, gpa: 3.2, totalScore: 85.6 },
   { semester: '大一下', courses: 7, gpa: 3.4, totalScore: 87.2 },
@@ -20,20 +22,17 @@ const grades = ref([
   { semester: '大二下', courses: 8, gpa: 3.8, totalScore: 91.3 },
 ])
 
-// 个人奖项
 const awards = ref([
   { name: '全国大学生数学建模竞赛', level: '省级', award: '二等奖', date: '2025-09' },
   { name: '校级优秀学生干部', level: '校级', award: '优秀干部', date: '2025-06' },
   { name: 'ACM 程序设计竞赛', level: '校级', award: '一等奖', date: '2025-05' },
 ])
 
-// 短板识别（AI 生成）
 const weaknesses = ref([
   { dimension: '科研创新', score: 60, weakness: '科研项目经历较少，缺乏论文发表', suggestion: '建议参与导师科研项目，尝试撰写学术论文' },
   { dimension: '竞赛实践', score: 65, weakness: '高级别竞赛参与度不足', suggestion: '关注国家级竞赛信息，组建团队参赛' },
 ])
 
-// 多维度画像
 const dimensions = ref([
   { label: '学业成绩', score: 88, color: '#409eff' },
   { label: '竞赛实践', score: 65, color: '#67c23a' },
@@ -41,6 +40,12 @@ const dimensions = ref([
   { label: '社会工作', score: 85, color: '#f56c6c' },
   { label: '综合素质', score: 80, color: '#9b59b6' },
 ])
+
+const { getColor, getLabel } = useDict(INTEREST_LEVEL)
+
+const getInterestType = computed(() => (level: string): TagProps['type'] => {
+  return (getColor(level) as TagProps['type']) ?? 'info'
+})
 </script>
 
 <template>
@@ -102,8 +107,8 @@ const dimensions = ref([
         <el-table-column prop="content" label="具体内容" />
         <el-table-column prop="level" label="掌握程度" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.level === '熟练' ? 'success' : row.level === '良好' ? 'warning' : 'info'" size="small">
-              {{ row.level }}
+            <el-tag :type="getInterestType(row.level)" size="small">
+              {{ getLabel(row.level) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -123,7 +128,7 @@ const dimensions = ref([
         <el-table-column prop="courses" label="课程数" width="100" />
         <el-table-column prop="gpa" label="绩点" width="120">
           <template #default="{ row }">
-            <span style="font-weight: 600; color: var(--el-color-primary);">{{ row.gpa }}</span>
+            <span class="gpa-highlight">{{ row.gpa }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="totalScore" label="平均分" />
@@ -161,7 +166,7 @@ const dimensions = ref([
           <el-progress
             :percentage="item.score"
             :stroke-width="8"
-            style="width: 200px"
+            class="progress-fixed"
             status="exception"
             :format="() => `${item.score}分`"
           />
@@ -171,7 +176,7 @@ const dimensions = ref([
           type="warning"
           :closable="false"
           show-icon
-          style="margin-bottom: 8px"
+          class="mb-8"
         />
         <el-alert
           :title="`建议：${item.suggestion}`"

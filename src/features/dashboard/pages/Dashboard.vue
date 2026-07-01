@@ -10,12 +10,14 @@ import {
   Trophy,
   Users,
 } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+// ── Mock 数据（接口联调后替换） ──
 
 // 统计卡片
 const statsCards = ref([
@@ -50,6 +52,15 @@ const profileDimensions = ref([
   { label: '社会工作', score: 85, color: '#f56c6c' },
   { label: '综合素质', score: 80, color: '#9b59b6' },
 ])
+
+const todayLabel = computed(() => {
+  return new Date().toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+  })
+})
 </script>
 
 <template>
@@ -61,7 +72,7 @@ const profileDimensions = ref([
         <p>{{ userStore.userInfo?.major }} · {{ userStore.userInfo?.className }} · 学号 {{ userStore.studentId }}</p>
       </div>
       <div class="dashboard__welcome-time">
-        <span>{{ new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }) }}</span>
+        <span>{{ todayLabel }}</span>
       </div>
     </div>
 

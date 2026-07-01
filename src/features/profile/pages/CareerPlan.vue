@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import type { TagProps } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { Download, Eye, Plus } from 'lucide-vue-next'
-import { reactive, ref } from 'vue'
-import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import { computed, reactive, ref } from 'vue'
+import { useDict } from '@/shared/composables'
+import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 
 interface PlanRecord {
   id: string
@@ -12,6 +14,7 @@ interface PlanRecord {
   status: 'draft' | 'submitted'
 }
 
+// ── 响应式数据 ──
 const planForm = reactive({
   semester: '',
   title: '',
@@ -19,6 +22,8 @@ const planForm = reactive({
 })
 
 const planFiles = ref<{ name: string, url: string }[]>([])
+
+// ── Mock 数据（接口联调后替换） ──
 const planRecords = ref<PlanRecord[]>([
   { id: '1', semester: '大二上', title: '大二学年成长规划', submitDate: '2025-09-15', status: 'submitted' },
   { id: '2', semester: '大一下', title: '大一学年总结与规划', submitDate: '2025-03-10', status: 'submitted' },
@@ -27,6 +32,14 @@ const planRecords = ref<PlanRecord[]>([
 const loading = ref(false)
 const dialogVisible = ref(false)
 
+// ── Computed ──
+const { getColor, getLabel } = useDict(APPLICATION_STATUS)
+
+const getStatusType = computed(() => (status: PlanRecord['status']): TagProps['type'] => {
+  return (getColor(status) as TagProps['type']) ?? 'info'
+})
+
+// ── 方法函数 ──
 function handleSubmit() {
   if (!planForm.semester || !planForm.title) {
     ElMessage.warning('请填写完整信息')
@@ -71,8 +84,8 @@ function handleSubmit() {
         <el-table-column prop="submitDate" label="提交时间" width="140" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'submitted' ? 'success' : 'info'" size="small">
-              {{ row.status === 'submitted' ? '已提交' : '草稿' }}
+            <el-tag :type="getStatusType(row.status)" size="small">
+              {{ getLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -94,7 +107,7 @@ function handleSubmit() {
     >
       <el-form :model="planForm" label-width="100px">
         <el-form-item label="学期" required>
-          <el-select v-model="planForm.semester" placeholder="请选择学期" style="width: 200px">
+          <el-select v-model="planForm.semester" placeholder="请选择学期" class="form-select">
             <el-option
               v-for="s in SEMESTER_OPTIONS"
               :key="s.value"
@@ -148,5 +161,9 @@ function handleSubmit() {
 .card-title {
   font-size: 16px;
   font-weight: 600;
+}
+
+.form-select {
+  width: 200px;
 }
 </style>

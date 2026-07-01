@@ -28,13 +28,20 @@ export const SEMESTER_OPTIONS = [
   { label: '大四 (下)', value: '大四下' },
 ] as const
 
-// 申请状态
+// 申请状态（含标签颜色）
 export const APPLICATION_STATUS = {
   draft: { label: '草稿', color: 'info' },
   submitted: { label: '已提交', color: 'warning' },
   approved: { label: '已通过', color: 'success' },
   rejected: { label: '已驳回', color: 'danger' },
 } as const
+
+// 审批状态筛选选项
+export const APPROVAL_STATUS_OPTIONS = [
+  { label: '已通过', value: 'approved' },
+  { label: '已驳回', value: 'rejected' },
+  { label: '待审批', value: 'pending' },
+] as const
 
 // 竞赛类型
 export const COMPETITION_TYPES = [
@@ -94,3 +101,27 @@ export const SCHOLARSHIP_LEVELS = [
   { label: '院级奖学金', value: 'college' },
   { label: '企业奖学金', value: 'enterprise' },
 ] as const
+
+// 成长时间轴事件类型
+export const TIMELINE_EVENT_TYPES = {
+  award: { label: '奖项', color: '#e6a23c', iconKey: 'Award' },
+  practice: { label: '实践', color: '#67c23a', iconKey: 'Users' },
+  grade: { label: '成绩', color: '#409eff', iconKey: 'BookOpen' },
+  competition: { label: '竞赛', color: '#9b59b6', iconKey: 'Code' },
+  internship: { label: '实习', color: '#f56c6c', iconKey: 'Briefcase' },
+  other: { label: '其他', color: '#909399', iconKey: 'Star' },
+} as const
+
+// 个人兴趣掌握程度
+export const INTEREST_LEVEL = {
+  proficient: { label: '熟练', color: 'success' },
+  good: { label: '良好', color: 'warning' },
+  general: { label: '一般', color: 'info' },
+} as const
+
+// 最近动态类型
+export const ACTIVITY_STATUS = {
+  submitted: { label: '已提交', color: '#e6a23c' },
+  approved: { label: '已通过', color: '#67c23a' },
+  rejected: { label: '需修改', color: '#f56c6c' },
+} as const

@@ -5,6 +5,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useApplication } from '@/shared/composables/useApplication'
 import { AWARD_LEVELS, COMPETITION_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import StatusTag from '@/shared/ui/StatusTag.vue'
 
 interface CompetitionItem {
   id: string
@@ -20,6 +21,7 @@ interface CompetitionItem {
 
 const router = useRouter()
 
+// Mock 数据（接口联调后替换）
 const list = ref<CompetitionItem[]>([
   { id: '1', competitionName: '全国大学生数学建模竞赛', competitionType: 'national', awardLevel: 'second', awardDate: '2025-09', semester: '大二上', status: 'approved', submitDate: '2025-10-01', proofMaterials: [] },
   { id: '2', competitionName: '校ACM程序设计竞赛', competitionType: 'school', awardLevel: 'first', awardDate: '2025-05', semester: '大二上', status: 'submitted', submitDate: '2025-06-01', proofMaterials: [] },
@@ -85,10 +87,7 @@ function handleSubmit() {
         <el-table-column prop="semester" label="学期" width="100" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag v-if="row.status === 'approved'" type="success" size="small">已通过</el-tag>
-            <el-tag v-else-if="row.status === 'submitted'" type="warning" size="small">待审核</el-tag>
-            <el-tag v-else-if="row.status === 'rejected'" type="danger" size="small">已驳回</el-tag>
-            <el-tag v-else size="small">草稿</el-tag>
+            <StatusTag :status="row.status" size="small" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
@@ -112,12 +111,12 @@ function handleSubmit() {
           <el-input v-model="app.formData.competitionName" placeholder="请输入竞赛名称" />
         </el-form-item>
         <el-form-item label="竞赛类型" required>
-          <el-select v-model="app.formData.competitionType" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.competitionType" placeholder="请选择" class="form-select">
             <el-option v-for="t in COMPETITION_TYPES" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="获奖等级" required>
-          <el-select v-model="app.formData.awardLevel" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.awardLevel" placeholder="请选择" class="form-select">
             <el-option v-for="t in AWARD_LEVELS" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
@@ -125,7 +124,7 @@ function handleSubmit() {
           <el-date-picker v-model="app.formData.awardDate" type="month" placeholder="选择年月" />
         </el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="app.formData.semester" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>

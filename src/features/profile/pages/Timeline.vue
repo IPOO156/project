@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
 import {
   Award,
   BookOpen,
@@ -7,67 +8,55 @@ import {
   Star,
   Users,
 } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useDict } from '@/shared/composables'
+import { SEMESTER_OPTIONS, TIMELINE_EVENT_TYPES } from '@/shared/constants/dict'
 
 interface TimelineEvent {
   semester: string
   date: string
   title: string
   description: string
-  type: 'award' | 'practice' | 'grade' | 'competition' | 'internship' | 'other'
+  type: keyof typeof TIMELINE_EVENT_TYPES
 }
 
+// ── Mock 数据（接口联调后替换） ──
 const timelineData = ref<TimelineEvent[]>([
-  // 大一上
   { semester: '大一 (上)', date: '2024-09', title: '入学', description: '进入计算机科学与技术专业学习', type: 'other' },
   { semester: '大一 (上)', date: '2025-01', title: '第一学期期末', description: 'GPA: 3.2，班级排名前30%', type: 'grade' },
-  // 大一下
   { semester: '大一 (下)', date: '2025-03', title: '加入ACM社团', description: '开始参加编程竞赛训练', type: 'competition' },
   { semester: '大一 (下)', date: '2025-06', title: '通过CET-4', description: '英语四级考试: 532分', type: 'award' },
-  // 大二上
   { semester: '大二 (上)', date: '2025-09', title: '校ACM竞赛一等奖', description: '团队赛获得校级一等奖', type: 'award' },
   { semester: '大二 (上)', date: '2025-11', title: '成为社团部长', description: '担任ACM社团技术部部长', type: 'practice' },
-  // 大二下
   { semester: '大二 (下)', date: '2026-03', title: '暑期社会实践', description: '参与"科技下乡"社会实践活动', type: 'practice' },
   { semester: '大二 (下)', date: '2026-05', title: '数学建模省二等奖', description: '全国大学生数学建模竞赛省二等奖', type: 'award' },
-  // 大三上
   { semester: '大三 (上)', date: '2026-09', title: 'GPA创新高', description: 'GPA: 3.82，班级排名前10%', type: 'grade' },
 ])
 
-// 按学期分组
-const semesterGroups = ['大一 (上)', '大一 (下)', '大二 (上)', '大二 (下)', '大三 (上)', '大三 (下)', '大四 (上)', '大四 (下)']
+const semesterGroups = computed(() => SEMESTER_OPTIONS.map(s => s.label))
 
-function getTypeIcon(type: string) {
-  switch (type) {
-    case 'award': return Award
-    case 'practice': return Users
-    case 'grade': return BookOpen
-    case 'competition': return Code
-    case 'internship': return Briefcase
-    default: return Star
-  }
+const { getColor, getLabel } = useDict(TIMELINE_EVENT_TYPES)
+
+const iconMap: Record<string, Component> = {
+  Award,
+  BookOpen,
+  Briefcase,
+  Code,
+  Star,
+  Users,
 }
 
-function getTypeColor(type: string) {
-  switch (type) {
-    case 'award': return '#e6a23c'
-    case 'practice': return '#67c23a'
-    case 'grade': return '#409eff'
-    case 'competition': return '#9b59b6'
-    case 'internship': return '#f56c6c'
-    default: return '#909399'
-  }
+function getTypeIcon(type: string): Component {
+  const iconKey = TIMELINE_EVENT_TYPES[type as keyof typeof TIMELINE_EVENT_TYPES]?.iconKey ?? 'Star'
+  return iconMap[iconKey] ?? Star
 }
 
-function getTypeLabel(type: string) {
-  switch (type) {
-    case 'award': return '奖项'
-    case 'practice': return '实践'
-    case 'grade': return '成绩'
-    case 'competition': return '竞赛'
-    case 'internship': return '实习'
-    default: return '其他'
-  }
+function getTypeColor(type: string): string {
+  return getColor(type) ?? '#909399'
+}
+
+function getTypeLabel(type: string): string {
+  return getLabel(type)
 }
 
 function getEventsForSemester(semester: string) {

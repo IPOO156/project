@@ -12,6 +12,7 @@ interface PendingItem {
   content: string
 }
 
+// ── Mock 数据（接口联调后替换） ──
 const list = ref<PendingItem[]>([
   { id: '1', type: 'competition', applicant: '李四', title: '全国大学生英语竞赛', submitDate: '2026-06-28', content: '申请登记全国大学生英语竞赛参赛信息' },
   { id: '2', type: 'innovation', applicant: '王五', title: '智创科技工作室', submitDate: '2026-06-27', content: '申请登记创新创业项目信息' },

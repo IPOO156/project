@@ -4,6 +4,7 @@ import { Delete, Edit, Eye, Plus } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useApplication } from '@/shared/composables/useApplication'
 import { SCHOLARSHIP_LEVELS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import StatusTag from '@/shared/ui/StatusTag.vue'
 
 interface ScholarshipItem {
   id: string
@@ -17,6 +18,7 @@ interface ScholarshipItem {
   proofMaterials: string[]
 }
 
+// Mock 数据（接口联调后替换）
 const list = ref<ScholarshipItem[]>([
   { id: '1', awardName: '校级一等奖学金', scholarshipLevel: 'school', scholarshipGrade: 'first', acquireDate: '2025-09', semester: '大二上', status: 'approved', submitDate: '2025-10-01', proofMaterials: [] },
 ])
@@ -43,10 +45,10 @@ function handleSubmit() {
     <el-alert title="奖学金申报说明" type="info" :closable="false" show-icon>
       <p>请填写获得的奖学金信息，包括奖学金名称、等级、级别等，并上传获奖证明。</p>
     </el-alert>
-    <div class="app-page__actions" style="margin-top: 16px;">
+    <div class="app-page__actions mt-16">
       <el-button type="primary" :icon="Plus" @click="app.openCreate()">新增申报</el-button>
     </div>
-    <el-card style="margin-top: 16px;">
+    <el-card class="mt-16">
       <el-table :data="list" stripe>
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column prop="awardName" label="奖学金名称" min-width="180" />
@@ -60,9 +62,7 @@ function handleSubmit() {
         <el-table-column prop="semester" label="学期" width="100" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'approved' ? 'success' : row.status === 'submitted' ? 'warning' : 'info'" size="small">
-              {{ row.status === 'approved' ? '已通过' : row.status === 'submitted' ? '待审核' : '草稿' }}
-            </el-tag>
+            <StatusTag :status="row.status" size="small" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
@@ -79,12 +79,12 @@ function handleSubmit() {
       <el-form :model="app.formData" label-width="120px">
         <el-form-item label="获奖名称" required><el-input v-model="app.formData.awardName" /></el-form-item>
         <el-form-item label="奖学金等级" required>
-          <el-select v-model="app.formData.scholarshipLevel" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.scholarshipLevel" placeholder="请选择" class="form-select">
             <el-option v-for="t in SCHOLARSHIP_LEVELS" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="奖学金级别" required>
-          <el-select v-model="app.formData.scholarshipGrade" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.scholarshipGrade" placeholder="请选择" class="form-select">
             <el-option label="一等奖" value="first" />
             <el-option label="二等奖" value="second" />
             <el-option label="三等奖" value="third" />
@@ -92,7 +92,7 @@ function handleSubmit() {
         </el-form-item>
         <el-form-item label="获取时间" required><el-date-picker v-model="app.formData.acquireDate" type="month" /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="app.formData.semester" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>

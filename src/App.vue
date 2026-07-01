@@ -16,18 +16,21 @@ onMounted(() => {
   <router-view />
 </template>
 
-<style lang="scss">
-// 全局重置样式
-*,
-*::before,
-*::after {
+<style scoped lang="scss">
+/* 全局重置样式 - 使用 :global() 导出到全局 */
+:global(*) {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html,
-body {
+:global(*::before),
+:global(*::after) {
+  box-sizing: border-box;
+}
+
+:global(html),
+:global(body) {
   height: 100%;
   font-family:
     'PingFang SC',
@@ -40,11 +43,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-#app {
+:global(#app) {
   height: 100%;
 }
 
-a {
+:global(a) {
   color: inherit;
   text-decoration: none;
 }

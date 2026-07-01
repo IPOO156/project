@@ -54,7 +54,7 @@ function handleSubmit() {
             type="password"
             placeholder="请输入原密码"
             show-password
-            style="max-width: 400px"
+            class="form-input--password"
           />
         </el-form-item>
         <el-form-item label="新密码" required>
@@ -63,7 +63,7 @@ function handleSubmit() {
             type="password"
             placeholder="请输入新密码（至少6位）"
             show-password
-            style="max-width: 400px"
+            class="form-input--password"
           />
         </el-form-item>
         <el-form-item label="确认密码" required>
@@ -72,7 +72,7 @@ function handleSubmit() {
             type="password"
             placeholder="请再次输入新密码"
             show-password
-            style="max-width: 400px"
+            class="form-input--password"
           />
         </el-form-item>
         <el-form-item>
@@ -97,5 +97,9 @@ function handleSubmit() {
 
 .edit-password__form {
   padding-top: 20px;
+}
+
+.form-input--password {
+  max-width: 400px;
 }
 </style>

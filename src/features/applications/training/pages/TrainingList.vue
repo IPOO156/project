@@ -4,6 +4,7 @@ import { Delete, Edit, Eye, Plus } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useApplication } from '@/shared/composables/useApplication'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import StatusTag from '@/shared/ui/StatusTag.vue'
 
 interface TrainingItem {
   id: string
@@ -17,6 +18,7 @@ interface TrainingItem {
   proofMaterials: string[]
 }
 
+// Mock 数据（接口联调后替换）
 const list = ref<TrainingItem[]>([
   { id: '1', projectName: 'Java Web开发实训', projectContent: '基于Spring Boot的在线商城系统开发', startDate: '2025-07', endDate: '2025-08', semester: '大二下', status: 'approved', submitDate: '2025-09-01', proofMaterials: [] },
 ])
@@ -38,10 +40,10 @@ function handleSubmit() { ElMessage.success('申报提交成功'); app.closeDial
     <el-alert title="实训项目申报说明" type="info" :closable="false" show-icon>
       <p>请填写参与的实训项目信息，包括项目名称、内容、时间段等，并上传实训成果材料。</p>
     </el-alert>
-    <div class="app-page__actions" style="margin-top: 16px;">
+    <div class="app-page__actions mt-16">
       <el-button type="primary" :icon="Plus" @click="app.openCreate()">新增申报</el-button>
     </div>
-    <el-card style="margin-top: 16px;">
+    <el-card class="mt-16">
       <el-table :data="list" stripe>
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column prop="projectName" label="实训项目名称" min-width="180" />
@@ -51,9 +53,7 @@ function handleSubmit() { ElMessage.success('申报提交成功'); app.closeDial
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'approved' ? 'success' : row.status === 'submitted' ? 'warning' : 'info'" size="small">
-              {{ row.status === 'approved' ? '已通过' : row.status === 'submitted' ? '待审核' : '草稿' }}
-            </el-tag>
+            <StatusTag :status="row.status" size="small" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
@@ -73,7 +73,7 @@ function handleSubmit() { ElMessage.success('申报提交成功'); app.closeDial
         <el-form-item label="开始时间" required><el-date-picker v-model="app.formData.startDate" type="month" /></el-form-item>
         <el-form-item label="结束时间" required><el-date-picker v-model="app.formData.endDate" type="month" /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="app.formData.semester" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>

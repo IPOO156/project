@@ -4,6 +4,7 @@ import { Delete, Edit, Eye, Plus } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useApplication } from '@/shared/composables/useApplication'
 import { PROJECT_LEVELS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import StatusTag from '@/shared/ui/StatusTag.vue'
 
 interface ScientificProjectItem {
   id: string
@@ -17,6 +18,7 @@ interface ScientificProjectItem {
   proofMaterials: string[]
 }
 
+// Mock 数据（接口联调后替换）
 const list = ref<ScientificProjectItem[]>([
   { id: '1', projectName: '基于知识图谱的智能推荐系统', projectLevel: 'school', ranking: '2/5', startDate: '2025-03', semester: '大二下', status: 'submitted', submitDate: '2025-04-01', proofMaterials: [] },
 ])
@@ -38,10 +40,10 @@ function handleSubmit() { ElMessage.success('申报提交成功'); app.closeDial
     <el-alert title="科研项目申报说明" type="info" :closable="false" show-icon>
       <p>请填写参与的科研项目信息，包括项目名称、级别、排名等，并上传项目证明材料。</p>
     </el-alert>
-    <div class="app-page__actions" style="margin-top: 16px;">
+    <div class="app-page__actions mt-16">
       <el-button type="primary" :icon="Plus" @click="app.openCreate()">新增申报</el-button>
     </div>
-    <el-card style="margin-top: 16px;">
+    <el-card class="mt-16">
       <el-table :data="list" stripe>
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column prop="projectName" label="项目名称" min-width="220" />
@@ -52,9 +54,7 @@ function handleSubmit() { ElMessage.success('申报提交成功'); app.closeDial
         <el-table-column prop="startDate" label="立项时间" width="120" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'approved' ? 'success' : row.status === 'submitted' ? 'warning' : 'info'" size="small">
-              {{ row.status === 'approved' ? '已通过' : row.status === 'submitted' ? '待审核' : '草稿' }}
-            </el-tag>
+            <StatusTag :status="row.status" size="small" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
@@ -71,16 +71,16 @@ function handleSubmit() { ElMessage.success('申报提交成功'); app.closeDial
       <el-form :model="app.formData" label-width="120px">
         <el-form-item label="项目名称" required><el-input v-model="app.formData.projectName" /></el-form-item>
         <el-form-item label="项目级别" required>
-          <el-select v-model="app.formData.projectLevel" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.projectLevel" placeholder="请选择" class="form-select">
             <el-option v-for="t in PROJECT_LEVELS" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="排名/总人数" required>
-          <el-input v-model="app.formData.ranking" placeholder="如：2/5" style="width: 200px" />
+          <el-input v-model="app.formData.ranking" placeholder="如：2/5" class="form-input" />
         </el-form-item>
         <el-form-item label="立项时间" required><el-date-picker v-model="app.formData.startDate" type="month" /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="app.formData.semester" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>

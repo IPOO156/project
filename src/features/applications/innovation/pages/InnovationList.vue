@@ -4,6 +4,7 @@ import { Delete, Edit, Eye, Plus } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useApplication } from '@/shared/composables/useApplication'
 import { INDUSTRY_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import StatusTag from '@/shared/ui/StatusTag.vue'
 
 interface InnovationItem {
   id: string
@@ -18,7 +19,7 @@ interface InnovationItem {
   proofMaterials: string[]
 }
 
-const list = ref<InnovationItem[]>([
+const list = ref<InnovationItem[]>([ // Mock 数据（接口联调后替换）
   { id: '1', companyName: '智创科技工作室', industryType: 'it', companyType: '创业实践', teamRole: '创始人', registerDate: '2025-06', semester: '大二下', status: 'approved', submitDate: '2025-07-01', proofMaterials: [] },
 ])
 
@@ -66,9 +67,7 @@ function handleSubmit() {
         <el-table-column prop="semester" label="学期" width="100" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'approved' ? 'success' : row.status === 'submitted' ? 'warning' : 'info'" size="small">
-              {{ row.status === 'approved' ? '已通过' : row.status === 'submitted' ? '待审核' : '草稿' }}
-            </el-tag>
+            <StatusTag :status="row.status" size="small" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
@@ -87,12 +86,12 @@ function handleSubmit() {
           <el-input v-model="app.formData.companyName" placeholder="请输入公司/工作室名称" />
         </el-form-item>
         <el-form-item label="行业类型" required>
-          <el-select v-model="app.formData.industryType" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.industryType" placeholder="请选择" class="form-select">
             <el-option v-for="t in INDUSTRY_TYPES" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="类型" required>
-          <el-select v-model="app.formData.companyType" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.companyType" placeholder="请选择" class="form-select">
             <el-option v-for="t in companyTypes" :key="t" :label="t" :value="t" />
           </el-select>
         </el-form-item>
@@ -103,7 +102,7 @@ function handleSubmit() {
           <el-date-picker v-model="app.formData.registerDate" type="month" placeholder="选择年月" />
         </el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="app.formData.semester" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>

@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 import { BookOpen, Delete, Edit, Eye, FileText } from 'lucide-vue-next'
 import { reactive, ref } from 'vue'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import StatusTag from '@/shared/ui/StatusTag.vue'
 
 /** 软件著作权 */
 interface SoftwareCopyright {
@@ -27,9 +28,11 @@ interface PaperRecord {
 
 const activeTab = ref<'copyright' | 'paper'>('copyright')
 
+// Mock 数据（接口联调后替换）
 const copyrightList = ref<SoftwareCopyright[]>([
   { id: '1', softName: '智能档案管理系统 V1.0', issuer: '国家版权局', ranking: '1/4', approveDate: '2025-11', semester: '大二上', status: 'approved' },
 ])
+// Mock 数据（接口联调后替换）
 const paperList = ref<PaperRecord[]>([
   { id: '1', journalName: '《计算机科学与应用》', paperName: '基于Vue3的档案管理系统设计与实现', ranking: '2/3', publishDate: '2026-03', semester: '大二下', status: 'submitted' },
 ])
@@ -62,12 +65,12 @@ function handleSubmit() {
       <p>科研之星报名包含软件著作权和论文两类成果，请根据实际情况填写并上传证明材料。</p>
     </el-alert>
 
-    <div class="app-page__actions" style="margin-top: 16px;">
+    <div class="app-page__actions mt-16">
       <el-button type="primary" :icon="FileText" @click="openCreate('copyright')">新增软著</el-button>
       <el-button type="primary" :icon="BookOpen" @click="openCreate('paper')">新增论文</el-button>
     </div>
 
-    <el-card style="margin-top: 16px;">
+    <el-card class="mt-16">
       <el-tabs v-model="activeTab">
         <!-- 软著 Tab -->
         <el-tab-pane label="软件著作权" name="copyright">
@@ -80,9 +83,7 @@ function handleSubmit() {
             <el-table-column prop="semester" label="学期" width="100" />
             <el-table-column label="状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="row.status === 'approved' ? 'success' : row.status === 'submitted' ? 'warning' : 'info'" size="small">
-                  {{ row.status === 'approved' ? '已通过' : row.status === 'submitted' ? '待审核' : '草稿' }}
-                </el-tag>
+                <StatusTag :status="row.status" size="small" />
               </template>
             </el-table-column>
             <el-table-column label="操作" width="160" fixed="right">
@@ -105,9 +106,7 @@ function handleSubmit() {
             <el-table-column prop="publishDate" label="发表时间" width="120" />
             <el-table-column label="状态" width="100">
               <template #default="{ row }">
-                <el-tag :type="row.status === 'approved' ? 'success' : row.status === 'submitted' ? 'warning' : 'info'" size="small">
-                  {{ row.status === 'approved' ? '已通过' : row.status === 'submitted' ? '待审核' : '草稿' }}
-                </el-tag>
+                <StatusTag :status="row.status" size="small" />
               </template>
             </el-table-column>
             <el-table-column label="操作" width="160" fixed="right">
@@ -127,10 +126,10 @@ function handleSubmit() {
       <el-form v-if="diagType === 'copyright'" :model="copyrightForm" label-width="120px">
         <el-form-item label="软著名称" required><el-input v-model="copyrightForm.softName" /></el-form-item>
         <el-form-item label="颁发单位" required><el-input v-model="copyrightForm.issuer" /></el-form-item>
-        <el-form-item label="排名/总人数" required><el-input v-model="copyrightForm.ranking" placeholder="如：1/4" style="width: 200px" /></el-form-item>
+        <el-form-item label="排名/总人数" required><el-input v-model="copyrightForm.ranking" placeholder="如：1/4" class="form-input" /></el-form-item>
         <el-form-item label="获批时间" required><el-date-picker v-model="copyrightForm.approveDate" type="month" /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="copyrightForm.semester" placeholder="请选择" style="width: 200px">
+          <el-select v-model="copyrightForm.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>
@@ -139,10 +138,10 @@ function handleSubmit() {
       <el-form v-else :model="paperForm" label-width="120px">
         <el-form-item label="期刊名称" required><el-input v-model="paperForm.journalName" /></el-form-item>
         <el-form-item label="论文名称" required><el-input v-model="paperForm.paperName" /></el-form-item>
-        <el-form-item label="排名/总人数" required><el-input v-model="paperForm.ranking" placeholder="如：2/3" style="width: 200px" /></el-form-item>
+        <el-form-item label="排名/总人数" required><el-input v-model="paperForm.ranking" placeholder="如：2/3" class="form-input" /></el-form-item>
         <el-form-item label="发表时间" required><el-date-picker v-model="paperForm.publishDate" type="month" /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="paperForm.semester" placeholder="请选择" style="width: 200px">
+          <el-select v-model="paperForm.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>

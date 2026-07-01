@@ -142,7 +142,7 @@ export interface AcademicResearch extends ApplicationBase {
   projectLevel: string
   researchType: string
   teamRole: string
-  立项Date: string
+  projectDate: string
 }
 
 // 奖学金
@@ -216,7 +216,7 @@ export interface ScientificProject extends ApplicationBase {
   projectName: string
   projectLevel: string
   ranking: string
-  立项Date: string
+  projectDate: string
 }
 
 // 科研之星 - 软著

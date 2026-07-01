@@ -4,6 +4,7 @@ import { Delete, Edit, Eye, Plus } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { useApplication } from '@/shared/composables/useApplication'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import StatusTag from '@/shared/ui/StatusTag.vue'
 
 interface BookReportItem {
   id: string
@@ -16,6 +17,7 @@ interface BookReportItem {
   proofMaterials: string[]
 }
 
+// Mock 数据（接口联调后替换）
 const list = ref<BookReportItem[]>([
   { id: '1', semester: '大二上', bookName: '《深入理解计算机系统》', bookDate: '2025-10', review: '通过阅读本书，深入理解了计算机系统的底层原理...', status: 'approved', submitDate: '2025-11-01', proofMaterials: [] },
 ])
@@ -36,10 +38,10 @@ function handleSubmit() { ElMessage.success('申报提交成功'); app.closeDial
     <el-alert title="图书心得申报说明" type="info" :closable="false" show-icon>
       <p>请填写阅读的书籍信息及读书心得，可上传心得文档作为佐证材料。</p>
     </el-alert>
-    <div class="app-page__actions" style="margin-top: 16px;">
+    <div class="app-page__actions mt-16">
       <el-button type="primary" :icon="Plus" @click="app.openCreate()">新增申报</el-button>
     </div>
-    <el-card style="margin-top: 16px;">
+    <el-card class="mt-16">
       <el-table :data="list" stripe>
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column prop="bookName" label="书籍名称" min-width="200" />
@@ -48,9 +50,7 @@ function handleSubmit() { ElMessage.success('申报提交成功'); app.closeDial
         <el-table-column prop="semester" label="学期" width="100" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'approved' ? 'success' : row.status === 'submitted' ? 'warning' : 'info'" size="small">
-              {{ row.status === 'approved' ? '已通过' : row.status === 'submitted' ? '待审核' : '草稿' }}
-            </el-tag>
+            <StatusTag :status="row.status" size="small" />
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
@@ -66,7 +66,7 @@ function handleSubmit() { ElMessage.success('申报提交成功'); app.closeDial
     <el-dialog v-model="app.dialogVisible" :title="app.isEdit ? '编辑图书心得' : '新增图书心得'" width="640px">
       <el-form :model="app.formData" label-width="120px">
         <el-form-item label="学期" required>
-          <el-select v-model="app.formData.semester" placeholder="请选择" style="width: 200px">
+          <el-select v-model="app.formData.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>
