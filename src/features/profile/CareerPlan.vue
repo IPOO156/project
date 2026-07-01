@@ -3,7 +3,7 @@ import type { TagProps } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { Download, Eye, Plus } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
-import { useDict } from '@/shared/composables'
+import { useDict } from '@/shared/composables/composables'
 import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 
 interface PlanRecord {

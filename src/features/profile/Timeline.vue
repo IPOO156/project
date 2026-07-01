@@ -9,7 +9,7 @@ import {
   Users,
 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { useDict } from '@/shared/composables'
+import { useDict } from '@/shared/composables/composables'
 import { SEMESTER_OPTIONS, TIMELINE_EVENT_TYPES } from '@/shared/constants/dict'
 
 interface TimelineEvent {

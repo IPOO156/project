@@ -3,7 +3,7 @@ import { ElMessage } from 'element-plus'
 import { GraduationCap } from 'lucide-vue-next'
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/app/stores'
+import { useUserStore } from '@/app/stores/stores'
 
 const router = useRouter()
 const userStore = useUserStore()

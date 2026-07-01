@@ -50,4 +50,4 @@ src/
 
 ## 路由关系
 
-见 `src/app/router/index.ts`。
+见 `src/app/router/routes.ts`。

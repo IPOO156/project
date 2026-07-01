@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
 import { computed } from 'vue'
-import { useDict } from '@/shared/composables'
+import { useDict } from '@/shared/composables/composables'
 import { APPLICATION_STATUS } from '@/shared/constants/dict'
 
 interface Props {

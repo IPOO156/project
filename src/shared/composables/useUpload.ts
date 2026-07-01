@@ -1,7 +1,7 @@
 import type { UploadUserFile } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
-import { request } from '@/shared/api'
+import { request } from '@/shared/api/api'
 
 interface UploadOptions {
   url?: string

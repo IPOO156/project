@@ -2,7 +2,7 @@
 import { Bell, LogOut, Settings, User } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useUserStore } from '@/app/stores'
+import { useUserStore } from '@/app/stores/stores'
 
 const route = useRoute()
 const router = useRouter()

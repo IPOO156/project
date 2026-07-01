@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAppStore } from '@/app/stores'
+import { useAppStore } from '@/app/stores/stores'
 import HeaderBar from './components/HeaderBar.vue'
 import Sidebar from './components/Sidebar.vue'
 

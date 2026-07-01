@@ -1,4 +1,4 @@
-import type { PaginatedData, PaginationParams } from '@/shared/types'
+import type { PaginatedData, PaginationParams } from '@/shared/types/types'
 import { reactive } from 'vue'
 import { usePagination } from './usePagination'
 

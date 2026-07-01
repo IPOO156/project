@@ -2,8 +2,8 @@
 import type { TagProps } from 'element-plus'
 import { AlertTriangle, Award, Info, Lightbulb, TrendingUp } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { useUserStore } from '@/app/stores'
-import { useDict } from '@/shared/composables'
+import { useUserStore } from '@/app/stores/stores'
+import { useDict } from '@/shared/composables/composables'
 import { INTEREST_LEVEL } from '@/shared/constants/dict'
 
 const userStore = useUserStore()
