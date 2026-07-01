@@ -1,4 +1,4 @@
-import type { DictOption } from '@/shared/types'
+import type { DictOption } from '@/shared/types/types'
 
 /**
  * 字典转换 - 将后端字典值转为前端展示文本

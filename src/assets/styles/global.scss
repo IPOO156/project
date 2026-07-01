@@ -145,3 +145,40 @@
   animation: skeleton-loading 1.4s ease infinite;
   border-radius: 4px;
 }
+
+// =============================================================================
+// 通用工具类（替代常见内联样式）
+// =============================================================================
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.mb-8 {
+  margin-bottom: 8px;
+}
+
+.form-select {
+  width: 200px;
+}
+
+.form-select--sm {
+  width: 160px;
+}
+
+.form-input {
+  width: 200px;
+}
+
+.form-input-number {
+  width: 200px;
+}
+
+.gpa-highlight {
+  font-weight: 600;
+  color: var(--el-color-primary);
+}
+
+.progress-fixed {
+  width: 200px;
+}

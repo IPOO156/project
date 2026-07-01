@@ -23,7 +23,7 @@ import {
 } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAppStore } from '@/app/stores'
+import { useAppStore } from '@/app/stores/stores'
 
 const route = useRoute()
 const router = useRouter()

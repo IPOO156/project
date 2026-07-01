@@ -1,16 +1,13 @@
+import type { PaginatedData, PaginationParams } from '@/shared/types/types'
 import { reactive } from 'vue'
 import { usePagination } from './usePagination'
 
-/**
- * 统一表格查询 Composable
- * 整合 searchForm + pagination + loading + list
- */
-export function useTableQuery(
-  fetchFn: (params: any) => Promise<any>,
-  defaultForm: Record<string, any> = {},
+export function useTableQuery<T>(
+  fetchFn: (params: PaginationParams) => Promise<PaginatedData<T> | T[]>,
+  defaultForm: Record<string, unknown> = {},
 ) {
-  const searchForm = reactive<Record<string, any>>({ ...defaultForm })
-  const { loading, list, pagination, fetchData, resetPage } = usePagination(fetchFn)
+  const searchForm = reactive<Record<string, unknown>>({ ...defaultForm })
+  const { loading, list, pagination, fetchData, resetPage } = usePagination<T>(fetchFn)
 
   async function handleSearch() {
     resetPage()
@@ -27,7 +24,7 @@ export function useTableQuery(
     loading,
     list,
     pagination,
-    fetchData: (extra?: Record<string, any>) => fetchData({ ...searchForm, ...extra }),
+    fetchData: (extra?: Record<string, unknown>) => fetchData({ ...searchForm, ...extra }),
     handleSearch,
     handleReset,
   }

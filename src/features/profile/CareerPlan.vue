@@ -1,0 +1,169 @@
+<script setup lang="ts">
+import type { TagProps } from 'element-plus'
+import { ElMessage } from 'element-plus'
+import { Download, Eye, Plus } from 'lucide-vue-next'
+import { computed, reactive, ref } from 'vue'
+import { useDict } from '@/shared/composables/composables'
+import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+
+interface PlanRecord {
+  id: string
+  semester: string
+  title: string
+  submitDate: string
+  status: 'draft' | 'submitted'
+}
+
+// ── 响应式数据 ──
+const planForm = reactive({
+  semester: '',
+  title: '',
+  content: '',
+})
+
+const planFiles = ref<{ name: string, url: string }[]>([])
+
+// ── Mock 数据（接口联调后替换） ──
+const planRecords = ref<PlanRecord[]>([
+  { id: '1', semester: '大二上', title: '大二学年成长规划', submitDate: '2025-09-15', status: 'submitted' },
+  { id: '2', semester: '大一下', title: '大一学年总结与规划', submitDate: '2025-03-10', status: 'submitted' },
+])
+
+const loading = ref(false)
+const dialogVisible = ref(false)
+
+// ── Computed ──
+const { getColor, getLabel } = useDict(APPLICATION_STATUS)
+
+const getStatusType = computed(() => (status: PlanRecord['status']): TagProps['type'] => {
+  return (getColor(status) as TagProps['type']) ?? 'info'
+})
+
+// ── 方法函数 ──
+function handleSubmit() {
+  if (!planForm.semester || !planForm.title) {
+    ElMessage.warning('请填写完整信息')
+    return
+  }
+  loading.value = true
+  setTimeout(() => {
+    planRecords.value.unshift({
+      id: Date.now().toString(),
+      semester: planForm.semester,
+      title: planForm.title,
+      submitDate: new Date().toISOString().slice(0, 10),
+      status: 'submitted',
+    })
+    ElMessage.success('规划材料提交成功')
+    dialogVisible.value = false
+    planForm.semester = ''
+    planForm.title = ''
+    planForm.content = ''
+    planFiles.value = []
+    loading.value = false
+  }, 600)
+}
+</script>
+
+<template>
+  <div class="career-plan">
+    <el-card>
+      <template #header>
+        <div class="career-plan__header">
+          <span class="card-title">职业规划与材料填写</span>
+          <el-button type="primary" :icon="Plus" @click="dialogVisible = true">
+            新增规划
+          </el-button>
+        </div>
+      </template>
+
+      <!-- 规划列表 -->
+      <el-table :data="planRecords" stripe>
+        <el-table-column prop="semester" label="学期" width="120" />
+        <el-table-column prop="title" label="规划名称" />
+        <el-table-column prop="submitDate" label="提交时间" width="140" />
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getStatusType(row.status)" size="small">
+              {{ getLabel(row.status) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="140" fixed="right">
+          <template #default>
+            <el-button text type="primary" :icon="Eye" size="small">查看</el-button>
+            <el-button text type="primary" :icon="Download" size="small">下载</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 新增规划弹窗 -->
+    <el-dialog
+      v-model="dialogVisible"
+      title="填写职业规划"
+      width="640px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="planForm" label-width="100px">
+        <el-form-item label="学期" required>
+          <el-select v-model="planForm.semester" placeholder="请选择学期" class="form-select">
+            <el-option
+              v-for="s in SEMESTER_OPTIONS"
+              :key="s.value"
+              :label="s.label"
+              :value="s.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="规划标题" required>
+          <el-input v-model="planForm.title" placeholder="请输入规划标题" />
+        </el-form-item>
+        <el-form-item label="规划内容">
+          <el-input
+            v-model="planForm.content"
+            type="textarea"
+            :rows="6"
+            placeholder="请描述你的职业规划、学习目标..."
+          />
+        </el-form-item>
+        <el-form-item label="规划文件">
+          <el-upload
+            v-model:file-list="planFiles"
+            action="#"
+            :auto-upload="false"
+            list-type="text"
+          >
+            <el-button type="primary" plain>选择文件</el-button>
+            <template #tip>
+              <div class="el-upload__tip">支持 pdf、doc、docx 格式</div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="loading" @click="handleSubmit">提交</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.career-plan {
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.form-select {
+  width: 200px;
+}
+</style>
