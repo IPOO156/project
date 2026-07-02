@@ -11,22 +11,30 @@ export const APPLICATION_TYPE_MAP: Record<string, string> = {
   socialPractice: '社会实践',
   bookReport: '图书心得',
   competitionStar: '竞赛之星报名',
+  innovationStar: '双创之星报名',
   scientificProject: '科研项目',
   softwareCopyright: '科研之星-软著',
   paper: '科研之星-论文',
 }
 
-// 学期选项
-export const SEMESTER_OPTIONS = [
-  { label: '大一 (上)', value: '大一上' },
-  { label: '大一 (下)', value: '大一下' },
-  { label: '大二 (上)', value: '大二上' },
-  { label: '大二 (下)', value: '大二下' },
-  { label: '大三 (上)', value: '大三上' },
-  { label: '大三 (下)', value: '大三下' },
-  { label: '大四 (上)', value: '大四上' },
-  { label: '大四 (下)', value: '大四下' },
-] as const
+const TERM_LABELS = ['一', '二', '三'] as const
+
+function generateSemesterOptions(startYear: number, endYear: number) {
+  const options: { label: string, value: string }[] = []
+  for (let year = startYear; year < endYear; year++) {
+    for (let term = 0; term < TERM_LABELS.length; term++) {
+      const value = `${year}-${year + 1}-${term + 1}`
+      options.push({
+        label: `${year}-${year + 1}第${TERM_LABELS[term]}学期`,
+        value,
+      })
+    }
+  }
+  return options
+}
+
+// 学期选项：学年-学期格式，如 2024-2025第一学期
+export const SEMESTER_OPTIONS = generateSemesterOptions(2022, 2028)
 
 // 申请状态（含标签颜色）
 export const APPLICATION_STATUS = {

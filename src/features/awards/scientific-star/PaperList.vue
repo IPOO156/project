@@ -6,13 +6,12 @@ import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
 
-interface OrganizationItem {
+interface PaperItem {
   id: string
-  organizationLevel: string
-  department: string
-  position: string
-  startDate: string
-  endDate: string
+  journalName: string
+  paperName: string
+  ranking: string
+  publishDate: string
   semester: string
   status: 'draft' | 'submitted' | 'approved' | 'rejected'
   submitDate: string
@@ -21,19 +20,18 @@ interface OrganizationItem {
 
 function emptyForm() {
   return {
-    organizationLevel: '',
-    department: '',
-    position: '',
-    startDate: '',
-    endDate: '',
+    journalName: '',
+    paperName: '',
+    ranking: '',
+    publishDate: '',
     semester: '',
     proofMaterials: [] as string[],
   }
 }
 
 const form = reactive(emptyForm())
-const list = ref<OrganizationItem[]>([
-  { id: '1', organizationLevel: '校级', department: '学生会', position: '部长', startDate: '2025-07-01', endDate: '2025-09-01', semester: '2023-2024-1', status: 'approved', submitDate: '2025-10-01', proofMaterials: [] },
+const list = ref<PaperItem[]>([
+  { id: '1', journalName: '《计算机科学与应用》', paperName: '基于Vue3的档案管理系统设计与实现', ranking: '2/3', publishDate: '2026-03', semester: '2023-2024-2', status: 'submitted', submitDate: '2026-03-15', proofMaterials: [] },
 ])
 const editingId = ref<string | null>(null)
 const submitting = ref(false)
@@ -56,7 +54,7 @@ function handleSubmit() {
           submitDate: new Date().toISOString().slice(0, 10),
         }
       }
-      ElMessage.success('申报信息已更新')
+      ElMessage.success('报名信息已更新')
     }
     else {
       list.value.unshift({
@@ -66,27 +64,27 @@ function handleSubmit() {
         submitDate: new Date().toISOString().slice(0, 10),
         proofMaterials: [],
       })
-      ElMessage.success('申报提交成功')
+      ElMessage.success('报名提交成功')
     }
     reset()
     submitting.value = false
   }, 600)
 }
 
-function edit(row: OrganizationItem) {
+function edit(row: PaperItem) {
   editingId.value = row.id
   Object.assign(form, {
-    organizationLevel: row.organizationLevel,
-    department: row.department,
-    position: row.position,
-    startDate: row.startDate,
-    endDate: row.endDate,
+    journalName: row.journalName,
+    paperName: row.paperName,
+    ranking: row.ranking,
+    publishDate: row.publishDate,
     semester: row.semester,
+    proofMaterials: row.proofMaterials,
   })
 }
 
-function remove(row: OrganizationItem) {
-  ElMessageBox.confirm(`确定删除 "${row.department}" 的申报记录吗？`, '提示', { type: 'warning' })
+function remove(row: PaperItem) {
+  ElMessageBox.confirm(`确定删除 "${row.paperName}" 的报名记录吗？`, '提示', { type: 'warning' })
     .then(() => {
       list.value = list.value.filter(i => i.id !== row.id)
       ElMessage.success('删除成功')
@@ -99,8 +97,9 @@ function remove(row: OrganizationItem) {
 
 <template>
   <ApplicationFormRecord
-    alert-title="组织履历申报说明"
-    alert-description="请填写学生组织任职经历，并上传任职证明等佐证材料。"
+    alert-title="论文申报说明"
+    alert-description="请填写论文信息，提交后可在下方查看记录。"
+    :show-alert="false"
     :is-editing="!!editingId"
     :submitting="submitting"
     :records="list"
@@ -111,41 +110,41 @@ function remove(row: OrganizationItem) {
   >
     <template #form>
       <el-form :model="form" label-width="120px">
-        <el-form-item label="组织级别" required><el-input v-model="form.organizationLevel" placeholder="请输入组织级别" /></el-form-item>
-        <el-form-item label="部门" required><el-input v-model="form.department" placeholder="请输入部门" /></el-form-item>
-        <el-form-item label="职务" required><el-input v-model="form.position" placeholder="请输入职务" /></el-form-item>
-        <el-form-item label="开始时间" required><el-date-picker v-model="form.startDate" type="date" placeholder="选择日期" /></el-form-item>
-        <el-form-item label="结束时间" required><el-date-picker v-model="form.endDate" type="date" placeholder="选择日期" /></el-form-item>
+        <el-form-item label="期刊名称" required><el-input v-model="form.journalName" /></el-form-item>
+        <el-form-item label="论文名称" required><el-input v-model="form.paperName" /></el-form-item>
+        <el-form-item label="排名/总人数" required>
+          <el-input v-model="form.ranking" placeholder="如：2/3" class="form-input" />
+        </el-form-item>
+        <el-form-item label="发表时间" required><el-date-picker v-model="form.publishDate" type="month" /></el-form-item>
         <el-form-item label="学期" required>
           <el-select v-model="form.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="佐证材料">
+        <el-form-item label="证明材料">
           <ProofUpload v-model:file-list="form.proofMaterials" />
         </el-form-item>
       </el-form>
     </template>
     <template #columns>
       <el-table-column type="index" label="序号" width="60" />
-      <el-table-column prop="organizationLevel" label="组织级别" width="120" />
-      <el-table-column prop="department" label="部门" min-width="140" />
-      <el-table-column prop="position" label="职务" width="120" />
-      <el-table-column prop="startDate" label="开始时间" width="120" />
+      <el-table-column prop="paperName" label="论文名称" min-width="250" show-overflow-tooltip />
+      <el-table-column prop="journalName" label="期刊名称" width="200" show-overflow-tooltip />
+      <el-table-column prop="ranking" label="排名/总人数" width="130" />
+      <el-table-column prop="publishDate" label="发表时间" width="120" />
       <el-table-column prop="semester" label="学期" width="100" />
       <el-table-column label="状态" width="100">
-        <template #default="{ row }"><StatusTag :status="(row as OrganizationItem).status" size="small" /></template>
+        <template #default="{ row }">
+          <StatusTag :status="(row as PaperItem).status" size="small" />
+        </template>
       </el-table-column>
     </template>
   </ApplicationFormRecord>
 </template>
 
 <style scoped lang="scss">
-.form-select {
-  width: 200px;
-}
-
-.form-input-number {
+.form-select,
+.form-input {
   width: 200px;
 }
 </style>
