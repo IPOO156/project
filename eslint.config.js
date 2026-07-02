@@ -19,6 +19,8 @@ export default antfu({
     '前端开发规范与最佳实践（优化版）.md',
     'docs/**/*.md',
     '代码修改记录/**/*.md',
+    // Cursor AI 规则目录：含 markdown 中的示例代码片段，不参与 ESLint 校验
+    '.cursor/**',
     // Husky 钩子脚本由 Husky 管理，不参与 ESLint 校验
     '.husky/**',
   ],

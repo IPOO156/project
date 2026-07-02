@@ -162,18 +162,18 @@ function handleMenuSelect(index: string) {
   position: fixed;
   top: 0;
   left: 0;
-  width: 240px;
+  width: $sidebar-width;
   height: 100vh;
-  background: #fff;
+  background: var(--el-bg-color);
   border-right: 1px solid var(--el-border-color-light);
   display: flex;
   flex-direction: column;
   z-index: 100;
-  transition: width 0.3s ease-in-out;
+  transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 
   &--collapsed {
-    width: 64px;
+    width: $sidebar-collapsed-width;
   }
 
   &__logo {
@@ -305,6 +305,17 @@ function handleMenuSelect(index: string) {
     gap: 6px;
     color: var(--el-text-color-secondary);
     font-size: 13px;
+  }
+}
+
+// 移动端：抽屉式
+@media (max-width: 991px) {
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: $shadow-lg;
+  }
+  .sidebar:not(.sidebar--collapsed) {
+    transform: translateX(0);
   }
 }
 
