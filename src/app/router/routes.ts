@@ -120,8 +120,13 @@ const routes: RouteRecordRaw[] = [
       // ─── 奖项报名 ───
       {
         path: 'awards',
-        redirect: '/awards/competition-star',
         children: [
+          {
+            path: '',
+            name: 'AwardOverview',
+            component: () => import('@/features/awards/AwardOverview.vue'),
+            meta: { title: '奖项总览' },
+          },
           {
             path: 'competition-star',
             name: 'CompetitionStar',
@@ -151,6 +156,12 @@ const routes: RouteRecordRaw[] = [
             name: 'ApprovalPending',
             component: () => import('@/features/approval/PendingApproval.vue'),
             meta: { title: '待审批信息' },
+          },
+          {
+            path: 'records',
+            name: 'SubmissionRecords',
+            component: () => import('@/features/submission-records/SubmissionRecords.vue'),
+            meta: { title: '提交记录' },
           },
         ],
       },

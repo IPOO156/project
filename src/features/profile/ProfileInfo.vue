@@ -1,57 +1,50 @@
 <script setup lang="ts">
-import type { TagProps } from 'element-plus'
-import { Award, Info, Lightbulb, TrendingUp } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { Download, BookOpen, FileText, KeyRound, TrendingUp } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores/stores'
-import { useDict } from '@/shared/composables/composables'
-import { INTEREST_LEVEL } from '@/shared/constants/dict'
+import { useExport } from '@/shared/composables/composables'
 
+const router = useRouter()
 const userStore = useUserStore()
+const { exporting, exportData } = useExport()
 
-// ── Mock 数据（接口联调后替换） ──
-const interests = ref([
-  { category: '编程开发', content: 'Web 前端开发、人工智能应用', level: 'proficient' },
-  { category: '语言能力', content: '英语（CET-6）、日语（N3）', level: 'good' },
-  { category: '运动爱好', content: '篮球、跑步', level: 'general' },
-])
+const navEntries = [
+  { label: '成长时间轴', path: '/profile/timeline', icon: TrendingUp, color: '#2ecc71', desc: '查看成长历程' },
+  { label: '职业规划', path: '/profile/career-plan', icon: BookOpen, color: '#e6a23c', desc: '制定职业目标' },
+  { label: '修改密码', path: '/profile/edit-password', icon: KeyRound, color: '#909399', desc: '安全设置' },
+  { label: '提交记录', path: '/approval/records', icon: FileText, color: '#409eff', desc: '查看申报历史' },
+]
 
-const grades = ref([
-  { semester: '2022-2023-1', courses: 8, gpa: 3.2, totalScore: 85.6 },
-  { semester: '2022-2023-2', courses: 7, gpa: 3.4, totalScore: 87.2 },
-  { semester: '2023-2024-1', courses: 9, gpa: 3.6, totalScore: 89.5 },
-  { semester: '2023-2024-2', courses: 8, gpa: 3.8, totalScore: 91.3 },
-])
+const exportDataPayload = computed<Record<string, unknown>>(() => ({
+  exportTime: new Date().toISOString(),
+  userInfo: {
+    name: userStore.userName,
+    studentId: userStore.studentId,
+    grade: userStore.userInfo?.grade,
+    major: userStore.userInfo?.major,
+    className: userStore.userInfo?.className,
+    email: userStore.userInfo?.email,
+  },
+}))
 
-const awards = ref([
-  { name: '全国大学生数学建模竞赛', level: '省级', award: '二等奖', date: '2025-09' },
-  { name: '校级优秀学生干部', level: '校级', award: '优秀干部', date: '2025-06' },
-  { name: 'ACM 程序设计竞赛', level: '校级', award: '一等奖', date: '2025-05' },
-])
-
-const dimensions = ref([
-  { label: '学业成绩', score: 88, color: '#409eff' },
-  { label: '竞赛实践', score: 65, color: '#67c23a' },
-  { label: '科研创新', score: 60, color: '#e6a23c' },
-  { label: '社会工作', score: 85, color: '#f56c6c' },
-  { label: '综合素质', score: 80, color: '#9b59b6' },
-])
-
-const { getColor, getLabel } = useDict(INTEREST_LEVEL)
-
-const getInterestType = computed(() => (level: string): TagProps['type'] => {
-  return (getColor(level) as TagProps['type']) ?? 'info'
-})
+function handleExport() {
+  exportData('个人档案信息', exportDataPayload.value)
+}
 </script>
 
 <template>
   <div class="profile-info">
-    <!-- 基本资料卡片 -->
+    <div class="profile-info__header">
+      <h2 class="profile-info__title">个人档案信息</h2>
+      <el-button type="primary" :loading="exporting" :icon="Download" @click="handleExport">
+        导出档案
+      </el-button>
+    </div>
+
     <el-card class="profile-info__section">
       <template #header>
-        <div class="section-header">
-          <Info :size="18" />
-          <span>基本资料</span>
-        </div>
+        <div class="section-header"><span>基本资料</span></div>
       </template>
       <el-descriptions :column="3" border>
         <el-descriptions-item label="姓名">{{ userStore.userName }}</el-descriptions-item>
@@ -63,87 +56,25 @@ const getInterestType = computed(() => (level: string): TagProps['type'] => {
       </el-descriptions>
     </el-card>
 
-    <!-- 多维度画像引擎 -->
     <el-card class="profile-info__section">
       <template #header>
-        <div class="section-header">
-          <TrendingUp :size="18" />
-          <span>多维度画像引擎</span>
-        </div>
+        <div class="section-header"><span>功能导航</span></div>
       </template>
-      <el-row :gutter="24">
-        <el-col v-for="dim in dimensions" :key="dim.label" :span="12">
-          <div class="dimension-item">
-            <div class="dimension-item__header">
-              <span>{{ dim.label }}</span>
-              <span class="dimension-item__score">{{ dim.score }}分</span>
+      <el-row :gutter="16">
+        <el-col v-for="entry in navEntries" :key="entry.label" :span="6">
+          <el-card shadow="hover" class="nav-card" @click="router.push(entry.path)">
+            <div class="nav-card__body">
+              <div class="nav-card__icon" :style="{ background: `${entry.color}15`, color: entry.color }">
+                <component :is="entry.icon" :size="24" />
+              </div>
+              <div class="nav-card__info">
+                <span class="nav-card__label">{{ entry.label }}</span>
+                <span class="nav-card__desc">{{ entry.desc }}</span>
+              </div>
             </div>
-            <el-progress
-              :percentage="dim.score"
-              :color="dim.color"
-              :stroke-width="14"
-              :format="() => ''"
-            />
-          </div>
+          </el-card>
         </el-col>
       </el-row>
-    </el-card>
-
-    <!-- 个人兴趣 -->
-    <el-card class="profile-info__section">
-      <template #header>
-        <div class="section-header">
-          <Lightbulb :size="18" />
-          <span>个人兴趣</span>
-        </div>
-      </template>
-      <el-table :data="interests" stripe>
-        <el-table-column prop="category" label="兴趣类别" width="160" />
-        <el-table-column prop="content" label="具体内容" />
-        <el-table-column prop="level" label="掌握程度" width="120">
-          <template #default="{ row }">
-            <el-tag :type="getInterestType(row.level)" size="small">
-              {{ getLabel(row.level) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-
-    <!-- 期末成绩 + 绩点 -->
-    <el-card class="profile-info__section">
-      <template #header>
-        <div class="section-header">
-          <Award :size="18" />
-          <span>期末成绩与绩点</span>
-        </div>
-      </template>
-      <el-table :data="grades" stripe>
-        <el-table-column prop="semester" label="学期" width="120" />
-        <el-table-column prop="courses" label="课程数" width="100" />
-        <el-table-column prop="gpa" label="绩点" width="120">
-          <template #default="{ row }">
-            <span class="gpa-highlight">{{ row.gpa }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column prop="totalScore" label="平均分" />
-      </el-table>
-    </el-card>
-
-    <!-- 个人奖项 -->
-    <el-card class="profile-info__section">
-      <template #header>
-        <div class="section-header">
-          <Award :size="18" />
-          <span>个人奖项</span>
-        </div>
-      </template>
-      <el-table :data="awards" stripe>
-        <el-table-column prop="name" label="奖项名称" />
-        <el-table-column prop="level" label="奖项级别" width="120" />
-        <el-table-column prop="award" label="获奖等级" width="120" />
-        <el-table-column prop="date" label="获奖时间" width="120" />
-      </el-table>
     </el-card>
   </div>
 </template>
@@ -154,6 +85,19 @@ const getInterestType = computed(() => (level: string): TagProps['type'] => {
   flex-direction: column;
   gap: 16px;
 
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    margin: 0;
+  }
+
   &__section {
     .section-header {
       display: flex;
@@ -161,26 +105,48 @@ const getInterestType = computed(() => (level: string): TagProps['type'] => {
       gap: 8px;
       font-size: 16px;
       font-weight: 600;
-
-      .el-tag {
-        margin-left: auto;
-      }
     }
   }
 }
 
-.dimension-item {
-  margin-bottom: 20px;
+.nav-card {
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
 
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 6px;
-    font-size: 14px;
+  &:hover {
+    transform: translateY(-2px);
   }
 
-  &__score {
+  &__body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__label {
+    font-size: 14px;
     font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  &__desc {
+    font-size: 12px;
     color: var(--el-text-color-secondary);
   }
 }

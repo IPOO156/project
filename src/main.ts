@@ -8,6 +8,7 @@ import router from './app/router/routes'
 import { initTabsRouter } from './app/stores/tabs'
 import 'element-plus/dist/index.css'
 import './assets/styles/global.scss'
+import './shared/utils/echarts-setup'
 
 const app = createApp(App)
 
