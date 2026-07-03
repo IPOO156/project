@@ -2,20 +2,10 @@ import { defineStore } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 /**
- * 多标签页 Tab 项
- */
-export interface TabItem {
-  path: string
-  title: string
-  closable: boolean
-}
-
-/**
  * 全局应用级状态
  *  - 侧边栏折叠 / 移动端检测
  *  - 面包屑（可由 Layout 接管，此处保留为兜底数据源）
  *  - 全局页面级 loading（供 useTableQuery / useUpload 等切换）
- *  - 多标签页管理（点击侧边栏在内容区上方生成标签卡）
  */
 export const useAppStore = defineStore('app', () => {
   // state
@@ -24,55 +14,10 @@ export const useAppStore = defineStore('app', () => {
   const pageLoading = ref(false)
   const breadcrumbList = ref<{ label: string, path?: string }[]>([])
 
-  // 多标签页状态
-  const tabs = ref<TabItem[]>([])
-  const activeTabPath = ref('')
-
   // getters
   const isSidebarCollapsed = computed(() => sidebarCollapsed.value)
-  /** 当前标签页索引 */
-  const activeTabIndex = computed(() => tabs.value.findIndex(t => t.path === activeTabPath.value))
 
   // actions
-
-  /**
-   * 添加（或切换到）一个标签页
-   * 如果路径已存在则只切换不重复添加
-   */
-  function addTab(path: string, title: string, closable = true) {
-    const exists = tabs.value.find(t => t.path === path)
-    if (exists) {
-      activeTabPath.value = path
-      return
-    }
-    tabs.value.push({ path, title, closable })
-    activeTabPath.value = path
-  }
-
-  /**
-   * 关闭标签页，自动切换到相邻标签
-   */
-  function closeTab(path: string) {
-    const idx = tabs.value.findIndex(t => t.path === path)
-    if (idx === -1) return
-    tabs.value.splice(idx, 1)
-    // 切换：优先右边，其次左边
-    if (activeTabPath.value === path) {
-      const next = tabs.value[idx] ?? tabs.value[idx - 1]
-      activeTabPath.value = next?.path ?? ''
-    }
-  }
-
-  /** 关闭除当前标签外的所有标签 */
-  function closeOtherTabs(path: string) {
-    tabs.value = tabs.value.filter(t => t.path === path || !t.closable)
-  }
-
-  /** 关闭所有可关闭的标签 */
-  function closeAllTabs() {
-    tabs.value = tabs.value.filter(t => !t.closable)
-    activeTabPath.value = tabs.value[0]?.path ?? ''
-  }
   function toggleSidebar() {
     sidebarCollapsed.value = !sidebarCollapsed.value
   }
@@ -115,18 +60,11 @@ export const useAppStore = defineStore('app', () => {
     isMobile,
     pageLoading,
     breadcrumbList,
-    tabs,
-    activeTabPath,
     isSidebarCollapsed,
-    activeTabIndex,
     toggleSidebar,
     setSidebarCollapsed,
     setBreadcrumb,
     setPageLoading,
-    addTab,
-    closeTab,
-    closeOtherTabs,
-    closeAllTabs,
     bindResponsive,
   }
 })

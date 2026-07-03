@@ -23,7 +23,6 @@ import { useAppStore, useUserStore } from '@/app/stores/stores'
 import { useTabs } from '@/shared/composables/composables'
 import { PageHeader } from '@/shared/ui'
 import HeaderBar from './components/HeaderBar.vue'
-import PageTabs from './components/PageTabs.vue'
 import Sidebar from './components/Sidebar.vue'
 
 defineOptions({ name: 'DefaultLayout' })
@@ -45,17 +44,6 @@ const hasPageHeader = computed(
 )
 const hasFooter = computed(() => !!slots.footer)
 const isLoading = computed(() => appStore.pageLoading)
-
-// 路由变化时自动添加标签页（非登录页和首页）
-watch(
-  () => route.path,
-  (path) => {
-    if (path === '/login' || path === '/') return
-    const title = (route.meta?.title as string) || path.split('/').pop() || ''
-    appStore.addTab(path, title)
-  },
-  { immediate: true },
-)
 
 /** 从路由 meta 中推断页面标题（fallback） */
 const pageTitle = computed(() => (route.meta?.title as string) || '')
@@ -131,8 +119,7 @@ watch(isLoading, async (loading) => {
         <HeaderBar :key="routeKey" />
       </Transition>
 
-      <!-- 多标签页导航 -->
-      <PageTabs />
+      <!-- 多标签页导航（由 NavTabs 接管） -->
 
       <!-- 内容区 -->
       <main

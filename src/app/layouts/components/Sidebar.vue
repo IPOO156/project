@@ -28,19 +28,6 @@ const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 
-/** 从路径反查菜单标题 */
-function getTitleByPath(path: string): string {
-  for (const item of menuItems) {
-    if (item.path === path)
-      return item.label
-    if (item.children) {
-      const child = item.children.find(c => c.path === path)
-      if (child)
-        return child.label
-    }
-  }
-  return path.split('/').pop() ?? ''
-}
 
 interface MenuItem {
   label: string
@@ -104,10 +91,6 @@ const activeMenu = computed(() => {
 })
 
 function handleMenuSelect(index: string) {
-  const title = getTitleByPath(index)
-  if (title) {
-    appStore.addTab(index, title)
-  }
   router.push(index)
 }
 </script>
