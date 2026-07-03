@@ -5,13 +5,19 @@ import { createApp } from 'vue'
 import App from './App.vue'
 
 import router from './app/router/routes'
+import { initTabsRouter } from './app/stores/tabs'
 import 'element-plus/dist/index.css'
 import './assets/styles/global.scss'
 
 const app = createApp(App)
 
-app.use(createPinia())
+const pinia = createPinia()
+app.use(pinia)
 app.use(router)
 app.use(ElementPlus, { locale: zhCn })
+
+// 注入 router 实例到 tabs store（store 初始化在首次使用时惰性执行，
+// 此时 router 已通过 app.use(router) 注册完毕，无需等待组件渲染）
+initTabsRouter(router)
 
 app.mount('#app')
