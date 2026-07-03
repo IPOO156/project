@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../constants'
+import type { GrowthExperience } from '../timeline-constants'
 import { Plus } from 'lucide-vue-next'
 import { reactive, ref, watch } from 'vue'
-import { inferSemester } from '../constants'
+import { inferSemester } from '../timeline-constants'
 
 interface Props {
   visible: boolean

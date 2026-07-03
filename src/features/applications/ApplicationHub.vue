@@ -1,0 +1,304 @@
+<script setup lang="ts">
+import {
+  Award,
+  BarChart3,
+  BookOpen,
+  Briefcase,
+  FlaskConical,
+  HeartHandshake,
+  Lightbulb,
+  Medal,
+  Trophy,
+  Users,
+} from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import BookReportList from './book-report/BookReportList.vue'
+import CertificateList from './certificate/CertificateList.vue'
+import CompetitionList from './competition/CompetitionList.vue'
+import InnovationList from './innovation/InnovationList.vue'
+import InternshipList from './internship/InternshipList.vue'
+import OrganizationList from './organization/OrganizationList.vue'
+import ResearchList from './research/ResearchList.vue'
+import ScholarshipList from './scholarship/ScholarshipList.vue'
+import SocialPracticeList from './social-practice/SocialPracticeList.vue'
+import TrainingList from './training/TrainingList.vue'
+
+const route = useRoute()
+const router = useRouter()
+
+const modules = [
+  {
+    key: 'competition',
+    label: '学科竞赛',
+    icon: Trophy,
+    component: CompetitionList,
+    desc: '竞赛成果与过程材料',
+  },
+  {
+    key: 'innovation',
+    label: '创新创业',
+    icon: Lightbulb,
+    component: InnovationList,
+    desc: '双创项目与实践记录',
+  },
+  {
+    key: 'research',
+    label: '学术研究',
+    icon: FlaskConical,
+    component: ResearchList,
+    desc: '科研成果与研究经历',
+  },
+  {
+    key: 'scholarship',
+    label: '奖学金',
+    icon: Medal,
+    component: ScholarshipList,
+    desc: '奖助学金申报信息',
+  },
+  {
+    key: 'certificate',
+    label: '荣誉证书',
+    icon: Award,
+    component: CertificateList,
+    desc: '荣誉与资格证明',
+  },
+  {
+    key: 'internship',
+    label: '实习经历',
+    icon: Briefcase,
+    component: InternshipList,
+    desc: '岗位实践与企业经历',
+  },
+  {
+    key: 'organization',
+    label: '组织履历',
+    icon: Users,
+    component: OrganizationList,
+    desc: '学生工作与组织任职',
+  },
+  {
+    key: 'training',
+    label: '实训项目',
+    icon: BarChart3,
+    component: TrainingList,
+    desc: '课程实训与项目训练',
+  },
+  {
+    key: 'social-practice',
+    label: '社会实践',
+    icon: HeartHandshake,
+    component: SocialPracticeList,
+    desc: '社会实践与志愿服务',
+  },
+  {
+    key: 'book-report',
+    label: '图书心得',
+    icon: BookOpen,
+    component: BookReportList,
+    desc: '阅读记录与心得沉淀',
+  },
+] as const
+
+function resolveKeyFromRoute(tab: unknown): string {
+  const key = typeof tab === 'string' ? tab : 'competition'
+  return modules.some((item) => item.key === key) ? key : 'competition'
+}
+
+const activeKey = ref(resolveKeyFromRoute(route.query.tab))
+const activeModule = computed(() => modules.find((item) => item.key === activeKey.value)!)
+
+watch(
+  () => route.query.tab,
+  (tab) => {
+    activeKey.value = resolveKeyFromRoute(tab)
+  },
+)
+
+function switchModule(key: string) {
+  if (key === activeKey.value) return
+  activeKey.value = key
+  router.replace({ path: '/applications', query: { tab: key } }).catch(() => {})
+}
+</script>
+
+<template>
+  <div class="application-hub">
+    <el-card class="application-hub__hero">
+      <div class="application-hub__hero-content">
+        <div>
+          <p class="application-hub__eyebrow">Applications Workspace</p>
+          <h2 class="application-hub__title">个人档案信息申报</h2>
+          <p class="application-hub__desc">
+            将分散的成长与成果材料集中到一个工作区中，通过模块切换统一录入、查看与维护。
+          </p>
+        </div>
+      </div>
+    </el-card>
+
+    <div class="application-hub__grid">
+      <button
+        v-for="item in modules"
+        :key="item.key"
+        type="button"
+        class="application-hub__tab"
+        :class="{ 'is-active': item.key === activeKey }"
+        @click="switchModule(item.key)"
+      >
+        <div class="application-hub__tab-icon">
+          <component :is="item.icon" :size="18" />
+        </div>
+        <div class="application-hub__tab-body">
+          <div class="application-hub__tab-title">{{ item.label }}</div>
+          <div class="application-hub__tab-desc">{{ item.desc }}</div>
+        </div>
+      </button>
+    </div>
+
+    <section class="application-hub__panel">
+      <div class="application-hub__panel-item is-active" aria-hidden="false">
+        <component :is="activeModule.component" :key="activeKey" />
+      </div>
+    </section>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.application-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.application-hub__hero {
+  border: none;
+}
+
+.application-hub__eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--el-color-primary);
+}
+
+.application-hub__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.application-hub__desc {
+  margin: 10px 0 0;
+  max-width: 680px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--el-text-color-secondary);
+}
+
+.application-hub__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.application-hub__tab {
+  min-height: 92px;
+  padding: 14px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 12px;
+  background: var(--el-bg-color);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.application-hub__tab:hover {
+  transform: translateY(-2px);
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 10px 24px rgba(31, 45, 61, 0.08);
+}
+
+.application-hub__tab.is-active {
+  border-color: var(--el-color-primary);
+  background: linear-gradient(180deg, rgba(64, 158, 255, 0.1), rgba(64, 158, 255, 0.03));
+  box-shadow: 0 12px 28px rgba(64, 158, 255, 0.12);
+}
+
+.application-hub__tab-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(64, 158, 255, 0.1);
+  color: var(--el-color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.application-hub__tab-body {
+  min-width: 0;
+}
+
+.application-hub__tab-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.application-hub__tab-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
+}
+
+.application-hub__panel {
+  position: relative;
+  min-width: 0;
+  height: 70vh;
+  overflow: hidden;
+}
+
+.application-hub__panel-item {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 1200px) {
+  .application-hub__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .application-hub__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .application-hub__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .application-hub__tab,
+  .application-hub__panel-item {
+    transition: none !important;
+  }
+}
+</style>

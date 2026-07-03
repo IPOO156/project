@@ -5,7 +5,7 @@
  * 交互：
  *  - 点击 tab → router.push 到该路径
  *  - 关闭按钮 → 移除 tab；如果关闭的是当前激活 tab，跳到前一个
- *  - 横向滚动 + 左右翻页按钮
+ *  - 横向滚动（鼠标滚轮/触摸滑动），不显示左右翻页按钮
  *  - 键盘：← / → 在 tab 间切换，Home/End 跳首尾，Enter 激活
  *  - 移动端：tab 自适应截断（超长省略）
  *
@@ -16,9 +16,9 @@
  *  - prefers-reduced-motion: reduce 关闭动画
  *  - 不使用 Emoji 图标
  */
-import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { X } from 'lucide-vue-next'
+import { computed, nextTick, ref, watch } from 'vue'
+import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
 import { useTabsStore } from '@/app/stores/tabs'
 
 const router = useRouter()
@@ -27,41 +27,25 @@ const tabsStore = useTabsStore()
 
 const scrollerRef = ref<HTMLElement | null>(null)
 const tabRefs = ref<HTMLElement[]>([])
-const canScrollLeft = ref(false)
-const canScrollRight = ref(false)
 
 const tabs = computed(() => tabsStore.visitedTabs)
 const activePath = computed(() => tabsStore.activePath || route.fullPath)
 
-function updateScrollState() {
-  const el = scrollerRef.value
-  if (!el) {
-    return
-  }
-  canScrollLeft.value = el.scrollLeft > 2
-  canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 2
-}
-
 // 把激活的 tab 滚到视口内
 async function scrollIntoView(path: string) {
   await nextTick()
-  const idx = tabs.value.findIndex(t => t.path === path)
+  const idx = tabs.value.findIndex((t) => t.path === path)
   if (idx === -1) {
     return
   }
   const el = tabRefs.value[idx]
-  const container = scrollerRef.value
-  if (!el || !container) {
+  if (!el) {
     return
   }
-  const elRect = el.getBoundingClientRect()
-  const cRect = container.getBoundingClientRect()
-  if (elRect.left < cRect.left) {
-    container.scrollBy({ left: elRect.left - cRect.left - 8, behavior: 'smooth' })
-  }
-  else if (elRect.right > cRect.right) {
-    container.scrollBy({ left: elRect.right - cRect.right + 8, behavior: 'smooth' })
-  }
+  // 等浏览器完成首次样式计算与 layout 后再滚动，避免强制同步布局
+  requestAnimationFrame(() => {
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+  })
 }
 
 // 路由变化时同步滚动
@@ -81,18 +65,33 @@ function setRef(el: Element | null, index: number) {
   }
 }
 
-function activate(path: string) {
+async function activate(path: string) {
   if (path === activePath.value) {
     return
   }
-  router.push(path)
+  try {
+    const failure = await router.push(path)
+    if (failure && !isNavigationFailure(failure, NavigationFailureType.cancelled)) {
+      console.warn('[NavTabs] 激活标签导航失败:', failure)
+    }
+  } catch (err) {
+    console.error('[NavTabs] 激活标签失败:', err)
+  }
 }
 
-function close(path: string, e: Event) {
+async function close(path: string, e: Event) {
   e.stopPropagation()
   const fallback = tabsStore.removeTab(path)
-  if (fallback) {
-    router.push(fallback)
+  if (!fallback) {
+    return
+  }
+  try {
+    const failure = await router.push(fallback)
+    if (failure && !isNavigationFailure(failure, NavigationFailureType.cancelled)) {
+      console.warn('[NavTabs] 关闭标签后导航失败:', failure)
+    }
+  } catch (err) {
+    console.error('[NavTabs] 关闭标签后跳转失败:', err)
   }
 }
 
@@ -129,51 +128,13 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     tabRefs.value[nextIndex]?.focus()
   }
 }
-
-function scrollBy(delta: number) {
-  scrollerRef.value?.scrollBy({ left: delta, behavior: 'smooth' })
-}
-
-// 监听滚动 → 更新翻页按钮可用状态 + resize 重算
-let resizeObserver: ResizeObserver | null = null
-onMounted(() => {
-  nextTick(() => {
-    updateScrollState()
-    if (scrollerRef.value && 'ResizeObserver' in window) {
-      resizeObserver = new ResizeObserver(() => updateScrollState())
-      resizeObserver.observe(scrollerRef.value)
-    }
-  })
-})
-onBeforeUnmount(() => {
-  resizeObserver?.disconnect()
-  resizeObserver = null
-})
 </script>
 
 <template>
   <div v-if="tabs.length > 0" class="nav-tabs" role="presentation">
-    <!-- 左翻页：与 header 等高，垂直居中 -->
-    <button
-      type="button"
-      class="nav-tabs__nav nav-tabs__nav--left"
-      aria-label="向左滚动标签"
-      @click="scrollBy(-160)"
-    >
-      <ChevronLeft :size="14" />
-    </button>
-
     <!-- 标签栏主体：水平滚动 + mask 渐变提示 -->
-    <div
-      ref="scrollerRef"
-      class="nav-tabs__viewport"
-    >
-      <div
-        ref="scrollerRef"
-        class="nav-tabs__scroller"
-        role="tablist"
-        aria-label="已访问页面标签"
-      >
+    <div class="nav-tabs__viewport">
+      <div ref="scrollerRef" class="nav-tabs__scroller" role="tablist" aria-label="已访问页面标签">
         <div
           v-for="(tab, index) in tabs"
           :key="tab.path"
@@ -190,29 +151,21 @@ onBeforeUnmount(() => {
           @click="activate(tab.path)"
           @keydown="onKeydown($event, tab.path, index)"
         >
-          <span class="nav-tabs__title">{{ tab.title }}</span>
-          <button
-            v-if="tab.closable"
-            type="button"
-            class="nav-tabs__close"
-            :aria-label="`关闭标签：${tab.title}`"
-            @click="close(tab.path, $event)"
-          >
-            <X :size="12" />
-          </button>
+          <div class="nav-tabs__surface">
+            <span class="nav-tabs__title" :title="tab.title">{{ tab.title }}</span>
+            <button
+              v-if="tab.closable"
+              type="button"
+              class="nav-tabs__close"
+              :aria-label="`关闭标签：${tab.title}`"
+              @click="close(tab.path, $event)"
+            >
+              <X :size="12" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
-
-    <!-- 右翻页 -->
-    <button
-      type="button"
-      class="nav-tabs__nav nav-tabs__nav--right"
-      aria-label="向右滚动标签"
-      @click="scrollBy(160)"
-    >
-      <ChevronRight :size="14" />
-    </button>
   </div>
 </template>
 
@@ -221,10 +174,12 @@ onBeforeUnmount(() => {
 // 校准核心公式
 //  - header 高 56px，header 内区 40px（上下各 8px）
 //  - tab 高 32px（视觉中线 = header 中线）
-//  - 翻页按钮 28×56（与 header 等高，垂直居中）
 //  - 全部 align-items: center（禁止 stretch，避免子项高度被拉伸错位）
 // =============================================================================
 .nav-tabs {
+  --tab-base-width: 168px;
+  --tab-min-width: 80px;
+
   flex: 1 1 auto;
   display: flex;
   align-items: center;
@@ -234,42 +189,6 @@ onBeforeUnmount(() => {
   position: relative;
   gap: $spacing-xs;
 
-  // 翻页按钮（左右对称；与 header 等高 56px）
-  &__nav {
-    flex: 0 0 auto;
-    width: 28px;
-    height: 32px; // 与 tab 等高 → 中轴线严格对齐
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 0;
-    border-radius: $radius-base;
-    color: var(--el-text-color-secondary);
-    cursor: pointer;
-    padding: 0;
-    transition:
-      color $duration-fast $ease-standard,
-      background-color $duration-fast $ease-standard,
-      opacity $duration-fast $ease-standard;
-
-    &:hover:not(:disabled) {
-      color: var(--el-color-primary);
-      background-color: var(--el-fill-color-light);
-    }
-
-    &:disabled {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--el-color-primary);
-      outline-offset: 2px;
-    }
-  }
-
-  // 视口外层（负责 mask 渐变和滚动边界）
   &__viewport {
     flex: 1 1 auto;
     min-width: 0;
@@ -280,101 +199,121 @@ onBeforeUnmount(() => {
     overflow: hidden;
   }
 
-  // 真正滚动的容器
   &__scroller {
     flex: 1 1 auto;
     min-width: 0;
-    height: 32px;
+    height: 34px;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
     display: flex;
-    align-items: center; // 关键：与 tab 视觉中轴对齐
-    gap: $spacing-xs;
-    padding: 0 $spacing-xs;
-    // 允许横向滚动但不允许惯性滚动到链式刷新
+    align-items: center;
+    gap: 6px;
+    padding: 0 4px;
     overscroll-behavior-x: contain;
-    // 性能：滚动容器是固定大小的，避免 layout 重算
     contain: layout style;
 
-    // 隐藏滚动条（Chrome/Safari）
     &::-webkit-scrollbar {
       display: none;
     }
   }
 
-  // 单个 tab
+  &__item,
+  &__surface {
+    box-sizing: border-box;
+  }
+
   &__item {
-    flex: 0 0 auto;
-    max-width: 200px;
-    min-width: 80px;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    gap: $spacing-xs;
-    // 关键：左右内边距对称 → 文本 + 关闭按钮在 tab 中完美居中
-    padding: 0 6px 0 12px;
-    border-radius: $radius-base;
+    flex: 0 1 var(--tab-base-width);
+    min-width: var(--tab-min-width);
+    max-width: var(--tab-base-width);
+    height: 34px;
+    padding: 0;
+    background: transparent;
     color: var(--el-text-color-regular);
     font-size: $font-size-base;
     line-height: 1;
     cursor: pointer;
     user-select: none;
     position: relative;
-    background-color: transparent;
-    // 仅动 transform + color + background-color（合成层）
-    transition:
-      color $duration-fast $ease-standard,
-      background-color $duration-fast $ease-standard,
-      transform $duration-fast $ease-standard;
-
-    &:hover {
-      background-color: var(--el-fill-color-light);
-      color: var(--el-color-primary);
-    }
-
-    &.is-active {
-      color: var(--el-color-primary);
-      background-color: var(--el-color-primary-light-9);
-      font-weight: 500;
-
-      // 底部激活指示条（与 tab padding 对齐：左右各 12px = padding-left）
-      &::after {
-        content: '';
-        position: absolute;
-        left: 12px;
-        right: 12px;
-        bottom: 0;
-        height: 2px;
-        border-radius: 2px 2px 0 0;
-        background: var(--el-color-primary);
-        animation: nav-tabs-slide-in $duration-base $ease-emphasized;
-        transform-origin: left center;
-      }
-    }
-
-    &.is-affix .nav-tabs__close {
-      display: none;
-    }
 
     &:focus-visible {
       outline: 2px solid var(--el-color-primary);
       outline-offset: 2px;
     }
+
+    &.is-affix .nav-tabs__close {
+      display: none;
+    }
   }
 
-  // 标题文本
+  &__surface {
+    width: 100%;
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px 0 12px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 10px 10px 0 0;
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(241, 245, 249, 0.82));
+    position: relative;
+    // 为关闭按钮绝对定位提供锚点
+    contain: layout style;
+    transition:
+      background-color $duration-fast $ease-standard,
+      border-color $duration-fast $ease-standard,
+      box-shadow $duration-fast $ease-standard,
+      transform $duration-fast $ease-standard,
+      color $duration-fast $ease-standard;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 0;
+      height: 2px;
+      background: var(--el-color-primary);
+      border-radius: 2px 2px 0 0;
+      transform: scaleX(0);
+      transform-origin: center;
+      transition: transform $duration-fast $ease-standard;
+    }
+  }
+
+  &__item:hover .nav-tabs__surface {
+    background: rgba(255, 255, 255, 0.98);
+    border-color: rgba(96, 165, 250, 0.28);
+    color: var(--el-color-primary);
+  }
+
+  &__item.is-active .nav-tabs__surface {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(248, 250, 252, 0.98));
+    border-color: rgba(96, 165, 250, 0.32);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    color: var(--el-color-primary);
+
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+
   &__title {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1 1 auto;
     min-width: 0;
+    // 为关闭按钮预留空间，避免 hover 时文字被挤压
+    margin-right: 26px;
   }
 
-  // 关闭按钮（视觉中心与 tab 文本基线对齐）
   &__close {
-    flex: 0 0 auto;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
     width: 18px;
     height: 18px;
     display: inline-flex;
@@ -386,9 +325,12 @@ onBeforeUnmount(() => {
     color: var(--el-text-color-secondary);
     cursor: pointer;
     padding: 0;
+    opacity: 0;
+    pointer-events: none;
     transition:
       background-color $duration-fast $ease-standard,
-      color $duration-fast $ease-standard;
+      color $duration-fast $ease-standard,
+      opacity $duration-fast $ease-standard;
 
     &:hover {
       background-color: rgba($color-danger, 0.1);
@@ -398,83 +340,60 @@ onBeforeUnmount(() => {
     &:focus-visible {
       outline: 2px solid var(--el-color-primary);
       outline-offset: 1px;
+      opacity: 1;
+      pointer-events: auto;
     }
   }
-}
 
-// 激活指示条滑入（合成层动画）
-@keyframes nav-tabs-slide-in {
-  from {
-    transform: scaleX(0);
-    opacity: 0;
-  }
-  to {
-    transform: scaleX(1);
+  &__item.is-active .nav-tabs__close,
+  &__item:hover .nav-tabs__close {
     opacity: 1;
+    pointer-events: auto;
   }
 }
 
-// =============================================================================
-// 响应式校准（4 档断点：1440 / 1199 / 768 / 375）
-// =============================================================================
-
-// 平板：收紧 tab 宽度、保留所有交互
-@media (max-width: 1199px) {
-  .nav-tabs__item {
-    max-width: 160px;
-  }
-}
-
-// 移动端横屏：tab 更紧凑、触控目标 ≥ 44px（含 padding）
 @media (max-width: 768px) {
-  .nav-tabs__item {
-    max-width: 120px;
-    min-width: 64px;
-    padding: 0 4px 0 10px;
+  .nav-tabs {
+    --tab-base-width: 140px;
+    --tab-min-width: 72px;
   }
-  .nav-tabs__nav {
-    width: 32px;
-    height: 32px;
+
+  .nav-tabs__surface {
+    padding: 0 8px 0 10px;
   }
-  .nav-tabs__viewport {
-    // 移动端给翻页按钮让出更多空间
-    margin: 0 -2px;
+
+  .nav-tabs__title {
+    margin-right: 22px;
   }
 }
 
-// 极小屏：tab 标题更短，整体更紧凑
 @media (max-width: 375px) {
-  .nav-tabs__item {
-    max-width: 88px;
-    min-width: 56px;
-    padding: 0 2px 0 8px;
-    font-size: $font-size-sm;
+  .nav-tabs {
+    --tab-base-width: 120px;
+    --tab-min-width: 64px;
   }
+
+  .nav-tabs__surface {
+    padding: 0 6px 0 8px;
+  }
+
+  .nav-tabs__title {
+    font-size: $font-size-sm;
+    margin-right: 18px;
+  }
+
   .nav-tabs__close {
     width: 16px;
     height: 16px;
-    margin-left: 2px;
-  }
-  .nav-tabs__nav {
-    width: 24px;
-    height: 28px;
-  }
-  .nav-tabs__scroller {
-    padding: 0 $spacing-xs;
+    right: 6px;
   }
 }
 
-// =============================================================================
-// 无障碍：关闭所有 transition / animation
-// =============================================================================
 @media (prefers-reduced-motion: reduce) {
   .nav-tabs__item,
-  .nav-tabs__nav,
+  .nav-tabs__surface,
   .nav-tabs__close {
     transition: none !important;
-  }
-  .nav-tabs__item.is-active::after {
-    animation: none !important;
   }
 }
 </style>

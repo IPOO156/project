@@ -1,25 +1,17 @@
 <script setup lang="ts">
 import {
-  Award,
   BarChart3,
-  BookOpen,
-  Briefcase,
   ChevronLeft,
   ChevronRight,
   Clock,
   FilePen,
-  FileText,
-  FlaskConical,
   GraduationCap,
-  HeartHandshake,
   Home,
   Lightbulb,
-  Medal,
   ShieldCheck,
   Star,
   Trophy,
   User,
-  Users,
 } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -28,7 +20,6 @@ import { useAppStore } from '@/app/stores/stores'
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
-
 
 interface MenuItem {
   label: string
@@ -51,18 +42,7 @@ const menuItems: MenuItem[] = [
   {
     label: '个人档案信息申报',
     icon: FilePen,
-    children: [
-      { label: '学科竞赛', icon: Trophy, path: '/applications/competition' },
-      { label: '创新创业', icon: Lightbulb, path: '/applications/innovation' },
-      { label: '学术研究', icon: FlaskConical, path: '/applications/research' },
-      { label: '奖学金', icon: Medal, path: '/applications/scholarship' },
-      { label: '荣誉证书', icon: Award, path: '/applications/certificate' },
-      { label: '实习经历', icon: Briefcase, path: '/applications/internship' },
-      { label: '组织履历', icon: Users, path: '/applications/organization' },
-      { label: '实训项目', icon: BarChart3, path: '/applications/training' },
-      { label: '社会实践', icon: HeartHandshake, path: '/applications/social-practice' },
-      { label: '图书心得', icon: BookOpen, path: '/applications/book-report' },
-    ],
+    path: '/applications',
   },
   {
     label: '奖项报名',
@@ -77,21 +57,25 @@ const menuItems: MenuItem[] = [
   {
     label: '审批与记录',
     icon: ShieldCheck,
-    children: [
-      { label: '待审批信息', icon: Clock, path: '/approval/pending' },
-    ],
+    children: [{ label: '待审批信息', icon: Clock, path: '/approval/pending' }],
   },
 ]
 
 // 当前路由所属的顶级菜单，用于 el-menu 的 default-active
 const activeMenu = computed(() => {
   const path = route.path
-  if (path === '/dashboard') return '/dashboard'
+  if (path === '/dashboard') {
+    return '/dashboard'
+  }
   // 返回当前路由 path，让 el-menu 高亮
   return path
 })
 
 function handleMenuSelect(index: string) {
+  if (index === route.fullPath) {
+    return
+  }
+
   router.push(index)
 }
 </script>
@@ -114,7 +98,7 @@ function handleMenuSelect(index: string) {
         :default-active="activeMenu"
         :collapse="appStore.isSidebarCollapsed"
         :collapse-transition="false"
-        router
+        :unique-opened="true"
         class="sidebar__el-menu"
         @select="handleMenuSelect"
       >
@@ -210,13 +194,14 @@ function handleMenuSelect(index: string) {
   }
 
   // === Element Plus el-menu 自定义样式 ===
+  // Element Plus 未暴露这些内部样式的 props，需通过 :deep() 覆盖以统一侧边栏视觉风格。
   // 移除 el-menu 默认背景和边框
   :deep(.sidebar__el-menu) {
     border-right: none !important;
     background: transparent !important;
   }
 
-  // 菜单项
+  // 菜单项：Element Plus 未提供对应样式 props，需覆盖内部类名以统一侧边栏尺寸与交互色。
   :deep(.el-menu-item) {
     height: 42px;
     line-height: 42px;
@@ -259,7 +244,7 @@ function handleMenuSelect(index: string) {
     }
   }
 
-  // 子菜单标题
+  // 子菜单标题：Element Plus 未提供对应样式 props，需覆盖内部类名以统一侧边栏尺寸与交互色。
   :deep(.el-sub-menu__title) {
     height: 42px;
     line-height: 42px;
@@ -278,16 +263,18 @@ function handleMenuSelect(index: string) {
     }
   }
 
-  // 子菜单弹出层
+  // 子菜单弹出层：折叠状态下 Element Plus 内部标题仍使用默认 padding，需覆盖以保持居中。
   :deep(.el-menu--collapse .el-sub-menu__title) {
     justify-content: center;
     padding: 0 !important;
   }
 
+  // 子菜单面板背景：Element Plus 默认背景色与侧边栏主题不符，需覆盖内部类名。
   :deep(.el-sub-menu .el-menu) {
     background: transparent !important;
   }
 
+  // 子菜单项缩进：Element Plus 默认缩进尺寸与侧边栏设计规范不一致，需覆盖内部类名。
   :deep(.el-sub-menu .el-menu .el-menu-item) {
     padding: 0 16px 0 44px !important;
     font-size: 13px;

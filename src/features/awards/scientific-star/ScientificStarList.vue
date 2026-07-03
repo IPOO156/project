@@ -35,6 +35,7 @@ const activeTab = ref<'project' | 'copyright' | 'paper'>('project')
   flex-direction: column;
   gap: 16px;
 
+  // el-alert 内容段落默认边距过大，Element Plus 未提供相关 props，需通过 :deep() 覆盖内部类名。
   &__alert :deep(p) {
     margin: 4px 0;
     font-size: 13px;

@@ -1,6 +1,6 @@
-import { ref } from 'vue'
+import type { Award, Grade, Interest, TimelineNode } from '@/shared/types/types'
 import { defineStore } from 'pinia'
-import type { TimelineNode, Award, Grade, Interest } from '@/shared/types/types'
+import { ref } from 'vue'
 
 interface ProfileDimension {
   label: string
@@ -33,7 +33,13 @@ export const useArchiveStore = defineStore('archive', () => {
       { id: '4', semester: '2023-2024-2', courseName: '操作系统', score: 91, gpa: 3.8, credits: 4 },
     ]
     awards.value = [
-      { id: '1', name: '全国大学生数学建模竞赛', level: 'provincial', type: 'competition', date: '2025-09' },
+      {
+        id: '1',
+        name: '全国大学生数学建模竞赛',
+        level: 'provincial',
+        type: 'competition',
+        date: '2025-09',
+      },
       { id: '2', name: '校级优秀学生干部', level: 'school', type: 'other', date: '2025-06' },
       { id: '3', name: 'ACM 程序设计竞赛', level: 'school', type: 'competition', date: '2025-05' },
     ]
@@ -45,15 +51,78 @@ export const useArchiveStore = defineStore('archive', () => {
       { label: '综合素质', score: 80, color: '#9b59b6' },
     ]
     timelineEvents.value = [
-      { id: '1', semester: '2022-2023-1', type: 'grade', title: '入学', description: '进入计算机科学与技术专业学习', date: '2024-09' },
-      { id: '2', semester: '2022-2023-1', type: 'grade', title: '第一学期期末', description: 'GPA: 3.2', date: '2025-01' },
-      { id: '3', semester: '2022-2023-2', type: 'competition', title: '加入ACM社团', description: '开始参加编程竞赛训练', date: '2025-03' },
-      { id: '4', semester: '2022-2023-2', type: 'award', title: '通过CET-4', description: '英语四级考试: 532分', date: '2025-06' },
-      { id: '5', semester: '2023-2024-1', type: 'award', title: '校ACM竞赛一等奖', description: '团队赛获得校级一等奖', date: '2025-09' },
-      { id: '6', semester: '2023-2024-1', type: 'practice', title: '成为社团部长', description: '担任ACM社团技术部部长', date: '2025-11' },
-      { id: '7', semester: '2023-2024-2', type: 'practice', title: '暑期社会实践', description: '参与"科技下乡"活动', date: '2026-03' },
-      { id: '8', semester: '2023-2024-2', type: 'award', title: '数学建模省二等奖', description: '全国大学生数学建模竞赛省二等奖', date: '2026-05' },
-      { id: '9', semester: '2024-2025-1', type: 'grade', title: 'GPA创新高', description: 'GPA: 3.82', date: '2026-09' },
+      {
+        id: '1',
+        semester: '2022-2023-1',
+        type: 'grade',
+        title: '入学',
+        description: '进入计算机科学与技术专业学习',
+        date: '2024-09',
+      },
+      {
+        id: '2',
+        semester: '2022-2023-1',
+        type: 'grade',
+        title: '第一学期期末',
+        description: 'GPA: 3.2',
+        date: '2025-01',
+      },
+      {
+        id: '3',
+        semester: '2022-2023-2',
+        type: 'competition',
+        title: '加入ACM社团',
+        description: '开始参加编程竞赛训练',
+        date: '2025-03',
+      },
+      {
+        id: '4',
+        semester: '2022-2023-2',
+        type: 'award',
+        title: '通过CET-4',
+        description: '英语四级考试: 532分',
+        date: '2025-06',
+      },
+      {
+        id: '5',
+        semester: '2023-2024-1',
+        type: 'award',
+        title: '校ACM竞赛一等奖',
+        description: '团队赛获得校级一等奖',
+        date: '2025-09',
+      },
+      {
+        id: '6',
+        semester: '2023-2024-1',
+        type: 'practice',
+        title: '成为社团部长',
+        description: '担任ACM社团技术部部长',
+        date: '2025-11',
+      },
+      {
+        id: '7',
+        semester: '2023-2024-2',
+        type: 'practice',
+        title: '暑期社会实践',
+        description: '参与"科技下乡"活动',
+        date: '2026-03',
+      },
+      {
+        id: '8',
+        semester: '2023-2024-2',
+        type: 'award',
+        title: '数学建模省二等奖',
+        description: '全国大学生数学建模竞赛省二等奖',
+        date: '2026-05',
+      },
+      {
+        id: '9',
+        semester: '2024-2025-1',
+        type: 'grade',
+        title: 'GPA创新高',
+        description: 'GPA: 3.82',
+        date: '2026-09',
+      },
     ]
   }
 
@@ -61,8 +130,7 @@ export const useArchiveStore = defineStore('archive', () => {
     loading.value = true
     return new Promise((resolve) => {
       setTimeout(() => {
-        if (interests.value.length === 0)
-          generateMockData()
+        if (interests.value.length === 0) generateMockData()
         loading.value = false
         resolve()
       }, 300)

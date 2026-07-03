@@ -1,14 +1,14 @@
 <script setup lang="ts">
+import type { ApplicationType, SubmissionFilters } from '@/shared/types/types'
 import { Search } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSubmissionStore } from '@/app/stores/stores'
-import { APPLICATION_TYPE_MAP, APPLICATION_STATUS } from '@/shared/constants/dict'
-import type { ApplicationType, SubmissionFilters } from '@/shared/types/types'
+import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
+import DictColumn from '@/shared/ui/DictColumn.vue'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
-import DictColumn from '@/shared/ui/DictColumn.vue'
 
 const router = useRouter()
 const submissionStore = useSubmissionStore()
@@ -29,11 +29,16 @@ const paginatedList = computed(() => {
 const total = computed(() => submissionStore.filteredRecords.length)
 
 const typeOptions = computed(() =>
-  Object.entries(APPLICATION_TYPE_MAP as Record<string, string>).map(([value, label]) => ({ value, label })),
+  Object.entries(APPLICATION_TYPE_MAP as Record<string, string>).map(([value, label]) => ({
+    value,
+    label,
+  })),
 )
 
 const statusOptions = computed(() =>
-  Object.entries(APPLICATION_STATUS as Record<string, { label: string }>).map(([value, config]) => ({ value, label: config.label })),
+  Object.entries(APPLICATION_STATUS as Record<string, { label: string }>).map(
+    ([value, config]) => ({ value, label: config.label }),
+  ),
 )
 
 let debounceTimer: ReturnType<typeof setTimeout>
@@ -97,13 +102,35 @@ onMounted(() => {
           <el-input v-model="keyword" placeholder="搜索关键词" :prefix-icon="Search" clearable />
         </el-col>
         <el-col :span="5">
-          <el-select v-model="typeFilter" placeholder="模块类型" clearable style="width: 100%" @change="handleTypeChange">
-            <el-option v-for="opt in typeOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          <el-select
+            v-model="typeFilter"
+            placeholder="模块类型"
+            clearable
+            style="width: 100%"
+            @change="handleTypeChange"
+          >
+            <el-option
+              v-for="opt in typeOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
           </el-select>
         </el-col>
         <el-col :span="5">
-          <el-select v-model="statusFilter" placeholder="状态" clearable style="width: 100%" @change="handleStatusChange">
-            <el-option v-for="opt in statusOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          <el-select
+            v-model="statusFilter"
+            placeholder="状态"
+            clearable
+            style="width: 100%"
+            @change="handleStatusChange"
+          >
+            <el-option
+              v-for="opt in statusOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
           </el-select>
         </el-col>
         <el-col :span="4">
@@ -113,11 +140,16 @@ onMounted(() => {
     </el-card>
 
     <el-card>
-      <el-table v-loading="submissionStore.loading" :data="paginatedList" stripe style="width: 100%">
+      <el-table
+        v-loading="submissionStore.loading"
+        :data="paginatedList"
+        stripe
+        style="width: 100%"
+      >
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column label="模块类型" width="120">
           <template #default="{ row }">
-            <DictColumn :value="row.type" :options="typeOptions as any" />
+            <DictColumn :value="row.type" :options="typeOptions" />
           </template>
         </el-table-column>
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
@@ -130,7 +162,9 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="120" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="viewRecord(row.sourcePath)">查看</el-button>
+            <el-button type="primary" link size="small" @click="viewRecord(row.sourcePath)"
+              >查看</el-button
+            >
           </template>
         </el-table-column>
       </el-table>

@@ -1,6 +1,6 @@
-import type { GrowthExperience } from '../constants'
+import type { GrowthExperience } from '../timeline-constants'
 import { computed, ref } from 'vue'
-import { inferSemester, INITIAL_EXPERIENCES } from '../constants'
+import { inferSemester, INITIAL_EXPERIENCES } from '../timeline-constants'
 
 function sortExperiencesByDate(list: GrowthExperience[]): GrowthExperience[] {
   return [...list].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())

@@ -18,7 +18,7 @@ import { computed, ref, watch } from 'vue'
  */
 
 const STORAGE_KEY = 'app:visited-tabs'
-const MAX_TABS = 12
+const MAX_TABS = 7
 
 export interface NavTab {
   /** 唯一 key（用 fullPath） */
@@ -29,6 +29,20 @@ export interface NavTab {
   closable: boolean
   /** 是否为 fixed（来自 route.meta.affix，严格 === true） */
   affix: boolean
+}
+
+/**
+ * 按 path 去重，保留第一次出现的 tab（用于清理持久化层旧脏数据）。
+ */
+function dedupeTabs(tabs: NavTab[]): NavTab[] {
+  const seen = new Set<string>()
+  return tabs.filter((tab) => {
+    if (seen.has(tab.path)) {
+      return false
+    }
+    seen.add(tab.path)
+    return true
+  })
 }
 
 /**
@@ -48,30 +62,30 @@ function readStorage(router?: Router): NavTab[] {
     if (!Array.isArray(parsed)) {
       return []
     }
-    return parsed.map((t) => {
-      const storedAffix = Boolean(t.affix)
-      // 实时反查真实 affix：旧版本产生的脏数据会被自动修正
-      let realAffix = storedAffix
-      if (router) {
-        try {
-          const resolved = router.resolve(t.path)
-          const leaf = resolved.matched[resolved.matched.length - 1]
-          // 严格 === true，避免父级 meta 继承或弱类型 true
-          realAffix = leaf?.meta?.affix === true
+    return dedupeTabs(
+      parsed.map((t) => {
+        const storedAffix = Boolean(t.affix)
+        // 实时反查真实 affix：旧版本产生的脏数据会被自动修正
+        let realAffix = storedAffix
+        if (router) {
+          try {
+            const resolved = router.resolve(t.path)
+            const leaf = resolved.matched[resolved.matched.length - 1]
+            // 严格 === true，避免父级 meta 继承或弱类型 true
+            realAffix = leaf?.meta?.affix === true
+          } catch {
+            // resolve 失败（路由已不存在），保留存储值
+          }
         }
-        catch {
-          // resolve 失败（路由已不存在），保留存储值
-        }
-      }
-      return {
-        path: t.path,
-        title: t.title,
-        closable: !realAffix,
-        affix: realAffix,
-      } satisfies NavTab
-    })
-  }
-  catch {
+        return {
+          path: t.path,
+          title: t.title,
+          closable: !realAffix,
+          affix: realAffix,
+        } satisfies NavTab
+      }),
+    )
+  } catch {
     return []
   }
 }
@@ -82,8 +96,7 @@ function writeStorage(tabs: NavTab[]) {
   }
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(tabs))
-  }
-  catch {
+  } catch {
     // sessionStorage 可能被禁用（隐私模式）—— 静默降级
   }
 }
@@ -103,23 +116,25 @@ export const useTabsStore = defineStore('tabs', () => {
   const hasTabs = computed(() => visitedTabs.value.length > 0)
 
   // actions
-  function addTab(tab: NavTab) {
+  /**
+   * 添加 tab。
+   * @returns true：tab 已存在或添加成功；false：已达上限且为新 tab，未添加。
+   */
+  function addTab(tab: NavTab): boolean {
     // 防止重复添加
-    if (visitedTabs.value.some(t => t.path === tab.path)) {
-      return
+    if (visitedTabs.value.some((t) => t.path === tab.path)) {
+      return true
     }
-    // 超出上限：淘汰最早的可关闭 tab（保护 affix）
+    // 超出上限：不再自动淘汰，由调用方提示用户手动清理
     if (visitedTabs.value.length >= MAX_TABS) {
-      const evictIndex = visitedTabs.value.findIndex(t => !t.affix)
-      if (evictIndex !== -1) {
-        visitedTabs.value.splice(evictIndex, 1)
-      }
+      return false
     }
     visitedTabs.value.push(tab)
+    return true
   }
 
   function removeTab(path: string) {
-    const idx = visitedTabs.value.findIndex(t => t.path === path)
+    const idx = visitedTabs.value.findIndex((t) => t.path === path)
     if (idx === -1) {
       return ''
     }
@@ -134,12 +149,12 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   function removeOtherTabs(path: string) {
-    visitedTabs.value = visitedTabs.value.filter(t => t.path === path || !t.closable)
+    visitedTabs.value = visitedTabs.value.filter((t) => t.path === path || !t.closable)
   }
 
   function removeAllTabs() {
     // 保留所有 affix
-    visitedTabs.value = visitedTabs.value.filter(t => !t.closable)
+    visitedTabs.value = visitedTabs.value.filter((t) => !t.closable)
     return visitedTabs.value[0]?.path ?? ''
   }
 

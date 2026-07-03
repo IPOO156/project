@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../constants'
+import type { GrowthExperience } from '../timeline-constants'
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 interface Props {

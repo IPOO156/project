@@ -69,6 +69,7 @@ defineEmits<{
   flex-direction: column;
   gap: 16px;
 
+  // el-alert 描述段落的默认边距与项目设计规范不符，Element Plus 未暴露相关 props，需覆盖内部类名。
   :deep(.el-alert__description) p {
     margin: 4px 0 0;
     font-size: 13px;

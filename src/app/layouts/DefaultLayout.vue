@@ -51,8 +51,8 @@ const pageSubtitle = computed(() => (route.meta?.subtitle as string) || '')
 
 /** 面包屑：基于 matched 路由栈 */
 const breadcrumbs = computed(() => {
-  const matched = route.matched.filter(r => r.meta?.title && r.path !== '/')
-  return matched.map(r => ({
+  const matched = route.matched.filter((r) => r.meta?.title && r.path !== '/')
+  return matched.map((r) => ({
     label: (r.meta?.title as string) || '',
     path: r.path,
   }))
@@ -72,9 +72,6 @@ watch(
   },
   { immediate: true },
 )
-
-// 路由切换时短暂触发 header 的 slide-down（route-key 变化驱动）
-const routeKey = computed(() => route.fullPath)
 
 // 加载态切换时，给 spinner/遮罩加 will-change，结束后释放
 const loadingEl = ref<HTMLElement | null>(null)
@@ -114,19 +111,13 @@ watch(isLoading, async (loading) => {
 
     <!-- 右侧主区域 -->
     <div class="layout__main">
-      <!-- 顶部栏（路由切换时整体淡入下移 240ms） -->
-      <Transition name="layout-header" mode="out-in">
-        <HeaderBar :key="routeKey" />
-      </Transition>
+      <!-- 顶部栏：保持挂载，内部 NavTabs 自行响应路由变化 -->
+      <HeaderBar />
 
       <!-- 多标签页导航（由 NavTabs 接管） -->
 
       <!-- 内容区 -->
-      <main
-        class="layout__content"
-        :aria-busy="isLoading"
-        :aria-label="pageTitle || '主内容区'"
-      >
+      <main class="layout__content" :aria-busy="isLoading" :aria-label="pageTitle || '主内容区'">
         <div class="layout__content-inner">
           <!-- 页面头：标题区 + 工具栏 -->
           <Transition name="layout-fade">
@@ -140,10 +131,7 @@ watch(isLoading, async (loading) => {
                 <slot name="breadcrumb">
                   <el-breadcrumb separator="/">
                     <el-breadcrumb-item :to="{ path: '/dashboard' }">首页</el-breadcrumb-item>
-                    <el-breadcrumb-item
-                      v-for="crumb in breadcrumbs"
-                      :key="crumb.path"
-                    >
+                    <el-breadcrumb-item v-for="crumb in breadcrumbs" :key="crumb.path">
                       {{ crumb.label }}
                     </el-breadcrumb-item>
                   </el-breadcrumb>
@@ -174,9 +162,9 @@ watch(isLoading, async (loading) => {
           <!-- 主内容：路由出口 / 自定义内容 -->
           <section class="layout__page-body">
             <router-view v-slot="{ Component, route: routeSlot }">
-              <transition name="layout-page" mode="out-in">
+              <keep-alive :max="20">
                 <component :is="Component" :key="routeSlot.fullPath" />
-              </transition>
+              </keep-alive>
             </router-view>
           </section>
 
@@ -259,6 +247,8 @@ watch(isLoading, async (loading) => {
     position: relative;
     // 滚动使用 passive 滚动（浏览器原生优化，避免阻塞主线程）
     overscroll-behavior: contain;
+    // 预留垂直滚动条空间，避免滚动条显隐导致居中内容左右偏移
+    scrollbar-gutter: stable;
   }
 
   &__content-inner {
@@ -385,53 +375,7 @@ watch(isLoading, async (loading) => {
   opacity: 0;
 }
 
-// B. HeaderBar 路由切换 → 整体淡入下移（240ms 减速曲线）
-.layout-header-enter-active {
-  transition:
-    transform $duration-slow $ease-decelerate,
-    opacity ($duration-slow - 40ms) $ease-decelerate;
-}
-
-.layout-header-leave-active {
-  transition:
-    transform $duration-base $ease-accelerate,
-    opacity $duration-fast $ease-accelerate;
-}
-
-.layout-header-enter-from {
-  transform: translateY(-6px);
-  opacity: 0;
-}
-
-.layout-header-leave-to {
-  transform: translateY(2px);
-  opacity: 0;
-}
-
-// C. 路由页面切换 → 淡入 + 4px 轻位移（200ms）
-.layout-page-enter-active {
-  transition:
-    transform $duration-base $ease-decelerate,
-    opacity $duration-base $ease-decelerate;
-}
-
-.layout-page-leave-active {
-  transition:
-    transform $duration-fast $ease-accelerate,
-    opacity $duration-fast $ease-accelerate;
-}
-
-.layout-page-enter-from {
-  transform: translateY(4px);
-  opacity: 0;
-}
-
-.layout-page-leave-to {
-  transform: translateY(-2px);
-  opacity: 0;
-}
-
-// D. 移动端遮罩 → 仅淡入（180ms，避免视觉抢占）
+// B. 移动端遮罩 → 仅淡入（180ms，避免视觉抢占）
 .layout-mask-enter-active,
 .layout-mask-leave-active {
   transition: opacity $duration-fast $ease-standard;
@@ -485,7 +429,9 @@ watch(isLoading, async (loading) => {
 
 // 关键帧
 @keyframes layout-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 // =============================================================================
@@ -512,9 +458,6 @@ watch(isLoading, async (loading) => {
   .layout-sidebar-leave-active {
     transition-duration: $duration-base;
   }
-  .layout-page-enter-active {
-    transition-duration: $duration-fast;
-  }
 }
 
 // 移动端竖屏：375px 以下（紧凑间距，禁止横向滚动）
@@ -533,10 +476,6 @@ watch(isLoading, async (loading) => {
     justify-content: flex-start;
   }
   // 极小屏：禁用 transform 位移，仅保留 opacity（避免低端机卡顿）
-  .layout-page-enter-from,
-  .layout-page-leave-to,
-  .layout-header-enter-from,
-  .layout-header-leave-to,
   .layout-fade-enter-from,
   .layout-fade-leave-to {
     transform: none;
@@ -557,10 +496,6 @@ watch(isLoading, async (loading) => {
   // 所有 transition 类：禁用过渡 + 清除初始/结束状态
   .layout-sidebar-enter-active,
   .layout-sidebar-leave-active,
-  .layout-header-enter-active,
-  .layout-header-leave-active,
-  .layout-page-enter-active,
-  .layout-page-leave-active,
   .layout-mask-enter-active,
   .layout-mask-leave-active,
   .layout-fade-enter-active,
@@ -573,10 +508,6 @@ watch(isLoading, async (loading) => {
   // 初始/结束状态：直接显示，无 transform
   .layout-sidebar-enter-from,
   .layout-sidebar-leave-to,
-  .layout-header-enter-from,
-  .layout-header-leave-to,
-  .layout-page-enter-from,
-  .layout-page-leave-to,
   .layout-mask-enter-from,
   .layout-mask-leave-to,
   .layout-fade-enter-from,

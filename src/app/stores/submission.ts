@@ -1,6 +1,6 @@
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
 import type { ApplicationType, SubmissionFilters, SubmissionRecord } from '@/shared/types/types'
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
 import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 
 /**
@@ -81,27 +81,22 @@ export const useSubmissionStore = defineStore('submission', () => {
     loading.value = true
     return new Promise((resolve) => {
       setTimeout(() => {
-        if (records.value.length === 0)
-          records.value = generateMockData()
+        if (records.value.length === 0) records.value = generateMockData()
 
         let filtered = [...records.value]
         if (filters) {
           if (filters.keyword) {
             const kw = filters.keyword.toLowerCase()
-            filtered = filtered.filter(r =>
-              r.title.toLowerCase().includes(kw) || r.typeLabel.toLowerCase().includes(kw),
+            filtered = filtered.filter(
+              (r) => r.title.toLowerCase().includes(kw) || r.typeLabel.toLowerCase().includes(kw),
             )
           }
-          if (filters.type)
-            filtered = filtered.filter(r => r.type === filters.type)
-          if (filters.status)
-            filtered = filtered.filter(r => r.status === filters.status)
+          if (filters.type) filtered = filtered.filter((r) => r.type === filters.type)
+          if (filters.status) filtered = filtered.filter((r) => r.status === filters.status)
           if (filters.dateRange) {
             const [start, end] = filters.dateRange
-            if (start)
-              filtered = filtered.filter(r => r.submitDate >= start)
-            if (end)
-              filtered = filtered.filter(r => r.submitDate <= end)
+            if (start) filtered = filtered.filter((r) => r.submitDate >= start)
+            if (end) filtered = filtered.filter((r) => r.submitDate <= end)
           }
         }
         filteredRecords.value = filtered

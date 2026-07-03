@@ -9,7 +9,7 @@ import ProgressDots from './components/ProgressDots.vue'
 import SummarySection from './components/SummarySection.vue'
 import TimelineNode from './components/TimelineNode.vue'
 import { useGrowthTimeline } from './composables/useGrowthTimeline'
-import { findRingBySemester } from './constants'
+import { findRingBySemester } from './timeline-constants'
 
 const {
   experiences,

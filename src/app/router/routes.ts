@@ -53,68 +53,52 @@ const routes: RouteRecordRaw[] = [
       // ─── 各类申报板块 ───
       {
         path: 'applications',
-        redirect: '/applications/competition',
         children: [
           {
+            path: '',
+            name: 'ApplicationsHub',
+            component: () => import('@/features/applications/ApplicationHub.vue'),
+            meta: { title: '个人档案信息申报' },
+          },
+          {
             path: 'competition',
-            name: 'Competition',
-            component: () => import('@/features/applications/competition/CompetitionList.vue'),
-            meta: { title: '学科竞赛' },
+            redirect: '/applications?tab=competition',
           },
           {
             path: 'innovation',
-            name: 'Innovation',
-            component: () => import('@/features/applications/innovation/InnovationList.vue'),
-            meta: { title: '创新创业' },
+            redirect: '/applications?tab=innovation',
           },
           {
             path: 'research',
-            name: 'AcademicResearch',
-            component: () => import('@/features/applications/research/ResearchList.vue'),
-            meta: { title: '学术研究' },
+            redirect: '/applications?tab=research',
           },
           {
             path: 'scholarship',
-            name: 'Scholarship',
-            component: () => import('@/features/applications/scholarship/ScholarshipList.vue'),
-            meta: { title: '奖学金' },
+            redirect: '/applications?tab=scholarship',
           },
           {
             path: 'certificate',
-            name: 'HonorCertificate',
-            component: () => import('@/features/applications/certificate/CertificateList.vue'),
-            meta: { title: '荣誉证书' },
+            redirect: '/applications?tab=certificate',
           },
           {
             path: 'internship',
-            name: 'Internship',
-            component: () => import('@/features/applications/internship/InternshipList.vue'),
-            meta: { title: '实习经历' },
+            redirect: '/applications?tab=internship',
           },
           {
             path: 'organization',
-            name: 'OrganizationExp',
-            component: () => import('@/features/applications/organization/OrganizationList.vue'),
-            meta: { title: '组织履历' },
+            redirect: '/applications?tab=organization',
           },
           {
             path: 'training',
-            name: 'TrainingProject',
-            component: () => import('@/features/applications/training/TrainingList.vue'),
-            meta: { title: '实训项目' },
+            redirect: '/applications?tab=training',
           },
           {
             path: 'social-practice',
-            name: 'SocialPractice',
-            component: () =>
-              import('@/features/applications/social-practice/SocialPracticeList.vue'),
-            meta: { title: '社会实践' },
+            redirect: '/applications?tab=social-practice',
           },
           {
             path: 'book-report',
-            name: 'BookReport',
-            component: () => import('@/features/applications/book-report/BookReportList.vue'),
-            meta: { title: '图书心得' },
+            redirect: '/applications?tab=book-report',
           },
         ],
       },
@@ -178,13 +162,18 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('token')
+
   if (to.name !== 'Login' && !token) {
     next({ name: 'Login' })
-  } else if (to.name === 'Login' && token) {
-    next({ path: '/dashboard' })
-  } else {
-    next()
+    return
   }
+
+  if (to.name === 'Login' && token) {
+    next({ path: '/dashboard' })
+    return
+  }
+
+  next()
 })
 
 export default router
