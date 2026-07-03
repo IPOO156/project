@@ -43,6 +43,14 @@ function reset() {
 }
 
 function handleSubmit() {
+  if (!form.companyName && !form.semester && !form.industryType && !form.ranking && !form.registerDate) {
+    ElMessage.warning('请填写报名信息')
+    return
+  }
+  if (form.proofMaterials.length === 0) {
+    ElMessage.warning('请上传证明材料')
+    return
+  }
   submitting.value = true
   setTimeout(() => {
     if (editingId.value) {
@@ -125,7 +133,7 @@ function remove(row: InnovationStarItem) {
           <el-input v-model="form.ranking" placeholder="如：1/3" class="form-input" />
         </el-form-item>
         <el-form-item label="注册时间" required><el-date-picker v-model="form.registerDate" type="month" /></el-form-item>
-        <el-form-item label="证明材料">
+        <el-form-item label="证明材料" required>
           <ProofUpload v-model:file-list="form.proofMaterials" />
         </el-form-item>
       </el-form>

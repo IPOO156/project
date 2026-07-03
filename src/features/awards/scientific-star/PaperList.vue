@@ -42,6 +42,14 @@ function reset() {
 }
 
 function handleSubmit() {
+  if (!form.journalName && !form.paperName && !form.ranking && !form.publishDate && !form.semester) {
+    ElMessage.warning('请填写报名信息')
+    return
+  }
+  if (form.proofMaterials.length === 0) {
+    ElMessage.warning('请上传证明材料')
+    return
+  }
   submitting.value = true
   setTimeout(() => {
     if (editingId.value) {
@@ -121,7 +129,7 @@ function remove(row: PaperItem) {
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="证明材料">
+        <el-form-item label="证明材料" required>
           <ProofUpload v-model:file-list="form.proofMaterials" />
         </el-form-item>
       </el-form>

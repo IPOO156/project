@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Clock,
   FilePen,
+  FileText,
   FlaskConical,
   GraduationCap,
   HeartHandshake,
@@ -48,7 +49,7 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    label: '各类申报',
+    label: '个人档案信息申报',
     icon: FilePen,
     children: [
       { label: '学科竞赛', icon: Trophy, path: '/applications/competition' },
@@ -67,6 +68,7 @@ const menuItems: MenuItem[] = [
     label: '奖项报名',
     icon: Star,
     children: [
+      { label: '奖项总览', icon: BarChart3, path: '/awards' },
       { label: '竞赛之星报名', icon: Trophy, path: '/awards/competition-star' },
       { label: '科研之星报名', icon: GraduationCap, path: '/awards/scientific-star' },
       { label: '双创之星报名', icon: Lightbulb, path: '/awards/innovation-star' },
@@ -77,6 +79,7 @@ const menuItems: MenuItem[] = [
     icon: ShieldCheck,
     children: [
       { label: '待审批信息', icon: Clock, path: '/approval/pending' },
+      { label: '提交记录', icon: FileText, path: '/approval/records' },
     ],
   },
 ]

@@ -8,30 +8,13 @@ import {
   Star,
   Users,
 } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useArchiveStore } from '@/app/stores/stores'
 import { useDict } from '@/shared/composables/composables'
 import { SEMESTER_OPTIONS, TIMELINE_EVENT_TYPES } from '@/shared/constants/dict'
 
-interface TimelineEvent {
-  semester: string
-  date: string
-  title: string
-  description: string
-  type: keyof typeof TIMELINE_EVENT_TYPES
-}
-
-// ── Mock 数据（接口联调后替换） ──
-const timelineData = ref<TimelineEvent[]>([
-  { semester: '大一 (上)', date: '2024-09', title: '入学', description: '进入计算机科学与技术专业学习', type: 'other' },
-  { semester: '大一 (上)', date: '2025-01', title: '第一学期期末', description: 'GPA: 3.2，班级排名前30%', type: 'grade' },
-  { semester: '大一 (下)', date: '2025-03', title: '加入ACM社团', description: '开始参加编程竞赛训练', type: 'competition' },
-  { semester: '大一 (下)', date: '2025-06', title: '通过CET-4', description: '英语四级考试: 532分', type: 'award' },
-  { semester: '大二 (上)', date: '2025-09', title: '校ACM竞赛一等奖', description: '团队赛获得校级一等奖', type: 'award' },
-  { semester: '大二 (上)', date: '2025-11', title: '成为社团部长', description: '担任ACM社团技术部部长', type: 'practice' },
-  { semester: '大二 (下)', date: '2026-03', title: '暑期社会实践', description: '参与"科技下乡"社会实践活动', type: 'practice' },
-  { semester: '大二 (下)', date: '2026-05', title: '数学建模省二等奖', description: '全国大学生数学建模竞赛省二等奖', type: 'award' },
-  { semester: '大三 (上)', date: '2026-09', title: 'GPA创新高', description: 'GPA: 3.82，班级排名前10%', type: 'grade' },
-])
+const archiveStore = useArchiveStore()
+const timelineData = computed(() => archiveStore.timelineEvents)
 
 const semesterGroups = computed(() => SEMESTER_OPTIONS.map(s => s.label))
 
@@ -62,6 +45,11 @@ function getTypeLabel(type: string): string {
 function getEventsForSemester(semester: string) {
   return timelineData.value.filter(e => e.semester === semester)
 }
+
+onMounted(() => {
+  if (timelineData.value.length === 0)
+    archiveStore.fetchArchive()
+})
 </script>
 
 <template>
@@ -85,7 +73,7 @@ function getEventsForSemester(semester: string) {
             <div class="timeline__events">
               <div
                 v-for="event in getEventsForSemester(semester)"
-                :key="event.title + event.date"
+                :key="event.id"
                 class="timeline__event"
               >
                 <div

@@ -43,6 +43,14 @@ function reset() {
 }
 
 function handleSubmit() {
+  if (!form.semester && !form.competitionName && !form.competitionDate && !form.competitionLevel && !form.awardLevel) {
+    ElMessage.warning('请填写报名信息')
+    return
+  }
+  if (form.proofMaterials.length === 0) {
+    ElMessage.warning('请上传佐证材料')
+    return
+  }
   submitting.value = true
   setTimeout(() => {
     if (editingId.value) {
@@ -127,7 +135,7 @@ function remove(row: CompetitionStarItem) {
             <el-option v-for="t in AWARD_LEVELS" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="佐证材料">
+        <el-form-item label="佐证材料" required>
           <ProofUpload v-model:file-list="form.proofMaterials" />
         </el-form-item>
       </el-form>
