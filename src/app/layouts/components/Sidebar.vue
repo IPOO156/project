@@ -28,6 +28,20 @@ const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 
+/** 从路径反查菜单标题 */
+function getTitleByPath(path: string): string {
+  for (const item of menuItems) {
+    if (item.path === path)
+      return item.label
+    if (item.children) {
+      const child = item.children.find(c => c.path === path)
+      if (child)
+        return child.label
+    }
+  }
+  return path.split('/').pop() ?? ''
+}
+
 interface MenuItem {
   label: string
   icon?: any
@@ -41,7 +55,6 @@ const menuItems: MenuItem[] = [
     label: '个人中心',
     icon: User,
     children: [
-      { label: '修改密码', path: '/profile/edit-password' },
       { label: '个人档案信息', path: '/profile/info' },
       { label: '成长时间轴', path: '/profile/timeline' },
       { label: '职业规划', path: '/profile/career-plan' },
@@ -91,6 +104,10 @@ const activeMenu = computed(() => {
 })
 
 function handleMenuSelect(index: string) {
+  const title = getTitleByPath(index)
+  if (title) {
+    appStore.addTab(index, title)
+  }
   router.push(index)
 }
 </script>

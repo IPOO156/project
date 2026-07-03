@@ -12,11 +12,12 @@
  *     - 主色深海蓝 + 琥珀金（$color-primary / $color-accent）
  *  4. 响应式：≥992 三栏、<992 自动折叠侧边栏为抽屉
  */
-import { computed, useSlots } from 'vue'
+import { computed, watch, useSlots } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
 import { PageHeader } from '@/shared/ui'
 import HeaderBar from './components/HeaderBar.vue'
+import PageTabs from './components/PageTabs.vue'
 import Sidebar from './components/Sidebar.vue'
 
 defineOptions({ name: 'DefaultLayout' })
@@ -33,6 +34,17 @@ const hasBreadcrumb = computed(() => !!slots.breadcrumb)
 const hasPageHeader = computed(() => hasHeader.value || hasToolbar.value || hasBreadcrumb.value || !!route.meta?.title)
 const hasFooter = computed(() => !!slots.footer)
 const isLoading = computed(() => appStore.pageLoading)
+
+// 路由变化时自动添加标签页（非登录页和首页）
+watch(
+  () => route.path,
+  (path) => {
+    if (path === '/login' || path === '/') return
+    const title = (route.meta?.title as string) || path.split('/').pop() || ''
+    appStore.addTab(path, title)
+  },
+  { immediate: true },
+)
 
 /** 从路由 meta 中推断页面标题（fallback） */
 const pageTitle = computed(() => (route.meta?.title as string) || '')
@@ -68,6 +80,9 @@ function goHome() {
     <div class="layout__main">
       <!-- 顶部栏 -->
       <HeaderBar />
+
+      <!-- 多标签页导航 -->
+      <PageTabs />
 
       <!-- 内容区 -->
       <main class="layout__content" :aria-busy="isLoading">
@@ -163,6 +178,7 @@ function goHome() {
     min-width: 0;
   }
 
+  // 折叠侧边栏
   &--collapsed &__main {
     margin-left: $sidebar-collapsed-width;
   }
