@@ -19,6 +19,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/features/dashboard/Dashboard.vue'),
         meta: { title: '首页' },
       },
+      {
+        path: 'growth-timeline',
+        name: 'GrowthTimeline',
+        component: () => import('@/features/growth-timeline/GrowthTimeline.vue'),
+        meta: { title: '成长时间轴' },
+      },
       // ─── 个人中心 ───
       {
         path: 'profile',
@@ -35,12 +41,6 @@ const routes: RouteRecordRaw[] = [
             name: 'ProfileInfo',
             component: () => import('@/features/profile/ProfileInfo.vue'),
             meta: { title: '个人档案信息' },
-          },
-          {
-            path: 'timeline',
-            name: 'Timeline',
-            component: () => import('@/features/profile/Timeline.vue'),
-            meta: { title: '成长时间轴' },
           },
           {
             path: 'career-plan',
@@ -106,7 +106,8 @@ const routes: RouteRecordRaw[] = [
           {
             path: 'social-practice',
             name: 'SocialPractice',
-            component: () => import('@/features/applications/social-practice/SocialPracticeList.vue'),
+            component: () =>
+              import('@/features/applications/social-practice/SocialPracticeList.vue'),
             meta: { title: '社会实践' },
           },
           {
@@ -168,11 +169,9 @@ router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('token')
   if (to.name !== 'Login' && !token) {
     next({ name: 'Login' })
-  }
-  else if (to.name === 'Login' && token) {
+  } else if (to.name === 'Login' && token) {
     next({ path: '/dashboard' })
-  }
-  else {
+  } else {
     next()
   }
 })
