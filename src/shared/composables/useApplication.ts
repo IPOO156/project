@@ -1,14 +1,19 @@
 import { reactive, ref } from 'vue'
 
+export interface ApplicationForm {
+  id?: string
+  [key: string]: unknown
+}
+
 /**
  * 通用申报 Composable - 管理表单、弹窗、提交状态
  */
-export function useApplication<T extends Record<string, any>>(defaultForm: T) {
+export function useApplication<T extends ApplicationForm>(defaultForm: T) {
   const dialogVisible = ref(false)
   const detailVisible = ref(false)
   const loading = ref(false)
   const submitting = ref(false)
-  const formData = reactive<T>({ ...defaultForm }) as T
+  const formData = reactive<T>({ ...defaultForm })
   const currentId = ref<string>('')
   const isEdit = ref(false)
 
@@ -21,7 +26,7 @@ export function useApplication<T extends Record<string, any>>(defaultForm: T) {
 
   function openEdit(data: T) {
     Object.assign(formData, { ...defaultForm, ...data })
-    currentId.value = (data as any).id
+    currentId.value = data.id ?? ''
     isEdit.value = true
     dialogVisible.value = true
   }

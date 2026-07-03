@@ -11,30 +11,45 @@ export const APPLICATION_TYPE_MAP: Record<string, string> = {
   socialPractice: '社会实践',
   bookReport: '图书心得',
   competitionStar: '竞赛之星报名',
+  innovationStar: '双创之星报名',
   scientificProject: '科研项目',
   softwareCopyright: '科研之星-软著',
   paper: '科研之星-论文',
 }
 
-// 学期选项
-export const SEMESTER_OPTIONS = [
-  { label: '大一 (上)', value: '大一上' },
-  { label: '大一 (下)', value: '大一下' },
-  { label: '大二 (上)', value: '大二上' },
-  { label: '大二 (下)', value: '大二下' },
-  { label: '大三 (上)', value: '大三上' },
-  { label: '大三 (下)', value: '大三下' },
-  { label: '大四 (上)', value: '大四上' },
-  { label: '大四 (下)', value: '大四下' },
-] as const
+const TERM_LABELS = ['一', '二', '三'] as const
 
-// 申请状态
+function generateSemesterOptions(startYear: number, endYear: number) {
+  const options: { label: string, value: string }[] = []
+  for (let year = startYear; year < endYear; year++) {
+    for (let term = 0; term < TERM_LABELS.length; term++) {
+      const value = `${year}-${year + 1}-${term + 1}`
+      options.push({
+        label: `${year}-${year + 1}第${TERM_LABELS[term]}学期`,
+        value,
+      })
+    }
+  }
+  return options
+}
+
+// 学期选项：学年-学期格式，如 2024-2025第一学期
+export const SEMESTER_OPTIONS = generateSemesterOptions(2022, 2028)
+
+// 申请状态（含标签颜色）
 export const APPLICATION_STATUS = {
   draft: { label: '草稿', color: 'info' },
   submitted: { label: '已提交', color: 'warning' },
   approved: { label: '已通过', color: 'success' },
   rejected: { label: '已驳回', color: 'danger' },
 } as const
+
+// 审批状态筛选选项
+export const APPROVAL_STATUS_OPTIONS = [
+  { label: '已通过', value: 'approved' },
+  { label: '已驳回', value: 'rejected' },
+  { label: '待审批', value: 'pending' },
+] as const
 
 // 竞赛类型
 export const COMPETITION_TYPES = [
@@ -86,6 +101,21 @@ export const INDUSTRY_TYPES = [
   { label: '其他', value: 'other' },
 ] as const
 
+// 奖学金级别（一/二/三等奖）
+export const SCHOLARSHIP_GRADES = [
+  { label: '一等奖', value: 'first' },
+  { label: '二等奖', value: 'second' },
+  { label: '三等奖', value: 'third' },
+] as const
+
+// 创新创业企业类型
+export const INNOVATION_COMPANY_TYPES = [
+  { label: '创业实践', value: '创业实践' },
+  { label: '创业计划', value: '创业计划' },
+  { label: '实体注册', value: '实体注册' },
+  { label: '其他', value: '其他' },
+] as const
+
 // 奖学金等级
 export const SCHOLARSHIP_LEVELS = [
   { label: '国家奖学金', value: 'national' },
@@ -94,3 +124,27 @@ export const SCHOLARSHIP_LEVELS = [
   { label: '院级奖学金', value: 'college' },
   { label: '企业奖学金', value: 'enterprise' },
 ] as const
+
+// 成长时间轴事件类型
+export const TIMELINE_EVENT_TYPES = {
+  award: { label: '奖项', color: '#e6a23c', iconKey: 'Award' },
+  practice: { label: '实践', color: '#67c23a', iconKey: 'Users' },
+  grade: { label: '成绩', color: '#409eff', iconKey: 'BookOpen' },
+  competition: { label: '竞赛', color: '#9b59b6', iconKey: 'Code' },
+  internship: { label: '实习', color: '#f56c6c', iconKey: 'Briefcase' },
+  other: { label: '其他', color: '#909399', iconKey: 'Star' },
+} as const
+
+// 个人兴趣掌握程度
+export const INTEREST_LEVEL = {
+  proficient: { label: '熟练', color: 'success' },
+  good: { label: '良好', color: 'warning' },
+  general: { label: '一般', color: 'info' },
+} as const
+
+// 最近动态类型
+export const ACTIVITY_STATUS = {
+  submitted: { label: '已提交', color: '#e6a23c' },
+  approved: { label: '已通过', color: '#67c23a' },
+  rejected: { label: '需修改', color: '#f56c6c' },
+} as const

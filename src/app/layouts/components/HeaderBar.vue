@@ -1,51 +1,50 @@
 <script setup lang="ts">
-import { Bell, LogOut, Settings, User } from 'lucide-vue-next'
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useUserStore } from '@/app/stores'
+/**
+ * HeaderBar - 顶部栏
+ *  - 面包屑改由 DefaultLayout 统一渲染（保持布局一致）
+ *  - 移动端自动出现"侧边栏开关"按钮
+ *  - 用户下拉：个人中心 / 修改密码 / 退出登录
+ */
+import { Bell, LogOut, Menu, Settings, User } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
+import { useAppStore, useUserStore } from '@/app/stores/stores'
 
-const route = useRoute()
-const router = useRouter()
 const userStore = useUserStore()
-
-const breadcrumbs = computed(() => {
-  const matched = route.matched.filter(r => r.meta?.title)
-  return matched.map(r => ({
-    label: (r.meta?.title as string) || '',
-    path: r.path === '/' ? undefined : r.path,
-  }))
-})
+const appStore = useAppStore()
+const router = useRouter()
 
 function handleLogout() {
   userStore.logout()
   router.push('/login')
+}
+
+function openSidebar() {
+  appStore.setSidebarCollapsed(false)
 }
 </script>
 
 <template>
   <header class="header">
     <div class="header__left">
-      <el-breadcrumb>
-        <el-breadcrumb-item :to="{ path: '/dashboard' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item
-          v-for="crumb in breadcrumbs"
-          :key="crumb.label"
-          :to="crumb.path ? { path: crumb.path } : undefined"
-        >
-          {{ crumb.label }}
-        </el-breadcrumb-item>
-      </el-breadcrumb>
+      <!-- 移动端菜单按钮 -->
+      <el-button
+        v-if="appStore.isMobile"
+        text
+        class="header__menu-btn"
+        aria-label="打开侧边栏"
+        @click="openSidebar"
+      >
+        <Menu :size="20" />
+      </el-button>
     </div>
 
     <div class="header__right">
-      <!-- 通知 -->
       <el-badge :value="3" class="header__action">
-        <el-button text>
+        <el-button text aria-label="通知">
           <Bell :size="18" />
         </el-button>
       </el-badge>
 
-      <!-- 用户信息 -->
       <el-dropdown trigger="click">
         <span class="header__user">
           <el-avatar :size="32" :icon="User" />
@@ -71,24 +70,32 @@ function handleLogout() {
 
 <style scoped lang="scss">
 .header {
-  height: 56px;
-  background: #fff;
+  height: $header-height;
+  background: var(--el-bg-color);
   border-bottom: 1px solid var(--el-border-color-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 $spacing-xl;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 
   &__left {
     display: flex;
     align-items: center;
+    gap: $spacing-md;
+  }
+
+  &__menu-btn {
+    color: var(--el-text-color-primary);
   }
 
   &__right {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: $spacing-md;
   }
 
   &__action {
@@ -98,10 +105,10 @@ function handleLogout() {
   &__user {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: $spacing-sm;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 6px;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-base;
     transition: background-color 0.2s;
 
     &:hover {
@@ -109,9 +116,18 @@ function handleLogout() {
     }
 
     &-name {
-      font-size: 14px;
+      font-size: $font-size-base;
       color: var(--el-text-color-primary);
     }
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0 $spacing-md;
+  }
+  .header__user-name {
+    display: none;
   }
 }
 </style>

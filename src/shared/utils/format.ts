@@ -37,6 +37,8 @@ export function formatGpa(gpa: number | undefined | null): string {
 /**
  * 空值兜底
  */
-export function orNa(value: any, fallback = '-'): string {
-  return value ?? fallback
+export function orNa(value: unknown, fallback = '-'): string {
+  if (value === undefined || value === null || value === '')
+    return fallback
+  return String(value)
 }

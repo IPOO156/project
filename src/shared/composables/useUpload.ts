@@ -1,6 +1,7 @@
+import type { UploadUserFile } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
-import { request } from '@/shared/api'
+import { request } from '@/shared/api/api'
 
 interface UploadOptions {
   url?: string
@@ -12,7 +13,7 @@ interface UploadOptions {
 export function useUpload(options: UploadOptions = {}) {
   const uploading = ref(false)
   const progress = ref(0)
-  const fileList = ref<any[]>([])
+  const fileList = ref<UploadUserFile[]>([])
   const uploadedUrls = ref<string[]>([])
 
   const defaultOptions: UploadOptions = {

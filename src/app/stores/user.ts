@@ -1,4 +1,4 @@
-import type { UserInfo } from '@/shared/types'
+import type { UserInfo } from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 

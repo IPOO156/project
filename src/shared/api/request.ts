@@ -41,6 +41,9 @@ request.interceptors.response.use(
         case 403:
           ElMessage.error('没有权限执行此操作')
           break
+        case 429:
+          ElMessage.error('请求过于频繁，请稍后重试')
+          break
         case 500:
           ElMessage.error('服务器异常，请稍后重试')
           break

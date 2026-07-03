@@ -1,9 +1,13 @@
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import Components from 'unplugin-vue-components/vite'
 import { defineConfig } from 'vite'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const srcDir = resolve(__dirname, 'src').replace(/\\/g, '/')
 
 export default defineConfig({
   plugins: [
@@ -17,13 +21,14 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': srcDir,
     },
   },
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: `@use "@/assets/styles/variables.scss" as *;\n`,
+        api: 'legacy',
+        additionalData: `@use "${srcDir}/assets/styles/variables.scss" as *;\n`,
       },
     },
   },

@@ -8,13 +8,13 @@ import {
   ChevronRight,
   Clock,
   FilePen,
+  FileText,
   FlaskConical,
   GraduationCap,
   HeartHandshake,
   Home,
   Lightbulb,
   Medal,
-  ScrollText,
   ShieldCheck,
   Star,
   Trophy,
@@ -23,7 +23,7 @@ import {
 } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAppStore } from '@/app/stores'
+import { useAppStore } from '@/app/stores/stores'
 
 const route = useRoute()
 const router = useRouter()
@@ -49,7 +49,7 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    label: '各类申报',
+    label: '个人档案信息申报',
     icon: FilePen,
     children: [
       { label: '学科竞赛', icon: Trophy, path: '/applications/competition' },
@@ -62,9 +62,16 @@ const menuItems: MenuItem[] = [
       { label: '实训项目', icon: BarChart3, path: '/applications/training' },
       { label: '社会实践', icon: HeartHandshake, path: '/applications/social-practice' },
       { label: '图书心得', icon: BookOpen, path: '/applications/book-report' },
-      { label: '竞赛之星报名', icon: Star, path: '/applications/competition-star' },
-      { label: '科研项目', icon: ScrollText, path: '/applications/scientific-project' },
-      { label: '科研之星报名', icon: GraduationCap, path: '/applications/scientific-star' },
+    ],
+  },
+  {
+    label: '奖项报名',
+    icon: Star,
+    children: [
+      { label: '奖项总览', icon: BarChart3, path: '/awards' },
+      { label: '竞赛之星报名', icon: Trophy, path: '/awards/competition-star' },
+      { label: '科研之星报名', icon: GraduationCap, path: '/awards/scientific-star' },
+      { label: '双创之星报名', icon: Lightbulb, path: '/awards/innovation-star' },
     ],
   },
   {
@@ -72,7 +79,7 @@ const menuItems: MenuItem[] = [
     icon: ShieldCheck,
     children: [
       { label: '待审批信息', icon: Clock, path: '/approval/pending' },
-      { label: '提交记录', path: '/approval/records' },
+      { label: '提交记录', icon: FileText, path: '/approval/records' },
     ],
   },
 ]
@@ -162,18 +169,18 @@ function handleMenuSelect(index: string) {
   position: fixed;
   top: 0;
   left: 0;
-  width: 240px;
+  width: $sidebar-width;
   height: 100vh;
-  background: #fff;
+  background: var(--el-bg-color);
   border-right: 1px solid var(--el-border-color-light);
   display: flex;
   flex-direction: column;
   z-index: 100;
-  transition: width 0.3s ease-in-out;
+  transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 
   &--collapsed {
-    width: 64px;
+    width: $sidebar-collapsed-width;
   }
 
   &__logo {
@@ -305,6 +312,17 @@ function handleMenuSelect(index: string) {
     gap: 6px;
     color: var(--el-text-color-secondary);
     font-size: 13px;
+  }
+}
+
+// 移动端：抽屉式
+@media (max-width: 991px) {
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: $shadow-lg;
+  }
+  .sidebar:not(.sidebar--collapsed) {
+    transform: translateX(0);
   }
 }
 
