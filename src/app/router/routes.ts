@@ -115,23 +115,30 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/features/applications/book-report/BookReportList.vue'),
             meta: { title: '图书心得' },
           },
+        ],
+      },
+      // ─── 奖项报名 ───
+      {
+        path: 'awards',
+        redirect: '/awards/competition-star',
+        children: [
           {
             path: 'competition-star',
             name: 'CompetitionStar',
-            component: () => import('@/features/applications/competition-star/CompetitionStarList.vue'),
+            component: () => import('@/features/awards/competition-star/CompetitionStarList.vue'),
             meta: { title: '竞赛之星报名' },
-          },
-          {
-            path: 'scientific-project',
-            name: 'ScientificProject',
-            component: () => import('@/features/applications/scientific-project/ScientificProjectList.vue'),
-            meta: { title: '科研项目' },
           },
           {
             path: 'scientific-star',
             name: 'ScientificStar',
-            component: () => import('@/features/applications/scientific-star/ScientificStarList.vue'),
+            component: () => import('@/features/awards/scientific-star/ScientificStarList.vue'),
             meta: { title: '科研之星报名' },
+          },
+          {
+            path: 'innovation-star',
+            name: 'InnovationStar',
+            component: () => import('@/features/awards/innovation-star/InnovationStarList.vue'),
+            meta: { title: '双创之星报名' },
           },
         ],
       },
@@ -144,12 +151,6 @@ const routes: RouteRecordRaw[] = [
             name: 'ApprovalPending',
             component: () => import('@/features/approval/PendingApproval.vue'),
             meta: { title: '待审批信息' },
-          },
-          {
-            path: 'records',
-            name: 'ApprovalRecords',
-            component: () => import('@/features/approval/SubmitRecords.vue'),
-            meta: { title: '提交记录' },
           },
         ],
       },

@@ -27,12 +27,8 @@ export interface DictOption {
   color?: string
 }
 
-// 学期枚举
-export type Semester
-  = | '大一上' | '大一下'
-    | '大二上' | '大二下'
-    | '大三上' | '大三下'
-    | '大四上' | '大四下'
+// 学期：学年-学期格式，如 2024-2025-1
+export type Semester = string
 
 // === 学生端核心类型 ===
 
@@ -235,6 +231,14 @@ export interface Paper extends ApplicationBase {
   publishDate: string
 }
 
+// 双创之星报名
+export interface InnovationStar extends ApplicationBase {
+  companyName: string
+  industryType: string
+  ranking: string
+  registerDate: string
+}
+
 // === 审批类型 ===
 
 export interface ApprovalItem {
@@ -259,6 +263,7 @@ export type ApplicationType
     | 'socialPractice'
     | 'bookReport'
     | 'competitionStar'
+    | 'innovationStar'
     | 'scientificProject'
     | 'softwareCopyright'
     | 'paper'

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { Download, Eye, Plus } from 'lucide-vue-next'
+import { AlertTriangle, Download, Eye, Plus } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
 import { useDict } from '@/shared/composables/composables'
 import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
@@ -25,8 +25,13 @@ const planFiles = ref<{ name: string, url: string }[]>([])
 
 // ── Mock 数据（接口联调后替换） ──
 const planRecords = ref<PlanRecord[]>([
-  { id: '1', semester: '大二上', title: '大二学年成长规划', submitDate: '2025-09-15', status: 'submitted' },
-  { id: '2', semester: '大一下', title: '大一学年总结与规划', submitDate: '2025-03-10', status: 'submitted' },
+  { id: '1', semester: '2023-2024-1', title: '大二学年成长规划', submitDate: '2025-09-15', status: 'submitted' },
+  { id: '2', semester: '2022-2023-2', title: '大一学年总结与规划', submitDate: '2025-03-10', status: 'submitted' },
+])
+
+const weaknesses = ref([
+  { dimension: '科研创新', score: 60, weakness: '科研项目经历较少，缺乏论文发表', suggestion: '建议参与导师科研项目，尝试撰写学术论文' },
+  { dimension: '竞赛实践', score: 65, weakness: '高级别竞赛参与度不足', suggestion: '关注国家级竞赛信息，组建团队参赛' },
 ])
 
 const loading = ref(false)
@@ -98,6 +103,44 @@ function handleSubmit() {
       </el-table>
     </el-card>
 
+    <!-- 短板识别与改进建议 -->
+    <el-card class="career-plan__section">
+      <template #header>
+        <div class="career-plan__header">
+          <div class="section-title">
+            <AlertTriangle :size="18" />
+            <span>短板识别与改进建议</span>
+          </div>
+          <el-tag size="small" type="warning">AI 生成</el-tag>
+        </div>
+      </template>
+      <div v-for="item in weaknesses" :key="item.dimension" class="weakness-item">
+        <div class="weakness-item__header">
+          <span class="weakness-item__dim">{{ item.dimension }}</span>
+          <el-progress
+            :percentage="item.score"
+            :stroke-width="8"
+            class="progress-fixed"
+            status="exception"
+            :format="() => `${item.score}分`"
+          />
+        </div>
+        <el-alert
+          :title="`短板：${item.weakness}`"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="mb-8"
+        />
+        <el-alert
+          :title="`建议：${item.suggestion}`"
+          type="success"
+          :closable="false"
+          show-icon
+        />
+      </div>
+    </el-card>
+
     <!-- 新增规划弹窗 -->
     <el-dialog
       v-model="dialogVisible"
@@ -151,10 +194,24 @@ function handleSubmit() {
 
 <style scoped lang="scss">
 .career-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+  }
+
+  &__section {
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 600;
+    }
   }
 }
 
@@ -165,5 +222,26 @@ function handleSubmit() {
 
 .form-select {
   width: 200px;
+}
+
+.weakness-item {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--el-fill-color-lighter);
+  border-radius: 8px;
+
+  &:last-child { margin-bottom: 0; }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  &__dim {
+    font-weight: 600;
+    font-size: 15px;
+  }
 }
 </style>

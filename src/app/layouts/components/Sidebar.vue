@@ -14,7 +14,6 @@ import {
   Home,
   Lightbulb,
   Medal,
-  ScrollText,
   ShieldCheck,
   Star,
   Trophy,
@@ -62,9 +61,15 @@ const menuItems: MenuItem[] = [
       { label: '实训项目', icon: BarChart3, path: '/applications/training' },
       { label: '社会实践', icon: HeartHandshake, path: '/applications/social-practice' },
       { label: '图书心得', icon: BookOpen, path: '/applications/book-report' },
-      { label: '竞赛之星报名', icon: Star, path: '/applications/competition-star' },
-      { label: '科研项目', icon: ScrollText, path: '/applications/scientific-project' },
-      { label: '科研之星报名', icon: GraduationCap, path: '/applications/scientific-star' },
+    ],
+  },
+  {
+    label: '奖项报名',
+    icon: Star,
+    children: [
+      { label: '竞赛之星报名', icon: Trophy, path: '/awards/competition-star' },
+      { label: '科研之星报名', icon: GraduationCap, path: '/awards/scientific-star' },
+      { label: '双创之星报名', icon: Lightbulb, path: '/awards/innovation-star' },
     ],
   },
   {
@@ -72,7 +77,6 @@ const menuItems: MenuItem[] = [
     icon: ShieldCheck,
     children: [
       { label: '待审批信息', icon: Clock, path: '/approval/pending' },
-      { label: '提交记录', path: '/approval/records' },
     ],
   },
 ]

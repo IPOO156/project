@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { Delete, Edit, Eye, Plus } from 'lucide-vue-next'
-import { ref } from 'vue'
-import { useApplication } from '@/shared/composables/useApplication'
-import { INDUSTRY_TYPES, INNOVATION_COMPANY_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { reactive, ref } from 'vue'
+import { INNOVATION_COMPANY_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
+import DictColumn from '@/shared/ui/DictColumn.vue'
+import ProofUpload from '@/shared/ui/ProofUpload.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
 
 interface InnovationItem {
@@ -14,113 +15,145 @@ interface InnovationItem {
   teamRole: string
   registerDate: string
   semester: string
-  status: string
+  status: 'draft' | 'submitted' | 'approved' | 'rejected'
   submitDate: string
   proofMaterials: string[]
 }
 
-const list = ref<InnovationItem[]>([ // Mock 数据（接口联调后替换）
-  { id: '1', companyName: '智创科技工作室', industryType: 'it', companyType: '创业实践', teamRole: '创始人', registerDate: '2025-06', semester: '大二下', status: 'approved', submitDate: '2025-07-01', proofMaterials: [] },
-])
+function emptyForm() {
+  return {
+    companyName: '',
+    industryType: '',
+    companyType: '',
+    teamRole: '',
+    registerDate: '',
+    semester: '',
+    proofMaterials: [] as string[],
+  }
+}
 
-const app = useApplication({
-  companyName: '',
-  industryType: '',
-  companyType: '',
-  teamRole: '',
-  registerDate: '',
-  semester: '',
-  proofMaterials: [],
-})
+const form = reactive(emptyForm())
+const list = ref<InnovationItem[]>([
+  { id: '1', companyName: '创新科技有限公司', industryType: '信息技术', companyType: '创业实践', teamRole: '核心成员', registerDate: '2025-03-15', semester: '2023-2024-1', status: 'approved', submitDate: '2025-10-01', proofMaterials: [] },
+])
+const editingId = ref<string | null>(null)
+const submitting = ref(false)
+
+function reset() {
+  Object.assign(form, emptyForm())
+  editingId.value = null
+}
 
 function handleSubmit() {
-  ElMessage.success('申报提交成功')
-  app.closeDialog()
+  submitting.value = true
+  setTimeout(() => {
+    if (editingId.value) {
+      const idx = list.value.findIndex(i => i.id === editingId.value)
+      if (idx > -1) {
+        list.value[idx] = {
+          ...list.value[idx],
+          ...form,
+          status: 'submitted',
+          submitDate: new Date().toISOString().slice(0, 10),
+        }
+      }
+      ElMessage.success('申报信息已更新')
+    }
+    else {
+      list.value.unshift({
+        id: `${Date.now()}`,
+        ...form,
+        status: 'submitted',
+        submitDate: new Date().toISOString().slice(0, 10),
+        proofMaterials: [],
+      })
+      ElMessage.success('申报提交成功')
+    }
+    reset()
+    submitting.value = false
+  }, 600)
+}
+
+function edit(row: InnovationItem) {
+  editingId.value = row.id
+  Object.assign(form, {
+    companyName: row.companyName,
+    industryType: row.industryType,
+    companyType: row.companyType,
+    teamRole: row.teamRole,
+    registerDate: row.registerDate,
+    semester: row.semester,
+  })
+}
+
+function remove(row: InnovationItem) {
+  ElMessageBox.confirm(`确定删除 "${row.companyName}" 的申报记录吗？`, '提示', { type: 'warning' })
+    .then(() => {
+      list.value = list.value.filter(i => i.id !== row.id)
+      ElMessage.success('删除成功')
+      if (editingId.value === row.id)
+        reset()
+    })
+    .catch(() => {})
 }
 </script>
 
 <template>
-  <div class="app-page">
-    <el-alert title="创新创业申报说明" type="info" :closable="false" show-icon class="app-page__alert">
-      <template #default>
-        <p>请如实填写创新创业项目信息，包括公司/工作室注册情况，并上传佐证材料。</p>
-        <p>双创之星报名需额外提交公司名称、行业类型、申报人排名及注册信息。</p>
-      </template>
-    </el-alert>
-
-    <div class="app-page__actions">
-      <el-button type="primary" :icon="Plus" @click="app.openCreate()">新增申报</el-button>
-    </div>
-
-    <el-card>
-      <el-table :data="list" stripe>
-        <el-table-column type="index" label="序号" width="60" />
-        <el-table-column prop="companyName" label="公司/项目名称" min-width="180" />
-        <el-table-column label="行业类型" width="120">
-          <template #default="{ row }">{{ INDUSTRY_TYPES.find(t => t.value === row.industryType)?.label || row.industryType }}</template>
-        </el-table-column>
-        <el-table-column prop="companyType" label="类型" width="120" />
-        <el-table-column prop="teamRole" label="团队角色" width="120" />
-        <el-table-column prop="registerDate" label="注册时间" width="120" />
-        <el-table-column prop="semester" label="学期" width="100" />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <StatusTag :status="row.status" size="small" />
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
-          <template #default>
-            <el-button text type="primary" :icon="Eye" size="small">查看</el-button>
-            <el-button text type="primary" :icon="Edit" size="small">编辑</el-button>
-            <el-button text type="danger" :icon="Delete" size="small">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-
-    <el-dialog v-model="app.dialogVisible" :title="app.isEdit ? '编辑创新创业' : '新增创新创业'" width="640px">
-      <el-form :model="app.formData" label-width="120px">
-        <el-form-item label="公司名称" required>
-          <el-input v-model="app.formData.companyName" placeholder="请输入公司/工作室名称" />
-        </el-form-item>
-        <el-form-item label="行业类型" required>
-          <el-select v-model="app.formData.industryType" placeholder="请选择" class="form-select">
-            <el-option v-for="t in INDUSTRY_TYPES" :key="t.value" :label="t.label" :value="t.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="类型" required>
-          <el-select v-model="app.formData.companyType" placeholder="请选择" class="form-select">
+  <ApplicationFormRecord
+    alert-title="创新创业申报说明"
+    alert-description="请填写创新创业项目或企业相关信息，并上传营业执照、项目计划书等佐证材料。"
+    :is-editing="!!editingId"
+    :submitting="submitting"
+    :records="list"
+    @submit="handleSubmit"
+    @cancel="reset"
+    @edit="edit"
+    @remove="remove"
+  >
+    <template #form>
+      <el-form :model="form" label-width="120px">
+        <el-form-item label="公司名称" required><el-input v-model="form.companyName" placeholder="请输入公司名称" /></el-form-item>
+        <el-form-item label="行业类型" required><el-input v-model="form.industryType" placeholder="请输入行业类型" /></el-form-item>
+        <el-form-item label="公司类型" required>
+          <el-select v-model="form.companyType" placeholder="请选择" class="form-select">
             <el-option v-for="t in INNOVATION_COMPANY_TYPES" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="团队角色" required>
-          <el-input v-model="app.formData.teamRole" placeholder="如：创始人、核心成员" />
-        </el-form-item>
-        <el-form-item label="创建/注册时间" required>
-          <el-date-picker v-model="app.formData.registerDate" type="month" placeholder="选择年月" />
-        </el-form-item>
+        <el-form-item label="团队角色" required><el-input v-model="form.teamRole" placeholder="请输入团队角色" /></el-form-item>
+        <el-form-item label="注册时间" required><el-date-picker v-model="form.registerDate" type="date" placeholder="选择日期" /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="app.formData.semester" placeholder="请选择" class="form-select">
+          <el-select v-model="form.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="佐证材料">
-          <el-upload action="#" :auto-upload="false" list-type="text">
-            <el-button type="primary" plain>上传文件</el-button>
-          </el-upload>
+          <ProofUpload v-model:file-list="form.proofMaterials" tip="支持 pdf、doc、docx 格式" />
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="app.closeDialog()">取消</el-button>
-        <el-button type="primary" :loading="app.submitting" @click="handleSubmit">提交</el-button>
-      </template>
-    </el-dialog>
-  </div>
+    </template>
+    <template #columns>
+      <el-table-column type="index" label="序号" width="60" />
+      <el-table-column prop="companyName" label="公司名称" min-width="180" />
+      <el-table-column label="公司类型" width="120">
+        <template #default="{ row }">
+          <DictColumn :value="(row as InnovationItem).companyType" :options="INNOVATION_COMPANY_TYPES" />
+        </template>
+      </el-table-column>
+      <el-table-column prop="registerDate" label="注册时间" width="120" />
+      <el-table-column prop="semester" label="学期" width="100" />
+      <el-table-column label="状态" width="100">
+        <template #default="{ row }"><StatusTag :status="(row as InnovationItem).status" size="small" /></template>
+      </el-table-column>
+    </template>
+  </ApplicationFormRecord>
 </template>
 
 <style scoped lang="scss">
-.app-page { display: flex; flex-direction: column; gap: 16px;
-  &__alert :deep(p) { margin: 4px 0; font-size: 13px; }
-  &__actions { display: flex; gap: 12px; }
+.form-select {
+  width: 200px;
+}
+
+.form-input-number {
+  width: 200px;
 }
 </style>

@@ -1,0 +1,91 @@
+<script setup lang="ts" generic="T extends { status: string }">
+import RecordActionButtons from './RecordActionButtons.vue'
+
+interface Props {
+  alertTitle: string
+  alertDescription: string
+  isEditing?: boolean
+  submitting?: boolean
+  records: T[]
+  showAlert?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  showAlert: true,
+})
+
+defineEmits<{
+  (e: 'submit'): void
+  (e: 'cancel'): void
+  (e: 'view', row: T): void
+  (e: 'edit', row: T): void
+  (e: 'remove', row: T): void
+}>()
+</script>
+
+<template>
+  <div class="app-page">
+    <el-alert v-if="showAlert" :title="alertTitle" type="info" :closable="false" show-icon>
+      <p>{{ alertDescription }}</p>
+    </el-alert>
+
+    <el-card class="form-card">
+      <template #header>
+        <span class="card-title">{{ isEditing ? '编辑报名信息' : '填写报名信息' }}</span>
+      </template>
+      <slot name="form" />
+      <div class="form-actions">
+        <el-button v-if="isEditing" @click="$emit('cancel')">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="$emit('submit')">
+          {{ isEditing ? '保存修改' : '提交报名' }}
+        </el-button>
+      </div>
+    </el-card>
+
+    <el-card v-if="records.length" class="record-card">
+      <template #header>
+        <span class="card-title">报名记录</span>
+      </template>
+      <el-table :data="records" stripe>
+        <slot name="columns" />
+        <el-table-column label="操作" width="280" fixed="right" align="center">
+          <template #default="{ row }">
+            <RecordActionButtons
+              :row="row as T"
+              @view="$emit('view', $event)"
+              @edit="$emit('edit', $event)"
+              @remove="$emit('remove', $event)"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+  </div>
+</template>
+
+<style scoped lang="scss">
+.app-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  :deep(.el-alert__description) p {
+    margin: 4px 0 0;
+    font-size: 13px;
+  }
+}
+
+.form-card,
+.record-card {
+  .card-title {
+    font-weight: 600;
+  }
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+</style>

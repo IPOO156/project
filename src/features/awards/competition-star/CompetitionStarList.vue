@@ -1,19 +1,19 @@
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { reactive, ref } from 'vue'
-import { SCHOLARSHIP_GRADES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import { AWARD_LEVELS, COMPETITION_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import DictColumn from '@/shared/ui/DictColumn.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
 
-interface ScholarshipItem {
+interface CompetitionStarItem {
   id: string
-  awardName: string
-  scholarshipLevel: string
-  scholarshipGrade: string
-  acquireDate: string
   semester: string
+  competitionName: string
+  competitionDate: string
+  competitionLevel: string
+  awardLevel: string
   status: 'draft' | 'submitted' | 'approved' | 'rejected'
   submitDate: string
   proofMaterials: string[]
@@ -21,18 +21,18 @@ interface ScholarshipItem {
 
 function emptyForm() {
   return {
-    awardName: '',
-    scholarshipLevel: '',
-    scholarshipGrade: '',
-    acquireDate: '',
     semester: '',
+    competitionName: '',
+    competitionDate: '',
+    competitionLevel: '',
+    awardLevel: '',
     proofMaterials: [] as string[],
   }
 }
 
 const form = reactive(emptyForm())
-const list = ref<ScholarshipItem[]>([
-  { id: '1', awardName: '国家励志奖学金', scholarshipLevel: '国家级', scholarshipGrade: 'first', acquireDate: '2025-09', semester: '2023-2024-1', status: 'approved', submitDate: '2025-10-01', proofMaterials: [] },
+const list = ref<CompetitionStarItem[]>([
+  { id: '1', semester: '2023-2024-1', competitionName: '全国大学生数学建模竞赛', competitionDate: '2025-09', competitionLevel: 'national', awardLevel: 'second', status: 'submitted', submitDate: '2025-10-01', proofMaterials: [] },
 ])
 const editingId = ref<string | null>(null)
 const submitting = ref(false)
@@ -55,7 +55,7 @@ function handleSubmit() {
           submitDate: new Date().toISOString().slice(0, 10),
         }
       }
-      ElMessage.success('申报信息已更新')
+      ElMessage.success('报名信息已更新')
     }
     else {
       list.value.unshift({
@@ -65,26 +65,27 @@ function handleSubmit() {
         submitDate: new Date().toISOString().slice(0, 10),
         proofMaterials: [],
       })
-      ElMessage.success('申报提交成功')
+      ElMessage.success('报名提交成功')
     }
     reset()
     submitting.value = false
   }, 600)
 }
 
-function edit(row: ScholarshipItem) {
+function edit(row: CompetitionStarItem) {
   editingId.value = row.id
   Object.assign(form, {
-    awardName: row.awardName,
-    scholarshipLevel: row.scholarshipLevel,
-    scholarshipGrade: row.scholarshipGrade,
-    acquireDate: row.acquireDate,
     semester: row.semester,
+    competitionName: row.competitionName,
+    competitionDate: row.competitionDate,
+    competitionLevel: row.competitionLevel,
+    awardLevel: row.awardLevel,
+    proofMaterials: row.proofMaterials,
   })
 }
 
-function remove(row: ScholarshipItem) {
-  ElMessageBox.confirm(`确定删除 "${row.awardName}" 的申报记录吗？`, '提示', { type: 'warning' })
+function remove(row: CompetitionStarItem) {
+  ElMessageBox.confirm(`确定删除 "${row.competitionName}" 的报名记录吗？`, '提示', { type: 'warning' })
     .then(() => {
       list.value = list.value.filter(i => i.id !== row.id)
       ElMessage.success('删除成功')
@@ -97,8 +98,8 @@ function remove(row: ScholarshipItem) {
 
 <template>
   <ApplicationFormRecord
-    alert-title="奖学金申报说明"
-    alert-description="请填写奖学金获奖信息，并上传奖学金证书或公示文件等佐证材料。"
+    alert-title="竞赛之星报名说明"
+    alert-description="竞赛之星用于评选在学科竞赛中表现突出的同学。请填写参赛信息及获奖情况，提交后可在下方查看报名记录。"
     :is-editing="!!editingId"
     :submitting="submitting"
     :records="list"
@@ -109,17 +110,21 @@ function remove(row: ScholarshipItem) {
   >
     <template #form>
       <el-form :model="form" label-width="120px">
-        <el-form-item label="奖项名称" required><el-input v-model="form.awardName" placeholder="请输入奖项名称" /></el-form-item>
-        <el-form-item label="奖学金级别" required><el-input v-model="form.scholarshipLevel" placeholder="请输入奖学金级别" /></el-form-item>
-        <el-form-item label="获奖等级" required>
-          <el-select v-model="form.scholarshipGrade" placeholder="请选择" class="form-select">
-            <el-option v-for="t in SCHOLARSHIP_GRADES" :key="t.value" :label="t.label" :value="t.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="获得时间" required><el-date-picker v-model="form.acquireDate" type="month" placeholder="选择年月" /></el-form-item>
         <el-form-item label="学期" required>
           <el-select v-model="form.semester" placeholder="请选择" class="form-select">
             <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="竞赛名称" required><el-input v-model="form.competitionName" /></el-form-item>
+        <el-form-item label="参赛时间" required><el-date-picker v-model="form.competitionDate" type="month" /></el-form-item>
+        <el-form-item label="竞赛级别" required>
+          <el-select v-model="form.competitionLevel" placeholder="请选择" class="form-select">
+            <el-option v-for="t in COMPETITION_TYPES" :key="t.value" :label="t.label" :value="t.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="获奖级别" required>
+          <el-select v-model="form.awardLevel" placeholder="请选择" class="form-select">
+            <el-option v-for="t in AWARD_LEVELS" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="佐证材料">
@@ -129,16 +134,23 @@ function remove(row: ScholarshipItem) {
     </template>
     <template #columns>
       <el-table-column type="index" label="序号" width="60" />
-      <el-table-column prop="awardName" label="奖项名称" min-width="180" />
-      <el-table-column label="获奖等级" width="120">
+      <el-table-column prop="competitionName" label="竞赛名称" min-width="200" />
+      <el-table-column label="竞赛级别" width="120">
         <template #default="{ row }">
-          <DictColumn :value="(row as ScholarshipItem).scholarshipGrade" :options="SCHOLARSHIP_GRADES" />
+          <DictColumn :value="(row as CompetitionStarItem).competitionLevel" :options="COMPETITION_TYPES" />
         </template>
       </el-table-column>
-      <el-table-column prop="acquireDate" label="获得时间" width="120" />
+      <el-table-column label="获奖级别" width="120">
+        <template #default="{ row }">
+          <DictColumn :value="(row as CompetitionStarItem).awardLevel" :options="AWARD_LEVELS" />
+        </template>
+      </el-table-column>
+      <el-table-column prop="competitionDate" label="参赛时间" width="120" />
       <el-table-column prop="semester" label="学期" width="100" />
       <el-table-column label="状态" width="100">
-        <template #default="{ row }"><StatusTag :status="(row as ScholarshipItem).status" size="small" /></template>
+        <template #default="{ row }">
+          <StatusTag :status="(row as CompetitionStarItem).status" size="small" />
+        </template>
       </el-table-column>
     </template>
   </ApplicationFormRecord>
@@ -146,10 +158,6 @@ function remove(row: ScholarshipItem) {
 
 <style scoped lang="scss">
 .form-select {
-  width: 200px;
-}
-
-.form-input-number {
   width: 200px;
 }
 </style>
