@@ -7,20 +7,20 @@ const props = defineProps({
   title: { type: String, default: '' },
 })
 
-const emit = defineEmits(['toggle-sidebar'])
+const emit = defineEmits(['togglesidebar'])
 </script>
 
 <template>
   <header class="topbar">
     <div class="left">
-      <button class="iconBtn" type="button" :aria-label="collapsed ? '展开侧栏' : '收起侧栏'" @click="emit('toggle-sidebar')">
+      <button class="iconBtn" type="button" :aria-label="collapsed ? '展开侧栏' : '收起侧栏'" @click="emit('togglesidebar')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line v-if="!collapsed" x1="3" y1="6" x2="21" y2="6"/>
-          <line v-if="!collapsed" x1="3" y1="12" x2="21" y2="12"/>
-          <line v-if="!collapsed" x1="3" y1="18" x2="21" y2="18"/>
-          <line v-if="collapsed" x1="4" y1="6" x2="20" y2="6"/>
-          <line v-if="collapsed" x1="4" y1="12" x2="14" y2="12"/>
-          <line v-if="collapsed" x1="4" y1="18" x2="20" y2="18"/>
+          <line v-if="!collapsed" x1="3" y1="6" x2="21" y2="6" />
+          <line v-if="!collapsed" x1="3" y1="12" x2="21" y2="12" />
+          <line v-if="!collapsed" x1="3" y1="18" x2="21" y2="18" />
+          <line v-if="collapsed" x1="4" y1="6" x2="20" y2="6" />
+          <line v-if="collapsed" x1="4" y1="12" x2="14" y2="12" />
+          <line v-if="collapsed" x1="4" y1="18" x2="20" y2="18" />
         </svg>
       </button>
       <div class="crumb">
@@ -32,16 +32,16 @@ const emit = defineEmits(['toggle-sidebar'])
     <div class="right">
       <UiButton variant="secondary">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
         导出
       </UiButton>
       <UiButton variant="primary">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
         新增档案
       </UiButton>

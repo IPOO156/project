@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import StudentLayout from '../views/student/StudentLayout.vue'
+import StudentArchiveCategory from '../views/student/pages/StudentArchiveCategory.vue'
 
 import StudentDashboard from '../views/student/pages/StudentDashboard.vue'
-import StudentTimeline from '../views/student/pages/StudentTimeline.vue'
-import StudentArchiveCategory from '../views/student/pages/StudentArchiveCategory.vue'
-import StudentSubmissions from '../views/student/pages/StudentSubmissions.vue'
 import StudentProfile from '../views/student/pages/StudentProfile.vue'
+import StudentSubmissions from '../views/student/pages/StudentSubmissions.vue'
+import StudentTimeline from '../views/student/pages/StudentTimeline.vue'
+import StudentLayout from '../views/student/StudentLayout.vue'
 
 const router = createRouter({
   history: createWebHistory(),

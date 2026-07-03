@@ -1,6 +1,6 @@
-import { ref } from 'vue'
-import { defineStore } from 'pinia'
 import type { ApplicationType, SubmissionFilters, SubmissionRecord } from '@/shared/types/types'
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
 import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 
 /**

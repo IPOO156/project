@@ -12,7 +12,7 @@ export const studentArchiveCategories = [
 ]
 
 export function getStudentArchiveCategory(key) {
-  return studentArchiveCategories.find((c) => c.key === key)
+  return studentArchiveCategories.find(c => c.key === key)
 }
 
 export const studentNavGroups = [
@@ -25,7 +25,7 @@ export const studentNavGroups = [
   },
   {
     title: '成长档案',
-    items: studentArchiveCategories.map((c) => ({
+    items: studentArchiveCategories.map(c => ({
       label: c.label,
       to: `/student/archive/${c.key}`,
       icon: c.icon,
@@ -40,4 +40,3 @@ export const studentNavGroups = [
     ],
   },
 ]
-

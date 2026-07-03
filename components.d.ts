@@ -48,6 +48,11 @@ declare module 'vue' {
     ElUpload: typeof import('element-plus/es')['ElUpload']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SidebarNav: typeof import('./src/components/layout/SidebarNav.vue')['default']
+    TopBar: typeof import('./src/components/layout/TopBar.vue')['default']
+    UiButton: typeof import('./src/components/ui/UiButton.vue')['default']
+    UiCard: typeof import('./src/components/ui/UiCard.vue')['default']
+    UiTag: typeof import('./src/components/ui/UiTag.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

@@ -1,4 +1,3 @@
-import { use } from 'echarts/core'
 import { BarChart, LineChart, PieChart } from 'echarts/charts'
 import {
   GridComponent,
@@ -6,6 +5,7 @@ import {
   TitleComponent,
   TooltipComponent,
 } from 'echarts/components'
+import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 
 use([

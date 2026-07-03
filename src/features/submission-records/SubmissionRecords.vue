@@ -1,14 +1,14 @@
 <script setup lang="ts">
+import type { ApplicationType, SubmissionFilters } from '@/shared/types/types'
 import { Search } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSubmissionStore } from '@/app/stores/stores'
-import { APPLICATION_TYPE_MAP, APPLICATION_STATUS } from '@/shared/constants/dict'
-import type { ApplicationType, SubmissionFilters } from '@/shared/types/types'
+import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
+import DictColumn from '@/shared/ui/DictColumn.vue'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
-import DictColumn from '@/shared/ui/DictColumn.vue'
 
 const router = useRouter()
 const submissionStore = useSubmissionStore()
@@ -186,7 +186,7 @@ onMounted(() => {
       </el-table>
 
       <!-- 分页 -->
-      <div class="pagination-wrap" v-if="total > 0">
+      <div v-if="total > 0" class="pagination-wrap">
         <el-pagination
           v-model:current-page="pageNum"
           v-model:page-size="pageSize"

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import VChart from 'vue-echarts'
-import { computed, onMounted, ref } from 'vue'
 import { Award, CircleCheck, Clock, TrendingUp } from 'lucide-vue-next'
+import { computed, onMounted } from 'vue'
+import VChart from 'vue-echarts'
 import { useSubmissionStore } from '@/app/stores/stores'
-import { APPLICATION_TYPE_MAP, APPLICATION_STATUS } from '@/shared/constants/dict'
-import type { SubmissionRecord } from '@/shared/types/types'
+import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
@@ -73,7 +72,10 @@ const barOption = computed(() => {
         borderRadius: [4, 4, 0, 0],
         color: {
           type: 'linear' as const,
-          x: 0, y: 0, x2: 0, y2: 1,
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
           colorStops: [
             { offset: 0, color: '#409eff' },
             { offset: 1, color: '#79bbff' },

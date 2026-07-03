@@ -1,6 +1,6 @@
-import { ref } from 'vue'
+import type { Award, Grade, Interest, TimelineNode } from '@/shared/types/types'
 import { defineStore } from 'pinia'
-import type { TimelineNode, Award, Grade, Interest } from '@/shared/types/types'
+import { ref } from 'vue'
 
 interface ProfileDimension {
   label: string

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Download, BookOpen, FileText, KeyRound, TrendingUp } from 'lucide-vue-next'
+import { BookOpen, Download, FileText, KeyRound, TrendingUp } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores/stores'
