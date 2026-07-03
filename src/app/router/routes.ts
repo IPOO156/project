@@ -17,7 +17,7 @@ const routes: RouteRecordRaw[] = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/features/dashboard/Dashboard.vue'),
-        meta: { title: '首页' },
+        meta: { title: '首页', affix: true },
       },
       // ─── 个人中心 ───
       {

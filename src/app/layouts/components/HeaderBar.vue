@@ -1,13 +1,13 @@
 <script setup lang="ts">
 /**
  * HeaderBar - 顶部栏
- *  - 面包屑改由 DefaultLayout 统一渲染（保持布局一致）
- *  - 移动端自动出现"侧边栏开关"按钮
- *  - 用户下拉：个人中心 / 修改密码 / 退出登录
+ *  - 左侧：移动端菜单按钮 + 已访问页面 tab 栏（NavTabs）
+ *  - 右侧：通知 + 用户下拉（个人中心 / 修改密码 / 退出登录）
  */
 import { Bell, LogOut, Menu, Settings, User } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
+import NavTabs from './NavTabs.vue'
 
 const userStore = useUserStore()
 const appStore = useAppStore()
@@ -36,6 +36,9 @@ function openSidebar() {
       >
         <Menu :size="20" />
       </el-button>
+
+      <!-- 已访问页面 tab 栏 -->
+      <NavTabs />
     </div>
 
     <div class="header__right">
@@ -80,22 +83,36 @@ function openSidebar() {
   flex-shrink: 0;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: $z-sticky;
+  // 固定栏位的稳定上下文：避免 NavTabs 滚动时 header 抖动
+  contain: layout;
 
   &__left {
     display: flex;
     align-items: center;
-    gap: $spacing-md;
+    // 关键：与右侧用户区视觉重量平衡 → tab 区域呼吸感更强
+    gap: $spacing-lg;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
   }
 
   &__menu-btn {
     color: var(--el-text-color-primary);
+    flex: 0 0 auto;
+    // 与 NavTabs 中轴对齐：菜单按钮图标 20px + 按钮 padding 8px ≈ 36px
+    // 让按钮视觉中心 ≈ tab 视觉中心
+    height: 32px;
+    padding: 0 $spacing-xs;
   }
 
   &__right {
     display: flex;
     align-items: center;
     gap: $spacing-md;
+    flex: 0 0 auto;
+    // 防止用户区被 NavTabs 挤压消失
+    padding-left: $spacing-lg;
   }
 
   &__action {
@@ -109,7 +126,7 @@ function openSidebar() {
     cursor: pointer;
     padding: $spacing-xs $spacing-sm;
     border-radius: $radius-base;
-    transition: background-color 0.2s;
+    transition: background-color $duration-fast $ease-standard;
 
     &:hover {
       background-color: var(--el-fill-color-light);
@@ -128,6 +145,21 @@ function openSidebar() {
   }
   .header__user-name {
     display: none;
+  }
+  .header__right {
+    padding-left: $spacing-md;
+  }
+}
+
+@media (max-width: 375px) {
+  .header {
+    padding: 0 $spacing-sm;
+  }
+  .header__left {
+    gap: $spacing-sm;
+  }
+  .header__right {
+    padding-left: $spacing-sm;
   }
 }
 </style>
