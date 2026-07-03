@@ -39,12 +39,12 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { label: '首页', icon: Home, path: '/dashboard' },
+  { label: '成长时间轴', icon: Clock, path: '/growth-timeline' },
   {
     label: '个人中心',
     icon: User,
     children: [
       { label: '个人档案信息', path: '/profile/info' },
-      { label: '成长时间轴', path: '/profile/timeline' },
       { label: '职业规划', path: '/profile/career-plan' },
     ],
   },
@@ -79,7 +79,6 @@ const menuItems: MenuItem[] = [
     icon: ShieldCheck,
     children: [
       { label: '待审批信息', icon: Clock, path: '/approval/pending' },
-      { label: '提交记录', icon: FileText, path: '/approval/records' },
     ],
   },
 ]
@@ -87,8 +86,7 @@ const menuItems: MenuItem[] = [
 // 当前路由所属的顶级菜单，用于 el-menu 的 default-active
 const activeMenu = computed(() => {
   const path = route.path
-  if (path === '/dashboard')
-    return '/dashboard'
+  if (path === '/dashboard') return '/dashboard'
   // 返回当前路由 path，让 el-menu 高亮
   return path
 })
@@ -152,11 +150,7 @@ function handleMenuSelect(index: string) {
 
     <!-- 折叠按钮 -->
     <div class="sidebar__footer">
-      <el-button
-        text
-        class="sidebar__collapse-btn"
-        @click="appStore.toggleSidebar()"
-      >
+      <el-button text class="sidebar__collapse-btn" @click="appStore.toggleSidebar()">
         <component :is="appStore.isSidebarCollapsed ? ChevronRight : ChevronLeft" :size="16" />
         <span v-show="!appStore.isSidebarCollapsed">收起</span>
       </el-button>
@@ -176,7 +170,9 @@ function handleMenuSelect(index: string) {
   display: flex;
   flex-direction: column;
   z-index: 100;
-  transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 
   &--collapsed {
