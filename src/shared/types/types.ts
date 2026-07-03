@@ -267,23 +267,3 @@ export type ApplicationType
     | 'scientificProject'
     | 'softwareCopyright'
     | 'paper'
-
-// === 提交记录类型 ===
-
-export interface SubmissionRecord {
-  id: string
-  type: ApplicationType
-  typeLabel: string
-  title: string
-  submitDate: string
-  semester: string
-  status: ApplicationBase['status']
-  sourcePath: string
-}
-
-export interface SubmissionFilters {
-  keyword?: string
-  type?: ApplicationType | ''
-  status?: string
-  dateRange?: [string, string]
-  }
