@@ -61,11 +61,7 @@ function handleLogin() {
         <el-tab-pane label="管理员登录" name="admin" />
       </el-tabs>
 
-      <el-form
-        :model="loginForm"
-        class="login__form"
-        @keyup.enter="handleLogin"
-      >
+      <el-form :model="loginForm" class="login__form" @keyup.enter="handleLogin">
         <el-form-item>
           <el-input
             v-model="loginForm.username"

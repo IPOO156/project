@@ -1,65 +1,13 @@
 <script setup lang="ts">
-import {
-  BarChart3,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  FilePen,
-  GraduationCap,
-  Home,
-  Lightbulb,
-  ShieldCheck,
-  Star,
-  Trophy,
-  User,
-} from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/app/stores/stores'
+import { menuItems } from '@/shared/constants/menu'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
-
-interface MenuItem {
-  label: string
-  icon?: any
-  path?: string
-  children?: MenuItem[]
-}
-
-const menuItems: MenuItem[] = [
-  { label: '首页', icon: Home, path: '/dashboard' },
-  { label: '成长时间轴', icon: Clock, path: '/growth-timeline' },
-  {
-    label: '个人中心',
-    icon: User,
-    children: [
-      { label: '个人档案信息', path: '/profile/info' },
-      { label: '职业规划', path: '/profile/career-plan' },
-    ],
-  },
-  {
-    label: '个人档案信息申报',
-    icon: FilePen,
-    path: '/applications',
-  },
-  {
-    label: '奖项报名',
-    icon: Star,
-    children: [
-      { label: '奖项总览', icon: BarChart3, path: '/awards' },
-      { label: '竞赛之星报名', icon: Trophy, path: '/awards/competition-star' },
-      { label: '科研之星报名', icon: GraduationCap, path: '/awards/scientific-star' },
-      { label: '双创之星报名', icon: Lightbulb, path: '/awards/innovation-star' },
-    ],
-  },
-  {
-    label: '审批与记录',
-    icon: ShieldCheck,
-    children: [{ label: '待审批信息', icon: Clock, path: '/approval/pending' }],
-  },
-]
 
 // 当前路由所属的顶级菜单，用于 el-menu 的 default-active
 const activeMenu = computed(() => {

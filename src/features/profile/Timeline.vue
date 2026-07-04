@@ -63,9 +63,9 @@ onMounted(() => {
                 <div class="timeline__event-body">
                   <div class="timeline__event-header">
                     <span class="timeline__event-title">{{ event.title }}</span>
-                    <el-tag :color="getTypeColor(event.type)" size="small" effect="plain">{{
-                      getTypeLabel(event.type)
-                    }}</el-tag>
+                    <el-tag :color="getTypeColor(event.type)" size="small" effect="plain">
+                      {{ getTypeLabel(event.type) }}
+                    </el-tag>
                   </div>
                   <p class="timeline__event-desc">{{ event.description }}</p>
                   <span class="timeline__event-date">{{ event.date }}</span>

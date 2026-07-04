@@ -32,7 +32,17 @@ function emptyForm() {
 
 const form = reactive(emptyForm())
 const list = ref<ScholarshipItem[]>([
-  { id: '1', awardName: '国家励志奖学金', scholarshipLevel: '国家级', scholarshipGrade: 'first', acquireDate: '2025-09', semester: '2023-2024-1', status: 'approved', submitDate: '2025-10-01', proofMaterials: [] },
+  {
+    id: '1',
+    awardName: '国家励志奖学金',
+    scholarshipLevel: '国家级',
+    scholarshipGrade: 'first',
+    acquireDate: '2025-09',
+    semester: '2023-2024-1',
+    status: 'approved',
+    submitDate: '2025-10-01',
+    proofMaterials: [],
+  },
 ])
 const editingId = ref<string | null>(null)
 const submitting = ref(false)
@@ -46,7 +56,7 @@ function handleSubmit() {
   submitting.value = true
   setTimeout(() => {
     if (editingId.value) {
-      const idx = list.value.findIndex(i => i.id === editingId.value)
+      const idx = list.value.findIndex((i) => i.id === editingId.value)
       if (idx > -1) {
         list.value[idx] = {
           ...list.value[idx],
@@ -56,8 +66,7 @@ function handleSubmit() {
         }
       }
       ElMessage.success('申报信息已更新')
-    }
-    else {
+    } else {
       list.value.unshift({
         id: `${Date.now()}`,
         ...form,
@@ -86,10 +95,9 @@ function edit(row: ScholarshipItem) {
 function remove(row: ScholarshipItem) {
   ElMessageBox.confirm(`确定删除 "${row.awardName}" 的申报记录吗？`, '提示', { type: 'warning' })
     .then(() => {
-      list.value = list.value.filter(i => i.id !== row.id)
+      list.value = list.value.filter((i) => i.id !== row.id)
       ElMessage.success('删除成功')
-      if (editingId.value === row.id)
-        reset()
+      if (editingId.value === row.id) reset()
     })
     .catch(() => {})
 }
@@ -109,17 +117,33 @@ function remove(row: ScholarshipItem) {
   >
     <template #form>
       <el-form :model="form" label-width="120px">
-        <el-form-item label="奖项名称" required><el-input v-model="form.awardName" placeholder="请输入奖项名称" /></el-form-item>
-        <el-form-item label="奖学金级别" required><el-input v-model="form.scholarshipLevel" placeholder="请输入奖学金级别" /></el-form-item>
+        <el-form-item label="奖项名称" required
+          ><el-input v-model="form.awardName" placeholder="请输入奖项名称"
+        /></el-form-item>
+        <el-form-item label="奖学金级别" required
+          ><el-input v-model="form.scholarshipLevel" placeholder="请输入奖学金级别"
+        /></el-form-item>
         <el-form-item label="获奖等级" required>
           <el-select v-model="form.scholarshipGrade" placeholder="请选择" class="form-select">
-            <el-option v-for="t in SCHOLARSHIP_GRADES" :key="t.value" :label="t.label" :value="t.value" />
+            <el-option
+              v-for="t in SCHOLARSHIP_GRADES"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="获得时间" required><el-date-picker v-model="form.acquireDate" type="month" placeholder="选择年月" /></el-form-item>
+        <el-form-item label="获得时间" required
+          ><el-date-picker v-model="form.acquireDate" type="month" placeholder="选择年月"
+        /></el-form-item>
         <el-form-item label="学期" required>
           <el-select v-model="form.semester" placeholder="请选择" class="form-select">
-            <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
+            <el-option
+              v-for="s in SEMESTER_OPTIONS"
+              :key="s.value"
+              :label="s.label"
+              :value="s.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="佐证材料">
@@ -132,13 +156,18 @@ function remove(row: ScholarshipItem) {
       <el-table-column prop="awardName" label="奖项名称" min-width="180" />
       <el-table-column label="获奖等级" width="120">
         <template #default="{ row }">
-          <DictColumn :value="(row as ScholarshipItem).scholarshipGrade" :options="SCHOLARSHIP_GRADES" />
+          <DictColumn
+            :value="(row as ScholarshipItem).scholarshipGrade"
+            :options="SCHOLARSHIP_GRADES"
+          />
         </template>
       </el-table-column>
       <el-table-column prop="acquireDate" label="获得时间" width="120" />
       <el-table-column prop="semester" label="学期" width="100" />
       <el-table-column label="状态" width="100">
-        <template #default="{ row }"><StatusTag :status="(row as ScholarshipItem).status" size="small" /></template>
+        <template #default="{ row }"
+          ><StatusTag :status="(row as ScholarshipItem).status" size="small"
+        /></template>
       </el-table-column>
     </template>
   </ApplicationFormRecord>

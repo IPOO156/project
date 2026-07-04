@@ -20,6 +20,7 @@ import { X } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
 import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
 import { useTabsStore } from '@/app/stores/tabs'
+import { findMenuItemByPath } from '@/shared/constants/menu'
 
 const router = useRouter()
 const route = useRoute()
@@ -30,6 +31,65 @@ const tabRefs = ref<HTMLElement[]>([])
 
 const tabs = computed(() => tabsStore.visitedTabs)
 const activePath = computed(() => tabsStore.activePath || route.fullPath)
+
+// 固定标签数量：固定标签始终在最左侧，不参与拖拽排序
+const affixCount = computed(() => tabs.value.filter((t) => t.affix).length)
+
+// 拖拽状态
+const dragIndex = ref<number | null>(null)
+const dropIndex = ref<number | null>(null)
+
+/**
+ * 解析 tab 图标。
+ * - 优先使用状态中的 icon（运行时已解析）
+ * - 状态缺失时（如刷新后从 sessionStorage 恢复），fallback 到菜单配置
+ */
+function getTabIcon(tab: (typeof tabs.value)[number]) {
+  return tab.icon ?? findMenuItemByPath(tab.path)?.icon
+}
+
+function onDragStart(index: number) {
+  // 固定标签不可拖动
+  if (tabs.value[index]?.affix) {
+    return
+  }
+  dragIndex.value = index
+}
+
+function onDragOver(e: DragEvent, index: number) {
+  e.preventDefault()
+  // 禁止放置到固定标签位置（保持固定标签始终在最左侧）
+  if (index < affixCount.value) {
+    dropIndex.value = null
+    return
+  }
+  dropIndex.value = index
+}
+
+function onDrop(e: DragEvent, index: number) {
+  e.preventDefault()
+  if (
+    dragIndex.value === null ||
+    dragIndex.value < affixCount.value ||
+    index < affixCount.value ||
+    dragIndex.value === index
+  ) {
+    dragIndex.value = null
+    dropIndex.value = null
+    return
+  }
+  const newTabs = [...tabs.value]
+  const [moved] = newTabs.splice(dragIndex.value, 1)
+  newTabs.splice(index, 0, moved)
+  tabsStore.reorderTabs(newTabs)
+  dragIndex.value = null
+  dropIndex.value = null
+}
+
+function onDragEnd() {
+  dragIndex.value = null
+  dropIndex.value = null
+}
 
 // 把激活的 tab 滚到视口内
 async function scrollIntoView(path: string) {
@@ -143,15 +203,29 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
           :class="{
             'is-active': tab.path === activePath,
             'is-affix': tab.affix,
+            'is-dragging': dragIndex === index,
+            'is-drop-target': dropIndex === index && dropIndex !== dragIndex,
           }"
           role="tab"
           tabindex="0"
+          :draggable="!tab.affix"
           :aria-selected="tab.path === activePath"
           :aria-label="`标签：${tab.title}${tab.path === activePath ? '（当前）' : ''}`"
           @click="activate(tab.path)"
           @keydown="onKeydown($event, tab.path, index)"
+          @dragstart="onDragStart(index)"
+          @dragover="onDragOver($event, index)"
+          @drop="onDrop($event, index)"
+          @dragend="onDragEnd"
         >
           <div class="nav-tabs__surface">
+            <component
+              :is="getTabIcon(tab)"
+              v-if="getTabIcon(tab)"
+              :size="14"
+              class="nav-tabs__icon"
+              aria-hidden="true"
+            />
             <span class="nav-tabs__title" :title="tab.title">{{ tab.title }}</span>
             <button
               v-if="tab.closable"
@@ -252,7 +326,7 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     height: 100%;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     padding: 0 10px 0 12px;
     border: 1px solid rgba(148, 163, 184, 0.16);
     border-radius: 10px 10px 0 0;
@@ -280,6 +354,14 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
       transform-origin: center;
       transition: transform $duration-fast $ease-standard;
     }
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: currentColor;
+    opacity: 0.8;
   }
 
   &__item:hover .nav-tabs__surface {
@@ -349,6 +431,18 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
   &__item:hover .nav-tabs__close {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  // 拖拽状态
+  &__item.is-dragging .nav-tabs__surface {
+    opacity: 0.4;
+    transform: scale(0.96);
+    cursor: grabbing;
+  }
+
+  &__item.is-drop-target .nav-tabs__surface {
+    border-color: var(--el-color-primary);
+    background: rgba(96, 165, 250, 0.08);
   }
 }
 

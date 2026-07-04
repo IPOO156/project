@@ -21,17 +21,39 @@ const planForm = reactive({
   content: '',
 })
 
-const planFiles = ref<{ name: string, url: string }[]>([])
+const planFiles = ref<{ name: string; url: string }[]>([])
 
 // ── Mock 数据（接口联调后替换） ──
 const planRecords = ref<PlanRecord[]>([
-  { id: '1', semester: '2023-2024-1', title: '大二学年成长规划', submitDate: '2025-09-15', status: 'submitted' },
-  { id: '2', semester: '2022-2023-2', title: '大一学年总结与规划', submitDate: '2025-03-10', status: 'submitted' },
+  {
+    id: '1',
+    semester: '2023-2024-1',
+    title: '大二学年成长规划',
+    submitDate: '2025-09-15',
+    status: 'submitted',
+  },
+  {
+    id: '2',
+    semester: '2022-2023-2',
+    title: '大一学年总结与规划',
+    submitDate: '2025-03-10',
+    status: 'submitted',
+  },
 ])
 
 const weaknesses = ref([
-  { dimension: '科研创新', score: 60, weakness: '科研项目经历较少，缺乏论文发表', suggestion: '建议参与导师科研项目，尝试撰写学术论文' },
-  { dimension: '竞赛实践', score: 65, weakness: '高级别竞赛参与度不足', suggestion: '关注国家级竞赛信息，组建团队参赛' },
+  {
+    dimension: '科研创新',
+    score: 60,
+    weakness: '科研项目经历较少，缺乏论文发表',
+    suggestion: '建议参与导师科研项目，尝试撰写学术论文',
+  },
+  {
+    dimension: '竞赛实践',
+    score: 65,
+    weakness: '高级别竞赛参与度不足',
+    suggestion: '关注国家级竞赛信息，组建团队参赛',
+  },
 ])
 
 const loading = ref(false)
@@ -132,12 +154,7 @@ function handleSubmit() {
           show-icon
           class="mb-8"
         />
-        <el-alert
-          :title="`建议：${item.suggestion}`"
-          type="success"
-          :closable="false"
-          show-icon
-        />
+        <el-alert :title="`建议：${item.suggestion}`" type="success" :closable="false" show-icon />
       </div>
     </el-card>
 
@@ -171,12 +188,7 @@ function handleSubmit() {
           />
         </el-form-item>
         <el-form-item label="规划文件">
-          <el-upload
-            v-model:file-list="planFiles"
-            action="#"
-            :auto-upload="false"
-            list-type="text"
-          >
+          <el-upload v-model:file-list="planFiles" action="#" :auto-upload="false" list-type="text">
             <el-button type="primary" plain>选择文件</el-button>
             <template #tip>
               <div class="el-upload__tip">支持 pdf、doc、docx 格式</div>
@@ -230,7 +242,9 @@ function handleSubmit() {
   background: var(--el-fill-color-lighter);
   border-radius: 8px;
 
-  &:last-child { margin-bottom: 0; }
+  &:last-child {
+    margin-bottom: 0;
+  }
 
   &__header {
     display: flex;

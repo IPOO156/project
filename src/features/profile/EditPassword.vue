@@ -76,9 +76,7 @@ function handleSubmit() {
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" @click="handleSubmit">
-            确认修改
-          </el-button>
+          <el-button type="primary" :loading="loading" @click="handleSubmit"> 确认修改 </el-button>
         </el-form-item>
       </el-form>
     </el-card>

@@ -14,9 +14,30 @@ interface PendingItem {
 
 // ── Mock 数据（接口联调后替换） ──
 const list = ref<PendingItem[]>([
-  { id: '1', type: 'competition', applicant: '李四', title: '全国大学生英语竞赛', submitDate: '2026-06-28', content: '申请登记全国大学生英语竞赛参赛信息' },
-  { id: '2', type: 'innovation', applicant: '王五', title: '智创科技工作室', submitDate: '2026-06-27', content: '申请登记创新创业项目信息' },
-  { id: '3', type: 'scholarship', applicant: '赵六', title: '校级一等奖学金', submitDate: '2026-06-25', content: '申请校级一等奖学金认定' },
+  {
+    id: '1',
+    type: 'competition',
+    applicant: '李四',
+    title: '全国大学生英语竞赛',
+    submitDate: '2026-06-28',
+    content: '申请登记全国大学生英语竞赛参赛信息',
+  },
+  {
+    id: '2',
+    type: 'innovation',
+    applicant: '王五',
+    title: '智创科技工作室',
+    submitDate: '2026-06-27',
+    content: '申请登记创新创业项目信息',
+  },
+  {
+    id: '3',
+    type: 'scholarship',
+    applicant: '赵六',
+    title: '校级一等奖学金',
+    submitDate: '2026-06-25',
+    content: '申请校级一等奖学金认定',
+  },
 ])
 
 const detailVisible = ref(false)
@@ -32,18 +53,22 @@ function handleApprove(item: PendingItem) {
     confirmButtonText: '通过',
     cancelButtonText: '驳回',
     type: 'warning',
-  }).then(() => {
-    ElMessage.success('已审批通过')
-    list.value = list.value.filter(i => i.id !== item.id)
-  }).catch(() => {
-    ElMessageBox.prompt('请输入驳回原因', '驳回', {
-      confirmButtonText: '确认驳回',
-      cancelButtonText: '取消',
-    }).then(({ value }) => {
-      ElMessage.info(`已驳回，原因：${value || '未填写'}`)
-      list.value = list.value.filter(i => i.id !== item.id)
-    }).catch(() => {})
   })
+    .then(() => {
+      ElMessage.success('已审批通过')
+      list.value = list.value.filter((i) => i.id !== item.id)
+    })
+    .catch(() => {
+      ElMessageBox.prompt('请输入驳回原因', '驳回', {
+        confirmButtonText: '确认驳回',
+        cancelButtonText: '取消',
+      })
+        .then(({ value }) => {
+          ElMessage.info(`已驳回，原因：${value || '未填写'}`)
+          list.value = list.value.filter((i) => i.id !== item.id)
+        })
+        .catch(() => {})
+    })
 }
 </script>
 
@@ -82,7 +107,9 @@ function handleApprove(item: PendingItem) {
     <el-dialog v-model="detailVisible" title="申报详情" width="560px">
       <template v-if="currentItem">
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="申报类型">{{ APPLICATION_TYPE_MAP[currentItem.type] }}</el-descriptions-item>
+          <el-descriptions-item label="申报类型">{{
+            APPLICATION_TYPE_MAP[currentItem.type]
+          }}</el-descriptions-item>
           <el-descriptions-item label="申请人">{{ currentItem.applicant }}</el-descriptions-item>
           <el-descriptions-item label="申报标题">{{ currentItem.title }}</el-descriptions-item>
           <el-descriptions-item label="提交时间">{{ currentItem.submitDate }}</el-descriptions-item>

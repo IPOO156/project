@@ -5,9 +5,9 @@
 
 ## 登记格式
 
-| 接口名 | URL | Method | 请求字段 | 响应字段 | 调用示例 | 负责人 |
-| ------ | --- | ------ | -------- | -------- | -------- | ------ |
-| 示例 | `/api/example` | GET | `{ pageNum, pageSize }` | `{ list, total }` | ... | ... |
+| 接口名 | URL            | Method | 请求字段                | 响应字段          | 调用示例 | 负责人 |
+| ------ | -------------- | ------ | ----------------------- | ----------------- | -------- | ------ |
+| 示例   | `/api/example` | GET    | `{ pageNum, pageSize }` | `{ list, total }` | ...      | ...    |
 
 ## 通用约定
 
@@ -29,20 +29,20 @@
 
 ### 2. 错误码处理
 
-| HTTP 状态 | 前端处理行为 |
-| --------- | ------------ |
-| 401 | 清除 `token` 并跳转 `/login` |
-| 403 | `ElMessage.error('没有权限执行此操作')` |
-| 429 | `ElMessage.error('请求过于频繁，请稍后重试')` |
-| 500 | `ElMessage.error('服务器异常，请稍后重试')` |
-| ECONNABORTED | `ElMessage.error('请求超时，请检查网络')` |
+| HTTP 状态    | 前端处理行为                                  |
+| ------------ | --------------------------------------------- |
+| 401          | 清除 `token` 并跳转 `/login`                  |
+| 403          | `ElMessage.error('没有权限执行此操作')`       |
+| 429          | `ElMessage.error('请求过于频繁，请稍后重试')` |
+| 500          | `ElMessage.error('服务器异常，请稍后重试')`   |
+| ECONNABORTED | `ElMessage.error('请求超时，请检查网络')`     |
 
 ### 3. 分页参数
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| `pageNum` | number | 当前页码，从 1 开始 |
-| `pageSize` | number | 每页条数 |
+| 字段       | 类型   | 说明                |
+| ---------- | ------ | ------------------- |
+| `pageNum`  | number | 当前页码，从 1 开始 |
+| `pageSize` | number | 每页条数            |
 
 分页响应结构见 `src/shared/types/types.ts` 中的 `PaginatedData<T>`。
 
@@ -59,9 +59,9 @@
 
 ### 文件上传
 
-| 接口名 | URL | Method | 请求字段 | 响应字段 | 调用示例 | 负责人 |
-| ------ | --- | ------ | -------- | -------- | -------- | ------ |
-| 文件上传 | `/api/upload` | POST | `FormData`（字段名 `file`） | `{ url: string }` | `useUpload` | 前端 |
+| 接口名   | URL           | Method | 请求字段                    | 响应字段          | 调用示例    | 负责人 |
+| -------- | ------------- | ------ | --------------------------- | ----------------- | ----------- | ------ |
+| 文件上传 | `/api/upload` | POST   | `FormData`（字段名 `file`） | `{ url: string }` | `useUpload` | 前端   |
 
 - 默认限制：单文件 ≤ 10MB，允许格式 `.jpg/.png/.pdf/.doc/.docx`。
 - 被多个申报表单模块复用，统一封装在 `src/shared/composables/useUpload.ts`。

@@ -31,8 +31,7 @@ export const useUserStore = defineStore('user', () => {
     // tabsStore 必须延迟获取：避免 user store 初始化时 tabs store 未注册
     try {
       useTabsStore().clearAll()
-    }
-    catch {
+    } catch {
       // tabs store 未注册（极少数场景）—— 静默降级
     }
   }

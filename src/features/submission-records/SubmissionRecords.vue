@@ -162,9 +162,9 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="120" align="center">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" @click="viewRecord(row.sourcePath)"
-              >查看</el-button
-            >
+            <el-button type="primary" link size="small" @click="viewRecord(row.sourcePath)">
+              查看
+            </el-button>
           </template>
         </el-table-column>
       </el-table>

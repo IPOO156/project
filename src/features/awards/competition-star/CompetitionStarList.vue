@@ -32,7 +32,17 @@ function emptyForm() {
 
 const form = reactive(emptyForm())
 const list = ref<CompetitionStarItem[]>([
-  { id: '1', semester: '2023-2024-1', competitionName: '全国大学生数学建模竞赛', competitionDate: '2025-09', competitionLevel: 'national', awardLevel: 'second', status: 'submitted', submitDate: '2025-10-01', proofMaterials: [] },
+  {
+    id: '1',
+    semester: '2023-2024-1',
+    competitionName: '全国大学生数学建模竞赛',
+    competitionDate: '2025-09',
+    competitionLevel: 'national',
+    awardLevel: 'second',
+    status: 'submitted',
+    submitDate: '2025-10-01',
+    proofMaterials: [],
+  },
 ])
 const editingId = ref<string | null>(null)
 const submitting = ref(false)
@@ -46,7 +56,7 @@ function handleSubmit() {
   submitting.value = true
   setTimeout(() => {
     if (editingId.value) {
-      const idx = list.value.findIndex(i => i.id === editingId.value)
+      const idx = list.value.findIndex((i) => i.id === editingId.value)
       if (idx > -1) {
         list.value[idx] = {
           ...list.value[idx],
@@ -56,8 +66,7 @@ function handleSubmit() {
         }
       }
       ElMessage.success('报名信息已更新')
-    }
-    else {
+    } else {
       list.value.unshift({
         id: `${Date.now()}`,
         ...form,
@@ -85,12 +94,13 @@ function edit(row: CompetitionStarItem) {
 }
 
 function remove(row: CompetitionStarItem) {
-  ElMessageBox.confirm(`确定删除 "${row.competitionName}" 的报名记录吗？`, '提示', { type: 'warning' })
+  ElMessageBox.confirm(`确定删除 "${row.competitionName}" 的报名记录吗？`, '提示', {
+    type: 'warning',
+  })
     .then(() => {
-      list.value = list.value.filter(i => i.id !== row.id)
+      list.value = list.value.filter((i) => i.id !== row.id)
       ElMessage.success('删除成功')
-      if (editingId.value === row.id)
-        reset()
+      if (editingId.value === row.id) reset()
     })
     .catch(() => {})
 }
@@ -112,14 +122,28 @@ function remove(row: CompetitionStarItem) {
       <el-form :model="form" label-width="120px">
         <el-form-item label="学期" required>
           <el-select v-model="form.semester" placeholder="请选择" class="form-select">
-            <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
+            <el-option
+              v-for="s in SEMESTER_OPTIONS"
+              :key="s.value"
+              :label="s.label"
+              :value="s.value"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="竞赛名称" required><el-input v-model="form.competitionName" /></el-form-item>
-        <el-form-item label="参赛时间" required><el-date-picker v-model="form.competitionDate" type="month" /></el-form-item>
+        <el-form-item label="竞赛名称" required
+          ><el-input v-model="form.competitionName"
+        /></el-form-item>
+        <el-form-item label="参赛时间" required
+          ><el-date-picker v-model="form.competitionDate" type="month"
+        /></el-form-item>
         <el-form-item label="竞赛级别" required>
           <el-select v-model="form.competitionLevel" placeholder="请选择" class="form-select">
-            <el-option v-for="t in COMPETITION_TYPES" :key="t.value" :label="t.label" :value="t.value" />
+            <el-option
+              v-for="t in COMPETITION_TYPES"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="获奖级别" required>
@@ -137,7 +161,10 @@ function remove(row: CompetitionStarItem) {
       <el-table-column prop="competitionName" label="竞赛名称" min-width="200" />
       <el-table-column label="竞赛级别" width="120">
         <template #default="{ row }">
-          <DictColumn :value="(row as CompetitionStarItem).competitionLevel" :options="COMPETITION_TYPES" />
+          <DictColumn
+            :value="(row as CompetitionStarItem).competitionLevel"
+            :options="COMPETITION_TYPES"
+          />
         </template>
       </el-table-column>
       <el-table-column label="获奖级别" width="120">

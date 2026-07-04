@@ -31,7 +31,17 @@ function emptyForm() {
 
 const form = reactive(emptyForm())
 const list = ref<PaperItem[]>([
-  { id: '1', journalName: '《计算机科学与应用》', paperName: '基于Vue3的档案管理系统设计与实现', ranking: '2/3', publishDate: '2026-03', semester: '2023-2024-2', status: 'submitted', submitDate: '2026-03-15', proofMaterials: [] },
+  {
+    id: '1',
+    journalName: '《计算机科学与应用》',
+    paperName: '基于Vue3的档案管理系统设计与实现',
+    ranking: '2/3',
+    publishDate: '2026-03',
+    semester: '2023-2024-2',
+    status: 'submitted',
+    submitDate: '2026-03-15',
+    proofMaterials: [],
+  },
 ])
 const editingId = ref<string | null>(null)
 const submitting = ref(false)
@@ -45,7 +55,7 @@ function handleSubmit() {
   submitting.value = true
   setTimeout(() => {
     if (editingId.value) {
-      const idx = list.value.findIndex(i => i.id === editingId.value)
+      const idx = list.value.findIndex((i) => i.id === editingId.value)
       if (idx > -1) {
         list.value[idx] = {
           ...list.value[idx],
@@ -55,8 +65,7 @@ function handleSubmit() {
         }
       }
       ElMessage.success('报名信息已更新')
-    }
-    else {
+    } else {
       list.value.unshift({
         id: `${Date.now()}`,
         ...form,
@@ -86,10 +95,9 @@ function edit(row: PaperItem) {
 function remove(row: PaperItem) {
   ElMessageBox.confirm(`确定删除 "${row.paperName}" 的报名记录吗？`, '提示', { type: 'warning' })
     .then(() => {
-      list.value = list.value.filter(i => i.id !== row.id)
+      list.value = list.value.filter((i) => i.id !== row.id)
       ElMessage.success('删除成功')
-      if (editingId.value === row.id)
-        reset()
+      if (editingId.value === row.id) reset()
     })
     .catch(() => {})
 }
@@ -110,15 +118,24 @@ function remove(row: PaperItem) {
   >
     <template #form>
       <el-form :model="form" label-width="120px">
-        <el-form-item label="期刊名称" required><el-input v-model="form.journalName" /></el-form-item>
+        <el-form-item label="期刊名称" required
+          ><el-input v-model="form.journalName"
+        /></el-form-item>
         <el-form-item label="论文名称" required><el-input v-model="form.paperName" /></el-form-item>
         <el-form-item label="排名/总人数" required>
           <el-input v-model="form.ranking" placeholder="如：2/3" class="form-input" />
         </el-form-item>
-        <el-form-item label="发表时间" required><el-date-picker v-model="form.publishDate" type="month" /></el-form-item>
+        <el-form-item label="发表时间" required
+          ><el-date-picker v-model="form.publishDate" type="month"
+        /></el-form-item>
         <el-form-item label="学期" required>
           <el-select v-model="form.semester" placeholder="请选择" class="form-select">
-            <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
+            <el-option
+              v-for="s in SEMESTER_OPTIONS"
+              :key="s.value"
+              :label="s.label"
+              :value="s.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="证明材料">

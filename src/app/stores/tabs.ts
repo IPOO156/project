@@ -1,3 +1,4 @@
+import type { Component } from 'vue'
 import type { Router } from 'vue-router'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
@@ -25,6 +26,8 @@ export interface NavTab {
   path: string
   /** 显示标题（来自 route.meta.title） */
   title: string
+  /** 图标（来自菜单配置或路由 meta） */
+  icon?: Component
   /** 是否可关闭（affix 为 false 时可关） */
   closable: boolean
   /** 是否为 fixed（来自 route.meta.affix，严格 === true） */
@@ -163,6 +166,14 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   /**
+   * 重新排序 tabs（拖拽后调用）。
+   * 注意：affix 标签仍保留在原始位置，不参与排序。
+   */
+  function reorderTabs(newOrder: NavTab[]) {
+    visitedTabs.value = newOrder
+  }
+
+  /**
    * 清除持久化数据（用于登出 / 测试 / 修复脏数据）
    */
   function clearAll() {
@@ -188,6 +199,7 @@ export const useTabsStore = defineStore('tabs', () => {
     removeOtherTabs,
     removeAllTabs,
     setActive,
+    reorderTabs,
     clearAll,
   }
 })

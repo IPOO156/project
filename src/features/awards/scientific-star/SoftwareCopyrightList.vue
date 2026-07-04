@@ -31,7 +31,17 @@ function emptyForm() {
 
 const form = reactive(emptyForm())
 const list = ref<SoftwareCopyrightItem[]>([
-  { id: '1', softName: '智能档案管理系统 V1.0', issuer: '国家版权局', ranking: '1/4', approveDate: '2025-11', semester: '2023-2024-1', status: 'approved', submitDate: '2025-11-01', proofMaterials: [] },
+  {
+    id: '1',
+    softName: '智能档案管理系统 V1.0',
+    issuer: '国家版权局',
+    ranking: '1/4',
+    approveDate: '2025-11',
+    semester: '2023-2024-1',
+    status: 'approved',
+    submitDate: '2025-11-01',
+    proofMaterials: [],
+  },
 ])
 const editingId = ref<string | null>(null)
 const submitting = ref(false)
@@ -45,7 +55,7 @@ function handleSubmit() {
   submitting.value = true
   setTimeout(() => {
     if (editingId.value) {
-      const idx = list.value.findIndex(i => i.id === editingId.value)
+      const idx = list.value.findIndex((i) => i.id === editingId.value)
       if (idx > -1) {
         list.value[idx] = {
           ...list.value[idx],
@@ -55,8 +65,7 @@ function handleSubmit() {
         }
       }
       ElMessage.success('报名信息已更新')
-    }
-    else {
+    } else {
       list.value.unshift({
         id: `${Date.now()}`,
         ...form,
@@ -86,10 +95,9 @@ function edit(row: SoftwareCopyrightItem) {
 function remove(row: SoftwareCopyrightItem) {
   ElMessageBox.confirm(`确定删除 "${row.softName}" 的报名记录吗？`, '提示', { type: 'warning' })
     .then(() => {
-      list.value = list.value.filter(i => i.id !== row.id)
+      list.value = list.value.filter((i) => i.id !== row.id)
       ElMessage.success('删除成功')
-      if (editingId.value === row.id)
-        reset()
+      if (editingId.value === row.id) reset()
     })
     .catch(() => {})
 }
@@ -115,10 +123,17 @@ function remove(row: SoftwareCopyrightItem) {
         <el-form-item label="排名/总人数" required>
           <el-input v-model="form.ranking" placeholder="如：1/4" class="form-input" />
         </el-form-item>
-        <el-form-item label="获批时间" required><el-date-picker v-model="form.approveDate" type="month" /></el-form-item>
+        <el-form-item label="获批时间" required
+          ><el-date-picker v-model="form.approveDate" type="month"
+        /></el-form-item>
         <el-form-item label="学期" required>
           <el-select v-model="form.semester" placeholder="请选择" class="form-select">
-            <el-option v-for="s in SEMESTER_OPTIONS" :key="s.value" :label="s.label" :value="s.value" />
+            <el-option
+              v-for="s in SEMESTER_OPTIONS"
+              :key="s.value"
+              :label="s.label"
+              :value="s.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="证明材料">

@@ -58,7 +58,9 @@ const getInterestType = computed(() => (level: string): TagProps['type'] => {
         <el-descriptions-item label="学号">{{ userStore.studentId }}</el-descriptions-item>
         <el-descriptions-item label="年级">{{ userStore.userInfo?.grade }}</el-descriptions-item>
         <el-descriptions-item label="专业">{{ userStore.userInfo?.major }}</el-descriptions-item>
-        <el-descriptions-item label="班级">{{ userStore.userInfo?.className }}</el-descriptions-item>
+        <el-descriptions-item label="班级">{{
+          userStore.userInfo?.className
+        }}</el-descriptions-item>
         <el-descriptions-item label="邮箱">{{ userStore.userInfo?.email }}</el-descriptions-item>
       </el-descriptions>
     </el-card>

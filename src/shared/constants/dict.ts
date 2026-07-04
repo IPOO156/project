@@ -20,7 +20,7 @@ export const APPLICATION_TYPE_MAP: Record<string, string> = {
 const TERM_LABELS = ['一', '二', '三'] as const
 
 function generateSemesterOptions(startYear: number, endYear: number) {
-  const options: { label: string, value: string }[] = []
+  const options: { label: string; value: string }[] = []
   for (let year = startYear; year < endYear; year++) {
     for (let term = 0; term < TERM_LABELS.length; term++) {
       const value = `${year}-${year + 1}-${term + 1}`

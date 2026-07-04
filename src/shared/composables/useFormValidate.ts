@@ -9,9 +9,11 @@ export function useFormValidate() {
   const formRef = ref<FormInstance>()
 
   async function validate(): Promise<boolean> {
-    if (!formRef.value)
-      return false
-    return formRef.value.validate().then(() => true).catch(() => false)
+    if (!formRef.value) return false
+    return formRef.value
+      .validate()
+      .then(() => true)
+      .catch(() => false)
   }
 
   function resetFields(): void {

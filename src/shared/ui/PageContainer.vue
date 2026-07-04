@@ -62,11 +62,7 @@ function handleRetry() {
     </el-result>
 
     <!-- 空数据 -->
-    <el-empty
-      v-else-if="empty"
-      :description="emptyText"
-      class="page-container__empty"
-    >
+    <el-empty v-else-if="empty" :description="emptyText" class="page-container__empty">
       <slot name="empty" />
     </el-empty>
 

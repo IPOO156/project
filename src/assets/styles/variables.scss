@@ -28,13 +28,7 @@ $color-bg-page: #f8fafc;
 $color-border: #e2e8f0;
 
 // 字体
-$font-family-base:
-  'PingFang SC',
-  'Microsoft YaHei',
-  'Helvetica Neue',
-  Helvetica,
-  Arial,
-  sans-serif;
+$font-family-base: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 $font-family-title: Georgia, 'Times New Roman', serif;
 
 // 字号
@@ -87,7 +81,7 @@ $duration-base: 200ms;
 $duration-slow: 280ms;
 $duration-slower: 400ms;
 
-$ease-standard: cubic-bezier(0.4, 0, 0.2, 1);       // Material 标准曲线（默认）
-$ease-decelerate: cubic-bezier(0, 0, 0.2, 1);        // 入场（减速）
-$ease-accelerate: cubic-bezier(0.4, 0, 1, 1);        // 出场（加速）
-$ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);     // 强调入场（弹性）
+$ease-standard: cubic-bezier(0.4, 0, 0.2, 1); // Material 标准曲线（默认）
+$ease-decelerate: cubic-bezier(0, 0, 0.2, 1); // 入场（减速）
+$ease-accelerate: cubic-bezier(0.4, 0, 1, 1); // 出场（加速）
+$ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1); // 强调入场（弹性）

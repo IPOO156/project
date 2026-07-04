@@ -1,8 +1,10 @@
+import type { Component } from 'vue'
 import type { RouteLocationMatched, RouteLocationNormalized } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useTabsStore } from '@/app/stores/tabs'
+import { findMenuItemByPath } from '@/shared/constants/menu'
 
 /**
  * useTabs - 标签页状态桥接
@@ -50,6 +52,16 @@ export function useTabs() {
     return ''
   }
 
+  /**
+   * 根据路由路径匹配菜单图标。
+   * - 优先从菜单配置中查找（与侧边栏保持一致）
+   * - 未找到时返回 undefined，标签栏不显示图标
+   */
+  function resolveIcon(path: string): Component | undefined {
+    const menuItem = findMenuItemByPath(path)
+    return menuItem?.icon
+  }
+
   function handleRoute(to: RouteLocationNormalized) {
     // 跳过：非 layout 路由（登录/错误页等）
     if (to.meta?.noLayout) {
@@ -67,6 +79,7 @@ export function useTabs() {
     const added = tabsStore.addTab({
       path: tabPath,
       title,
+      icon: resolveIcon(tabPath),
       closable: !affix,
       affix,
     })

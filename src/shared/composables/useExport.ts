@@ -17,8 +17,7 @@ export function useExport() {
       let blob: Blob
       if (typeof dataOrFetchFn === 'function') {
         blob = await dataOrFetchFn()
-      }
-      else {
+      } else {
         const json = JSON.stringify(dataOrFetchFn, null, 2)
         blob = new Blob([json], { type: 'application/json;charset=utf-8' })
       }
@@ -31,11 +30,9 @@ export function useExport() {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
       ElMessage.success('导出成功')
-    }
-    catch {
+    } catch {
       ElMessage.error('导出失败，请稍后重试')
-    }
-    finally {
+    } finally {
       exporting.value = false
     }
   }
