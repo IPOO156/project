@@ -4,7 +4,7 @@
  *
  * 设计目标
  *  1. 一个 Layout 满足绝大多数业务页面（列表/详情/表单/审批/统计）
- *  2. 通过 slot + meta 解耦菜单、面包屑、标题、工具栏、内容区
+ *  2. 通过 slot + meta 解耦菜单、标题、工具栏、内容区
  *  3. 与 .cursor 规则中的 ui-ux-pro-max 设计语言保持一致：
  *     - 8pt 间距网格（$spacing-xs..$spacing-2xl）
  *     - 圆角 6/8/12（$radius-base / $radius-lg / $radius-xl）
@@ -18,17 +18,15 @@
  *     - will-change 在动画结束后立即释放（避免常驻内存）
  */
 import { computed, nextTick, ref, useSlots, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
 import { useTabs } from '@/shared/composables/composables'
-import { PageHeader } from '@/shared/ui'
 import HeaderBar from './components/HeaderBar.vue'
 import Sidebar from './components/Sidebar.vue'
 
 defineOptions({ name: 'DefaultLayout' })
 
 const route = useRoute()
-const router = useRouter()
 const appStore = useAppStore()
 const userStore = useUserStore()
 const slots = useSlots()
@@ -38,29 +36,12 @@ useTabs()
 
 const hasHeader = computed(() => !!slots.header)
 const hasToolbar = computed(() => !!slots.toolbar)
-const hasBreadcrumb = computed(() => !!slots.breadcrumb)
-const hasPageHeader = computed(
-  () => hasHeader.value || hasToolbar.value || hasBreadcrumb.value || !!route.meta?.title,
-)
+const hasPageHeader = computed(() => hasHeader.value || hasToolbar.value)
 const hasFooter = computed(() => !!slots.footer)
 const isLoading = computed(() => appStore.pageLoading)
 
-/** 从路由 meta 中推断页面标题（fallback） */
+/** 从路由 meta 中推断页面标题，用于文档标题与无障碍属性 */
 const pageTitle = computed(() => (route.meta?.title as string) || '')
-const pageSubtitle = computed(() => (route.meta?.subtitle as string) || '')
-
-/** 面包屑：基于 matched 路由栈 */
-const breadcrumbs = computed(() => {
-  const matched = route.matched.filter((r) => r.meta?.title && r.path !== '/')
-  return matched.map((r) => ({
-    label: (r.meta?.title as string) || '',
-    path: r.path,
-  }))
-})
-
-function goHome() {
-  router.push('/dashboard')
-}
 
 // 同步文档标题 → 屏幕阅读器在路由切换时能播报新页面
 watch(
@@ -119,38 +100,12 @@ watch(isLoading, async (loading) => {
       <!-- 内容区 -->
       <main class="layout__content" :aria-busy="isLoading" :aria-label="pageTitle || '主内容区'">
         <div class="layout__content-inner">
-          <!-- 页面头：标题区 + 工具栏 -->
+          <!-- 页面头：仅当页面显式使用 header / toolbar 插槽时渲染 -->
           <Transition name="layout-fade">
             <section v-if="hasPageHeader" class="layout__page-header">
-              <!-- 面包屑：自定义 > 默认（meta 推断） -->
-              <nav
-                v-if="hasBreadcrumb || breadcrumbs.length > 0"
-                class="layout__breadcrumb"
-                aria-label="面包屑导航"
-              >
-                <slot name="breadcrumb">
-                  <el-breadcrumb separator="/">
-                    <el-breadcrumb-item :to="{ path: '/dashboard' }">首页</el-breadcrumb-item>
-                    <el-breadcrumb-item v-for="crumb in breadcrumbs" :key="crumb.path">
-                      {{ crumb.label }}
-                    </el-breadcrumb-item>
-                  </el-breadcrumb>
-                </slot>
-              </nav>
-
-              <!-- 页面级标题 + 工具栏 -->
               <div class="layout__page-header-row">
-                <div class="layout__page-header-main">
-                  <slot name="header">
-                    <PageHeader
-                      v-if="pageTitle"
-                      :title="pageTitle"
-                      :subtitle="pageSubtitle"
-                      size="md"
-                      :decoration="true"
-                      @click="goHome"
-                    />
-                  </slot>
+                <div v-if="hasHeader" class="layout__page-header-main">
+                  <slot name="header" />
                 </div>
                 <div v-if="hasToolbar" class="layout__page-header-toolbar">
                   <slot name="toolbar" />
@@ -270,10 +225,6 @@ watch(isLoading, async (loading) => {
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
-  }
-
-  &__breadcrumb {
-    color: var(--el-text-color-secondary);
   }
 
   &__page-header-row {

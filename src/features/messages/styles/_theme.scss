@@ -1,0 +1,254 @@
+/**
+ * 消息中心 / 动态中心共享主题
+ * 经典蓝白配色：主色 #1E88E5，纯白/浅灰背景，深色文本
+ */
+
+// ─── CSS 变量 ───
+@mixin message-theme-vars {
+  --mc-bg: #f5f7fa;
+  --mc-card: #ffffff;
+  --mc-wood: #1e88e5;
+  --mc-wood-light: #42a5f5;
+  --mc-terracotta: #1e88e5;
+  --mc-sage: #43a047;
+  --mc-gold: #ffa726;
+  --mc-cream: #e3f2fd;
+  --mc-text: #212121;
+  --mc-text-secondary: #616161;
+  --mc-border: #e0e0e0;
+  --mc-shadow: 0 4px 20px rgba(30, 136, 229, 0.08);
+  --mc-shadow-hover: 0 8px 30px rgba(30, 136, 229, 0.14);
+  --mc-primary-shadow: rgba(30, 136, 229, 0.28);
+  --mc-radius: 16px;
+}
+
+// ─── 字体 ───
+$mc-font-display: 'STSong', 'SimSun', 'Songti SC', serif;
+$mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+
+// ─── 动画 ───
+@mixin mc-fade-in($delay: 0s) {
+  animation: mc-fade-in 0.45s ease $delay both;
+
+  @keyframes mc-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+// ─── 按钮基础 ───
+@mixin mc-btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: $mc-font-body;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+@mixin mc-btn-primary {
+  @include mc-btn-base;
+  background: linear-gradient(135deg, var(--mc-wood) 0%, var(--mc-wood-light) 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px var(--mc-primary-shadow);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(30, 136, 229, 0.36);
+  }
+}
+
+@mixin mc-btn-secondary {
+  @include mc-btn-base;
+  background: #fff;
+  color: var(--mc-wood);
+  border: 1px solid var(--mc-border);
+
+  &:hover:not(:disabled) {
+    border-color: var(--mc-wood);
+    background: var(--mc-cream);
+  }
+}
+
+@mixin mc-btn-ghost {
+  @include mc-btn-base;
+  background: transparent;
+  color: var(--mc-text-secondary);
+  border: 1px solid transparent;
+
+  &:hover:not(:disabled) {
+    background: var(--mc-bg);
+    color: var(--mc-text);
+  }
+}
+
+// ─── 输入框 ───
+@mixin mc-input-wrap($width: 240px) {
+  position: relative;
+  width: $width;
+
+  :deep(.el-input__wrapper) {
+    padding-left: 42px;
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px var(--mc-border) inset;
+    background: #fff;
+    transition: box-shadow 0.2s ease;
+
+    &:hover,
+    &.is-focus {
+      box-shadow: 0 0 0 1px var(--mc-wood) inset;
+    }
+  }
+
+  &__icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--mc-text-secondary);
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+// ─── 选择器 ───
+@mixin mc-select($width: 150px) {
+  width: $width;
+
+  :deep(.el-input__wrapper) {
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px var(--mc-border) inset;
+    background: #fff;
+
+    &:hover,
+    &.is-focus {
+      box-shadow: 0 0 0 1px var(--mc-wood) inset;
+    }
+  }
+}
+
+// ─── 卡片 ───
+@mixin mc-card {
+  background: var(--mc-card);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius);
+  padding: 20px;
+  box-shadow: var(--mc-shadow);
+}
+
+// ─── 表格 ───
+@mixin mc-table {
+  --el-table-header-bg-color: var(--mc-cream);
+  --el-table-header-text-color: var(--mc-wood);
+  --el-table-row-hover-bg-color: var(--mc-bg);
+  --el-table-border-color: var(--mc-border);
+
+  border-radius: 12px;
+  overflow: hidden;
+
+  th.el-table__cell {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  td.el-table__cell {
+    font-size: 14px;
+    color: var(--mc-text);
+  }
+}
+
+// ─── 分页 ───
+@mixin mc-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mc-border);
+
+  .el-pagination.is-background .el-pager li:not(.is-disabled).is-active {
+    background: var(--mc-wood);
+  }
+
+  .el-pagination.is-background .el-pager li:not(.is-disabled):hover {
+    color: var(--mc-wood);
+  }
+}
+
+// ─── 弹窗 ───
+@mixin mc-dialog {
+  border-radius: var(--mc-radius);
+  overflow: hidden;
+
+  .el-dialog__header {
+    margin-right: 0;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--mc-border);
+
+    .el-dialog__title {
+      font-family: $mc-font-display;
+      font-size: 20px;
+      color: var(--mc-wood);
+    }
+  }
+
+  .el-dialog__body {
+    padding: 24px;
+  }
+
+  .el-dialog__footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--mc-border);
+  }
+}
+
+// ─── 表单 ───
+@mixin mc-form {
+  .el-form-item__label {
+    color: var(--mc-text);
+    font-weight: 500;
+  }
+
+  .el-input__wrapper,
+  .el-textarea__inner,
+  .el-select .el-input__wrapper {
+    border-radius: 10px;
+    box-shadow: 0 0 0 1px var(--mc-border) inset;
+    background: #fff;
+
+    &:hover,
+    &.is-focus {
+      box-shadow: 0 0 0 1px var(--mc-wood) inset;
+    }
+  }
+
+  .el-textarea__inner {
+    padding: 10px 12px;
+  }
+}
+
+// ─── 空状态 ───
+@mixin mc-empty {
+  padding: 48px 0;
+
+  .el-empty__description {
+    color: var(--mc-text-secondary);
+  }
+}

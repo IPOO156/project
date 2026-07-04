@@ -44,6 +44,20 @@ export const APPLICATION_STATUS = {
   rejected: { label: '已驳回', color: 'danger' },
 } as const
 
+// 通知分类（消息中心使用）
+export const NOTIFICATION_CATEGORY = {
+  system: { label: '系统通知', color: 'primary' },
+  approval: { label: '审批提醒', color: 'warning' },
+  activity: { label: '动态提醒', color: 'success' },
+  message: { label: '私信', color: 'info' },
+} as const
+
+// 通知状态
+export const NOTIFICATION_STATUS = {
+  read: { label: '已读', color: 'info' },
+  unread: { label: '未读', color: 'primary' },
+} as const
+
 // 审批状态筛选选项
 export const APPROVAL_STATUS_OPTIONS = [
   { label: '已通过', value: 'approved' },

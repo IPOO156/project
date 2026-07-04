@@ -132,6 +132,24 @@ const routes: RouteRecordRaw[] = [
           },
         ],
       },
+      // ─── 消息中心 ───
+      {
+        path: 'messages',
+        children: [
+          {
+            path: '',
+            name: 'MessageCenter',
+            component: () => import('@/features/messages/MessageCenter.vue'),
+            meta: { title: '消息中心' },
+          },
+          {
+            path: 'activities',
+            name: 'MessageActivities',
+            component: () => import('@/features/messages/activities/ActivityList.vue'),
+            meta: { title: '全部动态' },
+          },
+        ],
+      },
       // ─── 审批与记录 ───
       {
         path: 'approval',

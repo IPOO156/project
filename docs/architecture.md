@@ -24,12 +24,14 @@ src/
 ├── features/          # 按业务模块划分
 │   ├── auth/          # 登录认证
 │   ├── dashboard/     # 首页仪表盘
+│   ├── messages/      # 消息中心（通知 + 动态记录）
 │   ├── profile/       # 个人档案、成长时间轴、职业规划
 │   ├── applications/  # 各类申报模块
 │   └── approval/      # 审批/提交记录
 └── shared/            # 全局共享
     ├── api/           # Axios 请求封装
     ├── composables/   # 公共 Composables
+    ├── config/        # 模块注册表等配置化接口
     ├── constants/     # 全局常量、字典
     ├── types/         # 全局 TypeScript 类型
     └── utils/         # 工具函数
@@ -43,11 +45,21 @@ src/
 
 ## Store 依赖
 
-| Store          | 路径                     | 用途                 | 依赖模块 |
-| -------------- | ------------------------ | -------------------- | -------- |
-| `useUserStore` | `src/app/stores/user.ts` | 用户登录态、用户信息 | 全局     |
-| `useAppStore`  | `src/app/stores/app.ts`  | 应用级状态（待扩展） | 全局     |
+| Store                  | 路径                             | 用途                 | 依赖模块      |
+| ---------------------- | -------------------------------- | -------------------- | ------------- |
+| `useUserStore`         | `src/app/stores/user.ts`         | 用户登录态、用户信息 | 全局          |
+| `useAppStore`          | `src/app/stores/app.ts`          | 应用级状态（待扩展） | 全局          |
+| `useNotificationStore` | `src/app/stores/notification.ts` | 消息中心通知数据     | 消息中心      |
+| `useActivityStore`     | `src/app/stores/activity.ts`     | 动态记录数据         | 消息中心/首页 |
 
 ## 路由关系
 
 见 `src/app/router/routes.ts`。
+
+## 模块注册表
+
+为提升系统可扩展性，菜单与模块元数据由 `src/shared/config/moduleRegistry.ts` 集中管理。新增业务模块时，只需在注册表中添加 `AppModule` 条目，即可同步影响侧边栏菜单、模块图标与排序。
+
+- 路由表（`routes.ts`）继续作为路由权威来源。
+- `src/shared/constants/menu.ts` 从注册表派生，不再硬编码菜单项。
+- 详见 `docs/architecture/extensibility-design.md`。

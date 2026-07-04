@@ -1,22 +1,9 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
-import StatusTag from '@/shared/ui/StatusTag.vue'
-
-interface PaperItem {
-  id: string
-  journalName: string
-  paperName: string
-  ranking: string
-  publishDate: string
-  semester: string
-  status: 'draft' | 'submitted' | 'approved' | 'rejected'
-  submitDate: string
-  proofMaterials: string[]
-}
 
 function emptyForm() {
   return {
@@ -30,76 +17,19 @@ function emptyForm() {
 }
 
 const form = reactive(emptyForm())
-const list = ref<PaperItem[]>([
-  {
-    id: '1',
-    journalName: '《计算机科学与应用》',
-    paperName: '基于Vue3的档案管理系统设计与实现',
-    ranking: '2/3',
-    publishDate: '2026-03',
-    semester: '2023-2024-2',
-    status: 'submitted',
-    submitDate: '2026-03-15',
-    proofMaterials: [],
-  },
-])
-const editingId = ref<string | null>(null)
 const submitting = ref(false)
 
 function reset() {
   Object.assign(form, emptyForm())
-  editingId.value = null
 }
 
 function handleSubmit() {
   submitting.value = true
   setTimeout(() => {
-    if (editingId.value) {
-      const idx = list.value.findIndex((i) => i.id === editingId.value)
-      if (idx > -1) {
-        list.value[idx] = {
-          ...list.value[idx],
-          ...form,
-          status: 'submitted',
-          submitDate: new Date().toISOString().slice(0, 10),
-        }
-      }
-      ElMessage.success('报名信息已更新')
-    } else {
-      list.value.unshift({
-        id: `${Date.now()}`,
-        ...form,
-        status: 'submitted',
-        submitDate: new Date().toISOString().slice(0, 10),
-        proofMaterials: [],
-      })
-      ElMessage.success('报名提交成功')
-    }
+    ElMessage.success('报名提交成功')
     reset()
     submitting.value = false
   }, 600)
-}
-
-function edit(row: PaperItem) {
-  editingId.value = row.id
-  Object.assign(form, {
-    journalName: row.journalName,
-    paperName: row.paperName,
-    ranking: row.ranking,
-    publishDate: row.publishDate,
-    semester: row.semester,
-    proofMaterials: row.proofMaterials,
-  })
-}
-
-function remove(row: PaperItem) {
-  ElMessageBox.confirm(`确定删除 "${row.paperName}" 的报名记录吗？`, '提示', { type: 'warning' })
-    .then(() => {
-      list.value = list.value.filter((i) => i.id !== row.id)
-      ElMessage.success('删除成功')
-      if (editingId.value === row.id) reset()
-    })
-    .catch(() => {})
 }
 </script>
 
@@ -108,13 +38,9 @@ function remove(row: PaperItem) {
     alert-title="论文申报说明"
     alert-description="请填写论文信息，提交后可在下方查看记录。"
     :show-alert="false"
-    :is-editing="!!editingId"
+    :show-records="false"
     :submitting="submitting"
-    :records="list"
     @submit="handleSubmit"
-    @cancel="reset"
-    @edit="edit"
-    @remove="remove"
   >
     <template #form>
       <el-form :model="form" label-width="120px">
@@ -142,19 +68,6 @@ function remove(row: PaperItem) {
           <ProofUpload v-model:file-list="form.proofMaterials" />
         </el-form-item>
       </el-form>
-    </template>
-    <template #columns>
-      <el-table-column type="index" label="序号" width="60" />
-      <el-table-column prop="paperName" label="论文名称" min-width="250" show-overflow-tooltip />
-      <el-table-column prop="journalName" label="期刊名称" width="200" show-overflow-tooltip />
-      <el-table-column prop="ranking" label="排名/总人数" width="130" />
-      <el-table-column prop="publishDate" label="发表时间" width="120" />
-      <el-table-column prop="semester" label="学期" width="100" />
-      <el-table-column label="状态" width="100">
-        <template #default="{ row }">
-          <StatusTag :status="(row as PaperItem).status" size="small" />
-        </template>
-      </el-table-column>
     </template>
   </ApplicationFormRecord>
 </template>

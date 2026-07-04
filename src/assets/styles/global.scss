@@ -101,19 +101,6 @@
   --el-button-active-border-color: #{color.adjust($color-primary, $lightness: -8%)};
 }
 
-.el-breadcrumb {
-  font-size: $font-size-base;
-
-  &__inner {
-    color: $color-text-secondary;
-  }
-
-  &__item:last-child &__inner {
-    color: $color-text-primary;
-    font-weight: 500;
-  }
-}
-
 // 滚动条美化
 ::-webkit-scrollbar {
   width: 6px;

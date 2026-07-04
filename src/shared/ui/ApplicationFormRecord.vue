@@ -6,12 +6,15 @@ interface Props {
   alertDescription: string
   isEditing?: boolean
   submitting?: boolean
-  records: T[]
+  records?: T[]
   showAlert?: boolean
+  showRecords?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
+  records: () => [],
   showAlert: true,
+  showRecords: true,
 })
 
 defineEmits<{
@@ -42,7 +45,7 @@ defineEmits<{
       </div>
     </el-card>
 
-    <el-card v-if="records.length" class="record-card">
+    <el-card v-if="showRecords && records.length" class="record-card">
       <template #header>
         <span class="card-title">报名记录</span>
       </template>

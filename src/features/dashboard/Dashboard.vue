@@ -1,28 +1,23 @@
 <script setup lang="ts">
+import type { QuickEntry } from './composables/useQuickEntries'
 import { RadarChart } from 'echarts/charts'
 import { LegendComponent, RadarComponent, TooltipComponent } from 'echarts/components'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import {
-  ArrowRight,
-  Award,
-  BookOpen,
-  Clock,
-  FileText,
-  Star,
-  TrendingUp,
-  Trophy,
-  Users,
-} from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { ArrowRight, Award, Clock, FileText, TrendingUp } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import VChart from 'vue-echarts'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/app/stores/stores'
+import { useActivityStore, useUserStore } from '@/app/stores/stores'
+import { useQuickEntries } from './composables/useQuickEntries'
 
 use([CanvasRenderer, RadarComponent, RadarChart, TooltipComponent, LegendComponent])
 
 const router = useRouter()
 const userStore = useUserStore()
+const activityStore = useActivityStore()
+const { quickEntries, recordClick } = useQuickEntries()
 
 // ── Mock 数据（接口联调后替换） ──
 
@@ -32,23 +27,6 @@ const statsCards = ref([
   { label: '已通过', value: 8, icon: Award, color: '#67c23a' },
   { label: '待审批', value: 3, icon: Clock, color: '#e6a23c' },
   { label: '学期均绩', value: '3.82', icon: TrendingUp, color: '#1e3a5f' },
-])
-
-// 快捷入口
-const quickEntries = [
-  { label: '学科竞赛', path: '/applications?tab=competition', icon: Trophy, color: '#e74c3c' },
-  { label: '社会实践', path: '/applications?tab=social-practice', icon: Users, color: '#3498db' },
-  { label: '奖学金', path: '/applications?tab=scholarship', icon: Star, color: '#f39c12' },
-  { label: '成长时间轴', path: '/growth-timeline', icon: BookOpen, color: '#2ecc71' },
-]
-
-// 最近动态 (模拟数据)
-const recentActivities = ref([
-  { type: 'submitted', text: '学科竞赛申报已提交', time: '2026-06-28 14:30' },
-  { type: 'approved', text: '社会实践申报已通过', time: '2026-06-25 10:20' },
-  { type: 'submitted', text: '奖学金申请已提交', time: '2026-06-20 16:45' },
-  { type: 'rejected', text: '创新创业申报需修改', time: '2026-06-18 09:00' },
-  { type: 'approved', text: '荣誉证书登记已通过', time: '2026-06-15 11:30' },
 ])
 
 const profileDimensions = [
@@ -183,6 +161,28 @@ const todayLabel = computed(() => {
     weekday: 'long',
   })
 })
+
+const recentActivities = computed(() => activityStore.filteredActivities.slice(0, 5))
+
+async function handleEntryClick(entry: QuickEntry) {
+  recordClick(entry.path)
+  try {
+    await router.push(entry.path)
+  } catch {
+    ElMessage.error('页面跳转失败，请稍后重试')
+  }
+}
+
+function handleEntryKeydown(evt: KeyboardEvent, entry: QuickEntry) {
+  if (evt.key === 'Enter' || evt.key === ' ') {
+    evt.preventDefault()
+    handleEntryClick(entry)
+  }
+}
+
+onMounted(() => {
+  activityStore.fetchActivities()
+})
 </script>
 
 <template>
@@ -251,37 +251,55 @@ const todayLabel = computed(() => {
           <template #header>
             <span class="section-title">快捷入口</span>
           </template>
-          <el-row :gutter="12">
-            <el-col v-for="entry in quickEntries" :key="entry.label" :span="12">
-              <el-card shadow="hover" class="quick-entry" @click="router.push(entry.path)">
-                <div class="quick-entry__body">
-                  <!-- 图标背景/颜色依赖入口数据中的动态色值，故使用内联样式 -->
-                  <div
-                    class="quick-entry__icon"
-                    :style="{ background: `${entry.color}15`, color: entry.color }"
-                  >
-                    <component :is="entry.icon" :size="20" />
-                  </div>
-                  <span class="quick-entry__label">{{ entry.label }}</span>
-                  <ArrowRight :size="14" class="quick-entry__arrow" />
+          <div class="quick-entry-grid">
+            <div
+              v-for="entry in quickEntries"
+              :key="entry.label"
+              class="quick-entry"
+              tabindex="0"
+              role="button"
+              @click="handleEntryClick(entry)"
+              @keydown="(e) => handleEntryKeydown(e, entry)"
+            >
+              <div class="quick-entry__body">
+                <!-- 图标背景/颜色依赖入口数据中的动态色值，故使用内联样式 -->
+                <div
+                  class="quick-entry__icon"
+                  :style="{ background: `${entry.color}15`, color: entry.color }"
+                >
+                  <component :is="entry.icon" :size="20" />
                 </div>
-              </el-card>
-            </el-col>
-          </el-row>
+                <div class="quick-entry__info">
+                  <span class="quick-entry__label">{{ entry.label }}</span>
+                  <span v-if="entry.isRecent" class="quick-entry__badge">最近使用</span>
+                </div>
+                <ArrowRight :size="14" class="quick-entry__arrow" />
+              </div>
+            </div>
+          </div>
         </el-card>
 
         <el-card class="dashboard__section dashboard__section--activities">
           <template #header>
-            <span class="section-title">最近动态</span>
+            <div class="dashboard__section-header">
+              <span class="section-title">最近动态</span>
+              <el-button link type="primary" @click="router.push('/messages/activities')">
+                查看全部
+              </el-button>
+            </div>
           </template>
-          <div class="activities">
-            <div v-for="(act, idx) in recentActivities" :key="idx" class="activity-item">
+          <div v-loading="activityStore.loading" class="activities">
+            <div v-for="act in recentActivities" :key="act.id" class="activity-item">
               <div class="activity-item__dot" :class="`activity-item__dot--${act.type}`" />
               <div class="activity-item__content">
                 <p class="activity-item__text">{{ act.text }}</p>
                 <span class="activity-item__time">{{ act.time }}</span>
               </div>
             </div>
+            <el-empty
+              v-if="!activityStore.loading && recentActivities.length === 0"
+              description="暂无动态"
+            />
           </div>
         </el-card>
       </el-col>
@@ -327,6 +345,13 @@ const todayLabel = computed(() => {
     &--activities {
       margin-bottom: 0;
     }
+  }
+
+  &__section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
   }
 }
 
@@ -428,41 +453,81 @@ const todayLabel = computed(() => {
   color: #dc2626;
 }
 
+.quick-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
 .quick-entry {
-  margin-bottom: 12px;
   cursor: pointer;
+  border-radius: 10px;
+  border: 1px solid var(--el-border-color-lighter);
+  background: var(--el-bg-color);
   transition:
     transform 0.2s,
-    box-shadow 0.2s;
+    box-shadow 0.2s,
+    border-color 0.2s;
+  will-change: transform;
 
-  &:hover {
+  &:hover,
+  &:focus-visible {
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border-color: var(--el-color-primary-light-7);
+    outline: none;
+
+    .quick-entry__icon {
+      transform: scale(1.08);
+    }
+
     .quick-entry__arrow {
       opacity: 1;
       transform: translateX(0);
     }
   }
 
+  &:active {
+    transform: translateY(0);
+  }
+
   &__body {
     display: flex;
     align-items: center;
     gap: 10px;
+    padding: 12px;
   }
 
   &__icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    transition: transform 0.2s;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.2));
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
   &__label {
-    flex: 1;
     font-size: 14px;
     font-weight: 500;
+    color: var(--el-text-color-primary);
+  }
+
+  &__badge {
+    font-size: 11px;
+    line-height: 1;
+    color: var(--el-color-primary);
   }
 
   &__arrow {
@@ -470,6 +535,7 @@ const todayLabel = computed(() => {
     transform: translateX(-4px);
     transition: all 0.2s;
     color: var(--el-text-color-secondary);
+    flex-shrink: 0;
   }
 }
 
@@ -495,6 +561,9 @@ const todayLabel = computed(() => {
     margin-top: 6px;
     flex-shrink: 0;
 
+    &--draft {
+      background: #909399;
+    }
     &--submitted {
       background: #e6a23c;
     }
@@ -540,6 +609,22 @@ const todayLabel = computed(() => {
 @media (max-width: 768px) {
   .radar-panel__summary {
     grid-template-columns: 1fr;
+  }
+
+  .quick-entry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-entry {
+    &__body {
+      padding: 14px 12px;
+      min-height: 44px;
+    }
+
+    &__arrow {
+      opacity: 1;
+      transform: translateX(0);
+    }
   }
 }
 </style>

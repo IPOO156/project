@@ -6,11 +6,12 @@
  */
 import { Bell, LogOut, Menu, Settings, User } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
-import { useAppStore, useUserStore } from '@/app/stores/stores'
+import { useAppStore, useNotificationStore, useUserStore } from '@/app/stores/stores'
 import NavTabs from './NavTabs.vue'
 
 const userStore = useUserStore()
 const appStore = useAppStore()
+const notificationStore = useNotificationStore()
 const router = useRouter()
 
 function handleLogout() {
@@ -42,8 +43,16 @@ function openSidebar() {
     </div>
 
     <div class="header__right">
-      <el-badge :value="3" class="header__action">
-        <el-button text aria-label="通知">
+      <el-badge
+        :value="notificationStore.unreadCount"
+        :hidden="notificationStore.unreadCount === 0"
+        class="header__action"
+      >
+        <el-button
+          text
+          :aria-label="`消息中心，未读消息 ${notificationStore.unreadCount} 条`"
+          @click="router.push('/messages')"
+        >
           <Bell :size="18" />
         </el-button>
       </el-badge>

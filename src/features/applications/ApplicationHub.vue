@@ -124,18 +124,6 @@ function switchModule(key: string) {
 
 <template>
   <div class="application-hub">
-    <el-card class="application-hub__hero">
-      <div class="application-hub__hero-content">
-        <div>
-          <p class="application-hub__eyebrow">Applications Workspace</p>
-          <h2 class="application-hub__title">个人档案信息申报</h2>
-          <p class="application-hub__desc">
-            将分散的成长与成果材料集中到一个工作区中，通过模块切换统一录入、查看与维护。
-          </p>
-        </div>
-      </div>
-    </el-card>
-
     <div class="application-hub__grid">
       <button
         v-for="item in modules"
@@ -168,33 +156,6 @@ function switchModule(key: string) {
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.application-hub__hero {
-  border: none;
-}
-
-.application-hub__eyebrow {
-  margin: 0 0 8px;
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--el-color-primary);
-}
-
-.application-hub__title {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-}
-
-.application-hub__desc {
-  margin: 10px 0 0;
-  max-width: 680px;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--el-text-color-secondary);
 }
 
 .application-hub__grid {

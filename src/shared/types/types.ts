@@ -287,3 +287,42 @@ export interface SubmissionFilters {
   status?: string
   dateRange?: [string | undefined, string | undefined]
 }
+
+// === 最近动态 ===
+
+export interface Activity {
+  id: string
+  type: 'draft' | 'submitted' | 'approved' | 'rejected'
+  text: string
+  time: string
+  status: 'draft' | 'submitted' | 'approved' | 'rejected'
+}
+
+export interface ActivityFilters {
+  keyword?: string
+  status?: string
+}
+
+// === 消息中心 ===
+
+export type NotificationCategory = 'system' | 'approval' | 'activity' | 'message'
+
+export type NotificationStatus = 'read' | 'unread'
+
+export interface Notification {
+  id: string
+  title: string
+  content: string
+  category: NotificationCategory
+  status: NotificationStatus
+  isRead: boolean
+  createdAt: string
+  link?: string
+  sender?: string
+}
+
+export interface NotificationFilters {
+  category?: NotificationCategory
+  status?: NotificationStatus
+  keyword?: string
+}
