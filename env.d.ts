@@ -1,11 +1,6 @@
 /// <reference types="vite/client" />
 
-declare module 'vue-router' {
-  import type { DefineComponent } from 'vue'
-
-  const component: DefineComponent<{}, {}, any>
-  export default component
-}
+export {}
 
 declare module 'vue-echarts' {
   import type { DefineComponent } from 'vue'
