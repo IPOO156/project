@@ -42,12 +42,12 @@ defineProps<Props>()
     visibility 0.2s ease;
   padding: 0.55rem 0.85rem;
   border-radius: 10px;
-  background: rgba(45, 30, 18, 0.92);
+  background: var(--gt-tooltip-bg, rgba(45, 30, 18, 0.92));
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.22),
-    0 0 0 1px rgba(255, 252, 247, 0.1) inset;
+    0 0 0 1px rgba(var(--gt-card-rgb, 255 252 247), 0.1) inset;
   color: var(--bg-parchment, #f4efe6);
   max-width: 220px;
   text-align: left;
@@ -61,7 +61,7 @@ defineProps<Props>()
   transform: translateX(-50%);
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
-  border-bottom: 6px solid rgba(45, 30, 18, 0.92);
+  border-bottom: 6px solid var(--gt-tooltip-bg, rgba(45, 30, 18, 0.92));
   pointer-events: none;
 }
 
@@ -73,7 +73,7 @@ defineProps<Props>()
 .hero-rings__tooltip-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #fff8e8;
+  color: var(--gt-tooltip-text, #fff8e8);
   line-height: 1.35;
   margin-bottom: 0.2rem;
 }
@@ -83,7 +83,7 @@ defineProps<Props>()
   align-items: center;
   gap: 0.4rem;
   font-size: 0.7rem;
-  color: rgba(244, 239, 230, 0.72);
+  color: var(--gt-tooltip-muted, rgba(244, 239, 230, 0.72));
   font-family: 'JetBrains Mono', monospace;
   letter-spacing: 0.3px;
 }

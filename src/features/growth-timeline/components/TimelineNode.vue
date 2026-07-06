@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { GrowthExperience } from '../timeline-constants'
-import { Trash2 } from 'lucide-vue-next'
+import { ElMessageBox } from 'element-plus'
+import { FlaskConical, GraduationCap, HeartHandshake, Trash2, Trophy } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useScrollReveal } from '../composables/useScrollReveal'
 import { findRingBySemester, getSemesterDisplayLabel } from '../timeline-constants'
@@ -21,15 +22,43 @@ const emit = defineEmits<{
   (e: 'delete', id: string): void
 }>()
 
-function handleDelete(event: MouseEvent) {
+async function handleDelete(event: MouseEvent) {
   event.stopPropagation()
-  // eslint-disable-next-line no-alert
-  if (confirm('确定删除这条经历吗？')) {
+  try {
+    await ElMessageBox.confirm('确定删除这条成长经历吗？删除后无法恢复。', '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
     emit('delete', props.experience.id)
+  } catch {
+    // 用户取消，无需处理
   }
 }
 
 const ringColor = computed(() => findRingBySemester(props.experience.semester)?.color ?? '#8b6340')
+
+function getTypeIcon(tag: string) {
+  if (tag?.includes('竞赛')) return Trophy
+  if (tag?.includes('科研')) return FlaskConical
+  if (tag?.includes('实践')) return HeartHandshake
+  if (tag?.includes('学业')) return GraduationCap
+  return Trophy
+}
+
+function getTypeColor(tag: string): string {
+  const colorMap: Record<string, string> = {
+    竞赛: '#d4a574',
+    科研: '#8b6340',
+    实践: '#a67c52',
+    学业: '#5a7c5a',
+    技术: '#9a8474',
+  }
+  for (const [key, color] of Object.entries(colorMap)) {
+    if (tag?.includes(key)) return color
+  }
+  return '#8b6340'
+}
 
 const nodeRef = ref<HTMLElement | null>(null)
 const { isVisible } = useScrollReveal(nodeRef, {
@@ -49,6 +78,13 @@ const { isVisible } = useScrollReveal(nodeRef, {
   >
     <div class="growth-card" :data-index="String(index + 1).padStart(2, '0')">
       <div class="card-top">
+        <div
+          v-if="experience.tags.length"
+          class="card-type-indicator"
+          :style="{ '--type-color': getTypeColor(experience.tags[0]) }"
+        >
+          <component :is="getTypeIcon(experience.tags[0])" :size="12" />
+        </div>
         <span class="card-season-badge">{{ getSemesterDisplayLabel(experience.semester) }}</span>
         <span class="card-year-inline">{{ experience.date }}</span>
         <button class="delete-btn" aria-label="删除" title="删除" @click.stop="handleDelete">
@@ -124,11 +160,11 @@ const { isVisible } = useScrollReveal(nodeRef, {
 
 .growth-node--selected .growth-card {
   border-color: var(--ring-color, var(--bark-light, #8b6340));
-  background: rgba(255, 252, 247, 0.95);
+  background: rgba(var(--gt-card-rgb, 255 252 247), 0.95);
   box-shadow:
     0 0 0 1.5px var(--ring-color, var(--bark-light, #8b6340)),
-    0 18px 50px rgba(26, 18, 10, 0.1),
-    0 4px 12px rgba(26, 18, 10, 0.05);
+    0 18px 50px rgba(var(--gt-shadow-rgb, 26 18 10), 0.1),
+    0 4px 12px rgba(var(--gt-shadow-rgb, 26 18 10), 0.05);
   transform: translateY(-3px) scale(1.01);
 }
 
@@ -191,14 +227,14 @@ const { isVisible } = useScrollReveal(nodeRef, {
   border-radius: 50%;
   background: var(--ring-color, var(--bark-light, #8b6340));
   z-index: 1;
-  box-shadow: 0 0 12px rgba(139, 99, 64, 0.25);
+  box-shadow: 0 0 12px rgba(var(--gt-accent-rgb, 139 99 64), 0.25);
 }
 
 .growth-card {
   padding: 2rem 2rem 1.8rem;
-  border-radius: 16px;
-  background: rgba(255, 252, 247, 0.75);
-  border: 1px solid rgba(61, 43, 31, 0.08);
+  border-radius: $radius-2xl;
+  background: rgba(var(--gt-card-rgb, 255 252 247), 0.75);
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
   backdrop-filter: blur(12px);
   position: relative;
   overflow: hidden;
@@ -211,25 +247,32 @@ const { isVisible } = useScrollReveal(nodeRef, {
 }
 
 .growth-card:hover {
-  border-color: rgba(61, 43, 31, 0.15);
-  background: rgba(255, 252, 247, 0.92);
+  border-color: rgba(var(--gt-bark-rgb, 61 43 31), 0.15);
+  background: rgba(var(--gt-card-rgb, 255 252 247), 0.92);
   box-shadow:
-    0 14px 44px rgba(26, 18, 10, 0.08),
-    0 3px 10px rgba(26, 18, 10, 0.04);
+    0 14px 44px rgba(var(--gt-shadow-rgb, 26 18 10), 0.08),
+    0 3px 10px rgba(var(--gt-shadow-rgb, 26 18 10), 0.04);
   transform: translateY(-5px) scale(1.005);
 }
 
 .growth-card::before {
   content: attr(data-index);
   position: absolute;
-  top: -10px;
-  right: 10px;
+  right: 12px;
+  bottom: 6px;
   font-family: 'Cormorant Garamond', serif;
-  font-size: 7rem;
+  font-size: 3.5rem;
   font-weight: 700;
-  color: rgba(61, 43, 31, 0.03);
+  color: rgba(var(--gt-bark-rgb, 61 43 31), 0.04);
   line-height: 1;
   pointer-events: none;
+  z-index: 0;
+}
+
+/* 确保卡片内容在装饰序号之上 */
+.growth-card > * {
+  position: relative;
+  z-index: 1;
 }
 
 .growth-card::after {
@@ -252,16 +295,28 @@ const { isVisible } = useScrollReveal(nodeRef, {
   margin-bottom: 1rem;
 }
 
+.card-type-indicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(var(--gt-bark-rgb, 61 43 31), 0.06);
+  color: var(--type-color, var(--gt-accent, #8b6340));
+}
+
 .card-season-badge {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.55rem;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--ring-color, var(--bark-light, #8b6340));
-  border: 1px solid rgba(61, 43, 31, 0.1);
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
   padding: 0.25rem 0.7rem;
   border-radius: 100px;
-  background: rgba(61, 43, 31, 0.02);
+  background: rgba(var(--gt-bark-rgb, 61 43 31), 0.02);
   flex-shrink: 0;
 }
 
@@ -319,7 +374,7 @@ const { isVisible } = useScrollReveal(nodeRef, {
 
 .card-skill-track {
   height: 3px;
-  background: rgba(61, 43, 31, 0.08);
+  background: rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -364,7 +419,7 @@ const { isVisible } = useScrollReveal(nodeRef, {
   font-size: 0.5rem;
   letter-spacing: 1.5px;
   padding: 0.3rem 0.65rem;
-  border: 1px solid rgba(61, 43, 31, 0.08);
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
   border-radius: 100px;
   color: var(--text-light, #9a8474);
   transition: all 0.3s;
@@ -380,8 +435,8 @@ const { isVisible } = useScrollReveal(nodeRef, {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 1px solid rgba(61, 43, 31, 0.1);
-  background: rgba(255, 252, 247, 0.85);
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
+  background: rgba(var(--gt-card-rgb, 255 252 247), 0.85);
   color: var(--ring-color, var(--bark-light, #8b6340));
   cursor: pointer;
   display: inline-flex;
@@ -438,7 +493,7 @@ const { isVisible } = useScrollReveal(nodeRef, {
   .growth-card {
     grid-column: 2 !important;
     padding: 1.25rem;
-    border-radius: 14px;
+    border-radius: $radius-xl;
   }
 
   .growth-spacer {
@@ -459,6 +514,26 @@ const { isVisible } = useScrollReveal(nodeRef, {
     height: 32px;
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .growth-node {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+    will-change: auto !important;
+  }
+
+  .ring-marker-outer::before,
+  .ring-marker-outer::after {
+    animation: none !important;
+  }
+
+  .card-skill-fill {
+    transition: none !important;
+    width: var(--fill-width, 0%) !important;
   }
 }
 </style>

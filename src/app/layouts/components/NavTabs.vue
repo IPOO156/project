@@ -491,3 +491,36 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
   }
 }
 </style>
+
+<style lang="scss">
+/* 暗色模式：覆盖标签栏为深色系 */
+html.dark .nav-tabs {
+  &__surface {
+    border-color: rgba(148, 163, 184, 0.18);
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.88));
+    color: var(--el-text-color-secondary);
+  }
+
+  &__item:hover .nav-tabs__surface {
+    background: rgba(51, 65, 85, 0.96);
+    border-color: rgba(96, 165, 250, 0.35);
+    color: var(--el-color-primary);
+  }
+
+  &__item.is-active .nav-tabs__surface {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 1), rgba(30, 41, 59, 0.98));
+    border-color: rgba(96, 165, 250, 0.45);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    color: var(--el-color-primary);
+  }
+
+  &__close {
+    color: var(--el-text-color-secondary);
+
+    &:hover {
+      background-color: rgba(239, 68, 68, 0.15);
+      color: var(--el-color-danger);
+    }
+  }
+}
+</style>

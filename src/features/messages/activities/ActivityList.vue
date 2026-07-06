@@ -182,6 +182,16 @@ function handleSubmissionReset() {
   submissionStore.fetchRecords()
 }
 
+function handleActivitySizeChange(size: number) {
+  activityPageSize.value = size
+  activityPageNum.value = 1
+}
+
+function handleSubmissionSizeChange(size: number) {
+  submissionPageSize.value = size
+  submissionPageNum.value = 1
+}
+
 function viewSubmission(path: string) {
   router.push(path)
 }
@@ -300,10 +310,7 @@ onMounted(() => {
             layout="total, sizes, prev, pager, next, jumper"
             background
             @current-change="activityPageNum = $event"
-            @size-change="
-              activityPageSize = $event
-              activityPageNum = 1
-            "
+            @size-change="handleActivitySizeChange"
           />
         </div>
         <el-empty v-else-if="!activityStore.loading" description="暂无动态记录" class="mc-empty" />
@@ -414,10 +421,7 @@ onMounted(() => {
             layout="total, sizes, prev, pager, next, jumper"
             background
             @current-change="submissionPageNum = $event"
-            @size-change="
-              submissionPageSize = $event
-              submissionPageNum = 1
-            "
+            @size-change="handleSubmissionSizeChange"
           />
         </div>
         <el-empty
@@ -543,7 +547,7 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.2s ease;
   border: 1px solid var(--mc-border);
-  background: #fff;
+  background: var(--mc-card);
   font-family: $mc-font-body;
 
   &--view {
@@ -568,12 +572,12 @@ onMounted(() => {
   }
 
   &--delete {
-    color: #c45c5c;
-    border-color: #e0b4b4;
+    color: var(--mc-danger);
+    border-color: var(--mc-danger-light);
 
     &:hover {
-      background: rgba(196, 92, 92, 0.08);
-      border-color: #c45c5c;
+      background: var(--mc-danger-fade);
+      border-color: var(--mc-danger);
     }
   }
 }

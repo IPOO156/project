@@ -173,3 +173,14 @@
 .progress-fixed {
   width: 200px;
 }
+
+// 暗色模式滚动条适配
+html.dark {
+  ::-webkit-scrollbar-thumb {
+    background: #475569;
+
+    &:hover {
+      background: #64748b;
+    }
+  }
+}

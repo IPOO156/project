@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GrowthExperience } from '../timeline-constants'
+import { ElMessageBox } from 'element-plus'
 import { Trash2, X } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
 import { getSemesterDisplayLabel } from '../timeline-constants'
@@ -79,11 +80,17 @@ function handleClose() {
   emit('close')
 }
 
-function handleDelete() {
+async function handleDelete() {
   if (!props.experience) return
-  // eslint-disable-next-line no-alert
-  if (confirm('确定删除这条经历吗？')) {
+  try {
+    await ElMessageBox.confirm('确定删除这条成长经历吗？删除后无法恢复。', '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
     emit('delete', props.experience.id)
+  } catch {
+    // 用户取消，无需处理
   }
 }
 
@@ -143,7 +150,7 @@ function handleBackdropClick(event: MouseEvent) {
   position: fixed;
   inset: 0;
   z-index: 200;
-  background: rgba(244, 239, 230, 0.98);
+  background: var(--gt-bg-page, #f4efe6);
   overflow-y: auto;
   transform: scale(0);
   opacity: 0;
@@ -169,9 +176,9 @@ function handleBackdropClick(event: MouseEvent) {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1px solid rgba(61, 43, 31, 0.12);
-  background: rgba(255, 252, 247, 0.8);
-  color: #5c3d28;
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
+  background: rgba(var(--gt-card-rgb, 255 252 247), 0.8);
+  color: var(--gt-accent-mid, #5c3d28);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -181,8 +188,8 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .detail-close:hover {
-  background: #5c3d28;
-  color: #f4efe6;
+  background: var(--gt-accent-mid, #5c3d28);
+  color: var(--gt-bg-page, #f4efe6);
   transform: rotate(90deg);
 }
 
@@ -216,8 +223,8 @@ function handleBackdropClick(event: MouseEvent) {
   font-size: 0.65rem;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: #5c3d28;
-  border: 1px solid rgba(61, 43, 31, 0.12);
+  color: var(--gt-accent-mid, #5c3d28);
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
   padding: 6px 14px;
   border-radius: 100px;
 }
@@ -225,21 +232,21 @@ function handleBackdropClick(event: MouseEvent) {
 .detail-date {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.7rem;
-  color: #9a8474;
+  color: var(--text-light, #9a8474);
 }
 
 .detail-title {
   font-family: 'Instrument Serif', serif;
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 400;
-  color: #2d1e12;
+  color: var(--bark-dark, #2d1e12);
   margin-bottom: 1.5rem;
   line-height: 1.15;
 }
 
 .detail-desc {
   font-size: 1.15rem;
-  color: #6b5443;
+  color: var(--text-mid, #6b5443);
   line-height: 2;
   margin-bottom: 2.5rem;
 }
@@ -256,9 +263,9 @@ function handleBackdropClick(event: MouseEvent) {
   font-size: 0.65rem;
   letter-spacing: 1.5px;
   padding: 8px 14px;
-  border: 1px solid rgba(61, 43, 31, 0.12);
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
   border-radius: 100px;
-  color: #6b5443;
+  color: var(--text-mid, #6b5443);
 }
 
 .detail-subtitle {
@@ -266,7 +273,7 @@ function handleBackdropClick(event: MouseEvent) {
   font-size: 0.65rem;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: #8b6340;
+  color: var(--gt-accent, #8b6340);
   margin-bottom: 1.5rem;
 }
 
@@ -287,18 +294,18 @@ function handleBackdropClick(event: MouseEvent) {
 
 .skill-name {
   font-size: 0.9rem;
-  color: #6b5443;
+  color: var(--text-mid, #6b5443);
 }
 
 .skill-value {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.75rem;
-  color: #9a8474;
+  color: var(--text-light, #9a8474);
 }
 
 .skill-track {
   height: 6px;
-  background: rgba(61, 43, 31, 0.08);
+  background: rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -306,7 +313,7 @@ function handleBackdropClick(event: MouseEvent) {
 .skill-fill {
   width: var(--skill-growth, 0%);
   height: 100%;
-  background: linear-gradient(to right, #8b6340, #c8943e);
+  background: linear-gradient(to right, var(--gt-accent, #8b6340), var(--gt-gold, #c8943e));
   border-radius: 3px;
   transition: width 1s ease;
 }
@@ -321,9 +328,9 @@ function handleBackdropClick(event: MouseEvent) {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  border: 1px solid rgba(61, 43, 31, 0.12);
-  background: rgba(255, 252, 247, 0.8);
-  color: #8b6340;
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
+  background: rgba(var(--gt-card-rgb, 255 252 247), 0.8);
+  color: var(--gt-accent, #8b6340);
   cursor: pointer;
   display: inline-flex;
   align-items: center;

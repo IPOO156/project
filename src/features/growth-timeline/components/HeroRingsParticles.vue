@@ -161,4 +161,8 @@
   animation-duration: 6.5s;
   animation-delay: 2.4s;
 }
+
+html.dark .hero-rings__particles {
+  filter: brightness(1.35);
+}
 </style>

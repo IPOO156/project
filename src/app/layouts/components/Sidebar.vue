@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/app/stores/stores'
+import logoIcon from '@/assets/logo/logo-icon.jpg'
 import { menuItems } from '@/shared/constants/menu'
 
 const route = useRoute()
@@ -33,7 +34,7 @@ function handleMenuSelect(index: string) {
     <!-- Logo -->
     <div class="sidebar__logo">
       <div class="sidebar__logo-icon">
-        <GraduationCap :size="28" />
+        <img :src="logoIcon" alt="档案管理系统" class="sidebar__logo-img" />
       </div>
       <transition name="fade">
         <span v-show="!appStore.isSidebarCollapsed" class="sidebar__logo-text">档案管理系统</span>
@@ -125,6 +126,16 @@ function handleMenuSelect(index: string) {
       flex-shrink: 0;
       display: flex;
       align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      overflow: hidden;
+    }
+
+    &-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
     &-text {
@@ -266,5 +277,14 @@ function handleMenuSelect(index: string) {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+</style>
+
+<style lang="scss">
+/* 夜间模式：logo 图标容器使用深色背景，避免白色 logo 背景过于突兀 */
+html.dark .sidebar__logo-icon {
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
 }
 </style>

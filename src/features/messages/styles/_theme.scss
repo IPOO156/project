@@ -1,16 +1,19 @@
 /**
  * 消息中心 / 动态中心共享主题
  * 经典蓝白配色：主色 #1E88E5，纯白/浅灰背景，深色文本
+ * 夜间模式通过 html.dark 或 [data-theme='dark'] 自动切换
  */
 
 // ─── CSS 变量 ───
 @mixin message-theme-vars {
   --mc-bg: #f5f7fa;
+  --mc-row-hover: #f5f7fa;
   --mc-card: #ffffff;
   --mc-wood: #1e88e5;
   --mc-wood-light: #42a5f5;
   --mc-terracotta: #1e88e5;
   --mc-sage: #43a047;
+  --mc-sage-fade: rgba(67, 160, 71, 0.12);
   --mc-gold: #ffa726;
   --mc-cream: #e3f2fd;
   --mc-text: #212121;
@@ -19,7 +22,38 @@
   --mc-shadow: 0 4px 20px rgba(30, 136, 229, 0.08);
   --mc-shadow-hover: 0 8px 30px rgba(30, 136, 229, 0.14);
   --mc-primary-shadow: rgba(30, 136, 229, 0.28);
+  --mc-primary-fade: rgba(30, 136, 229, 0.25);
+  --mc-primary-faint: rgba(30, 136, 229, 0.08);
+  --mc-danger: #c45c5c;
+  --mc-danger-light: #e0b4b4;
+  --mc-danger-fade: rgba(196, 92, 92, 0.1);
   --mc-radius: 16px;
+
+  // 夜间模式覆盖
+  html.dark &,
+  [data-theme='dark'] & {
+    --mc-bg: #0f172a;
+    --mc-row-hover: #334155;
+    --mc-card: #1e293b;
+    --mc-wood: #60a5fa;
+    --mc-wood-light: #93c5fd;
+    --mc-terracotta: #60a5fa;
+    --mc-sage: #4ade80;
+    --mc-sage-fade: rgba(74, 222, 128, 0.12);
+    --mc-gold: #fbbf24;
+    --mc-cream: rgba(96, 165, 250, 0.15);
+    --mc-text: #f1f5f9;
+    --mc-text-secondary: #94a3b8;
+    --mc-border: #334155;
+    --mc-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --mc-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.45);
+    --mc-primary-shadow: rgba(96, 165, 250, 0.35);
+    --mc-primary-fade: rgba(96, 165, 250, 0.35);
+    --mc-primary-faint: rgba(96, 165, 250, 0.12);
+    --mc-danger: #f87171;
+    --mc-danger-light: #7f1d1d;
+    --mc-danger-fade: rgba(248, 113, 113, 0.15);
+  }
 }
 
 // ─── 字体 ───
@@ -72,13 +106,13 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(30, 136, 229, 0.36);
+    box-shadow: 0 6px 18px var(--mc-primary-shadow);
   }
 }
 
 @mixin mc-btn-secondary {
   @include mc-btn-base;
-  background: #fff;
+  background: var(--mc-card);
   color: var(--mc-wood);
   border: 1px solid var(--mc-border);
 
@@ -109,7 +143,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
     padding-left: 42px;
     border-radius: 10px;
     box-shadow: 0 0 0 1px var(--mc-border) inset;
-    background: #fff;
+    background: var(--mc-card);
     transition: box-shadow 0.2s ease;
 
     &:hover,
@@ -136,7 +170,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   :deep(.el-input__wrapper) {
     border-radius: 10px;
     box-shadow: 0 0 0 1px var(--mc-border) inset;
-    background: #fff;
+    background: var(--mc-card);
 
     &:hover,
     &.is-focus {
@@ -158,7 +192,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
 @mixin mc-table {
   --el-table-header-bg-color: var(--mc-cream);
   --el-table-header-text-color: var(--mc-wood);
-  --el-table-row-hover-bg-color: var(--mc-bg);
+  --el-table-row-hover-bg-color: var(--mc-row-hover);
   --el-table-border-color: var(--mc-border);
 
   border-radius: 12px;
@@ -231,7 +265,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   .el-select .el-input__wrapper {
     border-radius: 10px;
     box-shadow: 0 0 0 1px var(--mc-border) inset;
-    background: #fff;
+    background: var(--mc-card);
 
     &:hover,
     &.is-focus {

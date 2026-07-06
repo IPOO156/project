@@ -194,6 +194,15 @@ function handleElectronClick(event: MouseEvent, id: string) {
   emit('select', id, pos)
 }
 
+const progressPercent = computed(() => {
+  if (props.experiences.length === 0) return 0
+  const maxLevel = props.experiences.reduce((max, exp) => {
+    const ring = findRingBySemester(exp.semester)
+    return Math.max(max, ring?.level ?? 1)
+  }, 1)
+  return Math.round((maxLevel / SEMESTER_RINGS.length) * 100)
+})
+
 const selectedIdRef = computed(() => props.selectedId ?? null)
 const selectedElectronAngle = ref(0)
 const { extinguishedRings } = useRingEffects(
@@ -216,7 +225,7 @@ const { extinguishedRings } = useRingEffects(
           cy="200"
           r="180"
           fill="none"
-          stroke="#8b6340"
+          stroke="var(--gt-ring-mid, #8b6340)"
           stroke-width="0.5"
           opacity="0.04"
         />
@@ -225,7 +234,7 @@ const { extinguishedRings } = useRingEffects(
           cy="200"
           r="220"
           fill="none"
-          stroke="#5a7c5a"
+          stroke="var(--gt-sage, #5a7c5a)"
           stroke-width="0.5"
           opacity="0.03"
         />
@@ -234,7 +243,7 @@ const { extinguishedRings } = useRingEffects(
           cy="200"
           r="260"
           fill="none"
-          stroke="#c8943e"
+          stroke="var(--gt-gold, #c8943e)"
           stroke-width="0.5"
           opacity="0.02"
         />
@@ -275,6 +284,14 @@ const { extinguishedRings } = useRingEffects(
           </div>
           <div class="hero-rings__data-unit">Skills</div>
         </div>
+      </div>
+
+      <div class="hero-rings__progress">
+        <span class="hero-rings__progress-label">当前进度</span>
+        <div class="hero-rings__progress-bar">
+          <div class="hero-rings__progress-fill" :style="{ width: `${progressPercent}%` }" />
+        </div>
+        <span class="hero-rings__progress-pct">{{ progressPercent }}%</span>
       </div>
     </div>
 
@@ -341,7 +358,11 @@ const { extinguishedRings } = useRingEffects(
   left: 16%;
   width: 48vh;
   height: 48vh;
-  background: radial-gradient(circle, rgba(200, 148, 62, 0.28) 0%, rgba(200, 148, 62, 0) 70%);
+  background: radial-gradient(
+    circle,
+    var(--gt-halo-gold, rgba(200, 148, 62, 0.28)) 0%,
+    transparent 70%
+  );
   opacity: 0.5;
   animation: haloBreathe 10s ease-in-out infinite alternate;
 }
@@ -351,7 +372,11 @@ const { extinguishedRings } = useRingEffects(
   right: 18%;
   width: 42vh;
   height: 42vh;
-  background: radial-gradient(circle, rgba(90, 124, 90, 0.24) 0%, rgba(90, 124, 90, 0) 70%);
+  background: radial-gradient(
+    circle,
+    var(--gt-halo-green, rgba(90, 124, 90, 0.24)) 0%,
+    transparent 70%
+  );
   opacity: 0.4;
   animation: haloBreathe 12s ease-in-out infinite alternate-reverse;
 }
@@ -364,6 +389,29 @@ const { extinguishedRings } = useRingEffects(
   to {
     transform: scale(1.12);
     opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-rings__halo::before,
+  .hero-rings__halo::after {
+    animation: none !important;
+  }
+
+  .hero-rings__scroll svg {
+    animation: none !important;
+  }
+
+  .hero-rings__title,
+  .hero-rings__desc,
+  .hero-rings__data-row {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+
+  .hero-rings__scroll {
+    opacity: 1 !important;
+    animation: none !important;
   }
 }
 
@@ -429,6 +477,49 @@ const { extinguishedRings } = useRingEffects(
   text-transform: uppercase;
   color: var(--text-light, #9a8474);
   margin-top: 0.3rem;
+}
+
+.hero-rings__progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 2rem;
+  opacity: 0;
+  animation: fadeSlideUp 0.8s ease 1.5s forwards;
+
+  &-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-light, #9a8474);
+    white-space: nowrap;
+  }
+
+  &-bar {
+    flex: 1;
+    max-width: 140px;
+    height: 4px;
+    background: rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  &-fill {
+    height: 100%;
+    background: var(--gt-accent, #8b6340);
+    border-radius: 2px;
+    transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.5s;
+  }
+
+  &-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--gt-accent, #8b6340);
+    min-width: 32px;
+    text-align: right;
+  }
 }
 
 .hero-rings__scroll {

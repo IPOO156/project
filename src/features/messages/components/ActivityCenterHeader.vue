@@ -134,7 +134,7 @@ function switchTab(tab: 'activity' | 'submission') {
     transition: all 0.25s ease;
 
     &:hover {
-      background: rgba(30, 136, 229, 0.08);
+      background: var(--mc-primary-faint);
       color: var(--mc-wood);
     }
 
@@ -158,6 +158,36 @@ function switchTab(tab: 'activity' | 'submission') {
   &__tab.is-active &__badge {
     background: rgba(255, 255, 255, 0.25);
     color: #fff;
+  }
+}
+
+/* 暗色模式下增强 tab 容器与 badge 对比度 */
+html.dark .center-header {
+  &__tabs {
+    background: #1e293b;
+    border-color: #475569;
+  }
+
+  &__tab {
+    color: #94a3b8;
+
+    &:hover {
+      background: rgba(96, 165, 250, 0.12);
+      color: #60a5fa;
+    }
+
+    &.is-active {
+      color: #fff;
+    }
+  }
+
+  &__badge {
+    background: rgba(96, 165, 250, 0.2);
+    color: #93c5fd;
+  }
+
+  &__tab.is-active &__badge {
+    background: rgba(255, 255, 255, 0.25);
   }
 }
 

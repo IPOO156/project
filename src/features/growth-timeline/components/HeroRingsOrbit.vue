@@ -107,4 +107,8 @@ function parallaxOpacity() {
     opacity: 0;
   }
 }
+
+html.dark .hero-rings__ring {
+  filter: brightness(1.25);
+}
 </style>

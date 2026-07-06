@@ -42,13 +42,13 @@
 .footer-leaf-row svg {
   width: 14px;
   height: 14px;
-  fill: #5a7c5a;
+  fill: var(--gt-sage, #5a7c5a);
 }
 
 .footer-text {
   font-family: 'Cormorant Garamond', serif;
   font-size: 0.85rem;
-  color: #9a8474;
+  color: var(--text-light, #9a8474);
   font-style: italic;
 }
 

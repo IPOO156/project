@@ -7,6 +7,8 @@ import App from './App.vue'
 import router from './app/router/routes'
 import { initTabsRouter } from './app/stores/tabs'
 import 'element-plus/dist/index.css'
+import 'element-plus/theme-chalk/dark/css-vars.css'
+import './assets/styles/themes.css'
 import './assets/styles/global.scss'
 import './shared/utils/echarts-setup'
 

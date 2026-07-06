@@ -81,8 +81,24 @@ defineEmits<{
 
 .form-card,
 .record-card {
+  border-top: 3px solid #8b6340;
+
   .card-title {
     font-weight: 600;
+  }
+}
+
+.form-card {
+  // 统一申报表单中各类输入框宽度，避免 input/select/date-picker/textarea 长短不一
+  :deep(.el-form) {
+    .el-input,
+    .el-input-number,
+    .el-select,
+    .el-date-editor,
+    .el-textarea {
+      width: 480px;
+      max-width: 100%;
+    }
   }
 }
 

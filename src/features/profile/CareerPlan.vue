@@ -105,21 +105,23 @@ function handleSubmit() {
       </template>
 
       <!-- 规划列表 -->
-      <el-table :data="planRecords" stripe>
-        <el-table-column prop="semester" label="学期" width="120" />
-        <el-table-column prop="title" label="规划名称" />
-        <el-table-column prop="submitDate" label="提交时间" width="140" />
-        <el-table-column label="状态" width="100">
+      <el-table :data="planRecords" stripe class="career-plan__table">
+        <el-table-column prop="semester" label="学期" width="130" />
+        <el-table-column prop="title" label="规划名称" min-width="160" />
+        <el-table-column prop="submitDate" label="提交时间" width="110" />
+        <el-table-column label="状态" width="90">
           <template #default="{ row }">
             <el-tag :type="getStatusType(row.status)" size="small">
               {{ getLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default>
-            <el-button text type="primary" :icon="Eye" size="small">查看</el-button>
-            <el-button text type="primary" :icon="Download" size="small">下载</el-button>
+            <div class="action-btns">
+              <el-button text type="primary" :icon="Eye" size="small">查看</el-button>
+              <el-button text type="primary" :icon="Download" size="small">下载</el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -234,6 +236,18 @@ function handleSubmit() {
 
 .form-select {
   width: 200px;
+}
+
+.action-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.career-plan__table {
+  :deep(td.el-table__cell:first-child) {
+    white-space: nowrap;
+  }
 }
 
 .weakness-item {

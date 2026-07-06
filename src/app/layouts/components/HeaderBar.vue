@@ -4,15 +4,19 @@
  *  - 左侧：移动端菜单按钮 + 已访问页面 tab 栏（NavTabs）
  *  - 右侧：通知 + 用户下拉（个人中心 / 修改密码 / 退出登录）
  */
-import { Bell, LogOut, Menu, Settings, User } from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
-import { useAppStore, useNotificationStore, useUserStore } from '@/app/stores/stores'
+import { Bell, LogOut, Menu, Moon, Settings, Sun, User } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAppStore, useNotificationStore, useThemeStore, useUserStore } from '@/app/stores/stores'
 import NavTabs from './NavTabs.vue'
 
 const userStore = useUserStore()
 const appStore = useAppStore()
 const notificationStore = useNotificationStore()
+const themeStore = useThemeStore()
 const router = useRouter()
+const route = useRoute()
+const isGrowthTimeline = computed(() => route.path.startsWith('/growth-timeline'))
 
 function handleLogout() {
   userStore.logout()
@@ -25,7 +29,7 @@ function openSidebar() {
 </script>
 
 <template>
-  <header class="header">
+  <header class="header" :class="{ 'header--warm': isGrowthTimeline }">
     <div class="header__left">
       <!-- 移动端菜单按钮 -->
       <el-button
@@ -57,9 +61,23 @@ function openSidebar() {
         </el-button>
       </el-badge>
 
+      <el-tooltip
+        :content="themeStore.isDark ? '切换至日间模式' : '切换至夜间模式'"
+        placement="bottom"
+      >
+        <el-button
+          text
+          class="header__action"
+          :aria-label="themeStore.isDark ? '切换至日间模式' : '切换至夜间模式'"
+          @click="themeStore.toggleTheme"
+        >
+          <component :is="themeStore.isDark ? Sun : Moon" :size="18" />
+        </el-button>
+      </el-tooltip>
+
       <el-dropdown trigger="click">
         <span class="header__user">
-          <el-avatar :size="32" :icon="User" />
+          <el-avatar :size="32" :src="userStore.avatar" :icon="User" />
           <span class="header__user-name">{{ userStore.userName || '用户' }}</span>
         </span>
         <template #dropdown>
@@ -170,5 +188,9 @@ function openSidebar() {
   .header__right {
     padding-left: $spacing-sm;
   }
+}
+
+.header--warm {
+  border-bottom-color: var(--gt-ring-soft, #a88560);
 }
 </style>

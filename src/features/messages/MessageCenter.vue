@@ -3,7 +3,7 @@ import type { NotificationCategory, NotificationStatus } from '@/shared/types/ty
 import { Bell, CheckCheck, Filter, Mail, MailOpen, Search, Trash2, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useNotificationStore } from '@/app/stores/stores'
+import { useNotificationStore, useThemeStore } from '@/app/stores/stores'
 import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 
@@ -14,6 +14,7 @@ import PageContainer from '@/shared/ui/PageContainer.vue'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
+const themeStore = useThemeStore()
 
 const keyword = ref('')
 const categoryFilter = ref<NotificationCategory | ''>('')
@@ -21,6 +22,31 @@ const statusFilter = ref<NotificationStatus | ''>('')
 
 const pageNum = ref(1)
 const pageSize = ref(10)
+
+// ─── 批量操作 ───
+const batchMode = ref(false)
+const selectedIds = ref<string[]>([])
+
+function toggleSelect(id: string) {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx > -1) {
+    selectedIds.value.splice(idx, 1)
+  } else {
+    selectedIds.value.push(id)
+  }
+}
+
+function handleBatchRead() {
+  selectedIds.value.forEach((id) => notificationStore.markAsRead(id))
+  selectedIds.value = []
+  batchMode.value = false
+}
+
+function handleBatchDelete() {
+  selectedIds.value.forEach((id) => notificationStore.deleteNotification(id))
+  selectedIds.value = []
+  batchMode.value = false
+}
 
 // ─── 卡片逐行刷入动画触发 ───
 // 通过改变 key 强制消息列表重新渲染，使 CSS animation 在每次数据加载、筛选、分页变化时重新触发
@@ -112,13 +138,20 @@ function categoryLabel(category: NotificationCategory) {
 }
 
 function categoryStyle(category: NotificationCategory) {
-  const map: Record<NotificationCategory, { backgroundColor: string; color: string }> = {
+  const lightMap: Record<NotificationCategory, { backgroundColor: string; color: string }> = {
     system: { backgroundColor: 'rgba(30, 136, 229, 0.10)', color: '#1e88e5' },
     approval: { backgroundColor: 'rgba(255, 167, 38, 0.14)', color: '#f57c00' },
     activity: { backgroundColor: 'rgba(67, 160, 71, 0.12)', color: '#388e3c' },
     message: { backgroundColor: 'rgba(96, 125, 139, 0.12)', color: '#546e7a' },
   }
-  return map[category] ?? { backgroundColor: 'rgba(30, 136, 229, 0.10)', color: '#1e88e5' }
+  const darkMap: Record<NotificationCategory, { backgroundColor: string; color: string }> = {
+    system: { backgroundColor: 'rgba(96, 165, 250, 0.15)', color: '#93c5fd' },
+    approval: { backgroundColor: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' },
+    activity: { backgroundColor: 'rgba(74, 222, 128, 0.15)', color: '#4ade80' },
+    message: { backgroundColor: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8' },
+  }
+  const map = themeStore.isDark ? darkMap : lightMap
+  return map[category] ?? lightMap.system
 }
 
 function markAsRead(id: string) {
@@ -224,6 +257,47 @@ onMounted(() => {
           <X :size="14" /> 重置
         </button>
       </div>
+
+      <div class="panel-toolbar__batch">
+        <button
+          v-if="!batchMode"
+          type="button"
+          class="mc-btn mc-btn--ghost"
+          @click="batchMode = true"
+        >
+          批量操作
+        </button>
+        <template v-else>
+          <span class="panel-toolbar__batch-count">已选 {{ selectedIds.length }} 条</span>
+          <button
+            type="button"
+            class="mc-btn mc-btn--ghost"
+            @click="
+              batchMode = false
+              selectedIds = []
+            "
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            class="mc-btn mc-btn--primary"
+            :disabled="selectedIds.length === 0"
+            @click="handleBatchRead"
+          >
+            批量已读
+          </button>
+          <button
+            type="button"
+            class="mc-btn mc-btn--danger"
+            :disabled="selectedIds.length === 0"
+            @click="handleBatchDelete"
+          >
+            批量删除
+          </button>
+        </template>
+      </div>
+
       <button type="button" class="mc-btn mc-btn--secondary" @click="navigateToActivities">
         <Mail :size="16" /> 查看动态记录
       </button>
@@ -241,6 +315,13 @@ onMounted(() => {
         class="message-card"
         :class="{ 'is-unread': !item.isRead }"
       >
+        <label v-if="batchMode" class="message-card__checkbox">
+          <input
+            type="checkbox"
+            :checked="selectedIds.includes(item.id)"
+            @change="toggleSelect(item.id)"
+          />
+        </label>
         <div class="message-card__accent" />
         <div class="message-card__icon" :style="categoryStyle(item.category)">
           <Mail :size="20" />
@@ -378,12 +459,12 @@ onMounted(() => {
     gap: 6px;
     min-width: 92px;
     padding: 12px 18px;
-    background: #fff;
+    background: var(--mc-card);
     border: 1px solid var(--mc-border);
     border-radius: 12px;
 
     &:first-child {
-      border-color: rgba(30, 136, 229, 0.35);
+      border-color: var(--mc-primary-shadow);
       background: var(--mc-cream);
     }
   }
@@ -427,6 +508,17 @@ onMounted(() => {
     gap: 12px;
     flex-wrap: wrap;
   }
+
+  &__batch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__batch-count {
+    font-size: 13px;
+    color: var(--mc-text-secondary);
+  }
 }
 
 .mc-input-wrap {
@@ -448,6 +540,22 @@ onMounted(() => {
 
   &--ghost {
     @include mc-btn-ghost;
+  }
+
+  &--danger {
+    @include mc-btn-ghost;
+
+    color: var(--mc-danger);
+
+    &:not(:disabled):hover {
+      background: var(--mc-danger-fade);
+      color: var(--mc-danger);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   }
 }
 
@@ -486,9 +594,9 @@ onMounted(() => {
   gap: 14px;
   padding: 16px 20px 16px 18px;
   border-radius: 14px;
-  background: #fff;
+  background: var(--mc-card);
   border: 1px solid var(--mc-border);
-  transition: all 0.25s ease;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
     box-shadow: var(--mc-shadow-hover);
@@ -503,12 +611,14 @@ onMounted(() => {
     width: 3px;
     border-radius: 0 3px 3px 0;
     background: transparent;
-    transition: background 0.25s ease;
+    transition:
+      background 0.35s ease,
+      width 0.35s ease;
   }
 
   &.is-unread {
-    background: linear-gradient(135deg, var(--mc-cream) 0%, #ffffff 100%);
-    border-color: rgba(30, 136, 229, 0.25);
+    background: linear-gradient(135deg, var(--mc-cream) 0%, var(--mc-card) 100%);
+    border-color: var(--mc-primary-fade);
 
     .message-card__accent {
       background: var(--mc-wood);
@@ -521,6 +631,14 @@ onMounted(() => {
 
     .message-card__content {
       color: var(--mc-text);
+    }
+  }
+
+  &:not(.is-unread),
+  &.is-read {
+    .message-card__accent {
+      width: 2px;
+      background: var(--mc-border);
     }
   }
 
@@ -563,6 +681,9 @@ onMounted(() => {
     font-weight: 600;
     color: var(--mc-text);
     line-height: 1.5;
+    transition:
+      font-weight 0.2s ease,
+      color 0.35s ease;
   }
 
   &__content {
@@ -570,6 +691,21 @@ onMounted(() => {
     font-size: 13px;
     color: var(--mc-text-secondary);
     line-height: 1.6;
+    transition: color 0.35s ease;
+  }
+
+  &__checkbox {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding-top: 2px;
+
+    input[type='checkbox'] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--mc-wood);
+      cursor: pointer;
+    }
   }
 
   &__meta {
@@ -622,17 +758,17 @@ onMounted(() => {
     color: var(--mc-sage);
 
     &:hover {
-      background: rgba(67, 160, 71, 0.12);
+      background: var(--mc-sage-fade);
       color: var(--mc-sage);
     }
   }
 
   &--delete {
-    color: #c45c5c;
+    color: var(--mc-danger);
 
     &:hover {
-      background: rgba(196, 92, 92, 0.1);
-      color: #c45c5c;
+      background: var(--mc-danger-fade);
+      color: var(--mc-danger);
     }
   }
 }

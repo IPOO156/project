@@ -6,7 +6,6 @@ import { useSubmissionStore } from '@/app/stores/stores'
 import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
-import StatusTag from '@/shared/ui/StatusTag.vue'
 
 const submissionStore = useSubmissionStore()
 
@@ -141,12 +140,6 @@ const lineOption = computed(() => {
   }
 })
 
-const recentRecords = computed(() =>
-  [...submissionStore.filteredRecords]
-    .sort((a, b) => b.submitDate.localeCompare(a.submitDate))
-    .slice(0, 6),
-)
-
 onMounted(() => {
   if (submissionStore.filteredRecords.length === 0) submissionStore.fetchRecords()
 })
@@ -227,26 +220,10 @@ onMounted(() => {
     </el-row>
 
     <el-row :gutter="16">
-      <el-col :span="14">
+      <el-col :span="24">
         <el-card class="chart-card">
           <template #header><span class="chart-title">学期提交趋势</span></template>
           <VChart :option="lineOption" class="chart" autoresize />
-        </el-card>
-      </el-col>
-      <el-col :span="10">
-        <el-card class="chart-card">
-          <template #header><span class="chart-title">近期报名动态</span></template>
-          <div class="activities">
-            <div v-for="(rec, idx) in recentRecords" :key="idx" class="activity-item">
-              <div class="activity-item__dot" :class="`activity-item__dot--${rec.status}`" />
-              <div class="activity-item__content">
-                <p class="activity-item__text">{{ rec.title }}</p>
-                <span class="activity-item__meta">{{ rec.typeLabel }} · {{ rec.submitDate }}</span>
-              </div>
-              <StatusTag :status="rec.status" size="small" />
-            </div>
-            <el-empty v-if="recentRecords.length === 0" description="暂无数据" />
-          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -270,14 +247,14 @@ onMounted(() => {
     margin-bottom: 8px;
   }
   &__value {
-    font-size: 28px;
+    font-size: $font-size-3xl;
     font-weight: 700;
     color: var(--el-text-color-primary);
   }
   &__icon {
     width: 48px;
     height: 48px;
-    border-radius: 12px;
+    border-radius: $radius-xl;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -294,53 +271,6 @@ onMounted(() => {
 }
 .chart {
   width: 100%;
-  height: 280px;
-}
-
-.activities {
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--el-border-color-light);
-  &:last-child {
-    border-bottom: none;
-  }
-  &__dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    &--draft {
-      background: #909399;
-    }
-    &--submitted {
-      background: #e6a23c;
-    }
-    &--approved {
-      background: #67c23a;
-    }
-    &--rejected {
-      background: #f56c6c;
-    }
-  }
-  &__content {
-    flex: 1;
-    min-width: 0;
-  }
-  &__text {
-    font-size: 14px;
-    color: var(--el-text-color-primary);
-    margin-bottom: 2px;
-  }
-  &__meta {
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
+  height: 320px;
 }
 </style>

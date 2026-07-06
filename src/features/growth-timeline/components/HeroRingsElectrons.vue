@@ -168,4 +168,8 @@ const emit = defineEmits<{
     0 0 0 5px rgba(255, 252, 247, 0.25),
     0 8px 20px rgba(0, 0, 0, 0.2);
 }
+
+html.dark .hero-rings__electron-visual {
+  filter: brightness(1.15);
+}
 </style>

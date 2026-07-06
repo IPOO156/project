@@ -121,7 +121,7 @@ onBeforeUnmount(() => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  border: 1.5px solid #8b6340;
+  border: 1.5px solid var(--gt-accent, #8b6340);
   background: transparent;
   transition: all 0.4s ease;
   cursor: pointer;
@@ -130,9 +130,9 @@ onBeforeUnmount(() => {
 }
 
 .progress-dot.active {
-  background: #5c3d28;
-  border-color: #5c3d28;
-  box-shadow: 0 0 8px rgba(92, 61, 40, 0.2);
+  background: var(--gt-accent-mid, #5c3d28);
+  border-color: var(--gt-accent-mid, #5c3d28);
+  box-shadow: 0 0 8px rgba(var(--gt-accent-mid-rgb, 92 61 40), 0.2);
 }
 
 .progress-dot.active::after {
@@ -141,7 +141,7 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 1px solid #8b6340;
+  border: 1px solid var(--gt-accent, #8b6340);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
 .progress-line {
   width: 1px;
   height: 20px;
-  background: rgba(61, 43, 31, 0.15);
+  background: rgba(var(--gt-bark-rgb, 61 43 31), 0.15);
 }
 
 @media (max-width: 768px) {

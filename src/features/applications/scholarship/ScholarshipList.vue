@@ -79,13 +79,3 @@ function handleSubmit() {
     </template>
   </ApplicationFormRecord>
 </template>
-
-<style scoped lang="scss">
-.form-select {
-  width: 200px;
-}
-
-.form-input-number {
-  width: 200px;
-}
-</style>

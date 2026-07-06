@@ -1,0 +1,120 @@
+/* =============================================================================
+ * 主题变量 - 日间/夜间模式
+ * 通过 html[data-theme="dark"] 切换
+ * ============================================================================= */
+
+:root {
+  /* Element Plus 变量覆盖（日间） */
+  --el-bg-color: #ffffff;
+  --el-bg-color-page: #f8fafc;
+  --el-bg-color-overlay: #ffffff;
+  --el-text-color-primary: #1e293b;
+  --el-text-color-secondary: #64748b;
+  --el-text-color-placeholder: #94a3b8;
+  --el-text-color-disabled: #cbd5e1;
+  --el-border-color: #e2e8f0;
+  --el-border-color-light: #e2e8f0;
+  --el-border-color-lighter: #f1f5f9;
+  --el-fill-color: #f1f5f9;
+  --el-fill-color-light: #f8fafc;
+  --el-fill-color-lighter: #f8fafc;
+  --el-fill-color-blank: #ffffff;
+
+  /* 项目自定义变量（日间） */
+  --mc-bg-page: #f8fafc;
+  --mc-bg-card: #ffffff;
+  --mc-text-primary: #1e293b;
+  --mc-text-secondary: #64748b;
+  --mc-border: #e2e8f0;
+  --mc-primary: #1e3a5f;
+  --mc-primary-light: #2d5a87;
+  --mc-accent: #d4a574;
+
+  /* 成长时间轴（日间） */
+  --bark-light: #8b6340;
+  --bark-soft: #a88560;
+  --bark-mid: #5c3d28;
+  --bark-dark: #2d1e12;
+  --text-light: #9a8474;
+  --text-mid: #6b5443;
+  --bg-parchment: #f4efe6;
+
+  --gt-bg-page: #f4efe6;
+  --gt-bg-page-rgb: 244 239 230;
+  --gt-card: #fffcf7;
+  --gt-card-rgb: 255 252 247;
+  --gt-bark-rgb: 61 43 31;
+  --gt-shadow-rgb: 26 18 10;
+  --gt-accent: #8b6340;
+  --gt-accent-rgb: 139 99 64;
+  --gt-accent-mid: #5c3d28;
+  --gt-accent-mid-rgb: 92 61 40;
+  --gt-ring-soft: #a88560;
+  --gt-ring-mid: #8b6340;
+  --gt-sage: #5a7c5a;
+  --gt-gold: #c8943e;
+  --gt-text-quote: #5a4a3a;
+  --gt-tooltip-bg: rgba(45, 30, 18, 0.92);
+  --gt-tooltip-text: #fff8e8;
+  --gt-tooltip-muted: rgba(244, 239, 230, 0.72);
+  --gt-halo-gold: rgba(200, 148, 62, 0.28);
+  --gt-halo-green: rgba(90, 124, 90, 0.24);
+}
+
+[data-theme='dark'] {
+  /* Element Plus 变量覆盖（夜间） */
+  --el-bg-color: #0f172a;
+  --el-bg-color-page: #0b1120;
+  --el-bg-color-overlay: #1e293b;
+  --el-text-color-primary: #f1f5f9;
+  --el-text-color-secondary: #94a3b8;
+  --el-text-color-placeholder: #64748b;
+  --el-text-color-disabled: #475569;
+  --el-border-color: #334155;
+  --el-border-color-light: #334155;
+  --el-border-color-lighter: #1e293b;
+  --el-fill-color: #1e293b;
+  --el-fill-color-light: #334155;
+  --el-fill-color-lighter: #475569;
+  --el-fill-color-blank: #0f172a;
+
+  /* 项目自定义变量（夜间） */
+  --mc-bg-page: #0b1120;
+  --mc-bg-card: #0f172a;
+  --mc-text-primary: #f1f5f9;
+  --mc-text-secondary: #94a3b8;
+  --mc-border: #334155;
+  --mc-primary: #60a5fa;
+  --mc-primary-light: #93c5fd;
+  --mc-accent: #fbbf24;
+
+  /* 成长时间轴（夜间） */
+  --bark-light: #d4a574;
+  --bark-soft: #8a7a6a;
+  --bark-mid: #c8943e;
+  --bark-dark: #f1f5f9;
+  --text-light: #a89a8a;
+  --text-mid: #d4c4b0;
+  --bg-parchment: #1a1612;
+
+  --gt-bg-page: #12100e;
+  --gt-bg-page-rgb: 18 16 14;
+  --gt-card: #1e1c1a;
+  --gt-card-rgb: 30 28 26;
+  --gt-bark-rgb: 200 180 160;
+  --gt-shadow-rgb: 0 0 0;
+  --gt-accent: #d4a574;
+  --gt-accent-rgb: 212 165 116;
+  --gt-accent-mid: #c8943e;
+  --gt-accent-mid-rgb: 200 148 62;
+  --gt-ring-soft: #8a7a6a;
+  --gt-ring-mid: #d4a574;
+  --gt-sage: #7fb07f;
+  --gt-gold: #fbbf24;
+  --gt-text-quote: #d4c4b0;
+  --gt-tooltip-bg: rgba(15, 23, 42, 0.92);
+  --gt-tooltip-text: #f1f5f9;
+  --gt-tooltip-muted: rgba(241, 245, 249, 0.6);
+  --gt-halo-gold: rgba(251, 191, 36, 0.18);
+  --gt-halo-green: rgba(127, 176, 127, 0.15);
+}

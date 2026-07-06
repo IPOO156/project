@@ -76,7 +76,7 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: center;
   color: var(--bg-parchment, #f4efe6);
-  box-shadow: 0 4px 20px rgba(92, 61, 40, 0.25);
+  box-shadow: 0 4px 20px rgba(var(--gt-shadow-rgb, 92 61 40), 0.25);
   transition: transform 0.3s ease;
   cursor: pointer;
 }

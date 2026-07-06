@@ -34,6 +34,7 @@ const modules = [
     icon: Trophy,
     component: CompetitionList,
     desc: '竞赛成果与过程材料',
+    count: 0,
   },
   {
     key: 'innovation',
@@ -41,6 +42,7 @@ const modules = [
     icon: Lightbulb,
     component: InnovationList,
     desc: '双创项目与实践记录',
+    count: 0,
   },
   {
     key: 'research',
@@ -48,6 +50,7 @@ const modules = [
     icon: FlaskConical,
     component: ResearchList,
     desc: '科研成果与研究经历',
+    count: 0,
   },
   {
     key: 'scholarship',
@@ -55,6 +58,7 @@ const modules = [
     icon: Medal,
     component: ScholarshipList,
     desc: '奖助学金申报信息',
+    count: 0,
   },
   {
     key: 'certificate',
@@ -62,6 +66,7 @@ const modules = [
     icon: Award,
     component: CertificateList,
     desc: '荣誉与资格证明',
+    count: 0,
   },
   {
     key: 'internship',
@@ -69,6 +74,7 @@ const modules = [
     icon: Briefcase,
     component: InternshipList,
     desc: '岗位实践与企业经历',
+    count: 0,
   },
   {
     key: 'organization',
@@ -76,6 +82,7 @@ const modules = [
     icon: Users,
     component: OrganizationList,
     desc: '学生工作与组织任职',
+    count: 0,
   },
   {
     key: 'training',
@@ -83,6 +90,7 @@ const modules = [
     icon: BarChart3,
     component: TrainingList,
     desc: '课程实训与项目训练',
+    count: 0,
   },
   {
     key: 'social-practice',
@@ -90,6 +98,7 @@ const modules = [
     icon: HeartHandshake,
     component: SocialPracticeList,
     desc: '社会实践与志愿服务',
+    count: 0,
   },
   {
     key: 'book-report',
@@ -97,6 +106,7 @@ const modules = [
     icon: BookOpen,
     component: BookReportList,
     desc: '阅读记录与心得沉淀',
+    count: 0,
   },
 ] as const
 
@@ -133,6 +143,7 @@ function switchModule(key: string) {
         :class="{ 'is-active': item.key === activeKey }"
         @click="switchModule(item.key)"
       >
+        <div v-if="item.count > 0" class="application-hub__tab-badge">{{ item.count }}</div>
         <div class="application-hub__tab-icon">
           <component :is="item.icon" :size="18" />
         </div>
@@ -144,9 +155,11 @@ function switchModule(key: string) {
     </div>
 
     <section class="application-hub__panel">
-      <div class="application-hub__panel-item is-active" aria-hidden="false">
-        <component :is="activeModule.component" :key="activeKey" />
-      </div>
+      <Transition name="module-fade" mode="out-in">
+        <div :key="activeKey" class="application-hub__panel-item is-active" aria-hidden="false">
+          <component :is="activeModule.component" :key="activeKey" />
+        </div>
+      </Transition>
     </section>
   </div>
 </template>
@@ -165,6 +178,7 @@ function switchModule(key: string) {
 }
 
 .application-hub__tab {
+  position: relative;
   min-height: 92px;
   padding: 14px;
   border: 1px solid var(--el-border-color-light);
@@ -191,6 +205,23 @@ function switchModule(key: string) {
   border-color: var(--el-color-primary);
   background: linear-gradient(180deg, rgba(64, 158, 255, 0.1), rgba(64, 158, 255, 0.03));
   box-shadow: 0 12px 28px rgba(64, 158, 255, 0.12);
+}
+
+.application-hub__tab-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--el-color-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .application-hub__tab-icon {
@@ -256,9 +287,31 @@ function switchModule(key: string) {
   }
 }
 
+.module-fade-enter-active,
+.module-fade-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.module-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.module-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .application-hub__tab,
   .application-hub__panel-item {
+    transition: none !important;
+  }
+
+  .module-fade-enter-active,
+  .module-fade-leave-active {
     transition: none !important;
   }
 }

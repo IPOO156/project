@@ -202,11 +202,11 @@ function handleScrollToGrowth() {
 .growth-timeline-page {
   position: relative;
   min-height: 100vh;
-  background-color: #f4efe6;
+  background-color: var(--gt-bg-page, #f4efe6);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   background-size: 512px 512px;
   overflow-x: hidden;
-  border-radius: $radius-lg;
+  border-radius: $radius-xl;
 }
 
 .timeline-section {
@@ -227,7 +227,7 @@ function handleScrollToGrowth() {
 .sb-line {
   flex: 1;
   height: 1px;
-  background: rgba(61, 43, 31, 0.08);
+  background: rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
 }
 
 .sb-icon {
@@ -241,7 +241,7 @@ function handleScrollToGrowth() {
 .sb-icon svg {
   width: 18px;
   height: 18px;
-  fill: #5a7c5a;
+  fill: var(--gt-sage, #5a7c5a);
   opacity: 0.4;
 }
 
@@ -262,9 +262,9 @@ function handleScrollToGrowth() {
   background: linear-gradient(
     to bottom,
     transparent,
-    #a88560 5%,
-    #8b6340 50%,
-    #a88560 95%,
+    var(--gt-ring-soft, #a88560) 5%,
+    var(--gt-ring-mid, #8b6340) 50%,
+    var(--gt-ring-soft, #a88560) 95%,
     transparent
   );
   opacity: 0.15;
@@ -280,7 +280,7 @@ function handleScrollToGrowth() {
 .timeline-intro p {
   font-family: 'Cormorant Garamond', serif;
   font-size: 1.35rem;
-  color: #8b6340;
+  color: var(--gt-accent, #8b6340);
   margin: 0;
   letter-spacing: 2px;
 }
@@ -293,6 +293,14 @@ function handleScrollToGrowth() {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-intro {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
