@@ -48,6 +48,11 @@ function handleBatchDelete() {
   batchMode.value = false
 }
 
+function handleCancelBatchMode() {
+  batchMode.value = false
+  selectedIds.value = []
+}
+
 // ─── 卡片逐行刷入动画触发 ───
 // 通过改变 key 强制消息列表重新渲染，使 CSS animation 在每次数据加载、筛选、分页变化时重新触发
 const listKey = ref(0)
@@ -269,14 +274,7 @@ onMounted(() => {
         </button>
         <template v-else>
           <span class="panel-toolbar__batch-count">已选 {{ selectedIds.length }} 条</span>
-          <button
-            type="button"
-            class="mc-btn mc-btn--ghost"
-            @click="
-              batchMode = false
-              selectedIds = []
-            "
-          >
+          <button type="button" class="mc-btn mc-btn--ghost" @click="handleCancelBatchMode">
             取消
           </button>
           <button
