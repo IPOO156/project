@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { useApplicationForm } from '@/shared/composables/useApplicationForm'
 import { AWARD_LEVELS, COMPETITION_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -16,21 +15,7 @@ function emptyForm() {
   }
 }
 
-const form = reactive(emptyForm())
-const submitting = ref(false)
-
-function reset() {
-  Object.assign(form, emptyForm())
-}
-
-function handleSubmit() {
-  submitting.value = true
-  setTimeout(() => {
-    ElMessage.success('申报提交成功')
-    reset()
-    submitting.value = false
-  }, 600)
-}
+const { form, submitting, handleSubmit } = useApplicationForm({ emptyForm })
 </script>
 
 <template>
