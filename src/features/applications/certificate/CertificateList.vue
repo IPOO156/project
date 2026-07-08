@@ -53,3 +53,9 @@ const { form, submitting, handleSubmit } = useApplicationForm({ emptyForm })
     </template>
   </ApplicationFormRecord>
 </template>
+
+<style scoped lang="scss">
+:deep(.page-container) {
+  user-select: none;
+}
+</style>

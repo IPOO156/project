@@ -15,6 +15,7 @@ export interface ElectronItem {
   speed: number
   angle: number
   level: number
+  subOrbitIndex?: number
 }
 
 export interface TooltipState {

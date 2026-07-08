@@ -76,7 +76,7 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: center;
   color: var(--bg-parchment, #f4efe6);
-  box-shadow: 0 4px 20px rgba(var(--gt-shadow-rgb, 92 61 40), 0.25);
+  box-shadow: 0 4px 20px rgba(92, 61, 40, 0.25);
   transition: transform 0.3s ease;
   cursor: pointer;
 }
@@ -84,5 +84,24 @@ const emit = defineEmits<{
 .hero-rings__nucleus:hover .hero-rings__nucleus-core,
 .hero-rings__nucleus-core:hover {
   transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .hero-rings__nucleus {
+    width: 64px;
+    height: 64px;
+  }
+
+  .hero-rings__nucleus-core {
+    inset: 18px;
+  }
+
+  .hero-rings__nucleus-ring--2 {
+    inset: 6px;
+  }
+
+  .hero-rings__nucleus-ring--3 {
+    inset: 12px;
+  }
 }
 </style>

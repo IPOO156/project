@@ -87,7 +87,9 @@ function flattenMenuItems(items: MenuItem[], result: MenuItem[] = []): MenuItem[
 function buildBaseEntries(): QuickEntry[] {
   const menuItems = flattenMenuItems(getMenuItems())
   return menuItems
-    .filter((item) => item.path && item.path !== '/dashboard' && item.icon)
+    .filter(
+      (item) => item.path && item.path !== '/dashboard' && item.path !== '/ai-chat' && item.icon,
+    )
     .map((item, index) => {
       const color = ENTRY_COLORS[index % ENTRY_COLORS.length]
       return {
@@ -142,21 +144,34 @@ function migrateStorage() {
 
 /**
  * 首页快捷入口推荐与自定义逻辑
- * - 候选池取自全部菜单路由，首页最多展示 6 个。
- * - 刷新按钮仅对当前已选中的入口随机排序，不会引入未选入口。
+ * - 候选池取自全部菜单路由（不含 AI 助手），首页最多展示 6 个。
+ * - 刷新按钮从全部可用入口库中随机挑选 6 个，不局限于当前已选入口。
  * - 支持拖拽自定义顺序与显示/隐藏不常用入口。
  * - 基于 localStorage 记录最近点击路径，高频入口排序靠前。
+ * - 状态在模块级共享，确保设置弹窗与首页仪表盘实时同步。
  */
-export function useQuickEntries() {
-  migrateStorage()
-  const baseEntries = buildBaseEntries()
-  const history = ref<string[]>(readHistory())
-  const poolIds = ref<string[]>(readJson<string[]>(STORAGE_KEYS.pool, buildDefaultPool()))
-  const userOrder = ref<Record<string, number>>(
-    readJson<Record<string, number>>(STORAGE_KEYS.order, {}),
-  )
-  const hiddenIds = ref<Set<string>>(new Set(readJson<string[]>(STORAGE_KEYS.hidden, [])))
+// 模块级共享状态，确保 Dashboard 与 QuickEntrySettings 访问同一数据源
+migrateStorage()
+const baseEntries = buildBaseEntries()
+const history = ref<string[]>(readHistory())
+const defaultPool = buildDefaultPool()
+const poolIds = ref<string[]>(readJson<string[]>(STORAGE_KEYS.pool, defaultPool))
+const userOrder = ref<Record<string, number>>(
+  readJson<Record<string, number>>(STORAGE_KEYS.order, {}),
+)
+// 默认将不在首页展示池中的入口放入「未添加」区域，确保弹窗中能看到完整候选库（11 个）
+const savedHidden = readJson<string[] | null>(STORAGE_KEYS.hidden, null)
+const defaultHidden = new Set(savedHidden ?? [])
+// 补全：既不在展示池也不在隐藏池的入口，默认归为未添加，防止旧数据导致库数量丢失
+baseEntries.forEach((e) => {
+  if (!poolIds.value.includes(e.id) && !defaultHidden.has(e.id)) {
+    defaultHidden.add(e.id)
+  }
+})
+const hiddenIds = ref<Set<string>>(defaultHidden)
+writeJson(STORAGE_KEYS.hidden, Array.from(defaultHidden))
 
+export function useQuickEntries() {
   const recentPaths = computed(() => new Set(history.value))
 
   const visibleEntries = computed<QuickEntry[]>(() => {
@@ -204,25 +219,28 @@ export function useQuickEntries() {
   })
 
   function refreshPool() {
-    // 刷新行为：仅对当前已选中的入口随机排序，不引入未选入口
-    const current = visibleEntries.value.map((e) => e.id)
-    if (current.length === 0) {
-      ElMessage.info('当前没有可见入口')
+    // 刷新行为：从全部菜单候选库中随机挑选首页展示的 6 个，
+    // 同时将其余入口放回「未添加」库，保证候选库始终完整显示 11 个。
+    const available = baseEntries.map((e) => e.id)
+
+    if (available.length === 0) {
+      ElMessage.info('当前库中没有可用入口，请先在设置中添加')
       return
     }
 
-    const shuffled = [...current].sort(() => Math.random() - 0.5)
-    poolIds.value = shuffled
-    writeJson(STORAGE_KEYS.pool, shuffled)
+    const shuffled = [...available].sort(() => Math.random() - 0.5)
+    const selected = shuffled.slice(0, VISIBLE_COUNT)
+    const hidden = available.filter((id) => !selected.includes(id))
 
-    const orderMap: Record<string, number> = {}
-    shuffled.forEach((id, index) => {
-      orderMap[id] = index
-    })
-    userOrder.value = orderMap
-    writeJson(STORAGE_KEYS.order, orderMap)
+    poolIds.value = selected
+    userOrder.value = {}
+    hiddenIds.value = new Set(hidden)
 
-    ElMessage.success('已随机刷新入口顺序')
+    writeJson(STORAGE_KEYS.pool, selected)
+    writeJson(STORAGE_KEYS.order, {})
+    writeJson(STORAGE_KEYS.hidden, hidden)
+
+    ElMessage.success('已刷新首页快捷入口')
   }
 
   function toggleHidden(id: string) {
@@ -286,12 +304,14 @@ export function useQuickEntries() {
   }
 
   function resetToDefault() {
-    poolIds.value = buildDefaultPool()
+    const nextPool = buildDefaultPool()
+    const nextHidden = baseEntries.map((e) => e.id).filter((id) => !nextPool.includes(id))
+    poolIds.value = nextPool
     userOrder.value = {}
-    hiddenIds.value = new Set()
-    writeJson(STORAGE_KEYS.pool, poolIds.value)
+    hiddenIds.value = new Set(nextHidden)
+    writeJson(STORAGE_KEYS.pool, nextPool)
     writeJson(STORAGE_KEYS.order, {})
-    writeJson(STORAGE_KEYS.hidden, [])
+    writeJson(STORAGE_KEYS.hidden, nextHidden)
   }
 
   return {

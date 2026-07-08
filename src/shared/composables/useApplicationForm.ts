@@ -1,5 +1,5 @@
 import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { reactive, ref, toRaw } from 'vue'
 
 export interface ApplicationFormOptions<T> {
   emptyForm: () => T
@@ -26,7 +26,7 @@ export function useApplicationForm<T extends Record<string, any>>({
 
     try {
       if (onSubmit) {
-        await onSubmit(form)
+        await onSubmit(toRaw(form) as T)
       } else {
         await new Promise((resolve) => setTimeout(resolve, 600))
       }

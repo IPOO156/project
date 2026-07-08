@@ -171,19 +171,19 @@ function handleBackdropClick(event: MouseEvent) {
 
 .detail-close {
   position: fixed;
-  top: 2rem;
+  top: 5rem;
   right: 2rem;
   width: 44px;
   height: 44px;
   border-radius: 50%;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
-  background: rgba(var(--gt-card-rgb, 255 252 247), 0.8);
+  background: rgba(var(--gt-card-rgb, 255 252 247), 0.9);
   color: var(--gt-accent-mid, #5c3d28);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10;
+  z-index: 1000;
   transition: all 0.3s ease;
 }
 

@@ -48,6 +48,12 @@ const rings = computed<RingItem[]>(() => {
 
 const electronAngles = ref<Record<string, number>>({})
 
+function getSubOrbitOffsets(_count: number): number[] {
+  // 同一 level 的经历严格落在同一主轨道上，不随数量增加而偏移，
+  // 确保所有电子都分布在对应年轮圈的中心圆周上
+  return [0]
+}
+
 function initElectronAngles() {
   const byLevel = new Map<number, GrowthExperience[]>()
   props.experiences.forEach((exp) => {
@@ -60,9 +66,11 @@ function initElectronAngles() {
   })
   const nextAngles: Record<string, number> = {}
   byLevel.forEach((exps) => {
+    const n = exps.length
+    // 每个经历独立占一个角度槽，沿同一主轨道均匀分布，避免聚集
     exps.forEach((exp, i) => {
-      const baseAngle = (i / Math.max(exps.length, 1)) * 360
-      nextAngles[exp.id] = electronAngles.value[exp.id] ?? baseAngle
+      const angle = (i / n) * 360
+      nextAngles[exp.id] = electronAngles.value[exp.id] ?? angle
     })
   })
   electronAngles.value = nextAngles
@@ -87,17 +95,24 @@ const electrons = computed<ElectronItem[]>(() => {
     if (!ringDef) {
       return
     }
-    exps.forEach((exp) => {
+    const n = exps.length
+    const offsets = getSubOrbitOffsets(n)
+    const k = offsets.length
+    exps.forEach((exp, i) => {
+      const subOrbitIndex = i % k
+      // 每个经历独立占一个角度槽，沿同一主轨道均匀分布
+      const angle = (i / n) * 360
       result.push({
         id: exp.id,
         title: exp.title,
         date: exp.date.replace(/-/g, '.'),
         semester: exp.semester,
         color: ringDef.color,
-        radius: ringDef.r,
+        radius: ringDef.r + offsets[subOrbitIndex],
         speed: 0.04 + level * 0.01,
-        angle: electronAngles.value[exp.id] ?? 0,
+        angle: electronAngles.value[exp.id] ?? angle,
         level,
+        subOrbitIndex,
       })
     })
   })
@@ -265,33 +280,59 @@ const { extinguishedRings } = useRingEffects(
     </div>
 
     <div class="hero-rings__content">
-      <h1 class="hero-rings__title">年轮<em>生长记</em></h1>
-      <p class="hero-rings__desc">
-        如同树木以年轮记录岁月，每一圈都是成长的印记，记录着阳光与风雨。
-      </p>
-      <div class="hero-rings__data-row">
-        <div class="hero-rings__data-item">
-          <div class="hero-rings__data-value">{{ experiences.length }}</div>
-          <div class="hero-rings__data-unit">Experiences</div>
+      <div class="hero-rings__top">
+        <h1 class="hero-rings__title">
+          <span class="hero-rings__title-accent">年轮</span>
+          <span class="hero-rings__title-sub">生长记</span>
+        </h1>
+      </div>
+
+      <div class="hero-rings__poem">
+        <div class="hero-rings__poem-scroll hero-rings__poem-scroll--left" aria-hidden="true">
+          <span
+            v-for="(char, i) in '如同树木以年轮记录岁月'"
+            :key="`l-${i}`"
+            class="hero-rings__char"
+            :style="{ '--char-index': i }"
+            >{{ char }}</span
+          >
         </div>
-        <div class="hero-rings__data-item">
-          <div class="hero-rings__data-value">{{ SEMESTER_RINGS.length }}</div>
-          <div class="hero-rings__data-unit">Rings</div>
-        </div>
-        <div class="hero-rings__data-item">
-          <div class="hero-rings__data-value">
-            {{ experiences.reduce((sum, e) => sum + e.skills.length, 0) }}
-          </div>
-          <div class="hero-rings__data-unit">Skills</div>
+        <div class="hero-rings__poem-scroll hero-rings__poem-scroll--right" aria-hidden="true">
+          <span
+            v-for="(char, i) in '每一圈都是成长的印记'"
+            :key="`r-${i}`"
+            class="hero-rings__char"
+            :style="{ '--char-index': i }"
+            >{{ char }}</span
+          >
         </div>
       </div>
 
-      <div class="hero-rings__progress">
-        <span class="hero-rings__progress-label">当前进度</span>
-        <div class="hero-rings__progress-bar">
-          <div class="hero-rings__progress-fill" :style="{ width: `${progressPercent}%` }" />
+      <div class="hero-rings__footer">
+        <div class="hero-rings__data-row">
+          <div class="hero-rings__data-item">
+            <div class="hero-rings__data-value">{{ experiences.length }}</div>
+            <div class="hero-rings__data-unit">Experiences</div>
+          </div>
+          <div class="hero-rings__data-item">
+            <div class="hero-rings__data-value">{{ SEMESTER_RINGS.length }}</div>
+            <div class="hero-rings__data-unit">Rings</div>
+          </div>
+          <div class="hero-rings__data-item">
+            <div class="hero-rings__data-value">
+              {{ experiences.reduce((sum, e) => sum + e.skills.length, 0) }}
+            </div>
+            <div class="hero-rings__data-unit">Skills</div>
+          </div>
         </div>
-        <span class="hero-rings__progress-pct">{{ progressPercent }}%</span>
+
+        <div class="hero-rings__progress">
+          <span class="hero-rings__progress-label">当前进度</span>
+          <div class="hero-rings__progress-bar">
+            <div class="hero-rings__progress-fill" :style="{ width: `${progressPercent}%` }" />
+          </div>
+          <span class="hero-rings__progress-pct">{{ progressPercent }}%</span>
+        </div>
       </div>
     </div>
 
@@ -416,58 +457,131 @@ const { extinguishedRings } = useRingEffects(
 }
 
 .hero-rings__content {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5rem 3rem 4.5rem;
   pointer-events: none;
 }
 
-.hero-rings__title,
-.hero-rings__desc,
-.hero-rings__data-row {
+.hero-rings__top,
+.hero-rings__poem,
+.hero-rings__footer {
   opacity: 0;
-  animation: fadeSlideUp 0.8s ease forwards;
+  animation: fadeSlideUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: auto;
 }
 
-.hero-rings__title {
+.hero-rings__top {
   animation-delay: 0.6s;
 }
 
-.hero-rings__title em {
-  font-style: italic;
-  color: var(--bark-mid, #5c3d28);
-  display: block;
+.hero-rings__title {
+  font-family: 'Instrument Serif', serif;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 400;
+  margin: 0;
+  letter-spacing: 2px;
+  user-select: none;
+
+  &-accent {
+    color: var(--gt-accent, #8b6340);
+  }
+
+  &-sub {
+    color: var(--bark-dark, #2d1e12);
+  }
 }
 
-.hero-rings__desc {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.1rem;
-  font-weight: 300;
-  color: var(--text-mid, #6b5443);
-  max-width: 420px;
-  line-height: 2;
-  margin: 1.8rem auto 0;
-  animation-delay: 0.9s;
+.hero-rings__poem {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+  z-index: 4;
+}
+
+.hero-rings__poem-scroll {
+  position: absolute;
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  transform: translateY(-50%);
+}
+
+.hero-rings__poem-scroll--left {
+  left: clamp(1.5rem, 5vw, 4rem);
+}
+
+.hero-rings__poem-scroll--right {
+  right: clamp(1.5rem, 5vw, 4rem);
+}
+
+.hero-rings__char {
+  font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+  font-size: clamp(1.1rem, 1.9vw, 1.35rem);
+  color: var(--bark-dark, #2d1e12);
+  letter-spacing: 0;
+  line-height: 1;
+  opacity: 0;
+  transform: translateY(-18px);
+  animation: charDropIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: calc(0.9s + var(--char-index, 0) * 0.08s);
+}
+
+@keyframes charDropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+  to {
+    opacity: 0.85;
+    transform: translateY(0);
+  }
+}
+
+.hero-rings__footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  animation-delay: 1.2s;
 }
 
 .hero-rings__data-row {
   display: flex;
   justify-content: center;
+  align-items: stretch;
   gap: 3rem;
-  margin-top: 3rem;
-  animation-delay: 1.2s;
 }
 
 .hero-rings__data-item {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-width: 80px;
 }
 
 .hero-rings__data-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 3rem;
   font-family: 'Cormorant Garamond', serif;
   font-size: 2.5rem;
   font-weight: 600;
   color: var(--bark-dark, #2d1e12);
   line-height: 1;
+  // 统一为等高、等宽数字，确保 5/8/10 视觉顶部对齐
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .hero-rings__data-unit {
@@ -476,7 +590,6 @@ const { extinguishedRings } = useRingEffects(
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--text-light, #9a8474);
-  margin-top: 0.3rem;
 }
 
 .hero-rings__progress {
@@ -484,9 +597,6 @@ const { extinguishedRings } = useRingEffects(
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin-top: 2rem;
-  opacity: 0;
-  animation: fadeSlideUp 0.8s ease 1.5s forwards;
 
   &-label {
     font-family: 'JetBrains Mono', monospace;
@@ -499,6 +609,7 @@ const { extinguishedRings } = useRingEffects(
 
   &-bar {
     flex: 1;
+    width: 140px;
     max-width: 140px;
     height: 4px;
     background: rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
@@ -519,6 +630,24 @@ const { extinguishedRings } = useRingEffects(
     color: var(--gt-accent, #8b6340);
     min-width: 32px;
     text-align: right;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-rings__poem-scroll {
+    gap: 0.55rem;
+  }
+
+  .hero-rings__poem-scroll--left {
+    left: 0.75rem;
+  }
+
+  .hero-rings__poem-scroll--right {
+    right: 0.75rem;
+  }
+
+  .hero-rings__char {
+    font-size: 0.9rem;
   }
 }
 

@@ -6,16 +6,20 @@ import { useQuickEntries } from '../composables/useQuickEntries'
 
 const visible = defineModel<boolean>('visible', { default: false })
 
-const { allEntries, updateOrder, toggleHidden, resetToDefault } = useQuickEntries()
+const { visibleEntries, hiddenEntries, updateOrder, toggleHidden, resetToDefault } =
+  useQuickEntries()
 
 const localList = ref<QuickEntry[]>([])
 const dragIndex = ref<number>(-1)
 const dragOverIndex = ref<number>(-1)
 
 watch(
-  () => allEntries.value,
-  (entries) => {
-    localList.value = entries.map((e) => ({ ...e }))
+  [visibleEntries, hiddenEntries],
+  ([visible, hidden]) => {
+    localList.value = [
+      ...visible.map((e) => ({ ...e, hidden: false })),
+      ...hidden.map((e) => ({ ...e, hidden: true })),
+    ]
   },
   { immediate: true, deep: true },
 )

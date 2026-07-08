@@ -34,6 +34,7 @@ const { visibleEntries, recordClick, refreshPool, updateOrder, toggleHidden } = 
 const showSettings = ref(false)
 const dragOverIndex = ref<number>(-1)
 const dragActiveIndex = ref<number>(-1)
+const isRefreshing = ref(false)
 
 // ── Mock 数据（接口联调后替换） ──
 
@@ -203,6 +204,15 @@ async function handleEntryClick(entry: QuickEntry) {
   }
 }
 
+function handleRefreshPool() {
+  if (isRefreshing.value) return
+  isRefreshing.value = true
+  refreshPool()
+  setTimeout(() => {
+    isRefreshing.value = false
+  }, 600)
+}
+
 function handleEntryKeydown(evt: KeyboardEvent, entry: QuickEntry) {
   if (evt.key === 'Enter' || evt.key === ' ') {
     evt.preventDefault()
@@ -335,11 +345,12 @@ onMounted(() => {
               <div class="quick-entry-actions">
                 <el-button
                   text
-                  :icon="RefreshCw"
                   class="quick-entry-actions__refresh"
                   aria-label="刷新快捷入口"
-                  @click="refreshPool"
-                />
+                  @click="handleRefreshPool"
+                >
+                  <RefreshCw :size="18" :class="{ 'is-spinning': isRefreshing }" />
+                </el-button>
                 <el-button
                   text
                   :icon="Settings2"
@@ -434,6 +445,8 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .dashboard {
+  user-select: none;
+
   &__welcome {
     display: flex;
     justify-content: space-between;
@@ -611,6 +624,19 @@ onMounted(() => {
     &:hover {
       transform: rotate(180deg);
     }
+
+    .is-spinning {
+      animation: quick-refresh-spin 0.6s linear infinite;
+    }
+  }
+}
+
+@keyframes quick-refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
   }
 }
 

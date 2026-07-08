@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
 import { ref } from 'vue'
 import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 
@@ -47,29 +46,6 @@ function viewDetail(item: PendingItem) {
   currentItem.value = item
   detailVisible.value = true
 }
-
-function handleApprove(item: PendingItem) {
-  ElMessageBox.confirm(`确认通过「${item.title}」的申报？`, '审批确认', {
-    confirmButtonText: '通过',
-    cancelButtonText: '驳回',
-    type: 'warning',
-  })
-    .then(() => {
-      ElMessage.success('已审批通过')
-      list.value = list.value.filter((i) => i.id !== item.id)
-    })
-    .catch(() => {
-      ElMessageBox.prompt('请输入驳回原因', '驳回', {
-        confirmButtonText: '确认驳回',
-        cancelButtonText: '取消',
-      })
-        .then(({ value }) => {
-          ElMessage.info(`已驳回，原因：${value || '未填写'}`)
-          list.value = list.value.filter((i) => i.id !== item.id)
-        })
-        .catch(() => {})
-    })
-}
 </script>
 
 <template>
@@ -98,7 +74,6 @@ function handleApprove(item: PendingItem) {
         </div>
         <div class="approval-card__actions">
           <el-button text type="primary" @click="viewDetail(item)">查看详情</el-button>
-          <el-button type="primary" @click="handleApprove(item)">审批</el-button>
         </div>
       </div>
     </el-card>
@@ -121,6 +96,10 @@ function handleApprove(item: PendingItem) {
 </template>
 
 <style scoped lang="scss">
+.approval-page {
+  user-select: none;
+}
+
 .card-title {
   font-size: 16px;
   font-weight: 600;

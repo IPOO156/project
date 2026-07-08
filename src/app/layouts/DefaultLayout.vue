@@ -20,7 +20,11 @@
 import { computed, nextTick, ref, useSlots, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
+import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
+import AIFloatingBall from '@/features/ai-chat/components/AIFloatingBall.vue'
+import { useGreeting } from '@/features/dashboard/composables/useGreeting'
 import { useTabs } from '@/shared/composables/composables'
+import GreetingToast from '@/shared/ui/GreetingToast.vue'
 import HeaderBar from './components/HeaderBar.vue'
 import Sidebar from './components/Sidebar.vue'
 
@@ -31,8 +35,13 @@ const appStore = useAppStore()
 const userStore = useUserStore()
 const slots = useSlots()
 
+const drawerVisible = ref(false)
+
 // 启动 tab 状态监听：路由切换时把已访问页面写入 useTabsStore
 useTabs()
+
+// 人性化问候弹窗（useGreeting 内部已处理挂载与登录状态监听）
+const { visible, dismissing, greeting, theme, dismiss } = useGreeting()
 
 const hasHeader = computed(() => !!slots.header)
 const hasToolbar = computed(() => !!slots.toolbar)
@@ -42,6 +51,9 @@ const isLoading = computed(() => appStore.pageLoading)
 
 /** 从路由 meta 中推断页面标题，用于文档标题与无障碍属性 */
 const pageTitle = computed(() => (route.meta?.title as string) || '')
+
+/** 是否全宽出血页面（如成长时间轴），需要去掉内容区 padding 与最大宽度限制 */
+const isFullBleed = computed(() => !!route.meta?.fullBleed)
 
 // 同步文档标题 → 屏幕阅读器在路由切换时能播报新页面
 watch(
@@ -98,8 +110,16 @@ watch(isLoading, async (loading) => {
       <!-- 多标签页导航（由 NavTabs 接管） -->
 
       <!-- 内容区 -->
-      <main class="layout__content" :aria-busy="isLoading" :aria-label="pageTitle || '主内容区'">
-        <div class="layout__content-inner">
+      <main
+        class="layout__content"
+        :class="{ 'layout__content--full-bleed': isFullBleed }"
+        :aria-busy="isLoading"
+        :aria-label="pageTitle || '主内容区'"
+      >
+        <div
+          class="layout__content-inner"
+          :class="{ 'layout__content-inner--full-bleed': isFullBleed }"
+        >
           <!-- 页面头：仅当页面显式使用 header / toolbar 插槽时渲染 -->
           <Transition name="layout-fade">
             <section v-if="hasPageHeader" class="layout__page-header">
@@ -162,6 +182,19 @@ watch(isLoading, async (loading) => {
     <div v-if="false" aria-hidden="true" data-test="layout-user">
       {{ userStore.userName }}
     </div>
+
+    <!-- AI 悬浮球 -->
+    <AIFloatingBall :open="drawerVisible" @toggle="drawerVisible = !drawerVisible" />
+    <AIChatDrawer :visible="drawerVisible" @close="drawerVisible = false" />
+
+    <!-- 人性化问候通知条 -->
+    <GreetingToast
+      :visible="visible"
+      :dismissing="dismissing"
+      :greeting="greeting"
+      :theme="theme"
+      @close="dismiss"
+    />
   </div>
 </template>
 
@@ -213,6 +246,17 @@ watch(isLoading, async (loading) => {
     display: flex;
     flex-direction: column;
     gap: $spacing-xl;
+  }
+
+  // 全宽出血页面：去掉内容区 padding 与最大宽度限制，让页面背景能顶满可视区域
+  &__content--full-bleed {
+    padding: 0;
+  }
+
+  &__content-inner--full-bleed {
+    max-width: none;
+    margin: 0;
+    gap: 0;
   }
 
   // 页面级标题区

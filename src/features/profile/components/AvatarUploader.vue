@@ -101,7 +101,7 @@ function calculateMinScale(img: HTMLImageElement) {
   // 裁剪框固定为 CROP_FRAME_SIZE，最小缩放需保证图片能覆盖裁剪框
   const minW = CROP_FRAME_SIZE / img.width
   const minH = CROP_FRAME_SIZE / img.height
-  minScale.value = Math.max(minW, minH, 0.5)
+  minScale.value = Math.max(minW, minH, 0.3)
   cropScale.value = Math.max(minScale.value, 1)
 }
 

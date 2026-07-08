@@ -289,6 +289,7 @@ function handleAvatarUpload(base64: string) {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  user-select: none;
 
   &__section {
     .section-header {

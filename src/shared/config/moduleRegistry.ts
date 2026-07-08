@@ -10,6 +10,7 @@ import {
   IdCard,
   Inbox,
   Lightbulb,
+  MessageSquare,
   ShieldCheck,
   Star,
   Trophy,
@@ -109,6 +110,15 @@ export const registeredModules: AppModule[] = [
         ],
       },
     ],
+  },
+  {
+    id: 'ai-chat',
+    label: 'AI 助手',
+    icon: MessageSquare,
+    order: 38,
+    routePrefix: '/ai-chat',
+    description: 'AI 智能问答助手',
+    menuItems: [{ label: 'AI 助手', icon: MessageSquare, path: '/ai-chat' }],
   },
   {
     id: 'applications',

@@ -81,6 +81,10 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+.timeline {
+  user-select: none;
+}
+
 .card-title {
   font-size: 16px;
   font-weight: 600;

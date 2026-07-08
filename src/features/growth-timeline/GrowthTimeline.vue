@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { RefreshCw } from 'lucide-vue-next'
 import { onBeforeUnmount, ref } from 'vue'
 import ExperienceDetail from './components/ExperienceDetail.vue'
 import ExperienceForm from './components/ExperienceForm.vue'
@@ -16,10 +17,14 @@ const {
   selectedExperience,
   selectedId,
   formVisible,
+  isSyncing,
+  autoSync,
   selectExperience,
   openForm,
   addExperience,
   deleteExperience,
+  syncFromSources,
+  setAutoSync,
 } = useGrowthTimeline()
 
 const BASE_RADIUS = 52
@@ -166,6 +171,25 @@ function handleScrollToGrowth() {
 
         <div class="timeline-intro">
           <p>每一圈年轮，都有一段故事</p>
+          <div class="timeline-sync">
+            <button
+              type="button"
+              class="sync-btn"
+              :disabled="isSyncing"
+              @click.stop="syncFromSources"
+            >
+              <RefreshCw :size="14" :class="{ spinning: isSyncing }" />
+              <span>{{ isSyncing ? '同步中…' : '同步其他模块经历' }}</span>
+            </button>
+            <label class="sync-auto">
+              <input
+                type="checkbox"
+                :checked="autoSync"
+                @change="setAutoSync(($event.target as HTMLInputElement).checked)"
+              />
+              <span>自动同步</span>
+            </label>
+          </div>
         </div>
 
         <TimelineNode
@@ -201,12 +225,31 @@ function handleScrollToGrowth() {
 <style scoped lang="scss">
 .growth-timeline-page {
   position: relative;
-  min-height: 100vh;
+  min-height: calc(100vh - #{$header-height});
+  width: 100%;
+  margin: 0;
   background-color: var(--gt-bg-page, #f4efe6);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
   background-size: 512px 512px;
   overflow-x: hidden;
-  border-radius: $radius-xl;
+  opacity: 0;
+  animation: pageFadeIn 0.8s ease forwards;
+  user-select: none;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.growth-timeline-page :deep(input),
+.growth-timeline-page :deep(textarea),
+.growth-timeline-page :deep(.el-input__inner) {
+  user-select: auto;
 }
 
 .timeline-section {
@@ -281,8 +324,93 @@ function handleScrollToGrowth() {
   font-family: 'Cormorant Garamond', serif;
   font-size: 1.35rem;
   color: var(--gt-accent, #8b6340);
-  margin: 0;
+  margin: 0 0 1.25rem;
   letter-spacing: 2px;
+}
+
+.timeline-sync {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.sync-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 100px;
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text-mid, #6b5443);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.sync-btn:hover:not(:disabled) {
+  background: #fff;
+  border-color: var(--ring-color, var(--bark-light, #8b6340));
+  color: var(--ring-color, var(--bark-light, #8b6340));
+}
+
+.sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sync-btn .spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sync-auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 1px;
+  color: var(--text-light, #9a8474);
+  cursor: pointer;
+}
+
+.sync-auto input {
+  accent-color: var(--gt-accent, #8b6340);
+  cursor: pointer;
+}
+
+/* 夜间模式下的同步按钮与自动同步标签 */
+[data-theme='dark'] .sync-btn {
+  background: rgba(var(--gt-card-rgb, 30 28 26), 0.85);
+  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.2);
+  color: var(--text-mid, #d4c4b0);
+}
+
+[data-theme='dark'] .sync-btn:hover:not(:disabled) {
+  background: rgba(var(--gt-card-rgb, 30 28 26), 0.95);
+  border-color: var(--gt-accent, #d4a574);
+  color: var(--gt-accent, #d4a574);
+}
+
+[data-theme='dark'] .sync-auto {
+  color: var(--text-light, #a89a8a);
 }
 
 @keyframes fadeSlideUp {

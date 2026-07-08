@@ -137,6 +137,9 @@ const emit = defineEmits<{
     transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.4s ease;
   will-change: transform, box-shadow;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hero-rings__electron-visual::before {

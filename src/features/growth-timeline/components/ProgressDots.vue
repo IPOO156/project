@@ -1,12 +1,30 @@
 <script setup lang="ts">
 import type { GrowthExperience } from '../timeline-constants'
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 interface Props {
   experiences: GrowthExperience[]
 }
 
 const props = defineProps<Props>()
+
+const displayCount = computed(() => props.experiences.length)
+const displayDots = computed(() => {
+  const total = props.experiences.length
+  if (total <= 12) {
+    return props.experiences.map((exp, index) => ({ exp, sourceIndex: index }))
+  }
+
+  // 经历过多时均匀采样，最多保留 12 个指示点，避免右侧进度条过于密集
+  const maxDots = 12
+  const step = total / maxDots
+  const sampled: { exp: GrowthExperience; sourceIndex: number }[] = []
+  for (let i = 0; i < maxDots; i++) {
+    const sourceIndex = Math.min(Math.round(i * step), total - 1)
+    sampled.push({ exp: props.experiences[sourceIndex], sourceIndex })
+  }
+  return sampled
+})
 
 const activeIndex = ref<number>(-1)
 let observer: IntersectionObserver | null = null
@@ -91,15 +109,16 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="progress-indicator">
-    <template v-for="(exp, index) in experiences" :key="exp.id">
+  <div class="progress-indicator" :class="{ 'is-dense': displayCount > 12 }">
+    <template v-for="(item, displayIndex) in displayDots" :key="item.exp.id">
       <button
         class="progress-dot"
-        :class="{ active: isDotActive(index) }"
-        :aria-label="exp.title"
-        @click="scrollToNode(index)"
+        :class="{ active: isDotActive(item.sourceIndex) }"
+        :aria-label="item.exp.title"
+        :title="item.exp.title"
+        @click="scrollToNode(item.sourceIndex)"
       />
-      <div v-if="index < experiences.length - 1" class="progress-line" />
+      <div v-if="displayIndex < displayDots.length - 1" class="progress-line" />
     </template>
   </div>
 </template>
@@ -157,6 +176,19 @@ onBeforeUnmount(() => {
     transform: translate(-50%, -50%) scale(2);
     opacity: 0;
   }
+}
+
+.progress-indicator.is-dense {
+  gap: 0.5rem;
+}
+
+.progress-indicator.is-dense .progress-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.progress-indicator.is-dense .progress-line {
+  height: 12px;
 }
 
 .progress-line {

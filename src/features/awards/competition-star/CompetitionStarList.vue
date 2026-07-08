@@ -86,4 +86,8 @@ function handleSubmit() {
 .form-select {
   width: 200px;
 }
+
+:deep(.page-container) {
+  user-select: none;
+}
 </style>

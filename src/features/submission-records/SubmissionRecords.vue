@@ -186,6 +186,10 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+:deep(.page-container) {
+  user-select: none;
+}
+
 .filter-card {
   margin-bottom: 16px;
 }

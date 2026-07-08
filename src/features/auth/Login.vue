@@ -153,6 +153,7 @@ function handleLogin() {
   position: relative;
   overflow: hidden;
   transition: background 0.3s ease;
+  user-select: none;
 
   &__bg {
     position: absolute;

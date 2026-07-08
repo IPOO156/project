@@ -393,6 +393,7 @@ onMounted(() => {
 
   font-family: $mc-font-body;
   color: var(--mc-text);
+  user-select: none;
 }
 
 .message-header {

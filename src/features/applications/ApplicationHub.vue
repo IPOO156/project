@@ -169,6 +169,10 @@ function switchModule(key: string) {
   display: flex;
   flex-direction: column;
   gap: 16px;
+
+  :deep(.page-container) {
+    user-select: none;
+  }
 }
 
 .application-hub__grid {

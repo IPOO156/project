@@ -124,13 +124,14 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
 
 @mixin mc-btn-ghost {
   @include mc-btn-base;
-  background: transparent;
+  background: var(--mc-card);
   color: var(--mc-text-secondary);
-  border: 1px solid transparent;
+  border: 1px solid var(--mc-border);
 
   &:hover:not(:disabled) {
-    background: var(--mc-bg);
-    color: var(--mc-text);
+    background: var(--mc-cream);
+    border-color: var(--mc-wood);
+    color: var(--mc-wood);
   }
 }
 

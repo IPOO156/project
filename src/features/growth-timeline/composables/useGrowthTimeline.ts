@@ -1,6 +1,7 @@
 import type { GrowthExperience } from '../timeline-constants'
 import { computed, ref } from 'vue'
 import { inferSemester, INITIAL_EXPERIENCES } from '../timeline-constants'
+import { useGrowthDataSources } from './useGrowthDataSources'
 
 function sortExperiencesByDate(list: GrowthExperience[]): GrowthExperience[] {
   return [...list].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -10,6 +11,7 @@ export function useGrowthTimeline() {
   const experiences = ref<GrowthExperience[]>(sortExperiencesByDate(INITIAL_EXPERIENCES))
   const selectedId = ref<string | null>(null)
   const formVisible = ref(false)
+  const { sync, autoSync, setAutoSync, isSyncing } = useGrowthDataSources()
 
   const selectedExperience = computed(() => {
     return experiences.value.find((e) => e.id === selectedId.value) ?? null
@@ -44,15 +46,36 @@ export function useGrowthTimeline() {
     }
   }
 
+  async function syncFromSources() {
+    try {
+      const { added, experiences: synced } = await sync(experiences.value)
+      if (added > 0) {
+        experiences.value = sortExperiencesByDate([...experiences.value, ...synced])
+      }
+      return added
+    } catch {
+      return 0
+    }
+  }
+
+  // 首次加载时若开启自动同步，则自动拉取其他模块数据
+  if (autoSync.value) {
+    syncFromSources()
+  }
+
   return {
     experiences,
     selectedId,
     selectedExperience,
     formVisible,
+    isSyncing,
+    autoSync,
     selectExperience,
     openForm,
     closeForm,
     addExperience,
     deleteExperience,
+    syncFromSources,
+    setAutoSync,
   }
 }

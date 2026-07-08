@@ -62,8 +62,9 @@ function getTypeColor(tag: string): string {
 
 const nodeRef = ref<HTMLElement | null>(null)
 const { isVisible } = useScrollReveal(nodeRef, {
-  threshold: 0.25,
-  rootMargin: '0px 0px -60px 0px',
+  threshold: 0.1,
+  rootMargin: '0px 0px -40px 0px',
+  once: false,
 })
 </script>
 
@@ -73,10 +74,19 @@ const { isVisible } = useScrollReveal(nodeRef, {
     ref="nodeRef"
     class="growth-node"
     :class="{ 'growth-node--odd': isOdd, 'growth-node--selected': isSelected, visible: isVisible }"
-    :style="{ '--ring-color': ringColor }"
+    :style="{ '--ring-color': ringColor, '--stagger-delay': `${index * 0.08}s` }"
     @click="emit('click', experience.id)"
   >
-    <div class="growth-card" :data-index="String(index + 1).padStart(2, '0')">
+    <div class="growth-card" :style="{ '--card-edge-offset': '1.5rem' }">
+      <div class="card-right-edge">
+        <div class="card-actions">
+          <span class="card-status-ring" aria-hidden="true" />
+          <button class="delete-btn" aria-label="删除" title="删除" @click.stop="handleDelete">
+            <Trash2 :size="14" />
+          </button>
+        </div>
+        <span class="card-index">{{ String(index + 1).padStart(2, '0') }}</span>
+      </div>
       <div class="card-top">
         <div
           v-if="experience.tags.length"
@@ -87,9 +97,6 @@ const { isVisible } = useScrollReveal(nodeRef, {
         </div>
         <span class="card-season-badge">{{ getSemesterDisplayLabel(experience.semester) }}</span>
         <span class="card-year-inline">{{ experience.date }}</span>
-        <button class="delete-btn" aria-label="删除" title="删除" @click.stop="handleDelete">
-          <Trash2 :size="16" />
-        </button>
       </div>
       <h3 class="card-title">{{ experience.title }}</h3>
       <p class="card-body">{{ experience.description }}</p>
@@ -129,14 +136,30 @@ const { isVisible } = useScrollReveal(nodeRef, {
   align-items: start;
   margin-bottom: 5rem;
   cursor: pointer;
+  user-select: none;
+}
+
+/* 进入动画：卡片与轨道标记默认隐藏，滚动进入视图后一次性淡入（不使用 blur，避免像蒙了一层玻璃） */
+.growth-card,
+.ring-marker {
   opacity: 0;
-  transform: translateY(48px) scale(0.96);
-  filter: blur(2px);
-  transition:
-    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-    filter 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: transform, opacity, filter;
+  transform: translateY(34px) scale(0.96);
+}
+
+@keyframes gt-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(34px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.growth-node.visible .growth-card,
+.growth-node.visible .ring-marker {
+  animation: gt-card-enter 0.85s cubic-bezier(0.16, 1, 0.3, 1) var(--stagger-delay, 0s) both;
 }
 
 .growth-node--odd .growth-card {
@@ -150,12 +173,6 @@ const { isVisible } = useScrollReveal(nodeRef, {
 }
 .growth-node:not(.growth-node--odd) .growth-card {
   grid-column: 3;
-}
-
-.growth-node.visible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  filter: blur(0);
 }
 
 .growth-node--selected .growth-card {
@@ -230,12 +247,31 @@ const { isVisible } = useScrollReveal(nodeRef, {
   box-shadow: 0 0 12px rgba(var(--gt-accent-rgb, 139 99 64), 0.25);
 }
 
+.growth-node.visible .ring-marker-outer {
+  animation: ringMarkerPulse 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes ringMarkerPulse {
+  0% {
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 .growth-card {
-  padding: 2rem 2rem 1.8rem;
+  padding: 2.25rem 2.5rem 3.25rem;
   border-radius: $radius-2xl;
-  background: rgba(var(--gt-card-rgb, 255 252 247), 0.75);
-  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
-  backdrop-filter: blur(12px);
+  background: #fffcf7;
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
+  box-shadow:
+    0 2px 8px rgba(var(--gt-shadow-rgb, 26 18 10), 0.05),
+    0 10px 30px rgba(var(--gt-shadow-rgb, 26 18 10), 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   position: relative;
   overflow: hidden;
   transition:
@@ -247,45 +283,13 @@ const { isVisible } = useScrollReveal(nodeRef, {
 }
 
 .growth-card:hover {
-  border-color: rgba(var(--gt-bark-rgb, 61 43 31), 0.15);
-  background: rgba(var(--gt-card-rgb, 255 252 247), 0.92);
+  border-color: rgba(var(--gt-bark-rgb, 61 43 31), 0.22);
+  background: #fff;
   box-shadow:
-    0 14px 44px rgba(var(--gt-shadow-rgb, 26 18 10), 0.08),
-    0 3px 10px rgba(var(--gt-shadow-rgb, 26 18 10), 0.04);
-  transform: translateY(-5px) scale(1.005);
-}
-
-.growth-card::before {
-  content: attr(data-index);
-  position: absolute;
-  right: 12px;
-  bottom: 6px;
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 3.5rem;
-  font-weight: 700;
-  color: rgba(var(--gt-bark-rgb, 61 43 31), 0.04);
-  line-height: 1;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* 确保卡片内容在装饰序号之上 */
-.growth-card > * {
-  position: relative;
-  z-index: 1;
-}
-
-.growth-card::after {
-  content: '';
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid var(--ring-color, var(--bark-light, #8b6340));
-  opacity: 0.35;
-  pointer-events: none;
+    0 6px 16px rgba(var(--gt-shadow-rgb, 26 18 10), 0.08),
+    0 22px 56px rgba(var(--gt-shadow-rgb, 26 18 10), 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transform: translateY(-6px) scale(1.01);
 }
 
 .card-top {
@@ -293,6 +297,101 @@ const { isVisible } = useScrollReveal(nodeRef, {
   align-items: center;
   gap: 0.8rem;
   margin-bottom: 1rem;
+  padding-right: 6.25rem;
+}
+
+/* 右侧边缘统一容器：圈 + 垃圾桶 + 序号，共享同一右边缘参考线 */
+.card-right-edge {
+  position: absolute;
+  top: 1.25rem;
+  bottom: 1.25rem;
+  right: var(--card-edge-offset, 1.5rem);
+  width: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* 右上角操作区：圈 + 垃圾桶 */
+.card-actions {
+  position: static;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  pointer-events: auto;
+}
+
+/* 右下角装饰序号 */
+.card-index {
+  width: 100%;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--gt-accent, #8b6340);
+  line-height: 1;
+  text-align: right;
+  pointer-events: none;
+}
+
+.card-status-ring {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-status-ring::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ring-color, var(--bark-light, #8b6340));
+  box-sizing: border-box;
+}
+
+.delete-btn {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--ring-color, var(--bark-light, #8b6340));
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transition:
+    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.2s ease,
+    color 0.2s ease;
+  will-change: transform, opacity;
+  z-index: 5;
+}
+
+.growth-card:hover .delete-btn,
+.delete-btn:focus-visible {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  background: #b94e4e;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.delete-btn:active {
+  transform: scale(0.96);
 }
 
 .card-type-indicator {
@@ -384,11 +483,18 @@ const { isVisible } = useScrollReveal(nodeRef, {
   background: var(--ring-color, var(--bark-light, #8b6340));
   border-radius: 2px;
   width: 0;
-  transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0;
+  transform: translateX(-8px);
+  transition:
+    width 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .growth-node.visible .card-skill-fill {
   width: var(--fill-width, 0%);
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .growth-node.visible .card-skill:nth-child(1) .card-skill-fill {
@@ -422,7 +528,12 @@ const { isVisible } = useScrollReveal(nodeRef, {
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
   border-radius: 100px;
   color: var(--text-light, #9a8474);
-  transition: all 0.3s;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    all 0.3s ease,
+    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .card-tag:hover {
@@ -430,44 +541,34 @@ const { isVisible } = useScrollReveal(nodeRef, {
   color: var(--ring-color, var(--bark-light, #8b6340));
 }
 
-.delete-btn {
-  margin-left: auto;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
-  background: rgba(var(--gt-card-rgb, 255 252 247), 0.85);
-  color: var(--ring-color, var(--bark-light, #8b6340));
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.55;
-  transform: scale(0.92);
-  transition:
-    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-  will-change: transform, opacity;
-}
-
-.growth-card:hover .delete-btn,
-.delete-btn:focus-visible {
+.growth-node.visible .card-tag {
   opacity: 1;
-  transform: scale(1);
+  transform: translateY(0);
 }
 
-.delete-btn:hover {
-  background: #b94e4e;
-  border-color: #b94e4e;
-  color: #fff;
-  transform: scale(1.08);
+.growth-node.visible .card-tag:nth-child(1) {
+  transition-delay: 0s;
 }
-
-.delete-btn:active {
-  transform: scale(0.96);
+.growth-node.visible .card-tag:nth-child(2) {
+  transition-delay: 0.04s;
+}
+.growth-node.visible .card-tag:nth-child(3) {
+  transition-delay: 0.08s;
+}
+.growth-node.visible .card-tag:nth-child(4) {
+  transition-delay: 0.12s;
+}
+.growth-node.visible .card-tag:nth-child(5) {
+  transition-delay: 0.16s;
+}
+.growth-node.visible .card-tag:nth-child(6) {
+  transition-delay: 0.2s;
+}
+.growth-node.visible .card-tag:nth-child(7) {
+  transition-delay: 0.24s;
+}
+.growth-node.visible .card-tag:nth-child(8) {
+  transition-delay: 0.28s;
 }
 
 @media (hover: none) {
@@ -484,6 +585,17 @@ const { isVisible } = useScrollReveal(nodeRef, {
     margin-bottom: 3rem;
   }
 
+  @keyframes gt-card-enter {
+    from {
+      opacity: 0;
+      transform: translateY(22px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
   .ring-marker {
     grid-column: 1 !important;
     grid-row: 1;
@@ -491,9 +603,27 @@ const { isVisible } = useScrollReveal(nodeRef, {
   }
 
   .growth-card {
+    --card-edge-offset: 1rem;
     grid-column: 2 !important;
-    padding: 1.25rem;
+    padding: 1.5rem;
+    padding-top: 3.25rem;
     border-radius: $radius-xl;
+  }
+
+  .card-right-edge {
+    top: 1rem;
+    bottom: 1rem;
+    right: var(--card-edge-offset, 1rem);
+    width: 3rem;
+  }
+
+  .card-index {
+    font-size: 2.4rem;
+  }
+
+  .card-status-ring::before {
+    width: 8px;
+    height: 8px;
   }
 
   .growth-spacer {
@@ -509,21 +639,24 @@ const { isVisible } = useScrollReveal(nodeRef, {
     font-size: 1.35rem;
   }
 
+  .card-top {
+    padding-right: 4.5rem;
+  }
+
   .delete-btn {
-    width: 32px;
-    height: 32px;
+    width: 18px;
+    height: 18px;
     opacity: 1;
     transform: scale(1);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .growth-node {
+  .growth-node.visible .growth-card,
+  .growth-node.visible .ring-marker {
+    animation: none !important;
     opacity: 1 !important;
     transform: none !important;
-    filter: none !important;
-    transition: none !important;
-    will-change: auto !important;
   }
 
   .ring-marker-outer::before,
@@ -532,8 +665,85 @@ const { isVisible } = useScrollReveal(nodeRef, {
   }
 
   .card-skill-fill {
+    opacity: 1 !important;
+    transform: none !important;
     transition: none !important;
     width: var(--fill-width, 0%) !important;
   }
+
+  .card-tag {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+[data-theme='dark'] .growth-card {
+  background: #35302b;
+  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.4);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.28),
+    0 16px 40px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .growth-card:hover {
+  background: #3d3832;
+  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.48);
+}
+
+[data-theme='dark'] .card-title {
+  color: var(--bark-dark, #f1f5f9);
+}
+
+[data-theme='dark'] .card-body {
+  color: var(--text-mid, #d4c4b0);
+}
+
+[data-theme='dark'] .card-year-inline,
+[data-theme='dark'] .card-skill-name,
+[data-theme='dark'] .card-skill-pct,
+[data-theme='dark'] .card-tag {
+  color: var(--text-light, #a89a8a);
+}
+
+[data-theme='dark'] .card-tag {
+  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.14);
+}
+
+[data-theme='dark'] .card-tag:hover {
+  border-color: var(--ring-color, var(--bark-light, #d4a574));
+  color: var(--ring-color, var(--bark-light, #d4a574));
+}
+
+[data-theme='dark'] .card-skill-track {
+  background: rgba(var(--gt-bark-rgb, 200 180 160), 0.12);
+}
+
+[data-theme='dark'] .delete-btn {
+  background: rgba(var(--gt-card-rgb, 30 28 26), 0.85);
+  color: var(--ring-color, var(--bark-light, #d4a574));
+}
+
+[data-theme='dark'] .delete-btn:hover {
+  background: #b94e4e;
+  color: #fff;
+}
+
+[data-theme='dark'] .card-status-ring {
+  opacity: 0.6;
+}
+
+[data-theme='dark'] .card-status-ring::before {
+  border-color: var(--ring-color, var(--bark-light, #d4a574));
+}
+
+[data-theme='dark'] .card-type-indicator {
+  background: rgba(var(--gt-bark-rgb, 200 180 160), 0.1);
+}
+
+[data-theme='dark'] .card-season-badge {
+  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.16);
+  background: rgba(var(--gt-bark-rgb, 200 180 160), 0.06);
 }
 </style>

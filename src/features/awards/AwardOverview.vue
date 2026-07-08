@@ -231,6 +231,10 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+:deep(.page-container) {
+  user-select: none;
+}
+
 .stats-row {
   margin-bottom: 16px;
 }

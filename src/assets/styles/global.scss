@@ -184,3 +184,11 @@ html.dark {
     }
   }
 }
+
+// 输入框、文本域始终允许文本选择，即使父元素禁用了 user-select
+input,
+textarea,
+.el-input__inner,
+.el-textarea__inner {
+  user-select: auto !important;
+}

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { AlertTriangle, Download, Eye, Plus } from 'lucide-vue-next'
+import { AlertTriangle, Download, Eye, Plus, Sparkles } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
+import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import { useDict } from '@/shared/composables/composables'
 import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 
@@ -58,6 +59,8 @@ const weaknesses = ref([
 
 const loading = ref(false)
 const dialogVisible = ref(false)
+const aiDrawerVisible = ref(false)
+const aiInitialQuestion = '请分析我的职业规划短板并给出改进建议'
 
 // ── Computed ──
 const { getColor, getLabel } = useDict(APPLICATION_STATUS)
@@ -135,7 +138,18 @@ function handleSubmit() {
             <AlertTriangle :size="18" />
             <span>短板识别与改进建议</span>
           </div>
-          <el-tag size="small" type="warning">AI 生成</el-tag>
+          <div class="section-actions">
+            <el-button
+              type="primary"
+              size="small"
+              plain
+              :icon="Sparkles"
+              @click="aiDrawerVisible = true"
+            >
+              AI 深度分析
+            </el-button>
+            <el-tag size="small" type="warning">AI 生成</el-tag>
+          </div>
         </div>
       </template>
       <div v-for="item in weaknesses" :key="item.dimension" class="weakness-item">
@@ -203,6 +217,12 @@ function handleSubmit() {
         <el-button type="primary" :loading="loading" @click="handleSubmit">提交</el-button>
       </template>
     </el-dialog>
+
+    <AIChatDrawer
+      :visible="aiDrawerVisible"
+      :initial-question="aiInitialQuestion"
+      @close="aiDrawerVisible = false"
+    />
   </div>
 </template>
 
@@ -211,6 +231,7 @@ function handleSubmit() {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  user-select: none;
 
   &__header {
     display: flex;
@@ -232,6 +253,12 @@ function handleSubmit() {
 .card-title {
   font-size: 16px;
   font-weight: 600;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .form-select {
