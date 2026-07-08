@@ -87,13 +87,6 @@ export const useActivityStore = defineStore('activity', () => {
       },
       {
         id: '11',
-        type: 'draft',
-        text: '奖学金申请草稿待完善',
-        time: '2026-05-28 16:20',
-        status: 'draft',
-      },
-      {
-        id: '12',
         type: 'submitted',
         text: '竞赛之星报名已提交',
         time: '2026-05-25 13:40',
@@ -112,13 +105,6 @@ export const useActivityStore = defineStore('activity', () => {
         text: '荣誉证书照片不清晰被驳回',
         time: '2026-05-18 15:50',
         status: 'rejected',
-      },
-      {
-        id: '15',
-        type: 'draft',
-        text: '社会实践总结待提交',
-        time: '2026-05-15 11:00',
-        status: 'draft',
       },
     ]
     return rows.sort((a, b) => b.time.localeCompare(a.time))

@@ -150,19 +150,7 @@ const routes: RouteRecordRaw[] = [
           },
         ],
       },
-      // ─── AI 助手 ───
-      {
-        path: 'ai-chat',
-        children: [
-          {
-            path: '',
-            name: 'AIChat',
-            component: () => import('@/features/ai-chat/AIChat.vue'),
-            meta: { title: 'AI 助手' },
-          },
-        ],
-      },
-      // ─── 审批与记录 ───
+      // ─── 报名审核 ───
       {
         path: 'approval',
         children: [
@@ -170,13 +158,13 @@ const routes: RouteRecordRaw[] = [
             path: 'pending',
             name: 'ApprovalPending',
             component: () => import('@/features/approval/PendingApproval.vue'),
-            meta: { title: '待审批信息' },
+            meta: { title: '申报审核' },
           },
           {
-            path: 'records',
-            name: 'SubmissionRecords',
-            component: () => import('@/features/submission-records/SubmissionRecords.vue'),
-            meta: { title: '提交记录' },
+            path: 'award-review',
+            name: 'AwardReview',
+            component: () => import('@/features/approval/AwardReview.vue'),
+            meta: { title: '奖项审核' },
           },
         ],
       },

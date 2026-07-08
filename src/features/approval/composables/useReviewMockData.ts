@@ -1,0 +1,412 @@
+import type { Ref } from 'vue'
+/**
+ * 申报审核 - 申报类型 Mock 数据
+ */
+import { ref } from 'vue'
+
+/** 通用申报记录基数字段 */
+export interface ReviewRecordBase {
+  id: string
+  type: string
+  typeLabel: string
+  title: string
+  submitDate: string
+  semester: string
+  status: string
+  proofMaterials: string[]
+}
+
+export type ReviewRecord = ReviewRecordBase & Record<string, any>
+
+const statuses = ['draft', 'submitted', 'approved', 'rejected'] as const
+
+function randStatus(): string {
+  return statuses[Math.floor(Math.random() * statuses.length)]
+}
+
+/** 各类型 Mock 数据生成器 */
+const mockGenerators: Record<string, () => ReviewRecord[]> = {
+  competition: () => [
+    {
+      id: 'rev-cmp-1',
+      type: 'competition',
+      typeLabel: '学科竞赛',
+      competitionName: '全国大学生数学建模竞赛',
+      competitionType: 'national',
+      awardLevel: 'first',
+      awardDate: '2025-09',
+      semester: '2024-2025-1',
+      status: 'approved',
+      submitDate: '2025-10-15',
+      title: '全国大学生数学建模竞赛',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-cmp-2',
+      type: 'competition',
+      typeLabel: '学科竞赛',
+      competitionName: 'ACM 程序设计竞赛',
+      competitionType: 'provincial',
+      awardLevel: 'second',
+      awardDate: '2025-06',
+      semester: '2024-2025-2',
+      status: 'submitted',
+      submitDate: '2025-07-01',
+      title: 'ACM 程序设计竞赛',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-cmp-3',
+      type: 'competition',
+      typeLabel: '学科竞赛',
+      competitionName: '蓝桥杯大赛',
+      competitionType: 'national',
+      awardLevel: 'third',
+      awardDate: '2025-04',
+      semester: '2024-2025-2',
+      status: 'rejected',
+      submitDate: '2025-05-10',
+      title: '蓝桥杯大赛',
+      proofMaterials: [],
+    },
+  ],
+  innovation: () => [
+    {
+      id: 'rev-inn-1',
+      type: 'innovation',
+      typeLabel: '创新创业',
+      companyName: '校园文创项目',
+      industryType: 'media',
+      companyType: '创业计划',
+      teamRole: '负责人',
+      registerDate: '2025-03',
+      semester: '2024-2025-1',
+      status: 'approved',
+      submitDate: '2025-04-20',
+      title: '校园文创项目',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-inn-2',
+      type: 'innovation',
+      typeLabel: '创新创业',
+      companyName: '智能硬件创业计划',
+      industryType: 'it',
+      companyType: '创业实践',
+      teamRole: '核心成员',
+      registerDate: '2025-06',
+      semester: '2024-2025-2',
+      status: 'submitted',
+      submitDate: '2025-07-05',
+      title: '智能硬件创业计划',
+      proofMaterials: [],
+    },
+  ],
+  research: () => [
+    {
+      id: 'rev-res-1',
+      type: 'research',
+      typeLabel: '学术研究',
+      projectName: '基于深度学习的图像识别研究',
+      projectLevel: 'national',
+      researchType: '基础研究',
+      teamRole: '参与人',
+      projectDate: '2025-01',
+      semester: '2024-2025-1',
+      status: 'approved',
+      submitDate: '2025-03-12',
+      title: '基于深度学习的图像识别研究',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-res-2',
+      type: 'research',
+      typeLabel: '学术研究',
+      projectName: '区块链技术在档案管理中的应用',
+      projectLevel: 'school',
+      researchType: '应用研究',
+      teamRole: '负责人',
+      projectDate: '2025-05',
+      semester: '2024-2025-2',
+      status: 'submitted',
+      submitDate: '2025-06-18',
+      title: '区块链技术在档案管理中的应用',
+      proofMaterials: [],
+    },
+  ],
+  scholarship: () => [
+    {
+      id: 'rev-sch-1',
+      type: 'scholarship',
+      typeLabel: '奖学金',
+      awardName: '国家奖学金',
+      scholarshipLevel: 'national',
+      scholarshipGrade: 'first',
+      acquireDate: '2025-09',
+      semester: '2024-2025-1',
+      status: 'approved',
+      submitDate: '2025-10-01',
+      title: '国家奖学金申请',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-sch-2',
+      type: 'scholarship',
+      typeLabel: '奖学金',
+      awardName: '校级一等奖学金',
+      scholarshipLevel: 'school',
+      scholarshipGrade: 'first',
+      acquireDate: '2025-03',
+      semester: '2024-2025-2',
+      status: 'submitted',
+      submitDate: '2025-04-15',
+      title: '校级一等奖学金申请',
+      proofMaterials: [],
+    },
+  ],
+  certificate: () => [
+    {
+      id: 'rev-cer-1',
+      type: 'certificate',
+      typeLabel: '荣誉证书',
+      certName: 'CET-6 证书',
+      certType: 'language',
+      certDate: '2025-06',
+      semester: '2024-2025-2',
+      status: 'approved',
+      submitDate: '2025-07-10',
+      title: 'CET-6 证书登记',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-cer-2',
+      type: 'certificate',
+      typeLabel: '荣誉证书',
+      certName: '计算机二级证书',
+      certType: 'skill',
+      certDate: '2025-03',
+      semester: '2024-2025-1',
+      status: 'submitted',
+      submitDate: '2025-04-01',
+      title: '计算机二级证书登记',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-cer-3',
+      type: 'certificate',
+      typeLabel: '荣誉证书',
+      certName: '普通话水平测试等级证书',
+      certType: 'language',
+      certDate: '2024-12',
+      semester: '2024-2025-1',
+      status: 'rejected',
+      submitDate: '2025-01-05',
+      title: '普通话证书登记',
+      proofMaterials: [],
+    },
+  ],
+  internship: () => [
+    {
+      id: 'rev-int-1',
+      type: 'internship',
+      typeLabel: '实习经历',
+      company: '字节跳动',
+      position: '前端开发实习生',
+      location: '北京',
+      startDate: '2025-03',
+      endDate: '2025-08',
+      semester: '2024-2025-2',
+      status: 'approved',
+      submitDate: '2025-09-01',
+      title: '字节跳动前端开发实习',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-int-2',
+      type: 'internship',
+      typeLabel: '实习经历',
+      company: '腾讯科技',
+      position: '后端开发实习生',
+      location: '深圳',
+      startDate: '2025-07',
+      endDate: '2025-12',
+      semester: '2024-2025-1',
+      status: 'submitted',
+      submitDate: '2025-08-15',
+      title: '腾讯后端开发实习',
+      proofMaterials: [],
+    },
+  ],
+  organization: () => [
+    {
+      id: 'rev-org-1',
+      type: 'organization',
+      typeLabel: '组织履历',
+      department: '校学生会',
+      position: '组织部部长',
+      organizationLevel: 'school',
+      startDate: '2024-09',
+      endDate: '2025-06',
+      semester: '2024-2025-1',
+      status: 'approved',
+      submitDate: '2025-07-01',
+      title: '校学生会组织部',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-org-2',
+      type: 'organization',
+      typeLabel: '组织履历',
+      department: 'ACM 社团',
+      position: '副社长',
+      organizationLevel: 'college',
+      startDate: '2024-09',
+      endDate: '2025-06',
+      semester: '2024-2025-2',
+      status: 'submitted',
+      submitDate: '2025-07-10',
+      title: 'ACM 社团',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-org-3',
+      type: 'organization',
+      typeLabel: '组织履历',
+      department: '班级',
+      position: '班长',
+      organizationLevel: 'class',
+      startDate: '2023-09',
+      endDate: '至今',
+      semester: '2024-2025-2',
+      status: 'draft',
+      submitDate: '',
+      title: '班级职务',
+      proofMaterials: [],
+    },
+  ],
+  training: () => [
+    {
+      id: 'rev-tr-1',
+      type: 'training',
+      typeLabel: '实训项目',
+      projectName: 'Vue3 企业级开发实训',
+      projectContent: '基于 Vue3 + TypeScript 的企业级项目开发',
+      startDate: '2025-03',
+      endDate: '2025-06',
+      semester: '2024-2025-2',
+      status: 'approved',
+      submitDate: '2025-07-01',
+      title: 'Vue3 企业级开发实训',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-tr-2',
+      type: 'training',
+      typeLabel: '实训项目',
+      projectName: '云计算架构实训',
+      projectContent: 'AWS 云服务架构设计与部署',
+      startDate: '2025-09',
+      endDate: '2025-12',
+      semester: '2024-2025-1',
+      status: 'submitted',
+      submitDate: '2025-10-15',
+      title: '云计算架构实训',
+      proofMaterials: [],
+    },
+  ],
+  socialPractice: () => [
+    {
+      id: 'rev-sp-1',
+      type: 'socialPractice',
+      typeLabel: '社会实践',
+      activityName: '暑期三下乡社会实践',
+      location: '湖南省湘西州',
+      organization: '校团委',
+      startDate: '2025-07',
+      endDate: '2025-08',
+      volunteerHours: 120,
+      semester: '2024-2025-2',
+      status: 'approved',
+      submitDate: '2025-09-01',
+      title: '暑期三下乡社会实践',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-sp-2',
+      type: 'socialPractice',
+      typeLabel: '社会实践',
+      activityName: '社区疫情防控志愿服务',
+      location: '武汉市洪山区',
+      organization: '社区服务中心',
+      startDate: '2025-03',
+      endDate: '2025-04',
+      volunteerHours: 48,
+      semester: '2024-2025-1',
+      status: 'submitted',
+      submitDate: '2025-05-01',
+      title: '社区志愿服务',
+      proofMaterials: [],
+    },
+  ],
+  bookReport: () => [
+    {
+      id: 'rev-br-1',
+      type: 'bookReport',
+      typeLabel: '图书心得',
+      bookName: '深入理解计算机系统',
+      bookDate: '2025-06',
+      semester: '2024-2025-2',
+      status: 'approved',
+      submitDate: '2025-07-01',
+      title: '《深入理解计算机系统》读书心得',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-br-2',
+      type: 'bookReport',
+      typeLabel: '图书心得',
+      bookName: '算法导论',
+      bookDate: '2025-03',
+      semester: '2024-2025-1',
+      status: 'submitted',
+      submitDate: '2025-04-10',
+      title: '《算法导论》读书笔记',
+      proofMaterials: [],
+    },
+    {
+      id: 'rev-br-3',
+      type: 'bookReport',
+      typeLabel: '图书心得',
+      bookName: '设计模式之禅',
+      bookDate: '2025-08',
+      semester: '2024-2025-1',
+      status: 'draft',
+      submitDate: '',
+      title: '《设计模式之禅》阅读心得',
+      proofMaterials: [],
+    },
+  ],
+}
+
+/**
+ * 获取指定申报类型的 Mock 数据
+ */
+export function useReviewMockData(type: string): Ref<ReviewRecord[]> {
+  const data = ref<ReviewRecord[]>([])
+  if (mockGenerators[type]) {
+    data.value = mockGenerators[type]()
+  }
+  return data
+}
+
+/**
+ * 获取 10 个申报类型合并后的全部 Mock 数据
+ */
+export function useAllReviewMockData(): Ref<ReviewRecord[]> {
+  const data = ref<ReviewRecord[]>([])
+  for (const type of Object.keys(mockGenerators)) {
+    const records = mockGenerators[type]()
+    data.value.push(...records)
+  }
+  return data
+}

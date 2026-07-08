@@ -203,14 +203,13 @@ onMounted(() => {
           </div>
           <span class="message-header__stat-label">{{ stat.label }}</span>
         </div>
-        <button
-          type="button"
-          class="mc-btn mc-btn--primary message-header__read-all"
+        <el-button
+          type="primary"
           :disabled="notificationStore.unreadCount === 0"
           @click="markAllAsRead"
         >
-          <CheckCheck :size="16" /> 一键已读
-        </button>
+          <CheckCheck :size="16" style="margin-right: 4px" />一键已读
+        </el-button>
       </div>
     </header>
 
@@ -255,50 +254,39 @@ onMounted(() => {
             :value="opt.value"
           />
         </el-select>
-        <button type="button" class="mc-btn mc-btn--secondary" @click="handleSearch">
-          <Filter :size="14" /> 筛选
-        </button>
-        <button type="button" class="mc-btn mc-btn--ghost" @click="handleReset">
-          <X :size="14" /> 重置
-        </button>
+        <el-button type="primary" size="default" @click="handleSearch">
+          <Filter :size="14" style="margin-right: 4px" />筛选
+        </el-button>
+        <el-button @click="handleReset"> <X :size="14" style="margin-right: 4px" />重置 </el-button>
       </div>
 
       <div class="panel-toolbar__batch">
-        <button
-          v-if="!batchMode"
-          type="button"
-          class="mc-btn mc-btn--ghost"
-          @click="batchMode = true"
-        >
-          批量操作
-        </button>
+        <el-button v-if="!batchMode" size="small" @click="batchMode = true"> 批量操作 </el-button>
         <template v-else>
           <span class="panel-toolbar__batch-count">已选 {{ selectedIds.length }} 条</span>
-          <button type="button" class="mc-btn mc-btn--ghost" @click="handleCancelBatchMode">
-            取消
-          </button>
-          <button
-            type="button"
-            class="mc-btn mc-btn--primary"
+          <el-button size="small" @click="handleCancelBatchMode">取消</el-button>
+          <el-button
+            size="small"
+            type="primary"
             :disabled="selectedIds.length === 0"
             @click="handleBatchRead"
           >
             批量已读
-          </button>
-          <button
-            type="button"
-            class="mc-btn mc-btn--danger"
+          </el-button>
+          <el-button
+            size="small"
+            type="danger"
             :disabled="selectedIds.length === 0"
             @click="handleBatchDelete"
           >
             批量删除
-          </button>
+          </el-button>
         </template>
       </div>
 
-      <button type="button" class="mc-btn mc-btn--secondary" @click="navigateToActivities">
-        <Mail :size="16" /> 查看动态记录
-      </button>
+      <el-button @click="navigateToActivities">
+        <Mail :size="16" style="margin-right: 4px" />查看动态记录
+      </el-button>
     </div>
 
     <!-- 通知列表 -->
@@ -399,47 +387,43 @@ onMounted(() => {
 .message-header {
   @include mc-fade-in;
 
-  background: linear-gradient(135deg, var(--mc-card) 0%, var(--mc-cream) 100%);
+  background: var(--mc-card);
   border: 1px solid var(--mc-border);
   border-radius: var(--mc-radius);
-  padding: 28px 32px;
-  box-shadow: var(--mc-shadow);
+  padding: 24px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 
   &__main {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 16px;
   }
 
   &__icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, var(--mc-wood) 0%, var(--mc-wood-light) 100%);
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: #1e3a5f;
     color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 16px var(--mc-primary-shadow);
   }
 
   &__title {
     margin: 0;
-    font-family: $mc-font-display;
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 700;
-    color: var(--mc-wood);
-    letter-spacing: 1px;
+    color: #1e3a5f;
   }
 
   &__subtitle {
-    margin: 6px 0 0;
+    margin: 4px 0 0;
     font-size: 14px;
     color: var(--mc-text-secondary);
   }
@@ -447,7 +431,7 @@ onMounted(() => {
   &__stats {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     flex-wrap: wrap;
   }
 
@@ -455,30 +439,25 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    min-width: 92px;
-    padding: 12px 18px;
-    background: var(--mc-card);
+    gap: 4px;
+    min-width: 80px;
+    padding: 10px 14px;
+    background: var(--mc-bg);
     border: 1px solid var(--mc-border);
-    border-radius: 12px;
-
-    &:first-child {
-      border-color: var(--mc-primary-shadow);
-      background: var(--mc-cream);
-    }
+    border-radius: 8px;
   }
 
   &__stat-main {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: var(--mc-wood);
+    gap: 6px;
+    color: #1e3a5f;
   }
 
   &__stat-value {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 700;
-    color: var(--mc-wood);
+    color: #1e3a5f;
   }
 
   &__stat-label {
@@ -528,36 +507,6 @@ onMounted(() => {
   @include mc-select(150px);
 }
 
-.mc-btn {
-  &--primary {
-    @include mc-btn-primary;
-  }
-
-  &--secondary {
-    @include mc-btn-secondary;
-  }
-
-  &--ghost {
-    @include mc-btn-ghost;
-  }
-
-  &--danger {
-    @include mc-btn-ghost;
-
-    color: var(--mc-danger);
-
-    &:not(:disabled):hover {
-      background: var(--mc-danger-fade);
-      color: var(--mc-danger);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-}
-
 .mc-card {
   @include mc-card;
 }
@@ -590,66 +539,38 @@ onMounted(() => {
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 14px;
-  padding: 16px 20px 16px 18px;
-  border-radius: 14px;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 8px;
   background: var(--mc-card);
   border: 1px solid var(--mc-border);
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
 
   &:hover {
-    box-shadow: var(--mc-shadow-hover);
-    transform: translateY(-2px);
-  }
-
-  &__accent {
-    position: absolute;
-    left: 0;
-    top: 14px;
-    bottom: 14px;
-    width: 3px;
-    border-radius: 0 3px 3px 0;
-    background: transparent;
-    transition:
-      background 0.35s ease,
-      width 0.35s ease;
+    border-color: #d4a574;
   }
 
   &.is-unread {
-    background: linear-gradient(135deg, var(--mc-cream) 0%, var(--mc-card) 100%);
-    border-color: var(--mc-primary-fade);
-
-    .message-card__accent {
-      background: var(--mc-wood);
-    }
+    background: rgba(30, 58, 95, 0.02);
+    border-color: rgba(30, 58, 95, 0.2);
 
     .message-card__title {
-      color: var(--mc-wood);
-      font-weight: 700;
-    }
-
-    .message-card__content {
-      color: var(--mc-text);
-    }
-  }
-
-  &:not(.is-unread),
-  &.is-read {
-    .message-card__accent {
-      width: 2px;
-      background: var(--mc-border);
+      color: #1e3a5f;
+      font-weight: 600;
     }
   }
 
   &__icon {
     flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 2px;
+    margin-top: 1px;
   }
 
   &__main {
@@ -660,37 +581,33 @@ onMounted(() => {
   &__header-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 4px;
+    gap: 8px;
+    margin-bottom: 2px;
   }
 
   &__category {
     flex-shrink: 0;
-    padding: 2px 8px;
-    border-radius: 6px;
-    background: var(--mc-cream);
-    color: var(--mc-wood);
-    font-size: 12px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    background: var(--mc-bg);
+    color: var(--mc-text-secondary);
+    font-size: 11px;
     font-weight: 500;
   }
 
   &__title {
     margin: 0;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
     color: var(--mc-text);
     line-height: 1.5;
-    transition:
-      font-weight 0.2s ease,
-      color 0.35s ease;
   }
 
   &__content {
-    margin: 0 0 8px;
+    margin: 0 0 6px;
     font-size: 13px;
     color: var(--mc-text-secondary);
-    line-height: 1.6;
-    transition: color 0.35s ease;
+    line-height: 1.5;
   }
 
   &__checkbox {
@@ -700,9 +617,9 @@ onMounted(() => {
     padding-top: 2px;
 
     input[type='checkbox'] {
-      width: 18px;
-      height: 18px;
-      accent-color: var(--mc-wood);
+      width: 16px;
+      height: 16px;
+      accent-color: #1e3a5f;
       cursor: pointer;
     }
   }
@@ -710,7 +627,7 @@ onMounted(() => {
   &__meta {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     font-size: 12px;
     color: var(--mc-text-secondary);
   }
@@ -722,7 +639,7 @@ onMounted(() => {
   }
 
   &__sender {
-    padding-left: 12px;
+    padding-left: 10px;
     border-left: 1px solid var(--mc-border);
   }
 
@@ -730,8 +647,7 @@ onMounted(() => {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding-top: 2px;
+    gap: 4px;
   }
 }
 

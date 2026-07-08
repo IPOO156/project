@@ -44,7 +44,7 @@ export const useArchiveStore = defineStore('archive', () => {
       { id: '3', name: 'ACM 程序设计竞赛', level: 'school', type: 'competition', date: '2025-05' },
     ]
     dimensions.value = [
-      { label: '学业成绩', score: 88, color: '#409eff' },
+      { label: '学业成绩', score: 88, color: '#2d5a87' },
       { label: '竞赛实践', score: 65, color: '#67c23a' },
       { label: '科研创新', score: 60, color: '#e6a23c' },
       { label: '社会工作', score: 85, color: '#f56c6c' },
