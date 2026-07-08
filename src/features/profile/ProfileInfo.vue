@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
 import type { UserInfo } from '@/shared/types/types'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Award,
   Edit2,
@@ -13,7 +13,7 @@ import {
   TrendingUp,
 } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
-import { useUserStore } from '@/app/stores/stores'
+import { useThemeStore, useUserStore } from '@/app/stores/stores'
 import { useDict } from '@/shared/composables/composables'
 import { INTEREST_LEVEL } from '@/shared/constants/dict'
 import AvatarUploader from './components/AvatarUploader.vue'
@@ -56,8 +56,16 @@ function saveInterest() {
 }
 
 function deleteInterest(index: number) {
-  interests.value.splice(index, 1)
-  ElMessage.success('兴趣已删除')
+  ElMessageBox.confirm('确定删除该兴趣吗？', '删除确认', {
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      interests.value.splice(index, 1)
+      ElMessage.success('兴趣已删除')
+    })
+    .catch(() => {})
 }
 
 // ── 奖项增删改 ──
@@ -100,8 +108,16 @@ function saveAward() {
 }
 
 function deleteAward(index: number) {
-  awards.value.splice(index, 1)
-  ElMessage.success('奖项已删除')
+  ElMessageBox.confirm('确定删除该奖项吗？', '删除确认', {
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      awards.value.splice(index, 1)
+      ElMessage.success('奖项已删除')
+    })
+    .catch(() => {})
 }
 
 const userStore = useUserStore()
@@ -153,15 +169,19 @@ const awards = ref([
   { name: 'ACM 程序设计竞赛', level: '校级', award: '一等奖', date: '2025-05' },
 ])
 
-const dimensions = ref([
-  { label: '学业成绩', score: 88, color: '#2d5a87' },
-  { label: '竞赛实践', score: 65, color: '#10b981' },
-  { label: '科研创新', score: 60, color: '#d4a574' },
-  { label: '社会工作', score: 85, color: '#8b5cf6' },
-  { label: '综合素质', score: 80, color: '#f59e0b' },
-])
-
 const { getColor, getLabel } = useDict(INTEREST_LEVEL)
+const themeStore = useThemeStore()
+
+const dimensions = computed(() => {
+  const isDark = themeStore.isDark
+  return [
+    { label: '学业成绩', score: 88, color: isDark ? '#60a5fa' : '#2d5a87' },
+    { label: '竞赛实践', score: 65, color: isDark ? '#34d399' : '#10b981' },
+    { label: '科研创新', score: 60, color: isDark ? '#f0b87b' : '#d4a574' },
+    { label: '社会工作', score: 85, color: isDark ? '#a78bfa' : '#8b5cf6' },
+    { label: '综合素质', score: 80, color: isDark ? '#fbbf24' : '#f59e0b' },
+  ]
+})
 
 const getInterestType = computed(() => (level: string): TagProps['type'] => {
   return (getColor(level) as TagProps['type']) ?? 'info'
@@ -516,7 +536,7 @@ function handleAvatarUpload(base64: string) {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #1e3a5f;
+    color: var(--el-text-color-primary);
   }
 
   &__tag {
@@ -525,7 +545,7 @@ function handleAvatarUpload(base64: string) {
     color: var(--el-text-color-secondary);
     padding: 2px 10px;
     border-radius: 4px;
-    background: rgba(30, 58, 95, 0.04);
+    background: var(--el-fill-color-light);
   }
 
   .edit-actions {
@@ -546,7 +566,7 @@ function handleAvatarUpload(base64: string) {
   &__name {
     font-size: 18px;
     font-weight: 600;
-    color: #1e3a5f;
+    color: var(--el-text-color-primary);
     margin: 0 0 4px;
   }
 
@@ -721,7 +741,7 @@ function handleAvatarUpload(base64: string) {
     align-items: center;
     gap: 6px;
     margin-bottom: 4px;
-    color: #1e3a5f;
+    color: var(--el-text-color-primary);
   }
 
   &__category {
@@ -750,6 +770,27 @@ html.dark .profile-info {
   .el-table {
     --el-table-header-bg-color: var(--el-fill-color-light);
     --el-table-header-text-color: var(--el-text-color-primary);
+  }
+
+  .dimension-item__score {
+    color: var(--el-text-color-primary) !important;
+  }
+
+  .grade-item {
+    background: var(--el-bg-color);
+    border-color: var(--el-border-color);
+  }
+
+  .grade-item__semester {
+    color: var(--el-text-color-regular);
+  }
+
+  .grade-item__num {
+    color: var(--el-text-color-primary);
+  }
+
+  .grade-item__lbl {
+    color: var(--el-text-color-secondary);
   }
 }
 </style>

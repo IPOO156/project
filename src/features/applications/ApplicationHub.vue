@@ -204,12 +204,12 @@ function switchModule(key: string) {
 }
 
 .application-hub__tab.is-active {
-  border-color: #1e3a5f;
-  background: rgba(30, 58, 95, 0.03);
+  border-color: var(--el-color-primary);
+  background: rgba(var(--el-color-primary-rgb, 30 58 95), 0.03);
 }
 
 .application-hub__tab.is-active .application-hub__tab-title {
-  color: #1e3a5f;
+  color: var(--el-color-primary);
 }
 
 .application-hub__tab-badge {
@@ -220,7 +220,7 @@ function switchModule(key: string) {
   height: 20px;
   padding: 0 5px;
   border-radius: 10px;
-  background: #1e3a5f;
+  background: var(--el-color-primary);
   color: #fff;
   font-size: 11px;
   font-weight: 500;
@@ -233,8 +233,8 @@ function switchModule(key: string) {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: rgba(30, 58, 95, 0.06);
-  color: #1e3a5f;
+  background: rgba(var(--el-color-primary-rgb, 30 58 95), 0.06);
+  color: var(--el-color-primary);
   display: flex;
   align-items: center;
   justify-content: center;

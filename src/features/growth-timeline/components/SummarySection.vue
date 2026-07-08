@@ -141,7 +141,7 @@ watch(avgGrowth, (newVal) => {
 .summary-card {
   padding: 2.25rem 1.5rem;
   border-radius: 16px;
-  background: #8b6340;
+  background: var(--gt-card-bg);
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.22);
   box-shadow:
     0 2px 8px rgba(var(--gt-shadow-rgb, 26 18 10), 0.06),
@@ -160,6 +160,23 @@ watch(avgGrowth, (newVal) => {
   align-items: center;
   justify-content: center;
   min-height: 160px;
+}
+
+/* 四张卡片分别配色 */
+.summary-card:nth-child(1) {
+  --gt-card-bg: #6b8fa3;
+}
+
+.summary-card:nth-child(2) {
+  --gt-card-bg: #7a9e6b;
+}
+
+.summary-card:nth-child(3) {
+  --gt-card-bg: #b8945c;
+}
+
+.summary-card:nth-child(4) {
+  --gt-card-bg: #8b6b9e;
 }
 
 .summary-card.is-revealed {
@@ -243,8 +260,23 @@ watch(avgGrowth, (newVal) => {
 }
 
 /* 夜间模式适配：增强卡片与背景的区分度 */
-[data-theme='dark'] .summary-card {
-  background: #5c3d26;
+html.dark .summary-card:nth-child(1) {
+  background: #4a6270;
+}
+
+html.dark .summary-card:nth-child(2) {
+  background: #546b48;
+}
+
+html.dark .summary-card:nth-child(3) {
+  background: #7a643e;
+}
+
+html.dark .summary-card:nth-child(4) {
+  background: #5e4870;
+}
+
+html.dark .summary-card {
   border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.28);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.18),
@@ -252,21 +284,20 @@ watch(avgGrowth, (newVal) => {
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-[data-theme='dark'] .summary-card:hover {
-  background: #6b4a2e;
+html.dark .summary-card:hover {
   border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.36);
 }
 
-[data-theme='dark'] .summary-value {
+html.dark .summary-value {
   color: #fff;
 }
 
-[data-theme='dark'] .summary-label {
+html.dark .summary-label {
   color: rgba(255, 255, 255, 0.9);
 }
 
-[data-theme='dark'] .summary-header p,
-[data-theme='dark'] .summary-closing {
+html.dark .summary-header p,
+html.dark .summary-closing {
   color: var(--text-light, #a89a8a);
 }
 </style>

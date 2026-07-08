@@ -23,7 +23,7 @@ function emptyForm() {
 }
 
 const form = reactive(emptyForm())
-const { clearDraft } = useFormDraft('software-copyright', form as Record<string, unknown>, {
+const { clearDraft } = useFormDraft('software-copyright', form, {
   afterRestore: () => sanitizeSemesterMonthPair(form, 'approveDate', 'semester'),
 })
 const submitting = ref(false)

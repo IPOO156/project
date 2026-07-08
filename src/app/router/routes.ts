@@ -25,6 +25,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/features/growth-timeline/GrowthTimeline.vue'),
         meta: { title: '成长时间轴', fullBleed: true },
       },
+      // ─── AI 助手 ───
+      {
+        path: 'ai-chat',
+        name: 'AIChat',
+        component: () => import('@/features/ai-chat/AIChat.vue'),
+        meta: { title: 'AI 助手' },
+      },
       // ─── 个人中心 ───
       {
         path: 'profile',

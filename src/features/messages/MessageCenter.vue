@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { NotificationCategory, NotificationStatus } from '@/shared/types/types'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Bell, CheckCheck, Filter, Mail, MailOpen, Search, Trash2, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -43,9 +44,18 @@ function handleBatchRead() {
 }
 
 function handleBatchDelete() {
-  selectedIds.value.forEach((id) => notificationStore.deleteNotification(id))
-  selectedIds.value = []
-  batchMode.value = false
+  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条通知吗？`, '批量删除确认', {
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      selectedIds.value.forEach((id) => notificationStore.deleteNotification(id))
+      selectedIds.value = []
+      batchMode.value = false
+      ElMessage.success('已删除')
+    })
+    .catch(() => {})
 }
 
 function handleCancelBatchMode() {
@@ -164,7 +174,16 @@ function markAsRead(id: string) {
 }
 
 function deleteItem(id: string) {
-  notificationStore.deleteNotification(id)
+  ElMessageBox.confirm('确定删除该通知吗？', '删除确认', {
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      notificationStore.deleteNotification(id)
+      ElMessage.success('已删除')
+    })
+    .catch(() => {})
 }
 
 function markAllAsRead() {
@@ -408,7 +427,7 @@ onMounted(() => {
     width: 48px;
     height: 48px;
     border-radius: 10px;
-    background: #1e3a5f;
+    background: var(--el-color-primary);
     color: #fff;
     display: flex;
     align-items: center;
@@ -419,7 +438,7 @@ onMounted(() => {
     margin: 0;
     font-size: 22px;
     font-weight: 700;
-    color: #1e3a5f;
+    color: var(--el-text-color-primary);
   }
 
   &__subtitle {
@@ -457,7 +476,7 @@ onMounted(() => {
   &__stat-value {
     font-size: 20px;
     font-weight: 700;
-    color: #1e3a5f;
+    color: var(--el-text-color-primary);
   }
 
   &__stat-label {
@@ -553,11 +572,11 @@ onMounted(() => {
   }
 
   &.is-unread {
-    background: rgba(30, 58, 95, 0.02);
-    border-color: rgba(30, 58, 95, 0.2);
+    background: var(--el-fill-color-light);
+    border-color: var(--el-border-color);
 
     .message-card__title {
-      color: #1e3a5f;
+      color: var(--el-color-primary);
       font-weight: 600;
     }
   }
@@ -619,7 +638,7 @@ onMounted(() => {
     input[type='checkbox'] {
       width: 16px;
       height: 16px;
-      accent-color: #1e3a5f;
+      accent-color: var(--el-color-primary);
       cursor: pointer;
     }
   }

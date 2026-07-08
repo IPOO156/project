@@ -310,7 +310,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   }
 
   &__msg--user &__bubble {
-    background: #1e3a5f;
+    background: var(--el-color-primary);
     color: #fff;
     border-bottom-left-radius: 14px;
     border-bottom-right-radius: 4px;

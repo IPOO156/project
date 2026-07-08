@@ -16,8 +16,15 @@ function emptyForm() {
   }
 }
 
-const { form, submitting, handleSubmit: _submit } = useApplicationForm({ emptyForm })
-const { clearDraft } = useFormDraft('competition', form as Record<string, unknown>)
+const {
+  form,
+  submitting,
+  handleSubmit: _submit,
+} = useApplicationForm({
+  emptyForm,
+  requiredFields: ['competitionName', 'competitionType', 'awardLevel', 'awardDate', 'semester'],
+})
+const { clearDraft } = useFormDraft('competition', form)
 
 async function handleSubmit() {
   await _submit()

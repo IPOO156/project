@@ -22,7 +22,7 @@ const planForm = reactive({
   title: '',
   content: '',
 })
-const { clearDraft } = useFormDraft('career-plan', planForm as Record<string, unknown>)
+const { clearDraft } = useFormDraft('career-plan', planForm)
 
 const planFiles = ref<{ name: string; url: string }[]>([])
 

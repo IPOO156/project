@@ -19,10 +19,8 @@ import { computed, onMounted, ref } from 'vue'
 import VChart from 'vue-echarts'
 import { useRouter } from 'vue-router'
 import { useActivityStore, useThemeStore, useUserStore } from '@/app/stores/stores'
-import GpaTrendChart from './components/GpaTrendChart.vue'
 import QuickEntrySettings from './components/QuickEntrySettings.vue'
 import { useQuickEntries } from './composables/useQuickEntries'
-import { dashboardMockData } from './dashboard-mock'
 
 use([CanvasRenderer, RadarComponent, RadarChart, TooltipComponent, LegendComponent])
 
@@ -525,7 +523,7 @@ onMounted(() => {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(240px, 1fr);
   gap: $spacing-lg;
-  align-items: stretch;
+  align-items: center;
 }
 
 .radar-panel__chart {

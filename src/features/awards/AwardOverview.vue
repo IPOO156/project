@@ -200,7 +200,13 @@ onMounted(() => {
               <p class="stat-card__label">总提交数</p>
               <p class="stat-card__value">{{ totalCount }}</p>
             </div>
-            <div class="stat-card__icon" style="background: #1e3a5f15; color: #1e3a5f">
+            <div
+              class="stat-card__icon"
+              :style="{
+                background: themeStore.isDark ? '#60a5fa18' : '#1e3a5f15',
+                color: themeStore.isDark ? '#60a5fa' : '#1e3a5f',
+              }"
+            >
               <Award :size="24" />
             </div>
           </div>
