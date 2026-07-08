@@ -17,7 +17,7 @@ export const APPLICATION_TYPE_MAP: Record<string, string> = {
   paper: '科研之星-论文',
 }
 
-const TERM_LABELS = ['一', '二', '三'] as const
+const TERM_LABELS = ['一', '二'] as const
 
 function generateSemesterOptions(startYear: number, endYear: number) {
   const options: { label: string; value: string }[] = []

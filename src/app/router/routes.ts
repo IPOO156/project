@@ -172,12 +172,6 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/features/approval/PendingApproval.vue'),
             meta: { title: '待审批信息' },
           },
-          {
-            path: 'records',
-            name: 'SubmissionRecords',
-            component: () => import('@/features/submission-records/SubmissionRecords.vue'),
-            meta: { title: '提交记录' },
-          },
         ],
       },
     ],

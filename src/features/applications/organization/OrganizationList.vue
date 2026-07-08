@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useApplicationForm } from '@/shared/composables/useApplicationForm'
+import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -16,7 +17,13 @@ function emptyForm() {
   }
 }
 
-const { form, submitting, handleSubmit } = useApplicationForm({ emptyForm })
+const { form, submitting, handleSubmit: _submit } = useApplicationForm({ emptyForm })
+const { clearDraft } = useFormDraft('organization', form as Record<string, unknown>)
+
+async function handleSubmit() {
+  await _submit()
+  clearDraft()
+}
 </script>
 
 <template>

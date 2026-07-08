@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
+import {
+  buildSemesterMonthDisabledDate,
+  isMonthInSemester,
+  sanitizeSemesterMonthPair,
+} from '@/shared/utils/semester'
 
 function emptyForm() {
   return {
@@ -17,16 +23,34 @@ function emptyForm() {
 }
 
 const form = reactive(emptyForm())
+const { clearDraft } = useFormDraft('software-copyright', form as Record<string, unknown>, {
+  afterRestore: () => sanitizeSemesterMonthPair(form, 'approveDate', 'semester'),
+})
 const submitting = ref(false)
+
+const disabledDate = computed(() => buildSemesterMonthDisabledDate(form.semester))
+
+watch(
+  () => form.semester,
+  () => {
+    sanitizeSemesterMonthPair(form, 'approveDate', 'semester')
+  },
+)
 
 function reset() {
   Object.assign(form, emptyForm())
 }
 
 function handleSubmit() {
+  sanitizeSemesterMonthPair(form, 'approveDate', 'semester')
+  if (!isMonthInSemester(form.approveDate, form.semester)) {
+    ElMessage.error('获批时间与学期不匹配，请重新选择')
+    return
+  }
   submitting.value = true
   setTimeout(() => {
     ElMessage.success('报名提交成功')
+    clearDraft()
     reset()
     submitting.value = false
   }, 600)
@@ -49,9 +73,15 @@ function handleSubmit() {
         <el-form-item label="排名/总人数" required>
           <el-input v-model="form.ranking" placeholder="如：1/4" class="form-input" />
         </el-form-item>
-        <el-form-item label="获批时间" required
-          ><el-date-picker v-model="form.approveDate" type="month"
-        /></el-form-item>
+        <el-form-item label="获批时间" required>
+          <el-date-picker
+            v-model="form.approveDate"
+            type="month"
+            format="YYYY-MM"
+            value-format="YYYY-MM"
+            :disabled-date="disabledDate"
+          />
+        </el-form-item>
         <el-form-item label="学期" required>
           <el-select v-model="form.semester" placeholder="请选择" class="form-select">
             <el-option

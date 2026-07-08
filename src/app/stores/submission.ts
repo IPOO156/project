@@ -106,5 +106,16 @@ export const useSubmissionStore = defineStore('submission', () => {
     })
   }
 
-  return { records, filteredRecords, loading, fetchRecords }
+  function withdrawRecord(id: string) {
+    const idx = records.value.findIndex((r) => r.id === id)
+    if (idx >= 0) {
+      records.value[idx] = { ...records.value[idx], status: 'draft' }
+    }
+    const fIdx = filteredRecords.value.findIndex((r) => r.id === id)
+    if (fIdx >= 0) {
+      filteredRecords.value[fIdx] = { ...filteredRecords.value[fIdx], status: 'draft' }
+    }
+  }
+
+  return { records, filteredRecords, loading, fetchRecords, withdrawRecord }
 })

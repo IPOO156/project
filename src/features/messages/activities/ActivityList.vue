@@ -7,7 +7,7 @@ import type {
   SubmissionRecord,
 } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Edit, Eye, Filter, Search, X } from 'lucide-vue-next'
+import { Delete, Edit, Eye, Filter, Search, Undo2, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useActivityStore, useSubmissionStore } from '@/app/stores/stores'
@@ -194,6 +194,20 @@ function handleSubmissionSizeChange(size: number) {
 
 function viewSubmission(path: string) {
   router.push(path)
+}
+
+async function handleWithdrawSubmission(row: SubmissionRecord) {
+  try {
+    await ElMessageBox.confirm(`确定要撤回"${row.title}"吗？撤回后状态将变为草稿。`, '撤回确认', {
+      confirmButtonText: '撤回',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    submissionStore.withdrawRecord(row.id)
+    ElMessage.success('已撤回')
+  } catch {
+    // 用户取消
+  }
 }
 
 function formatSemester(semester: string) {
@@ -397,7 +411,7 @@ onMounted(() => {
               <StatusTag :status="(row as SubmissionRecord).status" size="small" />
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="120" fixed="right" align="center">
+          <el-table-column label="操作" width="200" fixed="right" align="center">
             <template #default="{ row }">
               <el-button
                 type="primary"
@@ -407,6 +421,16 @@ onMounted(() => {
                 @click="viewSubmission((row as SubmissionRecord).sourcePath)"
               >
                 查看
+              </el-button>
+              <el-button
+                v-if="(row as SubmissionRecord).status === 'submitted'"
+                type="warning"
+                link
+                size="small"
+                :icon="Undo2"
+                @click="handleWithdrawSubmission(row as SubmissionRecord)"
+              >
+                撤回
               </el-button>
             </template>
           </el-table-column>

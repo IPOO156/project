@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { INDUSTRY_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
+import {
+  buildSemesterMonthDisabledDate,
+  isMonthInSemester,
+  sanitizeSemesterMonthPair,
+} from '@/shared/utils/semester'
 
 function emptyForm() {
   return {
@@ -17,16 +23,34 @@ function emptyForm() {
 }
 
 const form = reactive(emptyForm())
+const { clearDraft } = useFormDraft('innovation-star', form as Record<string, unknown>, {
+  afterRestore: () => sanitizeSemesterMonthPair(form, 'registerDate', 'semester'),
+})
 const submitting = ref(false)
+
+const disabledDate = computed(() => buildSemesterMonthDisabledDate(form.semester))
+
+watch(
+  () => form.semester,
+  () => {
+    sanitizeSemesterMonthPair(form, 'registerDate', 'semester')
+  },
+)
 
 function reset() {
   Object.assign(form, emptyForm())
 }
 
 function handleSubmit() {
+  sanitizeSemesterMonthPair(form, 'registerDate', 'semester')
+  if (!isMonthInSemester(form.registerDate, form.semester)) {
+    ElMessage.error('注册时间与学期不匹配，请重新选择')
+    return
+  }
   submitting.value = true
   setTimeout(() => {
     ElMessage.success('报名提交成功')
+    clearDraft()
     reset()
     submitting.value = false
   }, 600)
@@ -69,9 +93,15 @@ function handleSubmit() {
         <el-form-item label="申报人排名" required>
           <el-input v-model="form.ranking" placeholder="如：1/3" class="form-input" />
         </el-form-item>
-        <el-form-item label="注册时间" required
-          ><el-date-picker v-model="form.registerDate" type="month"
-        /></el-form-item>
+        <el-form-item label="注册时间" required>
+          <el-date-picker
+            v-model="form.registerDate"
+            type="month"
+            format="YYYY-MM"
+            value-format="YYYY-MM"
+            :disabled-date="disabledDate"
+          />
+        </el-form-item>
         <el-form-item label="证明材料">
           <ProofUpload v-model:file-list="form.proofMaterials" />
         </el-form-item>
