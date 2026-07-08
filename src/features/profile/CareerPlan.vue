@@ -5,6 +5,7 @@ import { AlertTriangle, Download, Eye, Plus, Sparkles } from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
 import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import { useDict } from '@/shared/composables/composables'
+import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 
 interface PlanRecord {
@@ -21,6 +22,7 @@ const planForm = reactive({
   title: '',
   content: '',
 })
+const { clearDraft } = useFormDraft('career-plan', planForm as Record<string, unknown>)
 
 const planFiles = ref<{ name: string; url: string }[]>([])
 
@@ -85,6 +87,7 @@ function handleSubmit() {
       status: 'submitted',
     })
     ElMessage.success('规划材料提交成功')
+    clearDraft()
     dialogVisible.value = false
     planForm.semester = ''
     planForm.title = ''

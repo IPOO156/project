@@ -2,12 +2,107 @@
 import type { TagProps } from 'element-plus'
 import type { UserInfo } from '@/shared/types/types'
 import { ElMessage } from 'element-plus'
-import { Award, Edit2, GraduationCap, Heart, Info, Lightbulb, TrendingUp } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import {
+  Award,
+  Edit2,
+  GraduationCap,
+  Heart,
+  Info,
+  Lightbulb,
+  Plus,
+  TrendingUp,
+} from 'lucide-vue-next'
+import { computed, reactive, ref } from 'vue'
 import { useUserStore } from '@/app/stores/stores'
 import { useDict } from '@/shared/composables/composables'
 import { INTEREST_LEVEL } from '@/shared/constants/dict'
 import AvatarUploader from './components/AvatarUploader.vue'
+
+// ── 兴趣增删改 ──
+const interestDialogVisible = ref(false)
+const editingInterestIndex = ref(-1)
+const interestForm = reactive({ category: '', content: '', level: 'general' })
+
+function openAddInterest() {
+  editingInterestIndex.value = -1
+  interestForm.category = ''
+  interestForm.content = ''
+  interestForm.level = 'general'
+  interestDialogVisible.value = true
+}
+
+function openEditInterest(index: number) {
+  editingInterestIndex.value = index
+  const item = interests.value[index]
+  interestForm.category = item.category
+  interestForm.content = item.content
+  interestForm.level = item.level
+  interestDialogVisible.value = true
+}
+
+function saveInterest() {
+  if (!interestForm.category || !interestForm.content) {
+    ElMessage.warning('请填写完整信息')
+    return
+  }
+  if (editingInterestIndex.value >= 0) {
+    interests.value[editingInterestIndex.value] = { ...interestForm }
+    ElMessage.success('兴趣已更新')
+  } else {
+    interests.value.push({ ...interestForm })
+    ElMessage.success('兴趣已添加')
+  }
+  interestDialogVisible.value = false
+}
+
+function deleteInterest(index: number) {
+  interests.value.splice(index, 1)
+  ElMessage.success('兴趣已删除')
+}
+
+// ── 奖项增删改 ──
+const awardDialogVisible = ref(false)
+const editingAwardIndex = ref(-1)
+const awardForm = reactive({ name: '', level: '', award: '', date: '' })
+
+function openAddAward() {
+  editingAwardIndex.value = -1
+  awardForm.name = ''
+  awardForm.level = ''
+  awardForm.award = ''
+  awardForm.date = ''
+  awardDialogVisible.value = true
+}
+
+function openEditAward(index: number) {
+  editingAwardIndex.value = index
+  const item = awards.value[index]
+  awardForm.name = item.name
+  awardForm.level = item.level
+  awardForm.award = item.award
+  awardForm.date = item.date
+  awardDialogVisible.value = true
+}
+
+function saveAward() {
+  if (!awardForm.name || !awardForm.level) {
+    ElMessage.warning('请填写完整信息')
+    return
+  }
+  if (editingAwardIndex.value >= 0) {
+    awards.value[editingAwardIndex.value] = { ...awardForm }
+    ElMessage.success('奖项已更新')
+  } else {
+    awards.value.push({ ...awardForm })
+    ElMessage.success('奖项已添加')
+  }
+  awardDialogVisible.value = false
+}
+
+function deleteAward(index: number) {
+  awards.value.splice(index, 1)
+  ElMessage.success('奖项已删除')
+}
 
 const userStore = useUserStore()
 
@@ -256,11 +351,13 @@ function handleAvatarUpload(base64: string) {
                 <Award :size="16" />
                 <span>个人奖项</span>
               </div>
-              <span class="card-header__tag">{{ awards.length }}项</span>
+              <el-button link type="primary" size="small" :icon="Plus" @click="openAddAward">
+                新增
+              </el-button>
             </div>
           </template>
           <div class="award-list">
-            <div v-for="a in awards" :key="a.name" class="award-item">
+            <div v-for="(a, idx) in awards" :key="a.name" class="award-item">
               <div class="award-item__icon">
                 <Award :size="18" />
               </div>
@@ -271,6 +368,14 @@ function handleAvatarUpload(base64: string) {
                   <span>{{ a.award }}</span>
                   <span>{{ a.date }}</span>
                 </div>
+              </div>
+              <div class="award-item__actions">
+                <el-button link type="primary" size="small" @click="openEditAward(idx)">
+                  编辑
+                </el-button>
+                <el-button link type="danger" size="small" @click="deleteAward(idx)">
+                  删除
+                </el-button>
               </div>
             </div>
           </div>
@@ -285,10 +390,13 @@ function handleAvatarUpload(base64: string) {
                 <Heart :size="16" />
                 <span>个人兴趣</span>
               </div>
+              <el-button link type="primary" size="small" :icon="Plus" @click="openAddInterest">
+                新增
+              </el-button>
             </div>
           </template>
           <div class="interest-list">
-            <div v-for="item in interests" :key="item.category" class="interest-item">
+            <div v-for="(item, idx) in interests" :key="item.category" class="interest-item">
               <div class="interest-item__header">
                 <Lightbulb :size="14" />
                 <span class="interest-item__category">{{ item.category }}</span>
@@ -297,11 +405,87 @@ function handleAvatarUpload(base64: string) {
                 </el-tag>
               </div>
               <p class="interest-item__content">{{ item.content }}</p>
+              <div class="interest-item__actions">
+                <el-button link type="primary" size="small" @click="openEditInterest(idx)">
+                  编辑
+                </el-button>
+                <el-button link type="danger" size="small" @click="deleteInterest(idx)">
+                  删除
+                </el-button>
+              </div>
             </div>
           </div>
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 兴趣弹窗 -->
+    <el-dialog
+      v-model="interestDialogVisible"
+      :title="editingInterestIndex >= 0 ? '编辑兴趣' : '新增兴趣'"
+      width="480px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="interestForm" label-width="80px">
+        <el-form-item label="兴趣类别" required>
+          <el-input v-model="interestForm.category" placeholder="请输入兴趣类别" />
+        </el-form-item>
+        <el-form-item label="具体内容" required>
+          <el-input v-model="interestForm.content" placeholder="请输入具体内容" />
+        </el-form-item>
+        <el-form-item label="掌握程度">
+          <el-select v-model="interestForm.level" class="form-select">
+            <el-option label="精通" value="proficient" />
+            <el-option label="良好" value="good" />
+            <el-option label="一般" value="general" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="interestDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveInterest">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 奖项弹窗 -->
+    <el-dialog
+      v-model="awardDialogVisible"
+      :title="editingAwardIndex >= 0 ? '编辑奖项' : '新增奖项'"
+      width="480px"
+      :close-on-click-modal="false"
+    >
+      <el-form :model="awardForm" label-width="80px">
+        <el-form-item label="奖项名称" required>
+          <el-input v-model="awardForm.name" placeholder="请输入奖项名称" />
+        </el-form-item>
+        <el-form-item label="奖项级别" required>
+          <el-select v-model="awardForm.level" class="form-select" placeholder="请选择级别">
+            <el-option label="国家级" value="国家级" />
+            <el-option label="省级" value="省级" />
+            <el-option label="市级" value="市级" />
+            <el-option label="校级" value="校级" />
+            <el-option label="院级" value="院级" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="获奖等级">
+          <el-input v-model="awardForm.award" placeholder="如 一等奖、优秀干部" />
+        </el-form-item>
+        <el-form-item label="获奖时间">
+          <el-date-picker
+            v-model="awardForm.date"
+            type="month"
+            placeholder="选择月份"
+            format="YYYY-MM"
+            value-format="YYYY-MM"
+            class="form-select"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="awardDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveAward">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -491,6 +675,11 @@ function handleAvatarUpload(base64: string) {
     flex-shrink: 0;
   }
 
+  &__body {
+    flex: 1;
+    min-width: 0;
+  }
+
   &__name {
     font-size: 14px;
     font-weight: 600;
@@ -504,6 +693,13 @@ function handleAvatarUpload(base64: string) {
     gap: 8px;
     font-size: 12px;
     color: var(--el-text-color-secondary);
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
   }
 }
 
@@ -535,10 +731,16 @@ function handleAvatarUpload(base64: string) {
   }
 
   &__content {
-    margin: 0;
+    margin: 0 0 8px;
     font-size: 13px;
     color: var(--el-text-color-secondary);
     padding-left: 20px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
   }
 }
 </style>

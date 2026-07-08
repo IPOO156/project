@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { ApplicationType, SubmissionFilters } from '@/shared/types/types'
-import { Search } from 'lucide-vue-next'
+import type { ApplicationType, SubmissionFilters, SubmissionRecord } from '@/shared/types/types'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, Undo2 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSubmissionStore } from '@/app/stores/stores'
@@ -83,6 +84,21 @@ function handleSizeChange(size: number) {
   pageNum.value = 1
 }
 
+async function handleWithdraw(row: SubmissionRecord | Record<string, unknown>) {
+  const record = row as SubmissionRecord
+  try {
+    await ElMessageBox.confirm(
+      `确定要撤回"${record.title}"吗？撤回后状态将变为草稿。`,
+      '撤回确认',
+      { confirmButtonText: '撤回', cancelButtonText: '取消', type: 'warning' },
+    )
+    submissionStore.withdrawRecord(record.id)
+    ElMessage.success('已撤回')
+  } catch {
+    // 用户取消
+  }
+}
+
 function viewRecord(path: string) {
   router.push(path)
 }
@@ -160,10 +176,20 @@ onMounted(() => {
             <StatusTag :status="row.status" size="small" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" align="center">
+        <el-table-column label="操作" width="180" align="center">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="viewRecord(row.sourcePath)">
               查看
+            </el-button>
+            <el-button
+              v-if="row.status === 'submitted'"
+              type="warning"
+              link
+              size="small"
+              :icon="Undo2"
+              @click="handleWithdraw(row)"
+            >
+              撤回
             </el-button>
           </template>
         </el-table-column>
