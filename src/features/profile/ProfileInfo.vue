@@ -2,7 +2,16 @@
 import type { TagProps } from 'element-plus'
 import type { UserInfo } from '@/shared/types/types'
 import { ElMessage } from 'element-plus'
-import { Award, Edit2, Info, Lightbulb, Plus, TrendingUp } from 'lucide-vue-next'
+import {
+  Award,
+  Edit2,
+  GraduationCap,
+  Heart,
+  Info,
+  Lightbulb,
+  Plus,
+  TrendingUp,
+} from 'lucide-vue-next'
 import { computed, reactive, ref } from 'vue'
 import { useUserStore } from '@/app/stores/stores'
 import { useDict } from '@/shared/composables/composables'
@@ -51,7 +60,7 @@ function deleteInterest(index: number) {
   ElMessage.success('兴趣已删除')
 }
 
-// ── 兴趣增删改 ──
+// ── 奖项增删改 ──
 const awardDialogVisible = ref(false)
 const editingAwardIndex = ref(-1)
 const awardForm = reactive({ name: '', level: '', award: '', date: '' })
@@ -144,36 +153,23 @@ const awards = ref([
   { name: 'ACM 程序设计竞赛', level: '校级', award: '一等奖', date: '2025-05' },
 ])
 
-const gradesPage = ref(1)
-const gradesPageSize = ref(5)
-const awardsPage = ref(1)
-const awardsPageSize = ref(5)
-
-const paginatedGrades = computed(() => {
-  const start = (gradesPage.value - 1) * gradesPageSize.value
-  return grades.value.slice(start, start + gradesPageSize.value)
-})
-
-const paginatedAwards = computed(() => {
-  const start = (awardsPage.value - 1) * awardsPageSize.value
-  return awards.value.slice(start, start + awardsPageSize.value)
-})
-
 const dimensions = ref([
-  { label: '学业成绩', score: 88, color: '#409eff' },
-  { label: '竞赛实践', score: 65, color: '#67c23a' },
-  { label: '科研创新', score: 60, color: '#e6a23c' },
-  { label: '社会工作', score: 85, color: '#f56c6c' },
-  { label: '综合素质', score: 80, color: '#9b59b6' },
+  { label: '学业成绩', score: 88, color: '#2d5a87' },
+  { label: '竞赛实践', score: 65, color: '#10b981' },
+  { label: '科研创新', score: 60, color: '#d4a574' },
+  { label: '社会工作', score: 85, color: '#8b5cf6' },
+  { label: '综合素质', score: 80, color: '#f59e0b' },
 ])
 
 const { getColor, getLabel } = useDict(INTEREST_LEVEL)
 
-const awardRealIndex = (pageIndex: number) =>
-  (awardsPage.value - 1) * awardsPageSize.value + pageIndex
-
 const getInterestType = computed(() => (level: string): TagProps['type'] => {
   return (getColor(level) as TagProps['type']) ?? 'info'
+})
+
+const avgGpa = computed(() => {
+  const total = grades.value.reduce((s, g) => s + g.gpa, 0)
+  return (total / grades.value.length).toFixed(2)
 })
 
 function handleAvatarUpload(base64: string) {
@@ -184,230 +180,244 @@ function handleAvatarUpload(base64: string) {
 
 <template>
   <div class="profile-info">
-    <!-- 基本资料卡片 -->
-    <el-card class="profile-info__section">
-      <template #header>
-        <div class="section-header">
-          <div class="section-header__left">
-            <Info :size="18" />
-            <span>基本资料</span>
-          </div>
-          <el-button v-if="!isEditing" link type="primary" :icon="Edit2" @click="startEdit">
-            编辑
-          </el-button>
-          <div v-else class="edit-actions">
-            <el-button link @click="cancelEdit">取消</el-button>
-            <el-button link type="primary" @click="saveEdit">保存</el-button>
-          </div>
-        </div>
-      </template>
-      <div class="profile-header">
-        <AvatarUploader
-          :model-value="userStore.avatar ?? ''"
-          :size="96"
-          @upload="handleAvatarUpload"
-        />
-        <div class="profile-header__info">
-          <h3 class="profile-header__name">{{ userStore.userName }}</h3>
-          <p class="profile-header__meta">学号 {{ userStore.studentId }}</p>
-          <p class="profile-header__tip">点击头像更换，支持 jpg/png/webp，最大 5MB</p>
-        </div>
-      </div>
-      <el-descriptions v-if="!isEditing" :column="3" border class="profile-descriptions">
-        <el-descriptions-item label="姓名">{{ userStore.userName || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="学号">{{ userStore.studentId || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="年级">{{
-          userStore.userInfo?.grade || '-'
-        }}</el-descriptions-item>
-        <el-descriptions-item label="专业">{{
-          userStore.userInfo?.major || '-'
-        }}</el-descriptions-item>
-        <el-descriptions-item label="班级">{{
-          userStore.userInfo?.className || '-'
-        }}</el-descriptions-item>
-        <el-descriptions-item label="邮箱">{{
-          userStore.userInfo?.email || '-'
-        }}</el-descriptions-item>
-        <el-descriptions-item label="手机号">{{
-          userStore.userInfo?.phone || '-'
-        }}</el-descriptions-item>
-      </el-descriptions>
-      <el-form v-else :model="formData" label-width="80px" class="profile-form">
-        <el-row :gutter="16">
-          <el-col :span="8">
-            <el-form-item label="姓名">
-              <el-input v-model="formData.realName" placeholder="请输入姓名" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="学号">
-              <el-input v-model="formData.studentId" placeholder="请输入学号" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="年级">
-              <el-input v-model="formData.grade" placeholder="请输入年级" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="专业">
-              <el-input v-model="formData.major" placeholder="请输入专业" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="班级">
-              <el-input v-model="formData.className" placeholder="请输入班级" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="邮箱">
-              <el-input v-model="formData.email" placeholder="请输入邮箱" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="手机号">
-              <el-input v-model="formData.phone" placeholder="请输入手机号" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-    </el-card>
-
-    <!-- 多维度画像引擎 -->
-    <el-card class="profile-info__section">
-      <template #header>
-        <div class="section-header">
-          <TrendingUp :size="18" />
-          <span>多维度画像引擎</span>
-        </div>
-      </template>
-      <el-row :gutter="24">
-        <el-col v-for="dim in dimensions" :key="dim.label" :span="12">
-          <div class="dimension-item">
-            <span class="dimension-item__label">{{ dim.label }}</span>
-            <el-progress
-              class="dimension-item__progress"
-              :percentage="dim.score"
-              :color="dim.color"
-              :stroke-width="14"
-              :format="() => ''"
+    <!-- 第一行：基本资料 + 多维度画像 -->
+    <el-row :gutter="16">
+      <el-col :span="14">
+        <el-card class="profile-card">
+          <template #header>
+            <div class="card-header">
+              <div class="card-header__left">
+                <Info :size="16" />
+                <span>基本资料</span>
+              </div>
+              <el-button
+                v-if="!isEditing"
+                link
+                type="primary"
+                size="small"
+                :icon="Edit2"
+                @click="startEdit"
+              >
+                编辑
+              </el-button>
+              <div v-else class="edit-actions">
+                <el-button size="small" @click="cancelEdit">取消</el-button>
+                <el-button size="small" type="primary" @click="saveEdit">保存</el-button>
+              </div>
+            </div>
+          </template>
+          <div class="profile-user">
+            <AvatarUploader
+              :model-value="userStore.avatar ?? ''"
+              :size="80"
+              @upload="handleAvatarUpload"
             />
-            <span class="dimension-item__score">{{ dim.score }}分</span>
+            <div class="profile-user__info">
+              <h3 class="profile-user__name">{{ userStore.userName }}</h3>
+              <p class="profile-user__meta">
+                {{ userStore.userInfo?.major || '' }} · {{ userStore.userInfo?.className || '' }} ·
+                学号 {{ userStore.studentId }}
+              </p>
+            </div>
           </div>
-        </el-col>
-      </el-row>
-    </el-card>
+          <el-descriptions v-if="!isEditing" :column="2" border class="profile-descriptions">
+            <el-descriptions-item label="姓名">{{
+              userStore.userName || '-'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="学号">{{
+              userStore.studentId || '-'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="年级">{{
+              userStore.userInfo?.grade || '-'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="专业">{{
+              userStore.userInfo?.major || '-'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="班级">{{
+              userStore.userInfo?.className || '-'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="邮箱">{{
+              userStore.userInfo?.email || '-'
+            }}</el-descriptions-item>
+            <el-descriptions-item label="手机号">{{
+              userStore.userInfo?.phone || '-'
+            }}</el-descriptions-item>
+          </el-descriptions>
+          <el-form v-else :model="formData" label-width="70px" class="profile-form">
+            <el-row :gutter="12">
+              <el-col :span="12"
+                ><el-form-item label="姓名"><el-input v-model="formData.realName" /></el-form-item
+              ></el-col>
+              <el-col :span="12"
+                ><el-form-item label="学号"><el-input v-model="formData.studentId" /></el-form-item
+              ></el-col>
+              <el-col :span="12"
+                ><el-form-item label="年级"><el-input v-model="formData.grade" /></el-form-item
+              ></el-col>
+              <el-col :span="12"
+                ><el-form-item label="专业"><el-input v-model="formData.major" /></el-form-item
+              ></el-col>
+              <el-col :span="12"
+                ><el-form-item label="班级"><el-input v-model="formData.className" /></el-form-item
+              ></el-col>
+              <el-col :span="12"
+                ><el-form-item label="邮箱"><el-input v-model="formData.email" /></el-form-item
+              ></el-col>
+              <el-col :span="12"
+                ><el-form-item label="手机号"><el-input v-model="formData.phone" /></el-form-item
+              ></el-col>
+            </el-row>
+          </el-form>
+        </el-card>
+      </el-col>
 
-    <!-- 个人兴趣 -->
-    <el-card class="profile-info__section">
-      <template #header>
-        <div class="section-header">
-          <div class="section-header__left">
-            <Lightbulb :size="18" />
-            <span>个人兴趣</span>
+      <el-col :span="10">
+        <el-card class="profile-card">
+          <template #header>
+            <div class="card-header">
+              <div class="card-header__left">
+                <TrendingUp :size="16" />
+                <span>多维度画像</span>
+              </div>
+              <span class="card-header__tag"
+                >综合评分
+                {{ dimensions.reduce((s, d) => s + d.score, 0) / dimensions.length }}分</span
+              >
+            </div>
+          </template>
+          <div class="dimension-list">
+            <div v-for="dim in dimensions" :key="dim.label" class="dimension-item">
+              <div class="dimension-item__head">
+                <span class="dimension-item__label">{{ dim.label }}</span>
+                <span class="dimension-item__score" :style="{ color: dim.color }"
+                  >{{ dim.score }}分</span
+                >
+              </div>
+              <el-progress
+                :percentage="dim.score"
+                :color="dim.color"
+                :stroke-width="8"
+                :format="() => ''"
+                class="dimension-item__bar"
+              />
+            </div>
           </div>
-          <el-button link type="primary" :icon="Plus" @click="openAddInterest"> 新增 </el-button>
-        </div>
-      </template>
-      <el-table :data="interests" stripe>
-        <el-table-column prop="category" label="兴趣类别" width="160" />
-        <el-table-column prop="content" label="具体内容" />
-        <el-table-column prop="level" label="掌握程度" width="120">
-          <template #default="{ row }">
-            <el-tag :type="getInterestType(row.level)" size="small">
-              {{ getLabel(row.level) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
-          <template #default="{ $index }">
-            <el-button link type="primary" size="small" @click="openEditInterest($index)">
-              编辑
-            </el-button>
-            <el-button link type="danger" size="small" @click="deleteInterest($index)">
-              删除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <!-- 期末成绩 + 绩点 -->
-    <el-card class="profile-info__section">
-      <template #header>
-        <div class="section-header">
-          <div class="section-header__left">
-            <Award :size="18" />
-            <span>期末成绩与绩点</span>
-          </div>
-        </div>
-      </template>
-      <el-table :data="paginatedGrades" stripe>
-        <el-table-column prop="semester" label="学期" width="120" align="center" />
-        <el-table-column prop="courses" label="课程数" width="100" align="center" />
-        <el-table-column prop="gpa" label="绩点" width="120" align="center">
-          <template #default="{ row }">
-            <span class="gpa-highlight">{{ row.gpa }}</span>
+    <!-- 第二行：三个数据卡片 -->
+    <el-row :gutter="16">
+      <el-col :span="8">
+        <el-card class="profile-card">
+          <template #header>
+            <div class="card-header">
+              <div class="card-header__left">
+                <GraduationCap :size="16" />
+                <span>期末成绩</span>
+              </div>
+              <span class="card-header__tag">平均绩点 {{ avgGpa }}</span>
+            </div>
           </template>
-        </el-table-column>
-        <el-table-column prop="totalScore" label="平均分" align="center" />
-      </el-table>
-      <el-pagination
-        v-model:current-page="gradesPage"
-        v-model:page-size="gradesPageSize"
-        :total="grades.length"
-        :page-sizes="[5, 10, 20]"
-        layout="total, sizes, prev, pager, next"
-        class="profile-table-pagination"
-      />
-    </el-card>
+          <div class="grade-list">
+            <div v-for="g in grades" :key="g.semester" class="grade-item">
+              <div class="grade-item__semester">
+                {{ g.semester.replace(/-(\d)$/g, '第$1学期') }}
+              </div>
+              <div class="grade-item__body">
+                <div class="grade-item__stat">
+                  <span class="grade-item__num">{{ g.gpa }}</span>
+                  <span class="grade-item__lbl">绩点</span>
+                </div>
+                <div class="grade-item__stat">
+                  <span class="grade-item__num">{{ g.totalScore }}</span>
+                  <span class="grade-item__lbl">均分</span>
+                </div>
+                <div class="grade-item__stat">
+                  <span class="grade-item__num">{{ g.courses }}</span>
+                  <span class="grade-item__lbl">课程</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
 
-    <!-- 个人奖项 -->
-    <el-card class="profile-info__section">
-      <template #header>
-        <div class="section-header">
-          <div class="section-header__left">
-            <Award :size="18" />
-            <span>个人奖项</span>
-          </div>
-          <el-button link type="primary" :icon="Plus" @click="openAddAward"> 新增 </el-button>
-        </div>
-      </template>
-      <el-table :data="paginatedAwards" stripe>
-        <el-table-column prop="name" label="奖项名称" />
-        <el-table-column prop="level" label="奖项级别" width="120" align="center" />
-        <el-table-column prop="award" label="获奖等级" width="120" align="center" />
-        <el-table-column prop="date" label="获奖时间" width="120" align="center" />
-        <el-table-column label="操作" width="140" fixed="right">
-          <template #default="{ $index }">
-            <el-button
-              link
-              type="primary"
-              size="small"
-              @click="openEditAward(awardRealIndex($index))"
-            >
-              编辑
-            </el-button>
-            <el-button link type="danger" size="small" @click="deleteAward(awardRealIndex($index))">
-              删除
-            </el-button>
+      <el-col :span="8">
+        <el-card class="profile-card">
+          <template #header>
+            <div class="card-header">
+              <div class="card-header__left">
+                <Award :size="16" />
+                <span>个人奖项</span>
+              </div>
+              <el-button link type="primary" size="small" :icon="Plus" @click="openAddAward">
+                新增
+              </el-button>
+            </div>
           </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination
-        v-model:current-page="awardsPage"
-        v-model:page-size="awardsPageSize"
-        :total="awards.length"
-        :page-sizes="[5, 10, 20]"
-        layout="total, sizes, prev, pager, next"
-        class="profile-table-pagination"
-        @current-change="awardsPage = $event"
-        @size-change="
-          awardsPageSize = $event
-          awardsPage = 1
-        "
-      />
-    </el-card>
+          <div class="award-list">
+            <div v-for="(a, idx) in awards" :key="a.name" class="award-item">
+              <div class="award-item__icon">
+                <Award :size="18" />
+              </div>
+              <div class="award-item__body">
+                <div class="award-item__name">{{ a.name }}</div>
+                <div class="award-item__meta">
+                  <el-tag size="small" type="warning" effect="plain">{{ a.level }}</el-tag>
+                  <span>{{ a.award }}</span>
+                  <span>{{ a.date }}</span>
+                </div>
+              </div>
+              <div class="award-item__actions">
+                <el-button link type="primary" size="small" @click="openEditAward(idx)">
+                  编辑
+                </el-button>
+                <el-button link type="danger" size="small" @click="deleteAward(idx)">
+                  删除
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+
+      <el-col :span="8">
+        <el-card class="profile-card">
+          <template #header>
+            <div class="card-header">
+              <div class="card-header__left">
+                <Heart :size="16" />
+                <span>个人兴趣</span>
+              </div>
+              <el-button link type="primary" size="small" :icon="Plus" @click="openAddInterest">
+                新增
+              </el-button>
+            </div>
+          </template>
+          <div class="interest-list">
+            <div v-for="(item, idx) in interests" :key="item.category" class="interest-item">
+              <div class="interest-item__header">
+                <Lightbulb :size="14" />
+                <span class="interest-item__category">{{ item.category }}</span>
+                <el-tag :type="getInterestType(item.level)" size="small" effect="plain">
+                  {{ getLabel(item.level) }}
+                </el-tag>
+              </div>
+              <p class="interest-item__content">{{ item.content }}</p>
+              <div class="interest-item__actions">
+                <el-button link type="primary" size="small" @click="openEditInterest(idx)">
+                  编辑
+                </el-button>
+                <el-button link type="danger" size="small" @click="deleteInterest(idx)">
+                  删除
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
 
     <!-- 兴趣弹窗 -->
     <el-dialog
@@ -485,112 +495,252 @@ function handleAvatarUpload(base64: string) {
   flex-direction: column;
   gap: 16px;
   user-select: none;
+}
 
-  &__section {
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      font-size: 16px;
-      font-weight: 600;
+.profile-card {
+  margin-bottom: 0;
 
-      &__left {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .el-tag {
-        margin-left: auto;
-      }
-
-      .edit-actions {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-    }
-  }
-
-  .profile-form {
-    margin-top: 16px;
-  }
-
-  .profile-table-pagination {
-    margin-top: 16px;
-    justify-content: flex-end;
+  :deep(.el-card__body) {
+    padding: 16px 20px;
   }
 }
 
-.dimension-item {
+.card-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  font-size: 14px;
+  justify-content: space-between;
+  font-size: 15px;
+  font-weight: 600;
 
-  &__label {
-    flex-shrink: 0;
-    width: 70px;
-    color: var(--el-text-color-primary);
-  }
-
-  &__progress {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__score {
-    flex-shrink: 0;
-    width: 48px;
-    text-align: right;
-    font-weight: 600;
-    color: var(--el-text-color-secondary);
-  }
-}
-
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-
-  &__info {
+  &__left {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
+    align-items: center;
+    gap: 8px;
+    color: #1e3a5f;
   }
+
+  &__tag {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--el-text-color-secondary);
+    padding: 2px 10px;
+    border-radius: 4px;
+    background: rgba(30, 58, 95, 0.04);
+  }
+
+  .edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.profile-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
 
   &__name {
     font-size: 18px;
     font-weight: 600;
-    color: var(--el-text-color-primary);
-    margin: 0;
+    color: #1e3a5f;
+    margin: 0 0 4px;
   }
 
   &__meta {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--el-text-color-secondary);
-    margin: 0;
-  }
-
-  &__tip {
-    font-size: 12px;
-    color: var(--el-text-color-placeholder);
     margin: 0;
   }
 }
 
 .profile-descriptions {
-  margin-top: 16px;
-
   :deep(.el-descriptions__label) {
-    width: 80px;
-    min-width: 80px;
+    width: 70px;
+    min-width: 70px;
     text-align: center;
+  }
+}
+
+.profile-form {
+  margin-top: 12px;
+}
+
+// ─── 维度卡片 ───
+.dimension-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dimension-item {
+  &__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  &__label {
+    font-size: 13px;
+    color: var(--el-text-color-primary);
+  }
+
+  &__score {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  &__bar {
+    :deep(.el-progress-bar__outer) {
+      background-color: var(--el-fill-color-light);
+    }
+  }
+}
+
+// ─── 成绩卡片 ───
+.grade-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.grade-item {
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+
+  &__semester {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    margin-bottom: 8px;
+  }
+
+  &__body {
+    display: flex;
+    gap: 16px;
+  }
+
+  &__stat {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  &__num {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+
+  &__lbl {
+    font-size: 12px;
+    color: var(--el-text-color-placeholder);
+  }
+}
+
+// ─── 奖项卡片 ───
+.award-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.award-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--el-border-color-lighter);
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: #d4a574;
+  }
+
+  &__icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(212, 165, 116, 0.1);
+    color: #d4a574;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    margin-bottom: 4px;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+}
+
+// ─── 兴趣卡片 ───
+.interest-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.interest-item {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--el-border-color-lighter);
+  background: var(--el-fill-color-light);
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    color: #1e3a5f;
+  }
+
+  &__category {
+    font-size: 14px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  &__content {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+    padding-left: 20px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
   }
 }
 </style>
@@ -600,15 +750,6 @@ html.dark .profile-info {
   .el-table {
     --el-table-header-bg-color: var(--el-fill-color-light);
     --el-table-header-text-color: var(--el-text-color-primary);
-  }
-
-  .el-table th.el-table__cell {
-    background-color: var(--el-fill-color-light);
-    color: var(--el-text-color-primary);
-  }
-
-  .el-table td.el-table__cell {
-    color: var(--el-text-color-primary);
   }
 }
 </style>

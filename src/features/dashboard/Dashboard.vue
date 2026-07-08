@@ -276,19 +276,6 @@ onMounted(() => {
 
 <template>
   <div class="dashboard">
-    <div class="dashboard__welcome">
-      <div class="dashboard__welcome-text">
-        <h2>欢迎回来，{{ userStore.userName }}同学</h2>
-        <p>
-          {{ userStore.userInfo?.major }} · {{ userStore.userInfo?.className }} · 学号
-          {{ userStore.studentId }}
-        </p>
-      </div>
-      <div class="dashboard__welcome-time">
-        <span>{{ todayLabel }}</span>
-      </div>
-    </div>
-
     <el-row :gutter="16" class="dashboard__stats">
       <el-col v-for="card in statsCards" :key="card.label" :xs="12" :sm="6" :md="6" :span="6">
         <el-card shadow="hover" class="stat-card">
@@ -310,7 +297,7 @@ onMounted(() => {
     </el-row>
 
     <el-row :gutter="16" class="dashboard__main">
-      <el-col :span="13">
+      <el-col :span="13" class="dashboard__col">
         <el-card class="dashboard__section dashboard__section--radar">
           <template #header>
             <span class="section-title">多维度画像评估</span>
@@ -333,16 +320,9 @@ onMounted(() => {
             </div>
           </div>
         </el-card>
-
-        <el-card class="dashboard__section dashboard__section--chart">
-          <template #header>
-            <span class="section-title">个人绩点趋势</span>
-          </template>
-          <GpaTrendChart :data="dashboardMockData.gpaTrend" :is-dark="themeStore.isDark" />
-        </el-card>
       </el-col>
 
-      <el-col :span="11">
+      <el-col :span="11" class="dashboard__col">
         <el-card class="dashboard__section">
           <template #header>
             <div class="dashboard__section-header">
@@ -450,40 +430,43 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .dashboard {
-  user-select: none;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 12px;
 
-  &__welcome {
+  &__stats {
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
+
+  &__main {
+    flex: 1;
+    min-height: 0;
+    margin-bottom: 0;
+  }
+
+  &__col {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 24px;
+    flex-direction: column;
+    height: 100%;
 
-    &-text {
-      h2 {
-        font-size: 22px;
-        font-weight: 600;
-        color: var(--el-text-color-primary);
-        margin-bottom: 6px;
-      }
-
-      p {
-        font-size: 14px;
-        color: var(--el-text-color-secondary);
-      }
-    }
-
-    &-time {
-      font-size: 14px;
-      color: var(--el-text-color-secondary);
+    /* 左列单卡片撑满 */
+    &:first-child :deep(.el-card) {
+      flex: 1;
     }
   }
 
-  &__stats {
-    margin-bottom: 20px;
+  &__col:last-child :deep(.el-card) {
+    flex: 1;
+  }
+
+  &__col:last-child :deep(.dashboard__section:first-child) {
+    flex: 0 0 auto;
   }
 
   &__section {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 
     &--activities {
       margin-bottom: 0;
@@ -491,7 +474,7 @@ onMounted(() => {
   }
 
   &__charts {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
 
   &__section-header {
@@ -540,13 +523,13 @@ onMounted(() => {
 
 .radar-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 1fr);
-  gap: $spacing-xl;
+  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 1fr);
+  gap: $spacing-lg;
   align-items: stretch;
 }
 
 .radar-panel__chart {
-  height: 360px;
+  height: 260px;
   width: 100%;
 }
 

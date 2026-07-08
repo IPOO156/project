@@ -38,8 +38,8 @@ const LEVEL_SCORE: Record<string, number> = {
 
 const LEVEL_COLOR: Record<string, string> = {
   国家级: '#e6a23c',
-  省部级: '#409eff',
-  省级: '#409eff',
+  省部级: '#2d5a87',
+  省级: '#2d5a87',
   校级: '#67c23a',
   院级: '#909399',
 }

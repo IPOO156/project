@@ -79,7 +79,7 @@ export const registeredModules: AppModule[] = [
     id: 'profile',
     label: '个人中心',
     icon: User,
-    order: 30,
+    order: 70,
     routePrefix: '/profile',
     description: '个人档案信息与职业规划',
     menuItems: [
@@ -97,7 +97,7 @@ export const registeredModules: AppModule[] = [
     id: 'messages',
     label: '消息中心',
     icon: Inbox,
-    order: 35,
+    order: 60,
     routePrefix: '/messages',
     description: '系统通知、审批提醒与动态记录',
     menuItems: [
@@ -124,7 +124,7 @@ export const registeredModules: AppModule[] = [
     id: 'applications',
     label: '个人档案信息申报',
     icon: FilePen,
-    order: 40,
+    order: 30,
     routePrefix: '/applications',
     description: '各类档案信息申报入口',
     menuItems: [{ label: '个人档案信息申报', icon: FilePen, path: '/applications' }],
@@ -133,7 +133,7 @@ export const registeredModules: AppModule[] = [
     id: 'awards',
     label: '奖项报名',
     icon: Star,
-    order: 50,
+    order: 40,
     routePrefix: '/awards',
     description: '奖项总览与各类奖项报名',
     menuItems: [
@@ -151,16 +151,19 @@ export const registeredModules: AppModule[] = [
   },
   {
     id: 'approval',
-    label: '审批与记录',
+    label: '各类报名审核',
     icon: ShieldCheck,
-    order: 60,
+    order: 50,
     routePrefix: '/approval',
-    description: '待审批信息与提交记录',
+    description: '申报与奖项的报名审核',
     menuItems: [
       {
-        label: '审批与记录',
+        label: '各类报名审核',
         icon: ShieldCheck,
-        children: [{ label: '待审批信息', icon: Clock, path: '/approval/pending' }],
+        children: [
+          { label: '申报审核', icon: Clock, path: '/approval/pending' },
+          { label: '奖项审核', icon: Star, path: '/approval/award-review' },
+        ],
       },
     ],
   },

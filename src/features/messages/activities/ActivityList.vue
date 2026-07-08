@@ -1,24 +1,22 @@
 <script setup lang="ts">
 import type {
   Activity,
-  ActivityFilters,
   ApplicationType,
   SubmissionFilters,
   SubmissionRecord,
 } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Delete, Edit, Eye, Filter, Search, Undo2, X } from 'lucide-vue-next'
+import { Filter, Search, Undo2, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useActivityStore, useSubmissionStore } from '@/app/stores/stores'
 import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import StatusTag from '@/shared/ui/StatusTag.vue'
 import ActivityCenterHeader from '../components/ActivityCenterHeader.vue'
-import ActivityRecordDialog from '../components/ActivityRecordDialog.vue'
 
 /**
- * 动态中心页面
- * 整合「动态记录」与「报名记录」，采用蓝白配色自定义卡片风格。
+ * 动态中心页面（学生端）
+ * 整合「动态记录」与「报名记录」，学生仅可查看，不可编辑或删除。
  */
 
 type TabKey = 'activity' | 'submission'
@@ -42,14 +40,7 @@ const submissionStatus = ref('')
 const submissionPageNum = ref(1)
 const submissionPageSize = ref(10)
 
-// ─── 弹窗 ───
-const dialogVisible = ref(false)
-const editingId = ref<string | null>(null)
-const isViewMode = ref(false)
-const editingActivity = ref<Activity | null>(null)
-
 // ─── 表格逐行刷入动画触发 ───
-// 通过改变 key 强制 Element Plus 表格重新渲染，使 CSS animation 在每次数据加载、标签切换、分页变化时重新触发
 const activityTableKey = ref(0)
 const submissionTableKey = ref(0)
 
@@ -87,7 +78,6 @@ watch(activeTab, (tab) => {
   }
 })
 
-// 分页切换时数据直接切片变化，没有 loading，需要手动触发重渲染以播放逐行动画
 watch(
   [activityPageNum, activityPageSize],
   () => {
@@ -109,7 +99,9 @@ watch(
 )
 
 const statusOptions = computed(() =>
-  Object.entries(APPLICATION_STATUS).map(([value, config]) => ({ value, label: config.label })),
+  Object.entries(APPLICATION_STATUS)
+    .filter(([value]) => value !== 'draft')
+    .map(([value, config]) => ({ value, label: config.label })),
 )
 
 const typeOptions = computed(() =>
@@ -126,33 +118,9 @@ const submissionPaginated = computed(() => {
   return submissionStore.filteredRecords.slice(start, start + submissionPageSize.value)
 })
 
-function openEditDialog(row: Activity) {
-  isViewMode.value = row.status === 'approved'
-  editingId.value = row.id
-  editingActivity.value = row
-  dialogVisible.value = true
-}
-
-function handleSave(payload: Omit<Activity, 'id'>) {
-  if (editingId.value) {
-    activityStore.updateActivity(editingId.value, payload)
-  }
-  dialogVisible.value = false
-}
-
-function handleRemove(row: Activity) {
-  if (row.status === 'approved') {
-    ElMessage.warning('已通过审核的记录不可删除')
-    return
-  }
-  ElMessageBox.confirm(`确定删除动态 "${row.text}" 吗？`, '提示', { type: 'warning' })
-    .then(() => activityStore.deleteActivity(row.id))
-    .catch(() => {})
-}
-
 function handleActivitySearch() {
   activityPageNum.value = 1
-  const filters: ActivityFilters = {}
+  const filters: any = {}
   if (activityKeyword.value) filters.keyword = activityKeyword.value
   if (activityStatus.value) filters.status = activityStatus.value
   activityStore.fetchActivities(filters)
@@ -228,7 +196,7 @@ onMounted(() => {
       :submission-count="submissionStore.records.length"
     />
 
-    <!-- 动态记录 -->
+    <!-- 动态记录（学生只读） -->
     <section v-if="activeTab === 'activity'" class="center-panel" aria-labelledby="activity-tab">
       <div class="panel-toolbar">
         <div class="panel-toolbar__filters">
@@ -242,9 +210,10 @@ onMounted(() => {
               @clear="handleActivitySearch"
             />
           </div>
+          <span class="filter-label">状态：</span>
           <el-select
             v-model="activityStatus"
-            placeholder="全部状态"
+            placeholder="全部"
             clearable
             class="mc-select"
             @change="handleActivitySearch"
@@ -256,12 +225,12 @@ onMounted(() => {
               :value="opt.value"
             />
           </el-select>
-          <button type="button" class="mc-btn mc-btn--secondary" @click="handleActivitySearch">
-            <Filter :size="14" /> 筛选
-          </button>
-          <button type="button" class="mc-btn mc-btn--ghost" @click="handleActivityReset">
-            <X :size="14" /> 重置
-          </button>
+          <el-button type="primary" size="default" @click="handleActivitySearch">
+            <Filter :size="14" style="margin-right: 4px" />筛选
+          </el-button>
+          <el-button @click="handleActivityReset">
+            <X :size="14" style="margin-right: 4px" />重置
+          </el-button>
         </div>
       </div>
 
@@ -273,8 +242,8 @@ onMounted(() => {
           style="width: 100%"
         >
           <el-table-column type="index" label="序号" width="64" align="center" />
-          <el-table-column prop="text" label="动态内容" min-width="260" show-overflow-tooltip />
-          <el-table-column label="状态" width="110" align="center">
+          <el-table-column prop="text" label="动态内容" min-width="360" show-overflow-tooltip />
+          <el-table-column label="状态" width="100" align="center">
             <template #default="{ row }">
               <StatusTag :status="(row as Activity).status" size="small" />
             </template>
@@ -282,35 +251,6 @@ onMounted(() => {
           <el-table-column label="时间" width="160" align="center">
             <template #default="{ row }">
               <span class="mc-time">{{ (row as Activity).time }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="240" fixed="right" align="center">
-            <template #default="{ row }">
-              <div class="action-group">
-                <button
-                  type="button"
-                  class="action-btn action-btn--view"
-                  @click="openEditDialog(row as Activity)"
-                >
-                  <Eye :size="14" /> 查看
-                </button>
-                <template v-if="(row as Activity).status !== 'approved'">
-                  <button
-                    type="button"
-                    class="action-btn action-btn--edit"
-                    @click="openEditDialog(row as Activity)"
-                  >
-                    <Edit :size="14" /> 编辑
-                  </button>
-                  <button
-                    type="button"
-                    class="action-btn action-btn--delete"
-                    @click="handleRemove(row as Activity)"
-                  >
-                    <Delete :size="14" /> 删除
-                  </button>
-                </template>
-              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -345,9 +285,10 @@ onMounted(() => {
               @clear="handleSubmissionSearch"
             />
           </div>
+          <span class="filter-label">类型：</span>
           <el-select
             v-model="submissionType"
-            placeholder="全部类型"
+            placeholder="全部"
             clearable
             class="mc-select"
             @change="handleSubmissionSearch"
@@ -359,9 +300,10 @@ onMounted(() => {
               :value="opt.value"
             />
           </el-select>
+          <span class="filter-label">状态：</span>
           <el-select
             v-model="submissionStatus"
-            placeholder="全部状态"
+            placeholder="全部"
             clearable
             class="mc-select"
             @change="handleSubmissionSearch"
@@ -373,12 +315,12 @@ onMounted(() => {
               :value="opt.value"
             />
           </el-select>
-          <button type="button" class="mc-btn mc-btn--secondary" @click="handleSubmissionSearch">
-            <Filter :size="14" /> 筛选
-          </button>
-          <button type="button" class="mc-btn mc-btn--ghost" @click="handleSubmissionReset">
-            <X :size="14" /> 重置
-          </button>
+          <el-button type="primary" size="default" @click="handleSubmissionSearch">
+            <Filter :size="14" style="margin-right: 4px" />筛选
+          </el-button>
+          <el-button @click="handleSubmissionReset">
+            <X :size="14" style="margin-right: 4px" />重置
+          </el-button>
         </div>
       </div>
 
@@ -455,14 +397,6 @@ onMounted(() => {
         />
       </div>
     </section>
-
-    <ActivityRecordDialog
-      v-model="dialogVisible"
-      :editing-id="editingId"
-      :is-view-mode="isViewMode"
-      :initial-data="editingActivity"
-      @save="handleSave"
-    />
   </PageContainer>
 </template>
 
@@ -477,18 +411,15 @@ onMounted(() => {
   user-select: none;
 }
 
-.center-panel {
+.panel-toolbar {
   @include mc-fade-in(0.1s);
 
-  margin-top: 28px;
-}
-
-.panel-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  margin-top: 12px;
   margin-bottom: 20px;
 
   &__filters {
@@ -503,38 +434,19 @@ onMounted(() => {
   @include mc-input-wrap(240px);
 }
 
+.filter-label {
+  font-size: 13px;
+  color: var(--mc-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .mc-select {
   @include mc-select(150px);
 }
 
-.mc-btn {
-  &--primary {
-    @include mc-btn-primary;
-  }
-
-  &--secondary {
-    @include mc-btn-secondary;
-  }
-
-  &--ghost {
-    @include mc-btn-ghost;
-  }
-}
-
 .mc-card {
   @include mc-card;
-}
-
-.mc-table {
-  @include mc-table;
-}
-
-:deep(.mc-table--staggered) {
-  --mc-row-duration: 0.6s;
-  --mc-row-delay: 0.08s;
-  --mc-row-offset: -60px;
-
-  @include table-row-staggered(50);
 }
 
 .mc-pagination {
@@ -545,81 +457,7 @@ onMounted(() => {
   @include mc-empty;
 }
 
-.mc-time {
-  font-size: 13px;
-  color: var(--mc-text-secondary);
-}
-
-.action-group {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 64px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid var(--mc-border);
-  background: var(--mc-card);
-  font-family: $mc-font-body;
-
-  &--view {
-    color: var(--mc-wood);
-    border-color: var(--mc-wood);
-
-    &:hover {
-      background: var(--mc-cream);
-      border-color: var(--mc-wood);
-      color: var(--mc-wood);
-    }
-  }
-
-  &--edit {
-    color: var(--mc-text-secondary);
-
-    &:hover {
-      background: var(--mc-bg);
-      border-color: var(--mc-wood);
-      color: var(--mc-wood);
-    }
-  }
-
-  &--delete {
-    color: var(--mc-danger);
-    border-color: var(--mc-danger-light);
-
-    &:hover {
-      background: var(--mc-danger-fade);
-      border-color: var(--mc-danger);
-    }
-  }
-}
-
-@media (max-width: 768px) {
-  .panel-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-
-    &__filters {
-      width: 100%;
-    }
-  }
-
-  .mc-input-wrap,
-  .mc-select {
-    width: 100%;
-  }
+.mc-table {
+  @include mc-table;
 }
 </style>

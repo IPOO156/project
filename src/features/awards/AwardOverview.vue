@@ -39,6 +39,9 @@ const awardTypes = [
   'softwareCopyright',
   'paper',
 ]
+const textColor = '#64748b'
+const axisColor = '#e2e8f0'
+
 const pieOption = computed(() => {
   const typeMap = APPLICATION_TYPE_MAP as Record<string, string>
   const data = awardTypes
@@ -48,17 +51,24 @@ const pieOption = computed(() => {
     }))
     .filter((d) => d.value > 0)
   return {
-    tooltip: { trigger: 'item' as const, formatter: '{b}: {c} ({d}%)' },
-    legend: { bottom: 0, textStyle: { fontSize: 12, color: chartTextColor.value } },
+    tooltip: {
+      trigger: 'item' as const,
+      formatter: '{b}: {c} ({d}%)',
+      backgroundColor: '#fff',
+      borderColor: '#e2e8f0',
+      borderWidth: 1,
+      textStyle: { color: '#1e293b', fontSize: 13 },
+    },
+    legend: { bottom: 0, textStyle: { fontSize: 12, color: textColor } },
     series: [
       {
         type: 'pie',
-        radius: ['40%', '65%'],
+        radius: ['42%', '68%'],
         center: ['50%', '45%'],
         avoidLabelOverlap: true,
-        itemStyle: { borderRadius: 6, borderColor: chartBorderColor.value, borderWidth: 2 },
+        itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 },
         label: { show: false },
-        emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+        emphasis: { label: { show: true, fontSize: 13, fontWeight: 600 }, scale: false },
         data,
       },
     ],
@@ -73,14 +83,27 @@ const barOption = computed(() => {
     value: submissionStore.filteredRecords.filter((r) => r.status === s).length,
   }))
   return {
-    tooltip: { trigger: 'axis' as const },
-    grid: { left: 40, right: 20, top: 20, bottom: 30 },
+    tooltip: {
+      trigger: 'axis' as const,
+      backgroundColor: '#fff',
+      borderColor: '#e2e8f0',
+      borderWidth: 1,
+      textStyle: { color: '#1e293b', fontSize: 13 },
+    },
+    grid: { left: 44, right: 16, top: 16, bottom: 28 },
     xAxis: {
       type: 'category' as const,
       data: data.map((d) => d.name),
-      axisLabel: { fontSize: 12, color: chartTextColor.value },
+      axisLine: { lineStyle: { color: axisColor } },
+      axisTick: { show: false },
+      axisLabel: { fontSize: 12, color: textColor },
     },
-    yAxis: { type: 'value' as const, minInterval: 1 },
+    yAxis: {
+      type: 'value' as const,
+      minInterval: 1,
+      splitLine: { lineStyle: { color: axisColor, type: 'dashed' as const } },
+      axisLabel: { fontSize: 11, color: textColor },
+    },
     series: [
       {
         type: 'bar',
@@ -94,12 +117,12 @@ const barOption = computed(() => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: '#409eff' },
-              { offset: 1, color: '#79bbff' },
+              { offset: 0, color: '#1e3a5f' },
+              { offset: 1, color: '#d4a574' },
             ],
           },
         },
-        barWidth: 40,
+        barWidth: 36,
       },
     ],
   }
@@ -112,20 +135,33 @@ const lineOption = computed(() => {
   })
   const sorted = [...semesterMap.entries()].sort((a, b) => a[0].localeCompare(b[0]))
   return {
-    tooltip: { trigger: 'axis' as const },
-    grid: { left: 40, right: 20, top: 20, bottom: 30 },
+    tooltip: {
+      trigger: 'axis' as const,
+      backgroundColor: '#fff',
+      borderColor: '#e2e8f0',
+      borderWidth: 1,
+      textStyle: { color: '#1e293b', fontSize: 13 },
+    },
+    grid: { left: 44, right: 16, top: 16, bottom: 28 },
     xAxis: {
       type: 'category' as const,
       data: sorted.map(([s]) => s),
-      axisLabel: { fontSize: 11, rotate: 15, color: chartTextColor.value },
+      axisLine: { lineStyle: { color: axisColor } },
+      axisTick: { show: false },
+      axisLabel: { fontSize: 11, color: textColor, rotate: 15 },
     },
-    yAxis: { type: 'value' as const, minInterval: 1 },
+    yAxis: {
+      type: 'value' as const,
+      minInterval: 1,
+      splitLine: { lineStyle: { color: axisColor, type: 'dashed' as const } },
+      axisLabel: { fontSize: 11, color: textColor },
+    },
     series: [
       {
         type: 'line',
         data: sorted.map(([, c]) => c),
         smooth: true,
-        lineStyle: { width: 3, color: '#67c23a' },
+        lineStyle: { width: 2.5, color: '#1e3a5f' },
         areaStyle: {
           color: {
             type: 'linear' as const,
@@ -134,12 +170,14 @@ const lineOption = computed(() => {
             x2: 0,
             y2: 1,
             colorStops: [
-              { offset: 0, color: 'rgba(103,194,58,0.25)' },
-              { offset: 1, color: 'rgba(103,194,58,0.02)' },
+              { offset: 0, color: 'rgba(30,58,95,0.2)' },
+              { offset: 1, color: 'rgba(30,58,95,0.02)' },
             ],
           },
         },
-        itemStyle: { color: '#67c23a' },
+        itemStyle: { color: '#1e3a5f' },
+        symbol: 'circle' as const,
+        symbolSize: 6,
       },
     ],
   }
@@ -162,7 +200,7 @@ onMounted(() => {
               <p class="stat-card__label">总提交数</p>
               <p class="stat-card__value">{{ totalCount }}</p>
             </div>
-            <div class="stat-card__icon" style="background: #409eff15; color: #409eff">
+            <div class="stat-card__icon" style="background: #1e3a5f15; color: #1e3a5f">
               <Award :size="24" />
             </div>
           </div>

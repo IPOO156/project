@@ -39,7 +39,7 @@ export const SEMESTER_OPTIONS = generateSemesterOptions(2022, 2028)
 // 申请状态（含标签颜色）
 export const APPLICATION_STATUS = {
   draft: { label: '草稿', color: 'info' },
-  submitted: { label: '已提交', color: 'warning' },
+  submitted: { label: '待审核', color: 'warning' },
   approved: { label: '已通过', color: 'success' },
   rejected: { label: '已驳回', color: 'danger' },
 } as const
