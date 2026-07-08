@@ -228,8 +228,8 @@ function handleScrollToGrowth() {
   min-height: calc(100vh - #{$header-height});
   width: 100%;
   margin: 0;
-  background-color: var(--gt-bg-page, #f4efe6);
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-color: var(--gt-bg-page);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E");
   background-size: 512px 512px;
   overflow-x: hidden;
   opacity: 0;
@@ -264,28 +264,28 @@ function handleScrollToGrowth() {
   gap: 1.5rem;
   max-width: 800px;
   margin: 0 auto;
-  padding: 5rem 3rem;
+  padding: 4rem 3rem;
 }
 
 .sb-line {
   flex: 1;
   height: 1px;
-  background: rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
+  background: var(--el-border-color-light);
 }
 
 .sb-icon {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .sb-icon svg {
-  width: 18px;
-  height: 18px;
-  fill: var(--gt-sage, #5a7c5a);
-  opacity: 0.4;
+  width: 16px;
+  height: 16px;
+  fill: var(--gt-gold);
+  opacity: 0.3;
 }
 
 .timeline-wrap {
@@ -300,32 +300,32 @@ function handleScrollToGrowth() {
   left: 50%;
   top: 120px;
   bottom: 80px;
-  width: 2px;
+  width: 1.5px;
   transform: translateX(-50%);
   background: linear-gradient(
     to bottom,
     transparent,
-    var(--gt-ring-soft, #a88560) 5%,
-    var(--gt-ring-mid, #8b6340) 50%,
-    var(--gt-ring-soft, #a88560) 95%,
+    var(--gt-ring-soft) 5%,
+    var(--gt-ring-mid) 50%,
+    var(--gt-ring-soft) 95%,
     transparent
   );
-  opacity: 0.15;
+  opacity: 0.2;
 }
 
 .timeline-intro {
   text-align: center;
-  margin-bottom: 6rem;
+  margin-bottom: 5rem;
   opacity: 0;
   animation: fadeSlideUp 0.8s ease 0.3s forwards;
 }
 
 .timeline-intro p {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.35rem;
-  color: var(--gt-accent, #8b6340);
-  margin: 0 0 1.25rem;
-  letter-spacing: 2px;
+  font-size: 1.2rem;
+  color: var(--gt-text-quote);
+  margin: 0;
+  font-weight: 400;
+  letter-spacing: 1.5px;
 }
 
 .timeline-sync {

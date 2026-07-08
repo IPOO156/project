@@ -32,7 +32,7 @@ export const useSubmissionStore = defineStore('submission', () => {
 
   function generateMockData(): SubmissionRecord[] {
     const types = Object.keys(APPLICATION_TYPE_MAP) as ApplicationType[]
-    const statuses: SubmissionRecord['status'][] = ['draft', 'submitted', 'approved', 'rejected']
+    const statuses: SubmissionRecord['status'][] = ['submitted', 'approved', 'rejected']
     const semesters = ['2022-2023-2', '2023-2024-1', '2023-2024-2', '2024-2025-1']
     const mockTitles: Record<string, string[]> = {
       competition: ['全国大学生数学建模竞赛', 'ACM 程序设计竞赛', '蓝桥杯大赛'],

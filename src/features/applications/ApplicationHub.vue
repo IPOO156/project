@@ -183,46 +183,47 @@ function switchModule(key: string) {
 
 .application-hub__tab {
   position: relative;
-  min-height: 92px;
-  padding: 14px;
+  min-height: 84px;
+  padding: 14px 12px;
   border: 1px solid var(--el-border-color-light);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--el-bg-color);
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
   text-align: left;
   cursor: pointer;
   transition:
     border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
+    box-shadow 0.2s ease;
 }
 
 .application-hub__tab:hover {
-  transform: translateY(-2px);
-  border-color: var(--el-color-primary-light-5);
-  box-shadow: 0 10px 24px rgba(31, 45, 61, 0.08);
+  border-color: #d4a574;
+  box-shadow: 0 4px 12px rgba(30, 58, 95, 0.06);
 }
 
 .application-hub__tab.is-active {
-  border-color: var(--el-color-primary);
-  background: linear-gradient(180deg, rgba(64, 158, 255, 0.1), rgba(64, 158, 255, 0.03));
-  box-shadow: 0 12px 28px rgba(64, 158, 255, 0.12);
+  border-color: #1e3a5f;
+  background: rgba(30, 58, 95, 0.03);
+}
+
+.application-hub__tab.is-active .application-hub__tab-title {
+  color: #1e3a5f;
 }
 
 .application-hub__tab-badge {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 11px;
-  background: var(--el-color-primary);
+  top: 8px;
+  right: 8px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #1e3a5f;
   color: #fff;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -231,9 +232,9 @@ function switchModule(key: string) {
 .application-hub__tab-icon {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
-  background: rgba(64, 158, 255, 0.1);
-  color: var(--el-color-primary);
+  border-radius: 8px;
+  background: rgba(30, 58, 95, 0.06);
+  color: #1e3a5f;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -242,35 +243,32 @@ function switchModule(key: string) {
 
 .application-hub__tab-body {
   min-width: 0;
+  flex: 1;
 }
 
 .application-hub__tab-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--el-text-color-primary);
+  transition: color 0.25s ease;
 }
 
 .application-hub__tab-desc {
-  margin-top: 4px;
+  margin-top: 3px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.4;
   color: var(--el-text-color-secondary);
 }
 
 .application-hub__panel {
   position: relative;
   min-width: 0;
-  height: 70vh;
-  overflow: hidden;
+  min-height: 55vh;
+  overflow: visible;
 }
 
 .application-hub__panel-item {
-  position: absolute;
-  inset: 0;
   width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-gutter: stable;
 }
 
 @media (max-width: 1200px) {

@@ -81,7 +81,7 @@ defineEmits<{
 
 .form-card,
 .record-card {
-  border-top: 3px solid #8b6340;
+  /* 顶部装饰线已去除 */
 
   .card-title {
     font-weight: 600;
