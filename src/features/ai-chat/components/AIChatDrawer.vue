@@ -135,9 +135,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
             <div v-if="loading" class="ai-drawer__msg ai-drawer__msg--loading">
               <ChatAvatar role="ai" />
               <div class="ai-drawer__bubble ai-drawer__bubble--loading">
-                <span class="ai-drawer__dot" /><span class="ai-drawer__dot" /><span
-                  class="ai-drawer__dot"
-                />
+                <Sparkles :size="14" class="ai-drawer__thinking-icon" />
+                <span>AI Thinking...</span>
               </div>
             </div>
           </div>
@@ -331,33 +330,24 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   &__bubble--loading {
     display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 14px 16px;
+    gap: 8px;
+    padding: 12px 16px;
   }
 
-  &__dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--el-text-color-secondary);
-    animation: aiDrawerDotBounce 1.2s ease-in-out infinite;
-    &:nth-child(2) {
-      animation-delay: 0.15s;
-    }
-    &:nth-child(3) {
-      animation-delay: 0.3s;
-    }
+  &__thinking-icon {
+    animation: aiDrawerPulse 1.6s ease-in-out infinite;
+    color: var(--el-color-primary);
   }
 
-  @keyframes aiDrawerDotBounce {
+  @keyframes aiDrawerPulse {
     0%,
     100% {
-      transform: translateY(0);
-      opacity: 0.5;
+      opacity: 0.55;
+      transform: scale(1);
     }
     50% {
-      transform: translateY(-4px);
       opacity: 1;
+      transform: scale(1.15);
     }
   }
 

@@ -2,12 +2,17 @@
 import { Award, CircleCheck, Clock, TrendingUp } from 'lucide-vue-next'
 import { computed, onMounted } from 'vue'
 import VChart from 'vue-echarts'
-import { useSubmissionStore } from '@/app/stores/stores'
+import { useSubmissionStore, useThemeStore } from '@/app/stores/stores'
 import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
 
 const submissionStore = useSubmissionStore()
+const themeStore = useThemeStore()
+
+// 图表暗色模式适配色
+const chartTextColor = computed(() => (themeStore.isDark ? '#94a3b8' : '#333'))
+const chartBorderColor = computed(() => (themeStore.isDark ? '#334155' : '#fff'))
 
 const totalCount = computed(() => submissionStore.filteredRecords.length)
 const pendingCount = computed(
@@ -44,14 +49,14 @@ const pieOption = computed(() => {
     .filter((d) => d.value > 0)
   return {
     tooltip: { trigger: 'item' as const, formatter: '{b}: {c} ({d}%)' },
-    legend: { bottom: 0, textStyle: { fontSize: 12 } },
+    legend: { bottom: 0, textStyle: { fontSize: 12, color: chartTextColor.value } },
     series: [
       {
         type: 'pie',
         radius: ['40%', '65%'],
         center: ['50%', '45%'],
         avoidLabelOverlap: true,
-        itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+        itemStyle: { borderRadius: 6, borderColor: chartBorderColor.value, borderWidth: 2 },
         label: { show: false },
         emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
         data,
@@ -73,7 +78,7 @@ const barOption = computed(() => {
     xAxis: {
       type: 'category' as const,
       data: data.map((d) => d.name),
-      axisLabel: { fontSize: 12 },
+      axisLabel: { fontSize: 12, color: chartTextColor.value },
     },
     yAxis: { type: 'value' as const, minInterval: 1 },
     series: [
@@ -112,7 +117,7 @@ const lineOption = computed(() => {
     xAxis: {
       type: 'category' as const,
       data: sorted.map(([s]) => s),
-      axisLabel: { fontSize: 11, rotate: 15 },
+      axisLabel: { fontSize: 11, rotate: 15, color: chartTextColor.value },
     },
     yAxis: { type: 'value' as const, minInterval: 1 },
     series: [
@@ -196,7 +201,10 @@ onMounted(() => {
               <p class="stat-card__label">本学期新增</p>
               <p class="stat-card__value">{{ semesterCount }}</p>
             </div>
-            <div class="stat-card__icon" style="background: #1e3a5f15; color: #1e3a5f">
+            <div
+              class="stat-card__icon"
+              style="background: #409eff15; color: var(--el-color-primary)"
+            >
               <TrendingUp :size="24" />
             </div>
           </div>

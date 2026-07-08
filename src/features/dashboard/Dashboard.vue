@@ -39,8 +39,13 @@ const isRefreshing = ref(false)
 // ── Mock 数据（接口联调后替换） ──
 
 // 统计卡片
-const statsCards = ref([
-  { label: '申报总数', value: 12, icon: FileText, color: '#2d5a87' },
+const statsCards = computed(() => [
+  {
+    label: '申报总数',
+    value: 12,
+    icon: FileText,
+    color: themeStore.isDark ? '#60a5fa' : '#2d5a87',
+  },
   { label: '已通过', value: 8, icon: Award, color: '#10b981' },
   { label: '待审批', value: 3, icon: Clock, color: '#d4a574' },
   { label: '学期均绩', value: '3.82', icon: TrendingUp, color: '#d4a574' },

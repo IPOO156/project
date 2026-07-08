@@ -43,6 +43,7 @@ function applyTheme(theme: ThemeMode) {
  * - 支持 light / dark 两套主题
  * - 主题偏好持久化到 localStorage
  * - 通过 data-theme 属性驱动 CSS 变量切换
+ * - 登录时若用户无手动偏好，根据时间段自动切换（6:00-18:00 日间，18:00-6:00 夜间）
  */
 export const useThemeStore = defineStore('theme', () => {
   const theme: Ref<ThemeMode> = ref(readTheme())
@@ -62,10 +63,25 @@ export const useThemeStore = defineStore('theme', () => {
     setTheme(isDark.value ? 'light' : 'dark')
   }
 
+  /**
+   * 根据当前时间自动切换主题（仅在用户无手动偏好时生效）
+   * 日间 6:00-18:00 → light，夜间 18:00-6:00 → dark
+   */
+  function applyTimeBasedTheme() {
+    // 已有本地存储的偏好（用户手动设置过），不覆盖
+    if (typeof window !== 'undefined' && localStorage.getItem(STORAGE_KEY)) {
+      return
+    }
+    const hour = new Date().getHours()
+    const timeBased: ThemeMode = hour >= 6 && hour < 18 ? 'light' : 'dark'
+    setTheme(timeBased)
+  }
+
   return {
     theme,
     isDark,
     setTheme,
     toggleTheme,
+    applyTimeBasedTheme,
   }
 })

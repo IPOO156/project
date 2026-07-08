@@ -78,16 +78,16 @@
   font-size: $font-size-base;
 
   th.el-table__cell {
-    background-color: #f8fafc;
+    background-color: var(--el-fill-color-light);
     font-weight: 600;
-    color: $color-text-primary;
+    color: var(--el-text-color-primary);
   }
 
   .el-table__row {
     transition: background-color 0.15s;
 
-    &:hover {
-      background-color: rgba($color-primary, 0.02);
+    &:hover > td.el-table__cell {
+      background-color: var(--el-fill-color-lighter);
     }
   }
 }

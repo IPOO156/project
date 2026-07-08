@@ -48,6 +48,7 @@ function handleLogin() {
     })
     loading.value = false
     loginSuccess.value = true
+    themeStore.applyTimeBasedTheme()
     setTimeout(() => {
       router.push('/dashboard')
     }, 300)
