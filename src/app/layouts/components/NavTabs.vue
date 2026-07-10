@@ -141,8 +141,9 @@ async function activate(path: string) {
 
 async function close(path: string, e: Event) {
   e.stopPropagation()
+  const isClosingActive = path === activePath.value
   const fallback = tabsStore.removeTab(path)
-  if (!fallback) {
+  if (!isClosingActive || !fallback) {
     return
   }
   try {
