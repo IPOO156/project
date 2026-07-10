@@ -25,6 +25,8 @@ const {
 } = useApplicationForm({
   emptyForm,
   requiredFields: ['activityName', 'location', 'organization', 'startDate', 'endDate', 'semester'],
+  type: 'socialPractice',
+  typeLabel: '社会实践',
 })
 const { clearDraft } = useFormDraft('social-practice', form)
 

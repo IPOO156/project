@@ -22,6 +22,8 @@ const {
 } = useApplicationForm({
   emptyForm,
   requiredFields: ['certType', 'certName', 'certDate', 'semester'],
+  type: 'certificate',
+  typeLabel: '荣誉证书',
 })
 const { clearDraft } = useFormDraft('certificate', form)
 

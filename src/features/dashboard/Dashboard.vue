@@ -5,60 +5,73 @@ import { LegendComponent, RadarComponent, TooltipComponent } from 'echarts/compo
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { ElMessage } from 'element-plus'
-import {
-  ArrowRight,
-  Award,
-  Clock,
-  FileText,
-  RefreshCw,
-  Settings2,
-  TrendingUp,
-  X,
-} from 'lucide-vue-next'
+import { Award, Clock, FileText, TrendingUp } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import VChart from 'vue-echarts'
 import { useRouter } from 'vue-router'
-import { useActivityStore, useThemeStore, useUserStore } from '@/app/stores/stores'
+import {
+  useActivityStore,
+  useArchiveStore,
+  useSubmissionStore,
+  useThemeStore,
+} from '@/app/stores/stores'
+import QuickEntries from './components/QuickEntries.vue'
 import QuickEntrySettings from './components/QuickEntrySettings.vue'
+import StatsOverview from './components/StatsOverview.vue'
 import { useQuickEntries } from './composables/useQuickEntries'
 
 use([CanvasRenderer, RadarComponent, RadarChart, TooltipComponent, LegendComponent])
 
 const router = useRouter()
-const userStore = useUserStore()
 const activityStore = useActivityStore()
+const archiveStore = useArchiveStore()
+const submissionStore = useSubmissionStore()
 const themeStore = useThemeStore()
 const { visibleEntries, recordClick, refreshPool, updateOrder, toggleHidden } = useQuickEntries()
 const showSettings = ref(false)
-const dragOverIndex = ref<number>(-1)
-const dragActiveIndex = ref<number>(-1)
-const isRefreshing = ref(false)
 
-// ── Mock 数据（接口联调后替换） ──
+// ── 从 store 派生展示数据（数据由 API 层填充 store） ──
 
-// 统计卡片
-const statsCards = computed(() => [
-  {
-    label: '申报总数',
-    value: 12,
-    icon: FileText,
-    color: themeStore.isDark ? '#60a5fa' : '#2d5a87',
-  },
-  { label: '已通过', value: 8, icon: Award, color: '#10b981' },
-  { label: '待审批', value: 3, icon: Clock, color: '#d4a574' },
-  { label: '学期均绩', value: '3.82', icon: TrendingUp, color: '#d4a574' },
-])
+// 学期均绩：所有课程按学分加权平均 GPA
+const overallGpa = computed(() => {
+  const grades = archiveStore.grades
+  const totalCredits = grades.reduce((s, g) => s + g.credits, 0)
+  if (totalCredits === 0) return '0.00'
+  const weighted = grades.reduce((s, g) => s + g.gpa * g.credits, 0)
+  return (weighted / totalCredits).toFixed(2)
+})
 
-const profileDimensions = [
-  { label: '学业成绩', current: 88, target: 92, previous: 81 },
-  { label: '竞赛实践', current: 75, target: 90, previous: 68 },
-  { label: '科研创新', current: 60, target: 82, previous: 52 },
-  { label: '社会工作', current: 85, target: 88, previous: 78 },
-  { label: '综合素质', current: 80, target: 90, previous: 72 },
-]
+// 统计卡片：申报数据来自 submissionStore，均绩来自 archiveStore
+const statsCards = computed(() => {
+  const records = submissionStore.records
+  return [
+    {
+      label: '申报总数',
+      value: records.length,
+      icon: FileText,
+      color: themeStore.isDark ? '#60a5fa' : '#2d5a87',
+    },
+    {
+      label: '已通过',
+      value: records.filter((r) => r.status === 'approved').length,
+      icon: Award,
+      color: '#10b981',
+    },
+    {
+      label: '待审批',
+      value: records.filter((r) => r.status === 'submitted').length,
+      icon: Clock,
+      color: '#d4a574',
+    },
+    { label: '学期均绩', value: overallGpa.value, icon: TrendingUp, color: '#d4a574' },
+  ]
+})
+
+// 多维度画像：直接读取 store 的 ProfileDimension（{ label, current, target, previous }）
+const profileDimensions = computed(() => archiveStore.dimensions)
 
 const profileSummary = computed(() => {
-  return profileDimensions.map((item) => {
+  return profileDimensions.value.map((item) => {
     const deltaFromPrevious = item.current - item.previous
     return {
       label: item.label,
@@ -128,7 +141,7 @@ const radarOption = computed(() => ({
         color: radarAxisColor.value,
       },
     },
-    indicator: profileDimensions.map((item) => ({
+    indicator: profileDimensions.value.map((item) => ({
       name: item.label,
       max: 100,
     })),
@@ -140,7 +153,7 @@ const radarOption = computed(() => ({
       symbolSize: 7,
       data: [
         {
-          value: profileDimensions.map((item) => item.current),
+          value: profileDimensions.value.map((item) => item.current),
           name: '当前画像',
           areaStyle: {
             color: 'rgba(45, 90, 135, 0.20)',
@@ -154,7 +167,7 @@ const radarOption = computed(() => ({
           },
         },
         {
-          value: profileDimensions.map((item) => item.target),
+          value: profileDimensions.value.map((item) => item.target),
           name: '目标值',
           lineStyle: {
             color: '#94a3b8',
@@ -169,7 +182,7 @@ const radarOption = computed(() => ({
           },
         },
         {
-          value: profileDimensions.map((item) => item.previous),
+          value: profileDimensions.value.map((item) => item.previous),
           name: '上一阶段',
           lineStyle: {
             color: '#a855f7',
@@ -187,18 +200,9 @@ const radarOption = computed(() => ({
   ],
 }))
 
-const todayLabel = computed(() => {
-  return new Date().toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-  })
-})
-
 const recentActivities = computed(() => activityStore.filteredActivities.slice(0, 5))
 
-async function handleEntryClick(entry: QuickEntry) {
+async function onEntryClick(entry: QuickEntry) {
   recordClick(entry.path)
   try {
     await router.push(entry.path)
@@ -207,92 +211,29 @@ async function handleEntryClick(entry: QuickEntry) {
   }
 }
 
-function handleRefreshPool() {
-  if (isRefreshing.value) return
-  isRefreshing.value = true
+function onQuickRefresh() {
   refreshPool()
-  setTimeout(() => {
-    isRefreshing.value = false
-  }, 600)
 }
 
-function handleEntryKeydown(evt: KeyboardEvent, entry: QuickEntry) {
-  if (evt.key === 'Enter' || evt.key === ' ') {
-    evt.preventDefault()
-    handleEntryClick(entry)
-  }
+function onToggleHidden(id: string) {
+  toggleHidden(id)
 }
 
-// ── 快捷入口拖拽排序 ──
-
-let dragStartIndex = -1
-
-function handleEntryDragOver(index: number) {
-  if (dragStartIndex === -1 || dragStartIndex === index) return
-  dragOverIndex.value = index
-}
-
-function handleEntryDrop(index: number) {
-  if (dragStartIndex === -1 || dragStartIndex === index) return
-
-  const list = [...visibleEntries.value]
-  const [moved] = list.splice(dragStartIndex, 1)
-  list.splice(index, 0, moved)
-
-  // 同步用户自定义顺序（按当前可见列表顺序写入）
-  const orderedIds = list.map((e) => e.id)
+function onUpdateOrder(orderedIds: string[]) {
   updateOrder(orderedIds)
-
-  dragStartIndex = -1
-  dragOverIndex.value = -1
-}
-
-function handleEntryDragEnd() {
-  dragStartIndex = -1
-  dragOverIndex.value = -1
-}
-
-function handleEntryDragStartVisual(index: number) {
-  dragActiveIndex.value = index
-  dragStartIndex = index
-}
-
-function handleEntryDropVisual(index: number) {
-  dragActiveIndex.value = -1
-  handleEntryDrop(index)
-}
-
-function handleEntryDragEndVisual() {
-  dragActiveIndex.value = -1
-  handleEntryDragEnd()
 }
 
 onMounted(() => {
   activityStore.fetchActivities()
+  // 档案与申报数据：若已缓存则不重复拉取
+  if (archiveStore.dimensions.length === 0) archiveStore.fetchArchive()
+  if (submissionStore.records.length === 0) submissionStore.fetchRecords()
 })
 </script>
 
 <template>
   <div class="dashboard">
-    <el-row :gutter="16" class="dashboard__stats">
-      <el-col v-for="card in statsCards" :key="card.label" :xs="12" :sm="6" :md="6" :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-card__body">
-            <div class="stat-card__info">
-              <p class="stat-card__label">{{ card.label }}</p>
-              <p class="stat-card__value">{{ card.value }}</p>
-            </div>
-            <!-- 图标背景/颜色依赖卡片数据中的动态色值，故使用内联样式 -->
-            <div
-              class="stat-card__icon"
-              :style="{ background: `${card.color}15`, color: card.color }"
-            >
-              <component :is="card.icon" :size="24" />
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <StatsOverview :cards="statsCards" />
 
     <el-row :gutter="16" class="dashboard__main">
       <el-col :span="13" class="dashboard__col">
@@ -321,80 +262,14 @@ onMounted(() => {
       </el-col>
 
       <el-col :span="11" class="dashboard__col">
-        <el-card class="dashboard__section">
-          <template #header>
-            <div class="dashboard__section-header">
-              <span class="section-title">快捷入口</span>
-              <div class="quick-entry-actions">
-                <el-button
-                  text
-                  class="quick-entry-actions__refresh"
-                  aria-label="刷新快捷入口"
-                  @click="handleRefreshPool"
-                >
-                  <RefreshCw :size="18" :class="{ 'is-spinning': isRefreshing }" />
-                </el-button>
-                <el-button
-                  text
-                  :icon="Settings2"
-                  aria-label="自定义快捷入口"
-                  @click="showSettings = true"
-                />
-              </div>
-            </div>
-          </template>
-          <div
-            class="quick-entry-grid"
-            :class="`quick-entry-grid--${Math.min(visibleEntries.length, 6)}`"
-          >
-            <div
-              v-for="(entry, index) in visibleEntries"
-              :key="entry.id"
-              class="quick-entry"
-              :class="{
-                'is-drag-over': dragOverIndex === index,
-                'is-dragging': dragActiveIndex === index,
-              }"
-              tabindex="0"
-              role="button"
-              draggable="true"
-              @click="handleEntryClick(entry)"
-              @keydown="(e) => handleEntryKeydown(e, entry)"
-              @dragstart="handleEntryDragStartVisual(index)"
-              @dragover.prevent="handleEntryDragOver(index)"
-              @drop.prevent="handleEntryDropVisual(index)"
-              @dragend="handleEntryDragEndVisual"
-            >
-              <button
-                type="button"
-                class="quick-entry__remove"
-                aria-label="删除快捷入口"
-                @click.stop="toggleHidden(entry.id)"
-              >
-                <X :size="12" />
-              </button>
-              <div class="quick-entry__body">
-                <!-- 图标背景/颜色依赖入口数据中的动态色值，故使用内联样式 -->
-                <div
-                  class="quick-entry__icon"
-                  :style="{ background: entry.bgColor, color: entry.color }"
-                >
-                  <component :is="entry.icon" :size="20" />
-                </div>
-                <div class="quick-entry__info">
-                  <span class="quick-entry__label">{{ entry.label }}</span>
-                  <span v-if="entry.isRecent" class="quick-entry__badge">最近使用</span>
-                </div>
-                <ArrowRight :size="14" class="quick-entry__arrow" />
-              </div>
-            </div>
-          </div>
-          <el-empty
-            v-if="visibleEntries.length === 0"
-            description="暂无可见入口，请点击设置添加"
-            :image-size="80"
-          />
-        </el-card>
+        <QuickEntries
+          :entries="visibleEntries"
+          @entry-click="onEntryClick"
+          @refresh="onQuickRefresh"
+          @toggle-hidden="onToggleHidden"
+          @update-order="onUpdateOrder"
+          @open-settings="showSettings = true"
+        />
 
         <el-card class="dashboard__section dashboard__section--activities">
           <template #header>
@@ -433,11 +308,6 @@ onMounted(() => {
   height: 100%;
   gap: 12px;
 
-  &__stats {
-    flex-shrink: 0;
-    margin-bottom: 0;
-  }
-
   &__main {
     flex: 1;
     min-height: 0;
@@ -459,7 +329,7 @@ onMounted(() => {
     flex: 1;
   }
 
-  &__col:last-child :deep(.dashboard__section:first-child) {
+  &__col:last-child :deep(.quick-entries-card) {
     flex: 0 0 auto;
   }
 
@@ -480,36 +350,6 @@ onMounted(() => {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-  }
-}
-
-.stat-card {
-  &__body {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  &__label {
-    font-size: 14px;
-    color: var(--el-text-color-secondary);
-    margin-bottom: 8px;
-  }
-
-  &__value {
-    font-size: $font-size-3xl;
-    font-weight: 700;
-    color: var(--el-text-color-primary);
-  }
-
-  &__icon {
-    width: 48px;
-    height: 48px;
-    border-radius: $radius-lg;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
   }
 }
 
@@ -581,173 +421,6 @@ onMounted(() => {
   color: #dc2626;
 }
 
-.quick-entry-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-
-  &--1 {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-
-  &--2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  &--4 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.quick-entry-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-
-  &__refresh {
-    transition: transform 0.3s $ease-standard;
-
-    &:hover {
-      transform: rotate(180deg);
-    }
-
-    .is-spinning {
-      animation: quick-refresh-spin 0.6s linear infinite;
-    }
-  }
-}
-
-@keyframes quick-refresh-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.quick-entry {
-  cursor: pointer;
-  border-radius: $radius-lg;
-  border: 1px solid var(--el-border-color-lighter);
-  background: var(--el-bg-color);
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s,
-    border-color 0.2s;
-  will-change: transform;
-  position: relative;
-
-  &.is-drag-over {
-    box-shadow: inset 0 0 0 2px var(--el-color-primary-light-7);
-  }
-
-  &.is-dragging {
-    opacity: 0.5;
-    transform: scale(0.96);
-    cursor: grabbing;
-  }
-
-  &:hover,
-  &:focus-visible {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    border-color: var(--el-color-primary-light-7);
-    outline: none;
-
-    .quick-entry__icon {
-      transform: scale(1.08);
-    }
-
-    .quick-entry__arrow {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-
-  &__remove {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 20px;
-    height: 20px;
-    border: none;
-    border-radius: 50%;
-    background: transparent;
-    color: var(--el-text-color-secondary);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition:
-      opacity 0.2s,
-      background-color 0.2s,
-      color 0.2s;
-    z-index: 2;
-
-    &:hover {
-      background: var(--el-color-danger-light-9);
-      color: var(--el-color-danger);
-    }
-  }
-
-  &:hover &__remove,
-  &:focus-visible &__remove {
-    opacity: 1;
-  }
-
-  &__body {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px;
-  }
-
-  &__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: transform 0.2s;
-  }
-
-  &__info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  &__label {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--el-text-color-primary);
-  }
-
-  &__badge {
-    font-size: 11px;
-    line-height: 1;
-    color: var(--el-color-primary);
-  }
-
-  &__arrow {
-    opacity: 0;
-    transform: translateX(-4px);
-    transition: all 0.2s;
-    color: var(--el-text-color-secondary);
-    flex-shrink: 0;
-  }
-}
-
 .activities {
   max-height: 240px;
   overflow-y: auto;
@@ -817,28 +490,6 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .radar-panel__summary {
-    grid-template-columns: 1fr;
-  }
-
-  .quick-entry-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .quick-entry {
-    &__body {
-      padding: 14px 12px;
-      min-height: 44px;
-    }
-
-    &__arrow {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .quick-entry-grid {
     grid-template-columns: 1fr;
   }
 }

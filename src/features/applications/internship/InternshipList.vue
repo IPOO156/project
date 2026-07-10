@@ -24,6 +24,8 @@ const {
 } = useApplicationForm({
   emptyForm,
   requiredFields: ['company', 'location', 'position', 'startDate', 'endDate', 'semester'],
+  type: 'internship',
+  typeLabel: '实习经历',
 })
 const { clearDraft } = useFormDraft('internship', form)
 

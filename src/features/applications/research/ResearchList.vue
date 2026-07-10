@@ -31,6 +31,8 @@ const {
     'projectDate',
     'semester',
   ],
+  type: 'research',
+  typeLabel: '学术研究',
 })
 const { clearDraft } = useFormDraft('research', form)
 

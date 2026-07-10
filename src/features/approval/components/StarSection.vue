@@ -1,29 +1,15 @@
 <script setup lang="ts">
-import type { StarRecord } from '../composables/useStarMockData'
-import { ElMessage } from 'element-plus'
-/**
- * StarSection - 奖项报名审核情况
- *
- * 竞赛之星/科研之星/双创之星的报名状态展示。
- * 查看弹窗展示完整报名信息，
- * 编辑在弹窗内转为可编辑表单，修改后重新提交。
- */
-import { computed, reactive, ref } from 'vue'
-import {
-  AWARD_LEVELS,
-  COMPETITION_TYPES,
-  INDUSTRY_TYPES,
-  PROJECT_LEVELS,
-  SEMESTER_OPTIONS,
-} from '@/shared/constants/dict'
-import DictColumn from '@/shared/ui/DictColumn.vue'
+import type { StarRecord } from '@/shared/types/types'
+import { Award, CheckCircle, Clock, XCircle } from 'lucide-vue-next'
+// StarSection - 奖项报名审核情况
+// 竞赛之星/科研之星/双创之星报名状态展示，查看/编辑弹窗支持修改后重新提交
+import { computed, onMounted, ref, watch } from 'vue'
+import { useAwardReviewStore } from '@/app/stores/stores'
 import StatusTag from '@/shared/ui/StatusTag.vue'
-import {
-  canEditStar,
-  filterStarRecords,
-  SCIENTIFIC_SUB_TYPES,
-  useStarMockData,
-} from '../composables/useStarMockData'
+import { canEditStar, filterStarRecords } from '../composables/useStarMockData'
+import StarDialog from './StarDialog.vue'
+
+const awardReviewStore = useAwardReviewStore()
 
 const starTabs = [
   { key: 'all', label: '全部' },
@@ -33,9 +19,36 @@ const starTabs = [
 ]
 
 const activeTab = ref<string>('all')
-const allStarData = useStarMockData()
 
-const filteredRecords = computed(() => filterStarRecords(allStarData.value, activeTab.value))
+// ── 数据源（来自 awardReviewStore，由 API 层填充） ──
+const allRecords = computed(() => awardReviewStore.allRecords)
+
+// ── 统计卡片（从 store 数据派生） ──
+const stats = computed(() => {
+  const data = allRecords.value.filter((r) => r.status !== 'draft')
+  return [
+    {
+      label: '待审核',
+      value: data.filter((r) => r.status === 'submitted').length,
+      icon: Clock,
+      color: '#d4a574',
+    },
+    {
+      label: '已通过',
+      value: data.filter((r) => r.status === 'approved').length,
+      icon: CheckCircle,
+      color: '#10b981',
+    },
+    {
+      label: '已驳回',
+      value: data.filter((r) => r.status === 'rejected').length,
+      icon: XCircle,
+      color: '#ef4444',
+    },
+  ]
+})
+
+const filteredRecords = computed(() => filterStarRecords(allRecords.value, activeTab.value))
 
 const pageNum = ref(1)
 const pageSize = ref(10)
@@ -57,510 +70,318 @@ function handleSizeChange(size: number) {
 function handleTabChange(tab: string | number) {
   activeTab.value = String(tab)
   pageNum.value = 1
+  bumpTableAnimation()
 }
 
-// ── 详情/编辑弹窗 ──
-const detailVisible = ref(false)
-const detailMode = ref<'view' | 'edit'>('view')
-const detailRecord = ref<StarRecord | null>(null)
-const editForm = reactive<Record<string, any>>({})
-const saving = ref(false)
+watch(
+  [pageNum, pageSize, filteredRecords],
+  () => {
+    bumpTableAnimation()
+  },
+  { flush: 'post' },
+)
 
-const statusLabel: Record<string, string> = {
-  draft: '草稿',
-  submitted: '待审核',
-  approved: '已通过',
-  rejected: '已驳回',
+// 详情/编辑弹窗
+const dialogVisible = ref(false)
+const dialogMode = ref<'view' | 'edit'>('view')
+const dialogRecord = ref<StarRecord | null>(null)
+const tableKey = ref(0)
+const successPulse = ref(false)
+
+function bumpTableAnimation() {
+  tableKey.value++
 }
 
-function dictLabel(dict: readonly { label: string; value: string }[], value: string): string {
-  return dict.find((d) => d.value === value)?.label || value
+function triggerSuccessPulse() {
+  successPulse.value = true
+  setTimeout(() => {
+    successPulse.value = false
+  }, 520)
 }
-
-/** 查看模式字段：按之星类型展示完整报名信息 */
-const detailFields = computed(() => {
-  const r = detailRecord.value
-  if (!r) return []
-
-  const base = [
-    { label: '报名人', value: r.applicant },
-    { label: '提交日期', value: r.submitDate || '-' },
-    { label: '学期', value: r.semester },
-  ]
-
-  let typeFields: { label: string; value: string }[] = []
-
-  if (r.type === 'competitionStar') {
-    typeFields = [
-      { label: '竞赛名称', value: r.competitionName || r.title.replace(' - 竞赛之星报名', '') },
-      { label: '竞赛时间', value: r.competitionDate || '-' },
-      { label: '竞赛级别', value: dictLabel(COMPETITION_TYPES, r.competitionLevel || '') },
-      { label: '获奖等级', value: dictLabel(AWARD_LEVELS, r.awardLevel || '') },
-    ]
-  } else if (r.type === 'scientificProject') {
-    typeFields = [
-      { label: '项目名称', value: r.projectName || r.title.replace(' - 科研之星报名', '') },
-      { label: '项目级别', value: dictLabel(PROJECT_LEVELS, r.projectLevel || '') },
-      { label: '申报人排名', value: r.ranking || '-' },
-      { label: '项目时间', value: r.projectDate || '-' },
-    ]
-  } else if (r.type === 'softwareCopyright') {
-    typeFields = [
-      { label: '软件名称', value: r.softName || r.title.replace(' - 科研之星报名', '') },
-      { label: '颁发单位', value: r.issuer || '-' },
-      { label: '申报人排名', value: r.ranking || '-' },
-      { label: '批准日期', value: r.approveDate || '-' },
-    ]
-  } else if (r.type === 'paper') {
-    typeFields = [
-      { label: '论文名称', value: r.paperName || r.title.replace(' - 科研之星报名', '') },
-      { label: '发表期刊', value: r.journalName || '-' },
-      { label: '申报人排名', value: r.ranking || '-' },
-      { label: '发表日期', value: r.publishDate || '-' },
-    ]
-  } else if (r.type === 'innovationStar') {
-    typeFields = [
-      { label: '公司名称', value: r.companyName || r.title.replace(' - 双创之星报名', '') },
-      { label: '行业类型', value: dictLabel(INDUSTRY_TYPES, r.industryType || '') },
-      { label: '申报人排名', value: r.ranking || '-' },
-      { label: '注册时间', value: r.registerDate || '-' },
-    ]
-  }
-
-  return [
-    { label: '报名类型', value: r.typeLabel },
-    ...typeFields,
-    ...base,
-    { label: '当前状态', value: statusLabel[r.status] || r.status, isStatus: true },
-  ]
-})
 
 function handleView(row: StarRecord) {
-  detailRecord.value = row
-  detailMode.value = 'view'
-  detailVisible.value = true
+  dialogRecord.value = row
+  dialogMode.value = 'view'
+  dialogVisible.value = true
 }
 
 function handleEdit(row: StarRecord) {
-  detailRecord.value = row
-  detailMode.value = 'edit'
-  Object.keys(editForm).forEach((k) => delete (editForm as any)[k])
-  // 按类型填充完整字段，与各报名页字段一致
-  if (row.type === 'competitionStar') {
-    editForm.competitionName = row.competitionName || row.title.replace(' - 竞赛之星报名', '')
-    editForm.competitionDate = row.competitionDate || ''
-    editForm.competitionLevel = row.competitionLevel || ''
-    editForm.awardLevel = row.awardLevel || ''
-    editForm.semester = row.semester || ''
-  } else if (row.type === 'scientificProject') {
-    editForm.projectName = row.projectName || row.title.replace(' - 科研之星报名', '')
-    editForm.projectLevel = row.projectLevel || ''
-    editForm.ranking = row.ranking || ''
-    editForm.projectDate = row.projectDate || ''
-    editForm.semester = row.semester || ''
-  } else if (row.type === 'softwareCopyright') {
-    editForm.softName = row.softName || row.title.replace(' - 科研之星报名', '')
-    editForm.issuer = row.issuer || ''
-    editForm.ranking = row.ranking || ''
-    editForm.approveDate = row.approveDate || ''
-    editForm.semester = row.semester || ''
-  } else if (row.type === 'paper') {
-    editForm.paperName = row.paperName || row.title.replace(' - 科研之星报名', '')
-    editForm.journalName = row.journalName || ''
-    editForm.ranking = row.ranking || ''
-    editForm.publishDate = row.publishDate || ''
-    editForm.semester = row.semester || ''
-  } else if (row.type === 'innovationStar') {
-    editForm.companyName = row.companyName || row.title.replace(' - 双创之星报名', '')
-    editForm.industryType = row.industryType || ''
-    editForm.ranking = row.ranking || ''
-    editForm.registerDate = row.registerDate || ''
-    editForm.semester = row.semester || ''
-  }
-  detailVisible.value = true
+  dialogRecord.value = row
+  dialogMode.value = 'edit'
+  dialogVisible.value = true
 }
 
-function handleSave() {
-  saving.value = true
-  setTimeout(() => {
-    if (detailRecord.value) {
-      // 按子类型重构标题
-      const suffixMap: Record<string, string> = {
-        competitionStar: ' - 竞赛之星报名',
-        scientificProject: ' - 科研之星报名',
-        softwareCopyright: ' - 科研之星报名',
-        paper: ' - 科研之星报名',
-        innovationStar: ' - 双创之星报名',
-      }
-      const suffix = suffixMap[detailRecord.value.type] || ''
-      const type = detailRecord.value.type
-      const titleField =
-        type === 'competitionStar'
-          ? editForm.competitionName
-          : type === 'scientificProject'
-            ? editForm.projectName
-            : type === 'softwareCopyright'
-              ? editForm.softName
-              : type === 'paper'
-                ? editForm.paperName
-                : editForm.companyName
-      if (titleField) {
-        detailRecord.value.title = titleField + suffix
-      }
-      // 保存各类型特有字段
-      if (type === 'competitionStar') {
-        detailRecord.value.competitionName = editForm.competitionName
-        detailRecord.value.competitionDate = editForm.competitionDate
-        detailRecord.value.competitionLevel = editForm.competitionLevel
-        detailRecord.value.awardLevel = editForm.awardLevel
-      } else if (type === 'scientificProject') {
-        detailRecord.value.projectName = editForm.projectName
-        detailRecord.value.projectLevel = editForm.projectLevel
-        detailRecord.value.ranking = editForm.ranking
-        detailRecord.value.projectDate = editForm.projectDate
-      } else if (type === 'softwareCopyright') {
-        detailRecord.value.softName = editForm.softName
-        detailRecord.value.issuer = editForm.issuer
-        detailRecord.value.ranking = editForm.ranking
-        detailRecord.value.approveDate = editForm.approveDate
-      } else if (type === 'paper') {
-        detailRecord.value.paperName = editForm.paperName
-        detailRecord.value.journalName = editForm.journalName
-        detailRecord.value.ranking = editForm.ranking
-        detailRecord.value.publishDate = editForm.publishDate
-      } else if (type === 'innovationStar') {
-        detailRecord.value.companyName = editForm.companyName
-        detailRecord.value.industryType = editForm.industryType
-        detailRecord.value.ranking = editForm.ranking
-        detailRecord.value.registerDate = editForm.registerDate
-      }
-      detailRecord.value.semester = editForm.semester
-      detailRecord.value.status = 'submitted'
-    }
-    saving.value = false
-    detailVisible.value = false
-    ElMessage.success('修改已保存，等待重新审核')
-  }, 400)
+function handleSaved(_id: string) {
+  if (dialogRecord.value) {
+    Object.assign(dialogRecord.value, { status: 'submitted' })
+  }
+  bumpTableAnimation()
+  triggerSuccessPulse()
 }
+
+onMounted(() => {
+  awardReviewStore.fetchAll()
+})
 </script>
 
 <template>
   <div class="star-section">
+    <!-- 页面头部 -->
+    <header class="star-section__hero">
+      <div class="star-section__hero-main">
+        <div class="star-section__hero-icon">
+          <Award :size="28" />
+        </div>
+        <div>
+          <h1 class="star-section__hero-title">奖项审核</h1>
+          <p class="star-section__hero-subtitle">
+            查看竞赛之星/科研之星/双创之星的报名审核状态，待审核或被驳回的报名可修改后重新提交
+          </p>
+        </div>
+      </div>
+      <div class="star-section__hero-stats">
+        <div v-for="stat in stats" :key="stat.label" class="star-section__hero-stat">
+          <div class="star-section__hero-stat-main" :style="{ color: stat.color }">
+            <component :is="stat.icon" :size="18" />
+            <span class="star-section__hero-stat-value">{{ stat.value }}</span>
+          </div>
+          <span class="star-section__hero-stat-label">{{ stat.label }}</span>
+        </div>
+      </div>
+    </header>
+
     <el-tabs v-model="activeTab" type="card" @tab-change="handleTabChange">
       <el-tab-pane v-for="tab in starTabs" :key="tab.key" :label="tab.label" :name="tab.key" />
     </el-tabs>
 
-    <el-table :data="paginatedRecords" stripe style="width: 100%">
-      <el-table-column type="index" label="序号" width="60" />
-      <el-table-column prop="title" label="报名标题" min-width="240" show-overflow-tooltip />
-      <el-table-column prop="typeLabel" label="报名类型" width="120" />
-      <el-table-column prop="applicant" label="报名人" width="100" />
-      <el-table-column prop="submitDate" label="提交日期" width="120" />
-      <el-table-column prop="semester" label="学期" width="110" />
-      <el-table-column label="状态" width="100">
-        <template #default="{ row }"
-          ><StatusTag :status="(row as StarRecord).status" size="small"
-        /></template>
-      </el-table-column>
-      <el-table-column label="操作" width="120" align="center" fixed="right">
-        <template #default="{ row }">
-          <el-button
-            v-if="canEditStar((row as StarRecord).status)"
-            type="warning"
-            link
-            size="small"
-            @click="handleEdit(row as StarRecord)"
-            >编辑</el-button
-          >
-          <el-button v-else type="primary" link size="small" @click="handleView(row as StarRecord)"
-            >查看</el-button
-          >
-        </template>
-      </el-table-column>
-    </el-table>
+    <div :key="tableKey" class="star-section__card mc-card">
+      <el-table
+        :data="paginatedRecords"
+        class="mc-table mc-table--staggered"
+        :class="{ 'is-success-pulse': successPulse }"
+        stripe
+        style="width: 100%"
+      >
+        <el-table-column type="index" label="序号" width="60" />
+        <el-table-column prop="title" label="报名标题" min-width="240" show-overflow-tooltip />
+        <el-table-column prop="typeLabel" label="报名类型" width="120" />
+        <el-table-column prop="applicant" label="报名人" width="100" />
+        <el-table-column prop="submitDate" label="提交日期" width="120" />
+        <el-table-column prop="semester" label="学期" width="110" />
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }"
+            ><StatusTag :status="(row as StarRecord).status" size="small"
+          /></template>
+        </el-table-column>
+        <el-table-column label="操作" width="120" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="canEditStar((row as StarRecord).status)"
+              type="warning"
+              link
+              size="small"
+              @click="handleEdit(row as StarRecord)"
+              >编辑</el-button
+            >
+            <el-button
+              v-else
+              type="primary"
+              link
+              size="small"
+              @click="handleView(row as StarRecord)"
+              >查看</el-button
+            >
+          </template>
+        </el-table-column>
+      </el-table>
 
-    <div v-if="total > 0" class="star-section__pagination">
-      <el-pagination
-        v-model:current-page="pageNum"
-        v-model:page-size="pageSize"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next, jumper"
-        background
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-      />
+      <div v-if="total > 0" class="star-section__pagination mc-pagination">
+        <el-pagination
+          v-model:current-page="pageNum"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @current-change="handlePageChange"
+          @size-change="handleSizeChange"
+        />
+      </div>
     </div>
 
     <!-- 详情/编辑弹窗 -->
-    <el-dialog
-      v-model="detailVisible"
-      :title="detailMode === 'edit' ? '编辑报名信息' : '报名详情'"
-      width="560px"
-    >
-      <!-- 查看模式 -->
-      <template v-if="detailRecord && detailMode === 'view'">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item v-for="f in detailFields" :key="f.label" :label="f.label">
-            <template v-if="f.isStatus">
-              <StatusTag :status="detailRecord.status" size="small" />
-            </template>
-            <span v-else>{{ f.value }}</span>
-          </el-descriptions-item>
-        </el-descriptions>
-      </template>
-
-      <!-- 编辑模式 -->
-      <template v-if="detailRecord && detailMode === 'edit'">
-        <el-alert title="编辑说明" type="warning" :closable="false" show-icon class="mb-16">
-          <p>修改后提交将进入待审核状态。</p>
-        </el-alert>
-        <el-form :model="editForm" label-width="120px">
-          <!-- 竞赛之星 -->
-          <template v-if="detailRecord.type === 'competitionStar'">
-            <el-form-item label="竞赛名称" required>
-              <el-input
-                v-model="editForm.competitionName"
-                placeholder="请输入竞赛名称"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="参赛时间">
-              <el-date-picker
-                v-model="editForm.competitionDate"
-                type="month"
-                placeholder="选择年月"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="竞赛级别">
-              <el-select
-                v-model="editForm.competitionLevel"
-                placeholder="请选择"
-                class="form-control"
-              >
-                <el-option
-                  v-for="t in COMPETITION_TYPES"
-                  :key="t.value"
-                  :label="t.label"
-                  :value="t.value"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="获奖等级">
-              <el-select v-model="editForm.awardLevel" placeholder="请选择" class="form-control">
-                <el-option
-                  v-for="t in AWARD_LEVELS"
-                  :key="t.value"
-                  :label="t.label"
-                  :value="t.value"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="学期">
-              <el-select v-model="editForm.semester" placeholder="请选择" class="form-control">
-                <el-option
-                  v-for="s in SEMESTER_OPTIONS"
-                  :key="s.value"
-                  :label="s.label"
-                  :value="s.value"
-                />
-              </el-select>
-            </el-form-item>
-          </template>
-
-          <!-- 科研项目 -->
-          <template v-if="detailRecord.type === 'scientificProject'">
-            <el-form-item label="项目名称" required>
-              <el-input
-                v-model="editForm.projectName"
-                placeholder="请输入科研项目名称"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="项目级别">
-              <el-select v-model="editForm.projectLevel" placeholder="请选择" class="form-control">
-                <el-option
-                  v-for="t in PROJECT_LEVELS"
-                  :key="t.value"
-                  :label="t.label"
-                  :value="t.value"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="申报人排名">
-              <el-input v-model="editForm.ranking" placeholder="如：1/3" class="form-control" />
-            </el-form-item>
-            <el-form-item label="项目时间">
-              <el-date-picker
-                v-model="editForm.projectDate"
-                type="month"
-                placeholder="选择年月"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="学期">
-              <el-select v-model="editForm.semester" placeholder="请选择" class="form-control">
-                <el-option
-                  v-for="s in SEMESTER_OPTIONS"
-                  :key="s.value"
-                  :label="s.label"
-                  :value="s.value"
-                />
-              </el-select>
-            </el-form-item>
-          </template>
-
-          <!-- 软件著作权 -->
-          <template v-if="detailRecord.type === 'softwareCopyright'">
-            <el-form-item label="软件名称" required>
-              <el-input
-                v-model="editForm.softName"
-                placeholder="请输入软件名称"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="颁发单位">
-              <el-input
-                v-model="editForm.issuer"
-                placeholder="请输入颁发单位"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="申报人排名">
-              <el-input v-model="editForm.ranking" placeholder="如：1/3" class="form-control" />
-            </el-form-item>
-            <el-form-item label="批准日期">
-              <el-date-picker
-                v-model="editForm.approveDate"
-                type="month"
-                placeholder="选择年月"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="学期">
-              <el-select v-model="editForm.semester" placeholder="请选择" class="form-control">
-                <el-option
-                  v-for="s in SEMESTER_OPTIONS"
-                  :key="s.value"
-                  :label="s.label"
-                  :value="s.value"
-                />
-              </el-select>
-            </el-form-item>
-          </template>
-
-          <!-- 发表论文 -->
-          <template v-if="detailRecord.type === 'paper'">
-            <el-form-item label="论文名称" required>
-              <el-input
-                v-model="editForm.paperName"
-                placeholder="请输入论文名称"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="发表期刊">
-              <el-input
-                v-model="editForm.journalName"
-                placeholder="请输入期刊名称"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="申报人排名">
-              <el-input v-model="editForm.ranking" placeholder="如：1/3" class="form-control" />
-            </el-form-item>
-            <el-form-item label="发表日期">
-              <el-date-picker
-                v-model="editForm.publishDate"
-                type="month"
-                placeholder="选择年月"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="学期">
-              <el-select v-model="editForm.semester" placeholder="请选择" class="form-control">
-                <el-option
-                  v-for="s in SEMESTER_OPTIONS"
-                  :key="s.value"
-                  :label="s.label"
-                  :value="s.value"
-                />
-              </el-select>
-            </el-form-item>
-          </template>
-
-          <!-- 双创之星 -->
-          <template v-if="detailRecord.type === 'innovationStar'">
-            <el-form-item label="公司名称" required>
-              <el-input
-                v-model="editForm.companyName"
-                placeholder="请输入公司名称"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="行业类型">
-              <el-select v-model="editForm.industryType" placeholder="请选择" class="form-control">
-                <el-option
-                  v-for="t in INDUSTRY_TYPES"
-                  :key="t.value"
-                  :label="t.label"
-                  :value="t.value"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item label="申报人排名">
-              <el-input v-model="editForm.ranking" placeholder="如：1/3" class="form-control" />
-            </el-form-item>
-            <el-form-item label="注册时间">
-              <el-date-picker
-                v-model="editForm.registerDate"
-                type="month"
-                placeholder="选择年月"
-                class="form-control"
-              />
-            </el-form-item>
-            <el-form-item label="学期">
-              <el-select v-model="editForm.semester" placeholder="请选择" class="form-control">
-                <el-option
-                  v-for="s in SEMESTER_OPTIONS"
-                  :key="s.value"
-                  :label="s.label"
-                  :value="s.value"
-                />
-              </el-select>
-            </el-form-item>
-          </template>
-        </el-form>
-      </template>
-
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-        <el-button v-if="detailMode === 'edit'" type="primary" :loading="saving" @click="handleSave"
-          >保存修改</el-button
-        >
-      </template>
-    </el-dialog>
+    <StarDialog
+      v-model="dialogVisible"
+      :record="dialogRecord"
+      :mode="dialogMode"
+      @saved="handleSaved"
+    />
   </div>
 </template>
 
 <style scoped lang="scss">
+@use '@/features/messages/styles/theme' as *;
+
 .star-section {
+  @include message-theme-vars;
+
   display: flex;
   flex-direction: column;
   gap: 16px;
+  font-family: $mc-font-body;
+  color: var(--mc-text);
+
+  // ── hero 头部 ──
+  &__hero {
+    @include mc-fade-in;
+
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
+    border-radius: var(--mc-radius);
+    padding: 24px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-shadow: var(--mc-shadow);
+  }
+
+  &__hero-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__hero-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: var(--mc-gold);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__hero-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--el-text-color-primary);
+  }
+
+  &__hero-subtitle {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--mc-text-secondary);
+  }
+
+  &__hero-stats {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__hero-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 90px;
+    padding: 10px 16px;
+    background: var(--mc-bg);
+    border: 1px solid var(--mc-border);
+    border-radius: 8px;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:hover {
+      border-color: var(--mc-gold);
+      box-shadow: 0 2px 8px var(--mc-primary-fade);
+    }
+  }
+
+  &__hero-stat-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__hero-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--el-text-color-primary);
+  }
+
+  &__hero-stat-label {
+    font-size: 12px;
+    color: var(--mc-text-secondary);
+  }
+
+  // ── 表格卡片 ──
+  &__card {
+    @include mc-fade-in(0.1s);
+    @include mc-card;
+
+    padding: 0;
+    overflow: hidden;
+
+    :deep(.el-table) {
+      @include mc-table;
+    }
+  }
 
   &__pagination {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 8px;
+    @include mc-pagination;
+
+    margin: 0 16px 16px;
   }
 }
 
-.form-control {
-  width: 360px;
+// ── 行级 stagger 动画（:deep 直接穿透 el-table__row，避免 :deep(.el-table) 的同级元素 bug） ──
+.mc-table--staggered {
+  --mc-row-duration: 0.54s;
+  --mc-row-delay: 0.05s;
+  --mc-row-offset: -28px;
+
+  :deep(.el-table__row) {
+    --_duration: var(--mc-row-duration, 0.6s);
+    --_delay: var(--mc-row-delay, 0.08s);
+    --_easing: var(--mc-row-easing, #{$ease-emphasized});
+
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: table-row-brush var(--_duration) var(--_easing) both;
+  }
+
+  @for $i from 1 through 24 {
+    :deep(.el-table__body .el-table__row:nth-child(#{$i})) {
+      animation-delay: calc((#{$i} - 1) * var(--_delay));
+    }
+  }
 }
 
-:deep(.mb-16) {
-  margin-bottom: 16px;
+// ── 保存成功脉冲（琥珀金） ──
+.is-success-pulse {
+  animation: star-table-pulse 0.52s ease;
+}
+
+@keyframes star-table-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(212, 165, 116, 0);
+    transform: translateY(0);
+  }
+  40% {
+    box-shadow: 0 10px 30px rgba(212, 165, 116, 0.18);
+    transform: translateY(-2px);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 165, 116, 0);
+    transform: translateY(0);
+  }
 }
 </style>

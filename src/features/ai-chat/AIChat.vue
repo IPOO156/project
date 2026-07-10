@@ -1,512 +1,232 @@
 <script setup lang="ts">
-import { Send, Sparkles, User } from 'lucide-vue-next'
-import { nextTick, ref } from 'vue'
+import type { ChatSettings, ExportFormat } from './types'
+import { ElMessage } from 'element-plus'
+/**
+ * AIChat - AI 智能助手独立页（编排者）
+ *
+ * 参照 archive-assistant.html 的布局与功能，沿用项目浅色主题（深海蓝 + 琥珀金）。
+ * fullBleed 路由：根高度 calc(100vh - $header-height)，侧栏与消息区各自独立滚动。
+ *
+ * 结构：grid 280px 侧栏 + 1fr 主区
+ *  - 左：ChatSidebar（品牌 / 新建 / 历史 / 用户 / 设置入口）
+ *  - 右：ChatHeader + ChatMessages + QuickQuestions + ChatInput
+ *  - 浮层：SettingsPanel（右滑入）/ ClearConfirmModal（居中）
+ *
+ * 子组件均为纯展示/交互组件，状态由本文件通过 useAIChat / useChatSettings / useChatExport 协调。
+ */
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useUserStore } from '@/app/stores/stores'
-import PageContainer from '@/shared/ui/PageContainer.vue'
+import ChatHeader from './components/ChatHeader.vue'
+import ChatInput from './components/ChatInput.vue'
+import ChatMessages from './components/ChatMessages.vue'
+import ChatSidebar from './components/ChatSidebar.vue'
+import ClearConfirmModal from './components/ClearConfirmModal.vue'
+import QuickQuestions from './components/QuickQuestions.vue'
+import SettingsPanel from './components/SettingsPanel.vue'
+import { useAIChat } from './composables/useAIChat'
+import { useChatExport } from './composables/useChatExport'
+import { useChatSettings } from './composables/useChatSettings'
+import { quickQuestions } from './data/quickQuestions'
 
-interface ChatMessage {
-  id: string
-  role: 'user' | 'ai'
-  content: string
-  time: string
-}
+defineOptions({ name: 'AIChat' })
 
-const messages = ref<ChatMessage[]>([
-  {
-    id: 'welcome',
-    role: 'ai',
-    content:
-      '你好！我是你的档案智能助手，可以帮你解答关于个人档案、奖项申报、成长记录等方面的问题。',
-    time: formatTime(new Date()),
-  },
-])
-
-const inputValue = ref('')
-const loading = ref(false)
-const chatBodyRef = ref<HTMLElement | null>(null)
 const userStore = useUserStore()
+const {
+  messages,
+  loading,
+  sendMessage,
+  clearMessages,
+  conversations,
+  currentConversationId,
+  createConversation,
+  switchConversation,
+  deleteConversation,
+  setFeedback,
+} = useAIChat()
+const { settings, update: updateSetting } = useChatSettings()
+const { exportConversation } = useChatExport()
 
-const quickQuestions = [
-  '如何填写个人档案信息？',
-  '奖项申报需要准备哪些材料？',
-  '成长时间轴怎么添加经历？',
-  '如何查看审批进度？',
-]
+const showSettings = ref(false)
+const showClearModal = ref(false)
+/** 快捷问题对话状态可见性：首次提问后隐藏，新建/清空后按 settings.quick 恢复 */
+const quickVisible = ref(settings.value.quick)
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-}
+const userName = computed(() => userStore.userName || '同学')
+const userAvatar = computed(() => userStore.avatar || '')
+const messageCount = computed(() => messages.value.length)
+/** 快捷问题有效可见 = 设置开关 && 对话状态 */
+const quickEffectiveVisible = computed(() => settings.value.quick && quickVisible.value)
 
-function scrollToBottom() {
-  nextTick(() => {
-    const el = chatBodyRef.value
-    if (!el) return
-    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
-  })
-}
-
-function simulateAIReply(userText: string): string {
-  const lower = userText.toLowerCase()
-  if (lower.includes('档案') || lower.includes('个人')) {
-    return '你可以在「个人中心 → 个人档案信息」页面查看和编辑基本资料。点击头像可以更换照片，基本资料支持直接修改保存。'
+/** 发送消息（thinking 开启时 800ms 思考，关闭时 150ms 快速回复） */
+function handleSend(text: string, files: File[]) {
+  if (files.length) {
+    ElMessage.info(`已附加 ${files.length} 个文件（演示模式暂不解析附件内容）`)
   }
-  if (lower.includes('奖项') || lower.includes('申报') || lower.includes('报名')) {
-    return '奖项申报请进入「奖项报名」模块，选择对应类别后填写信息并上传佐证材料。提交后可在「消息中心」查看审批提醒。'
+  sendMessage(text, { delay: settings.value.thinking ? 800 : 150 })
+  quickVisible.value = false
+}
+
+/** 快捷问题点击 → 直接发送 */
+function handleQuickAsk(question: string) {
+  sendMessage(question, { delay: settings.value.thinking ? 800 : 150 })
+  quickVisible.value = false
+}
+
+/** 清空对话 → 弹确认 */
+function handleClear() {
+  showClearModal.value = true
+}
+
+/** 确认清空：恢复欢迎语 + 重置快捷问题可见性 */
+function confirmClear() {
+  clearMessages()
+  showClearModal.value = false
+  quickVisible.value = settings.value.quick
+}
+
+/** 新建对话：当前有内容时存入历史，重置欢迎语 */
+function handleNewChat() {
+  createConversation()
+  quickVisible.value = settings.value.quick
+}
+
+/** 切换历史对话 */
+function handleSwitch(id: string) {
+  switchConversation(id)
+  quickVisible.value = false
+}
+
+/** 删除历史对话 */
+function handleDelete(id: string) {
+  deleteConversation(id)
+}
+
+/** 导出当前对话 */
+function handleExport(format: ExportFormat) {
+  exportConversation(messages.value, userName.value, format)
+}
+
+/** 消息反馈（有用/无用） */
+function handleFeedback(msgId: string, type: 'useful' | 'useless') {
+  setFeedback(msgId, type)
+  ElMessage.success(type === 'useful' ? '感谢反馈，已记录为"有用"' : '感谢反馈，已记录为"无用"')
+}
+
+/** 复制消息内容（content 字段已为纯文本，富文本回复时由 richToPlain 生成） */
+function handleCopy(msgId: string) {
+  const msg = messages.value.find((m) => m.id === msgId)
+  if (!msg) return
+  navigator.clipboard
+    .writeText(msg.content)
+    .then(() => ElMessage.success('已复制到剪贴板'))
+    .catch(() => ElMessage.error('复制失败，请手动选择文本'))
+}
+
+/** 设置项更新（持久化由 useChatSettings 负责） */
+function handleSettingUpdate(key: keyof ChatSettings, value: boolean) {
+  updateSetting(key, value)
+}
+
+/** Esc 关闭浮层：优先关确认弹窗，其次关设置面板 */
+function onKeydown(e: KeyboardEvent) {
+  if (e.key !== 'Escape') return
+  if (showClearModal.value) {
+    showClearModal.value = false
+  } else if (showSettings.value) {
+    showSettings.value = false
   }
-  if (lower.includes('成长') || lower.includes('时间轴') || lower.includes('经历')) {
-    return '在「成长时间轴」页面点击中央的年轮原子核即可添加经历。经历会按学期自动排序到对应的年轮圈上。'
-  }
-  if (lower.includes('审批') || lower.includes('进度') || lower.includes('审核')) {
-    return '提交记录可在「审批与记录 → 提交记录」中查看。审批状态变更时，系统会通过消息中心推送提醒。'
-  }
-  if (lower.includes('密码') || lower.includes('登录')) {
-    return '如需修改密码，请前往「个人中心 → 修改密码」页面。登录时请注意大小写锁定状态。'
-  }
-  return '这个问题我暂时无法给出具体答案。你可以联系辅导员或系统管理员获取帮助，也可以尝试描述得更详细一些。'
 }
 
-function pushUserMessage(text: string) {
-  messages.value.push({
-    id: `u-${Date.now()}`,
-    role: 'user',
-    content: text,
-    time: formatTime(new Date()),
-  })
-}
-
-function pushAIMessage(content: string) {
-  messages.value.push({
-    id: `ai-${Date.now()}`,
-    role: 'ai',
-    content,
-    time: formatTime(new Date()),
-  })
-}
-
-function handleSend() {
-  const text = inputValue.value.trim()
-  if (!text || loading.value) return
-  pushUserMessage(text)
-  inputValue.value = ''
-  scrollToBottom()
-
-  loading.value = true
-  setTimeout(() => {
-    pushAIMessage(simulateAIReply(text))
-    loading.value = false
-    scrollToBottom()
-  }, 800)
-}
-
-function handleQuickQuestion(text: string) {
-  pushUserMessage(text)
-  scrollToBottom()
-  loading.value = true
-  setTimeout(() => {
-    pushAIMessage(simulateAIReply(text))
-    loading.value = false
-    scrollToBottom()
-  }, 800)
-}
-
-function handleKeydown(event: KeyboardEvent) {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault()
-    handleSend()
-  }
-}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <PageContainer class="ai-chat">
-    <header class="ai-chat__header">
-      <div class="ai-chat__brand">
-        <div class="ai-chat__icon">
-          <Sparkles :size="26" />
-        </div>
-        <div>
-          <h1 class="ai-chat__title">AI 智能助手</h1>
-          <p class="ai-chat__subtitle">解答档案、申报、成长记录相关问题</p>
-        </div>
-      </div>
-    </header>
+  <div class="ai-chat">
+    <!-- 左侧：历史对话栏 -->
+    <ChatSidebar
+      :conversations="conversations"
+      :current-id="currentConversationId"
+      :user-name="userName"
+      :user-avatar="userAvatar"
+      @newchat="handleNewChat"
+      @switch="handleSwitch"
+      @delete="handleDelete"
+      @opensettings="showSettings = true"
+    />
 
-    <div class="ai-chat__card">
-      <div ref="chatBodyRef" class="ai-chat__body">
-        <div
-          v-for="msg in messages"
-          :key="msg.id"
-          class="ai-chat__message"
-          :class="{ 'ai-chat__message--user': msg.role === 'user' }"
-        >
-          <div
-            class="ai-chat__avatar"
-            :class="{
-              'ai-chat__avatar--user': msg.role === 'user',
-              'ai-chat__avatar--ai': msg.role === 'ai',
-            }"
-          >
-            <template v-if="msg.role === 'user'">
-              <img
-                v-if="userStore.avatar"
-                :src="userStore.avatar"
-                alt="用户头像"
-                class="ai-chat__avatar-img"
-              />
-              <User v-else :size="18" />
-            </template>
-            <Sparkles v-else :size="18" />
-          </div>
-          <div class="ai-chat__bubble">
-            <p class="ai-chat__content">{{ msg.content }}</p>
-            <span class="ai-chat__time">{{ msg.time }}</span>
-          </div>
-        </div>
+    <!-- 右侧：主聊天区 -->
+    <section class="ai-chat__main">
+      <ChatHeader
+        :online="true"
+        :message-count="messageCount"
+        @clear="handleClear"
+        @export="handleExport"
+      />
 
-        <div v-if="loading" class="ai-chat__message ai-chat__message--loading">
-          <div class="ai-chat__avatar ai-chat__avatar--ai">
-            <Sparkles :size="18" />
-          </div>
-          <div class="ai-chat__bubble ai-chat__bubble--loading">
-            <Sparkles :size="16" class="ai-chat__thinking-icon" />
-            <span>AI Thinking...</span>
-          </div>
-        </div>
-      </div>
+      <ChatMessages
+        :messages="messages"
+        :loading="loading"
+        :show-thinking="settings.thinking"
+        :show-feedback="settings.feedback"
+        :user-name="userName"
+        @feedback="handleFeedback"
+        @copy="handleCopy"
+      />
 
-      <div class="ai-chat__quick">
-        <button
-          v-for="q in quickQuestions"
-          :key="q"
-          type="button"
-          class="ai-chat__quick-btn"
-          @click="handleQuickQuestion(q)"
-        >
-          {{ q }}
-        </button>
-      </div>
+      <QuickQuestions
+        :questions="quickQuestions"
+        :visible="quickEffectiveVisible"
+        @ask="handleQuickAsk"
+      />
 
-      <div class="ai-chat__input-bar">
-        <input
-          v-model="inputValue"
-          class="ai-chat__input"
-          placeholder="输入你的问题，按回车发送..."
-          @keydown="handleKeydown"
-        />
-        <button
-          type="button"
-          class="ai-chat__send"
-          :disabled="!inputValue.trim() || loading"
-          @click="handleSend"
-        >
-          <Send :size="18" />
-        </button>
-      </div>
-    </div>
-  </PageContainer>
+      <ChatInput :loading="loading" @send="handleSend" />
+    </section>
+
+    <!-- 浮层：设置面板（右侧滑入） -->
+    <SettingsPanel
+      :visible="showSettings"
+      :settings="settings"
+      @update="handleSettingUpdate"
+      @close="showSettings = false"
+    />
+
+    <!-- 浮层：清空确认弹窗 -->
+    <ClearConfirmModal
+      :visible="showClearModal"
+      @confirm="confirmClear"
+      @cancel="showClearModal = false"
+    />
+  </div>
 </template>
 
 <style scoped lang="scss">
-:deep(.page-container__body) {
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  align-items: center;
-  height: calc(100vh - #{$header-height} - 50px);
-  padding: 16px;
-}
-
+// fullBleed canonical 高度：HeaderBar 总占 $header-height(56px)，NavTabs 在其内部
+// 根容器固定高度 + overflow hidden，侧栏/消息区各自独立滚动，避免双滚动条
 .ai-chat {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
-  user-select: none;
+  height: calc(100vh - #{$header-height});
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  overflow: hidden;
+  background: var(--el-bg-color-page);
 
-  &__header {
-    background: linear-gradient(135deg, var(--el-bg-color) 0%, var(--el-fill-color-light) 100%);
-    border: 1px solid var(--el-border-color-light);
-    border-radius: $radius-xl;
-    padding: 24px 28px;
-    margin-bottom: 28px;
-    box-shadow: 0 4px 20px rgba(var(--gt-shadow-rgb, 26 18 10), 0.06);
-  }
-
-  &__brand {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-  }
-
-  &__icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 14px;
-    background: linear-gradient(
-      135deg,
-      var(--el-color-primary) 0%,
-      var(--el-color-primary-light-3) 100%
-    );
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 6px 16px rgba(64, 128, 255, 0.15);
-  }
-
-  &__title {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--el-text-color-primary);
-  }
-
-  &__subtitle {
-    margin: 6px 0 0;
-    font-size: 14px;
-    color: var(--el-text-color-secondary);
-  }
-
-  &__card {
-    flex: 1;
+  &__main {
     display: flex;
     flex-direction: column;
-    width: 100%;
-    max-width: 1080px;
-    margin: 0 auto;
-    min-height: 360px;
-    max-height: min(600px, calc(100vh - #{$header-height} - 260px));
-    background: var(--el-bg-color);
-    border: 1px solid var(--el-border-color-light);
-    border-radius: $radius-xl;
-    box-shadow: 0 4px 20px rgba(var(--gt-shadow-rgb, 26 18 10), 0.06);
     overflow: hidden;
-  }
-
-  &__body {
-    flex: 1;
-    padding: 24px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-  }
-
-  &__message {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    max-width: min(640px, 62%);
-    width: fit-content;
-
-    &--user {
-      align-self: flex-end;
-      flex-direction: row-reverse;
-      max-width: min(760px, 78%);
-    }
-
-    &--loading {
-      align-self: flex-start;
-    }
-  }
-
-  &__avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
-    background: var(--el-fill-color-light);
-    color: var(--el-text-color-secondary);
-  }
-
-  &__avatar--ai {
-    background: linear-gradient(
-      135deg,
-      var(--el-color-primary) 0%,
-      var(--el-color-primary-light-3) 100%
-    );
-    color: #fff;
-  }
-
-  &__avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  &__message--user &__avatar {
-    background: var(--el-color-primary);
-    color: #fff;
-  }
-
-  &__bubble {
-    padding: 14px 18px;
-    border-radius: 18px;
-    background: var(--el-fill-color-light);
-    color: var(--el-text-color-primary);
-    line-height: 1.7;
-    font-size: 14px;
-    position: relative;
-  }
-
-  &__message--user &__bubble {
-    background: var(--el-color-primary);
-    color: #fff;
-    border-bottom-right-radius: 6px;
-  }
-
-  &__bubble:not(.ai-chat__bubble--loading) {
-    border-bottom-left-radius: 6px;
-  }
-
-  &__content {
-    margin: 0;
-    white-space: pre-wrap;
-  }
-
-  &__time {
-    display: block;
-    margin-top: 6px;
-    font-size: 11px;
-    opacity: 0.6;
-  }
-
-  &__bubble--loading {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 16px 20px;
-    color: var(--el-text-color-secondary);
-    font-size: 13px;
-  }
-
-  &__thinking-icon {
-    animation: thinkingPulse 1.6s ease-in-out infinite;
-  }
-
-  @keyframes thinkingPulse {
-    0%,
-    100% {
-      opacity: 0.55;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.15);
-    }
-  }
-
-  &__quick {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 14px 24px;
-    border-top: 1px solid var(--el-border-color-light);
-    background: var(--el-fill-color-light);
-  }
-
-  &__quick-btn {
-    padding: 8px 14px;
-    border-radius: 100px;
-    border: 1px solid var(--el-border-color);
-    background: var(--el-bg-color);
-    color: var(--el-text-color-secondary);
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      border-color: var(--el-color-primary);
-      color: var(--el-color-primary);
-      background: rgba(64, 128, 255, 0.06);
-    }
-  }
-
-  &__input-bar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 24px;
-    border-top: 1px solid var(--el-border-color-light);
-    background: var(--el-bg-color);
-  }
-
-  &__input {
-    flex: 1;
     min-width: 0;
-    padding: 12px 18px;
-    border-radius: 12px;
-    border: 1px solid var(--el-border-color);
-    background: var(--el-fill-color-light);
-    color: var(--el-text-color-primary);
-    font-size: 14px;
-    outline: none;
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
-
-    &::placeholder {
-      color: var(--el-text-color-placeholder);
-    }
-
-    &:focus {
-      border-color: var(--el-color-primary);
-      box-shadow: 0 0 0 3px rgba(var(--el-color-primary-rgb, 100 132 236), 0.12);
-    }
-  }
-
-  &__send {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    border: none;
-    background: var(--el-color-primary);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover:not(:disabled) {
-      background: var(--el-color-primary-light-3);
-      transform: translateY(-1px);
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
   }
 }
 
+// 平板/移动端：隐藏历史栏，主聊天区顶满
 @media (max-width: 768px) {
   .ai-chat {
-    &__header {
-      padding: 20px;
-    }
+    grid-template-columns: 1fr;
+  }
 
-    &__card {
-      min-height: 420px;
-    }
-
-    &__message {
-      max-width: 100%;
-    }
-
-    &__input-bar {
-      padding: 12px 16px;
-    }
-
-    &__quick {
-      padding: 12px 16px;
-    }
+  // ChatSidebar 作为 grid 第一列被隐藏
+  .ai-chat > :first-child {
+    display: none;
   }
 }
 </style>

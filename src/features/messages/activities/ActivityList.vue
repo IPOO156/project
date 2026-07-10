@@ -171,7 +171,7 @@ async function handleWithdrawSubmission(row: SubmissionRecord) {
       cancelButtonText: '取消',
       type: 'warning',
     })
-    submissionStore.withdrawRecord(row.id)
+    await submissionStore.withdrawRecord(row.id)
     ElMessage.success('已撤回')
   } catch {
     // 用户取消
@@ -447,6 +447,7 @@ onMounted(() => {
 
 .mc-card {
   @include mc-card;
+  @include mc-fade-in(0.1s);
 }
 
 .mc-pagination {
@@ -458,6 +459,30 @@ onMounted(() => {
 }
 
 .mc-table {
-  @include mc-table;
+  :deep(.el-table) {
+    @include mc-table;
+  }
+
+  &--staggered {
+    --mc-row-duration: 0.54s;
+    --mc-row-delay: 0.05s;
+    --mc-row-offset: -28px;
+
+    :deep(.el-table__row) {
+      --_duration: var(--mc-row-duration, 0.6s);
+      --_delay: var(--mc-row-delay, 0.08s);
+      --_easing: var(--mc-row-easing, #{$ease-emphasized});
+
+      opacity: 0;
+      will-change: transform, opacity;
+      animation: table-row-brush var(--_duration) var(--_easing) both;
+    }
+
+    @for $i from 1 through 50 {
+      :deep(.el-table__body .el-table__row:nth-child(#{$i})) {
+        animation-delay: calc((#{$i} - 1) * var(--_delay));
+      }
+    }
+  }
 }
 </style>

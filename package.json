@@ -36,6 +36,7 @@
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.4",
     "sass": "^1.86.3",
+    "sharp": "^0.35.3",
     "stylelint": "^17.14.0",
     "stylelint-config-standard-scss": "^17.0.0",
     "typescript": "~5.7.3",

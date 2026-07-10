@@ -89,11 +89,7 @@ function handleClick() {
   bottom: 0;
   left: 0;
   border-radius: 50%;
-  background: linear-gradient(
-    135deg,
-    var(--el-color-primary) 0%,
-    var(--el-color-primary-light-3) 100%
-  );
+  background: linear-gradient(135deg, var(--mc-primary) 0%, var(--mc-primary-light) 100%);
   color: #fff;
   display: flex;
   align-items: center;

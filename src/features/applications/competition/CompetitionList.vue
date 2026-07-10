@@ -23,6 +23,8 @@ const {
 } = useApplicationForm({
   emptyForm,
   requiredFields: ['competitionName', 'competitionType', 'awardLevel', 'awardDate', 'semester'],
+  type: 'competition',
+  typeLabel: '学科竞赛',
 })
 const { clearDraft } = useFormDraft('competition', form)
 

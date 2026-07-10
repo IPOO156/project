@@ -22,6 +22,8 @@ const {
 } = useApplicationForm({
   emptyForm,
   requiredFields: ['bookName', 'bookDate', 'review', 'semester'],
+  type: 'bookReport',
+  typeLabel: '图书心得',
 })
 const { clearDraft } = useFormDraft('book-report', form)
 

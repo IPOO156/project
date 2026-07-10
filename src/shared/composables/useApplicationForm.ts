@@ -1,10 +1,16 @@
 import { ElMessage } from 'element-plus'
 import { reactive, ref, toRaw } from 'vue'
+import { submitApplication } from '@/shared/api/submission'
 
 export interface ApplicationFormOptions<T> {
   emptyForm: () => T
   requiredFields?: (keyof T & string)[]
+  /** 自定义提交回调，默认走 submitApplication(type, typeLabel, ...form) */
   onSubmit?: (form: T) => Promise<void> | void
+  /** 申报类型标识（默认提交时使用） */
+  type?: string
+  /** 申报类型中文名 */
+  typeLabel?: string
   successMessage?: string
 }
 
@@ -12,6 +18,8 @@ export function useApplicationForm<T extends Record<string, any>>({
   emptyForm,
   requiredFields,
   onSubmit,
+  type,
+  typeLabel,
   successMessage = '申报提交成功',
 }: ApplicationFormOptions<T>) {
   const form = reactive(emptyForm())
@@ -21,7 +29,6 @@ export function useApplicationForm<T extends Record<string, any>>({
     Object.assign(form, emptyForm())
   }
 
-  /** 校验必填字段是否已填写 */
   function validateRequired(): boolean {
     if (!requiredFields || requiredFields.length === 0) return true
 
@@ -48,15 +55,16 @@ export function useApplicationForm<T extends Record<string, any>>({
     try {
       if (onSubmit) {
         await onSubmit(toRaw(form) as T)
+      } else if (type) {
+        await submitApplication({ type, typeLabel, ...toRaw(form) })
       } else {
         await new Promise((resolve) => setTimeout(resolve, 600))
       }
 
       ElMessage.success(successMessage)
       reset()
-    } catch (error) {
+    } catch {
       ElMessage.error('提交失败，请重试')
-      console.error('表单提交错误:', error)
     } finally {
       submitting.value = false
     }

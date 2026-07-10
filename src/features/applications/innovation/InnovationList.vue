@@ -31,6 +31,8 @@ const {
     'registerDate',
     'semester',
   ],
+  type: 'innovation',
+  typeLabel: '创新创业',
 })
 const { clearDraft } = useFormDraft('innovation', form)
 

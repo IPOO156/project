@@ -54,7 +54,7 @@ export function useFormDraft<T extends Record<string, unknown>>(
       if (!isNonEmpty(data)) return
       Object.keys(data).forEach((k) => {
         if (k in form) {
-          form[k] = data[k]
+          Object.assign(form, { [k]: data[k] })
         }
       })
     } catch {

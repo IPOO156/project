@@ -30,7 +30,7 @@ const routes: RouteRecordRaw[] = [
         path: 'ai-chat',
         name: 'AIChat',
         component: () => import('@/features/ai-chat/AIChat.vue'),
-        meta: { title: 'AI 助手' },
+        meta: { title: 'AI 助手', fullBleed: true },
       },
       // ─── 个人中心 ───
       {

@@ -31,6 +31,8 @@ const {
     'endDate',
     'semester',
   ],
+  type: 'organization',
+  typeLabel: '组织履历',
 })
 const { clearDraft } = useFormDraft('organization', form)
 

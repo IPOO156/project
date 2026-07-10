@@ -23,6 +23,8 @@ const {
 } = useApplicationForm({
   emptyForm,
   requiredFields: ['awardName', 'scholarshipLevel', 'scholarshipGrade', 'acquireDate', 'semester'],
+  type: 'scholarship',
+  typeLabel: '奖学金',
 })
 const { clearDraft } = useFormDraft('scholarship', form)
 

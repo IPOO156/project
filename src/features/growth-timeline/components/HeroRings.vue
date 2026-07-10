@@ -6,6 +6,7 @@ import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import { useRingEffects } from '../composables/useRingEffects'
 import { findRingBySemester, getSemesterDisplayLabel, SEMESTER_RINGS } from '../timeline-constants'
 import HeroRingsElectrons from './HeroRingsElectrons.vue'
+import HeroRingsFooter from './HeroRingsFooter.vue'
 import HeroRingsNucleus from './HeroRingsNucleus.vue'
 import HeroRingsOrbit from './HeroRingsOrbit.vue'
 import HeroRingsParticles from './HeroRingsParticles.vue'
@@ -209,15 +210,6 @@ function handleElectronClick(event: MouseEvent, id: string) {
   emit('select', id, pos)
 }
 
-const progressPercent = computed(() => {
-  if (props.experiences.length === 0) return 0
-  const maxLevel = props.experiences.reduce((max, exp) => {
-    const ring = findRingBySemester(exp.semester)
-    return Math.max(max, ring?.level ?? 1)
-  }, 1)
-  return Math.round((maxLevel / SEMESTER_RINGS.length) * 100)
-})
-
 const selectedIdRef = computed(() => props.selectedId ?? null)
 const selectedElectronAngle = ref(0)
 const { extinguishedRings } = useRingEffects(
@@ -309,30 +301,7 @@ const { extinguishedRings } = useRingEffects(
       </div>
 
       <div class="hero-rings__footer">
-        <div class="hero-rings__data-row">
-          <div class="hero-rings__data-item">
-            <div class="hero-rings__data-value">{{ experiences.length }}</div>
-            <div class="hero-rings__data-unit">Experiences</div>
-          </div>
-          <div class="hero-rings__data-item">
-            <div class="hero-rings__data-value">{{ SEMESTER_RINGS.length }}</div>
-            <div class="hero-rings__data-unit">Rings</div>
-          </div>
-          <div class="hero-rings__data-item">
-            <div class="hero-rings__data-value">
-              {{ experiences.reduce((sum, e) => sum + e.skills.length, 0) }}
-            </div>
-            <div class="hero-rings__data-unit">Skills</div>
-          </div>
-        </div>
-
-        <div class="hero-rings__progress">
-          <span class="hero-rings__progress-label">当前进度</span>
-          <div class="hero-rings__progress-bar">
-            <div class="hero-rings__progress-fill" :style="{ width: `${progressPercent}%` }" />
-          </div>
-          <span class="hero-rings__progress-pct">{{ progressPercent }}%</span>
-        </div>
+        <HeroRingsFooter :experiences="experiences" />
       </div>
     </div>
 
@@ -444,8 +413,7 @@ const { extinguishedRings } = useRingEffects(
   }
 
   .hero-rings__title,
-  .hero-rings__desc,
-  .hero-rings__data-row {
+  .hero-rings__desc {
     animation: none !important;
     opacity: 1 !important;
   }
@@ -469,8 +437,7 @@ const { extinguishedRings } = useRingEffects(
 }
 
 .hero-rings__top,
-.hero-rings__poem,
-.hero-rings__footer {
+.hero-rings__poem {
   opacity: 0;
   animation: fadeSlideUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: auto;
@@ -543,93 +510,6 @@ const { extinguishedRings } = useRingEffects(
   to {
     opacity: 0.85;
     transform: translateY(0);
-  }
-}
-
-.hero-rings__footer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-  animation-delay: 1.2s;
-}
-
-.hero-rings__data-row {
-  display: flex;
-  justify-content: center;
-  align-items: stretch;
-  gap: 3rem;
-}
-
-.hero-rings__data-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  min-width: 80px;
-}
-
-.hero-rings__data-value {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 3rem;
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 2.5rem;
-  font-weight: 600;
-  color: var(--bark-dark, #2d1e12);
-  line-height: 1;
-  // 统一为等高、等宽数字，确保 5/8/10 视觉顶部对齐
-  font-variant-numeric: tabular-nums lining-nums;
-}
-
-.hero-rings__data-unit {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--text-light, #9a8474);
-}
-
-.hero-rings__progress {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-
-  &-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--text-light, #9a8474);
-    white-space: nowrap;
-  }
-
-  &-bar {
-    flex: 1;
-    width: 140px;
-    max-width: 140px;
-    height: 4px;
-    background: rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  &-fill {
-    height: 100%;
-    background: var(--gt-accent, #8b6340);
-    border-radius: 2px;
-    transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.5s;
-  }
-
-  &-pct {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.6rem;
-    color: var(--gt-accent, #8b6340);
-    min-width: 32px;
-    text-align: right;
   }
 }
 
