@@ -1,20 +1,251 @@
 <script setup lang="ts">
 /**
- * DeclarationReview - 申报审核
+ * DeclarationBoard - 申报看板
  *
- * 查看个人档案信息 10 个申报类型的申报状态与审核进度。
- * hero 头部 + 统计卡 + Tab 切换 + 动态筛选，全部由 ReviewSection 自包含。
+ * 统计总览 + 柱状图 + 学期趋势 + 档案完整度网格。
+ * 一站式查看各类型申报情况，点击快速跳转到对应表单。
  */
+import { FileText, Plus, TrendingUp } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 import PageContainer from '@/shared/ui/PageContainer.vue'
-import ReviewSection from './components/ReviewSection.vue'
+import PageHeader from '@/shared/ui/PageHeader.vue'
+import BoardCharts from './components/BoardCharts.vue'
+import { DECLARATION_TYPE_KEYS, DECLARATION_TYPE_LABELS } from './components/review-columns'
+import TrendChart from './components/TrendChart.vue'
+import { useAllReviewMockData } from './composables/useReviewMockData'
+
+const router = useRouter()
+const allData = useAllReviewMockData()
+
+const totalCount = computed(() => allData.value.length)
+
+const currentSemester = computed(() => {
+  const sorted = [...allData.value].sort((a, b) => b.submitDate?.localeCompare(a.submitDate) || 0)
+  return sorted[0]?.semester || '2024-2025-2'
+})
+
+const semesterCount = computed(
+  () => allData.value.filter((r) => r.semester === currentSemester.value).length,
+)
+
+const typeData = computed(() => {
+  const map = new Map<string, number>()
+  allData.value.forEach((r) => {
+    const label = DECLARATION_TYPE_LABELS[r.type] || r.typeLabel || r.type
+    map.set(label, (map.get(label) || 0) + 1)
+  })
+  return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
+})
+
+const trendData = computed(() => {
+  const map = new Map<string, number>()
+  allData.value.forEach((r) => {
+    if (r.semester) map.set(r.semester, (map.get(r.semester) || 0) + 1)
+  })
+  return Array.from(map.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([semester, count]) => ({ semester, count }))
+})
+
+const completenessList = computed(() => {
+  return DECLARATION_TYPE_KEYS.map((key) => {
+    const label = DECLARATION_TYPE_LABELS[key] || key
+    const hasData = allData.value.some((r) => r.type === key)
+    const pathMap: Record<string, string> = {
+      competition: '/applications?tab=competition',
+      innovation: '/applications?tab=innovation',
+      research: '/applications?tab=research',
+      scholarship: '/applications?tab=scholarship',
+      certificate: '/applications?tab=certificate',
+      internship: '/applications?tab=internship',
+      organization: '/applications?tab=organization',
+      training: '/applications?tab=training',
+      socialPractice: '/applications?tab=social-practice',
+      bookReport: '/applications?tab=book-report',
+    }
+    return { key, label, hasData, path: pathMap[key] || '/applications' }
+  })
+})
+
+function goTo(path: string) {
+  router.push(path)
+}
 </script>
 
 <template>
   <PageContainer>
-    <ReviewSection />
+    <PageHeader title="申报看板" subtitle="总览各类型申报情况，快速了解档案完整度" />
+
+    <el-row :gutter="16" class="stats-row">
+      <el-col :span="12">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">申报总数</p>
+              <p class="stat-card__value">{{ totalCount }}</p>
+            </div>
+            <div class="stat-card__icon"><FileText :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">本学期新增</p>
+              <p class="stat-card__value">{{ semesterCount }}</p>
+            </div>
+            <div class="stat-card__icon"><TrendingUp :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="16">
+      <el-col :span="14">
+        <BoardCharts :data="typeData" title="各类型申报数量" />
+      </el-col>
+      <el-col :span="10">
+        <TrendChart :data="trendData" title="各学期申报趋势" />
+      </el-col>
+    </el-row>
+
+    <el-card class="completeness-card">
+      <template #header>
+        <div class="completeness-header">
+          <span class="completeness-title">档案完整度总览</span>
+          <span class="completeness-sub"
+            >已填写 {{ completenessList.filter((c) => c.hasData).length }}/{{
+              completenessList.length
+            }}
+            项</span
+          >
+        </div>
+      </template>
+      <el-row :gutter="12">
+        <el-col v-for="item in completenessList" :key="item.key" :span="6" class="completeness-col">
+          <div
+            class="completeness-item"
+            :class="{ 'is-filled': item.hasData }"
+            @click="goTo(item.path)"
+          >
+            <div class="completeness-item__icon">
+              <span v-if="item.hasData" class="check">✓</span>
+              <span v-else class="cross">✗</span>
+            </div>
+            <div class="completeness-item__label">{{ item.label }}</div>
+            <el-button
+              :type="item.hasData ? 'primary' : 'default'"
+              size="small"
+              link
+              @click.stop="goTo(item.path)"
+            >
+              {{ item.hasData ? '查看' : '去填写' }}
+              <Plus :size="12" style="margin-left: 2px" />
+            </el-button>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
   </PageContainer>
 </template>
 
 <style scoped lang="scss">
-// 样式由 ReviewSection 内部自包含，此处无需额外样式
+.stats-row {
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  &__body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  &__label {
+    font-size: 14px;
+    color: var(--el-text-color-secondary);
+    margin-bottom: 4px;
+  }
+  &__value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  &__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #f1f5f9;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+}
+
+.completeness-card {
+  margin-bottom: 16px;
+}
+.completeness-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.completeness-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.completeness-sub {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+.completeness-col {
+  margin-bottom: 12px;
+}
+
+.completeness-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--el-border-color-lighter);
+  background: var(--el-fill-color-light);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  &:hover {
+    border-color: #94a3b8;
+    background: #fff;
+  }
+  &.is-filled {
+    border-color: #d4edda;
+    background: #f0fdf4;
+    &:hover {
+      border-color: #10b981;
+    }
+    .check {
+      color: #10b981;
+    }
+  }
+  .cross {
+    color: #94a3b8;
+  }
+  &__icon {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  &__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+    text-align: center;
+  }
+}
 </style>

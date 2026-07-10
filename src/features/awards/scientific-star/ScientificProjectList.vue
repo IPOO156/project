@@ -3,6 +3,8 @@ import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 import { submitApplication } from '@/shared/api/submission'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
+import { useFormEdit } from '@/shared/composables/useFormEdit'
+import { useFormRecords } from '@/shared/composables/useFormRecords'
 import { PROJECT_LEVELS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -28,6 +30,17 @@ const { clearDraft } = useFormDraft('scientific-project', form, {
   afterRestore: () => sanitizeSemesterMonthPair(form, 'startDate', 'semester'),
 })
 const submitting = ref(false)
+const { records, addRecord, updateRecord, removeRecord } = useFormRecords('scientificProject')
+const {
+  editingId,
+  detailVisible,
+  detailRecord,
+  isEditing,
+  viewRecord,
+  startEdit,
+  cancelEdit,
+  closeDetail,
+} = useFormEdit()
 
 const disabledDate = computed(() => buildSemesterMonthDisabledDate(form.semester))
 
@@ -42,6 +55,20 @@ function reset() {
   Object.assign(form, emptyForm())
 }
 
+function handleEditClick(row: any) {
+  form.projectName = row.projectName || ''
+  form.projectLevel = row.projectLevel || ''
+  form.ranking = row.ranking || ''
+  form.startDate = row.startDate || ''
+  form.semester = row.semester || ''
+  startEdit(row)
+}
+
+function handleCancel() {
+  cancelEdit()
+  Object.assign(form, emptyForm())
+}
+
 async function handleSubmit() {
   sanitizeSemesterMonthPair(form, 'startDate', 'semester')
   if (!isMonthInSemester(form.startDate, form.semester)) {
@@ -52,6 +79,12 @@ async function handleSubmit() {
   try {
     await submitApplication({ type: 'scientificProject', typeLabel: '科研之星报名', ...form })
     ElMessage.success('报名提交成功')
+    if (editingId.value) {
+      updateRecord(editingId.value, { title: form.projectName || '科研项目申报', ...form })
+      editingId.value = null
+    } else {
+      addRecord(form.projectName || '科研项目申报')
+    }
     clearDraft()
     reset()
   } catch {
@@ -67,10 +100,21 @@ async function handleSubmit() {
     alert-title="科研项目申报说明"
     alert-description="请填写科研项目信息，提交后可在下方查看记录。"
     :show-alert="false"
-    :show-records="false"
+    :show-records="true"
+    :records="records"
     :submitting="submitting"
+    :is-editing="isEditing"
     @submit="handleSubmit"
+    @view="(row) => viewRecord(row)"
+    @edit="(row) => handleEditClick(row)"
+    @cancel="handleCancel"
+    @remove="removeRecord($event.id)"
   >
+    <template #columns>
+      <el-table-column type="index" label="序号" width="60" />
+      <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+      <el-table-column prop="submitDate" label="提交日期" width="120" />
+    </template>
     <template #form>
       <el-form :model="form" label-width="120px">
         <el-form-item label="项目名称" required

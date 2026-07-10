@@ -3,6 +3,8 @@ import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 import { submitApplication } from '@/shared/api/submission'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
+import { useFormEdit } from '@/shared/composables/useFormEdit'
+import { useFormRecords } from '@/shared/composables/useFormRecords'
 import { AWARD_LEVELS, COMPETITION_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -28,6 +30,17 @@ const { clearDraft } = useFormDraft('competition-star', form, {
   afterRestore: () => sanitizeSemesterMonthPair(form, 'competitionDate', 'semester'),
 })
 const submitting = ref(false)
+const { records, addRecord, updateRecord, removeRecord } = useFormRecords('competitionStar')
+const {
+  editingId,
+  detailVisible,
+  detailRecord,
+  isEditing,
+  viewRecord,
+  startEdit,
+  cancelEdit,
+  closeDetail,
+} = useFormEdit()
 
 const disabledDate = computed(() => buildSemesterMonthDisabledDate(form.semester))
 
@@ -42,6 +55,20 @@ function reset() {
   Object.assign(form, emptyForm())
 }
 
+function handleEditClick(row: any) {
+  form.competitionName = row.competitionName || ''
+  form.competitionDate = row.competitionDate || ''
+  form.competitionLevel = row.competitionLevel || ''
+  form.awardLevel = row.awardLevel || ''
+  form.semester = row.semester || ''
+  startEdit(row)
+}
+
+function handleCancel() {
+  cancelEdit()
+  Object.assign(form, emptyForm())
+}
+
 async function handleSubmit() {
   sanitizeSemesterMonthPair(form, 'competitionDate', 'semester')
   if (!isMonthInSemester(form.competitionDate, form.semester)) {
@@ -52,6 +79,12 @@ async function handleSubmit() {
   try {
     await submitApplication({ type: 'competitionStar', typeLabel: '竞赛之星报名', ...form })
     ElMessage.success('报名提交成功')
+    if (editingId.value) {
+      updateRecord(editingId.value, { title: form.competitionName || '竞赛之星报名', ...form })
+      editingId.value = null
+    } else {
+      addRecord(form.competitionName || '竞赛之星报名')
+    }
     clearDraft()
     reset()
   } catch {
@@ -66,10 +99,21 @@ async function handleSubmit() {
   <ApplicationFormRecord
     alert-title="竞赛之星报名说明"
     alert-description="竞赛之星用于评选在学科竞赛中表现突出的同学。请填写参赛信息及获奖情况，提交后可在下方查看报名记录。"
-    :show-records="false"
+    :show-records="true"
+    :records="records"
     :submitting="submitting"
+    :is-editing="isEditing"
     @submit="handleSubmit"
+    @view="(row) => viewRecord(row)"
+    @edit="(row) => handleEditClick(row)"
+    @cancel="handleCancel"
+    @remove="removeRecord($event.id)"
   >
+    <template #columns>
+      <el-table-column type="index" label="序号" width="60" />
+      <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+      <el-table-column prop="submitDate" label="提交日期" width="120" />
+    </template>
     <template #form>
       <el-form :model="form" label-width="120px">
         <el-form-item label="学期" required>

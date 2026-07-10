@@ -3,6 +3,8 @@ import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 import { submitApplication } from '@/shared/api/submission'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
+import { useFormEdit } from '@/shared/composables/useFormEdit'
+import { useFormRecords } from '@/shared/composables/useFormRecords'
 import { INDUSTRY_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -28,6 +30,17 @@ const { clearDraft } = useFormDraft('innovation-star', form, {
   afterRestore: () => sanitizeSemesterMonthPair(form, 'registerDate', 'semester'),
 })
 const submitting = ref(false)
+const { records, addRecord, updateRecord, removeRecord } = useFormRecords('innovationStar')
+const {
+  editingId,
+  detailVisible,
+  detailRecord,
+  isEditing,
+  viewRecord,
+  startEdit,
+  cancelEdit,
+  closeDetail,
+} = useFormEdit()
 
 const disabledDate = computed(() => buildSemesterMonthDisabledDate(form.semester))
 
@@ -42,6 +55,20 @@ function reset() {
   Object.assign(form, emptyForm())
 }
 
+function handleEditClick(row: any) {
+  form.companyName = row.companyName || ''
+  form.industryType = row.industryType || ''
+  form.ranking = row.ranking || ''
+  form.registerDate = row.registerDate || ''
+  form.semester = row.semester || ''
+  startEdit(row)
+}
+
+function handleCancel() {
+  cancelEdit()
+  Object.assign(form, emptyForm())
+}
+
 async function handleSubmit() {
   sanitizeSemesterMonthPair(form, 'registerDate', 'semester')
   if (!isMonthInSemester(form.registerDate, form.semester)) {
@@ -52,6 +79,12 @@ async function handleSubmit() {
   try {
     await submitApplication({ type: 'innovationStar', typeLabel: '双创之星报名', ...form })
     ElMessage.success('报名提交成功')
+    if (editingId.value) {
+      updateRecord(editingId.value, { title: form.companyName || '双创之星报名', ...form })
+      editingId.value = null
+    } else {
+      addRecord(form.companyName || '双创之星报名')
+    }
     clearDraft()
     reset()
   } catch {
@@ -66,10 +99,21 @@ async function handleSubmit() {
   <ApplicationFormRecord
     alert-title="双创之星报名说明"
     alert-description="双创之星用于评选在创新创业实践中表现突出的同学。请填写公司信息、行业类型、申报人排名及注册时间，提交后可在下方查看报名记录。"
-    :show-records="false"
+    :show-records="true"
+    :records="records"
     :submitting="submitting"
+    :is-editing="isEditing"
     @submit="handleSubmit"
+    @view="(row) => viewRecord(row)"
+    @edit="(row) => handleEditClick(row)"
+    @cancel="handleCancel"
+    @remove="removeRecord($event.id)"
   >
+    <template #columns>
+      <el-table-column type="index" label="序号" width="60" />
+      <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+      <el-table-column prop="submitDate" label="提交日期" width="120" />
+    </template>
     <template #form>
       <el-form :model="form" label-width="120px">
         <el-form-item label="公司名称" required

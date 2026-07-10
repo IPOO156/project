@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { ElMessageBox } from 'element-plus'
 import { useApplicationForm } from '@/shared/composables/useApplicationForm'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
+import { useFormEdit } from '@/shared/composables/useFormEdit'
+import { useFormRecords } from '@/shared/composables/useFormRecords'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -28,10 +31,48 @@ const {
   typeLabel: '实习经历',
 })
 const { clearDraft } = useFormDraft('internship', form)
+const { records, addRecord, updateRecord, removeRecord } = useFormRecords('internship')
+
+const {
+  editingId,
+  detailVisible,
+  detailRecord,
+  isEditing,
+  viewRecord,
+  startEdit,
+  cancelEdit,
+  closeDetail,
+} = useFormEdit()
 
 async function handleSubmit() {
+  const name = form.company || '新记录'
   await _submit()
+  if (editingId.value) {
+    updateRecord(editingId.value, {
+      title: name,
+      ...form,
+      submitDate: new Date().toISOString().slice(0, 10),
+    })
+    editingId.value = null
+  } else {
+    addRecord(name)
+  }
   clearDraft()
+}
+
+function handleEditClick(row: any) {
+  form.company = row.company || ''
+  form.location = row.location || ''
+  form.position = row.position || ''
+  form.startDate = row.startDate || ''
+  form.endDate = row.endDate || ''
+  form.semester = row.semester || ''
+  startEdit(row)
+}
+
+function handleCancel() {
+  cancelEdit()
+  Object.assign(form, emptyForm())
 }
 </script>
 
@@ -39,9 +80,15 @@ async function handleSubmit() {
   <ApplicationFormRecord
     alert-title="实习经历申报说明"
     alert-description="请填写实习经历相关信息，并上传实习证明等佐证材料。"
-    :show-records="false"
+    :show-records="true"
+    :records="records"
     :submitting="submitting"
+    :is-editing="isEditing"
     @submit="handleSubmit"
+    @view="(row) => viewRecord(row)"
+    @edit="(row) => handleEditClick(row)"
+    @remove="(row) => removeRecord(row.id)"
+    @cancel="handleCancel"
   >
     <template #form>
       <el-form :model="form" label-width="120px">
@@ -75,7 +122,28 @@ async function handleSubmit() {
         </el-form-item>
       </el-form>
     </template>
+    <template #columns>
+      <el-table-column type="index" label="序号" width="60" />
+      <el-table-column prop="title" label="标题" min-width="200" />
+      <el-table-column prop="submitDate" label="提交日期" width="120" />
+    </template>
   </ApplicationFormRecord>
+  <el-dialog v-model="detailVisible" title="记录详情" width="560px">
+    <template v-if="detailRecord">
+      <el-descriptions :column="1" border>
+        <el-descriptions-item
+          v-for="(val, key) in detailRecord"
+          :key="String(key)"
+          :label="String(key)"
+        >
+          {{ String(val) }}
+        </el-descriptions-item>
+      </el-descriptions>
+    </template>
+    <template #footer>
+      <el-button @click="closeDetail">关闭</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped lang="scss">

@@ -1,6 +1,4 @@
-<script setup lang="ts" generic="T extends { status: string }">
-import RecordActionButtons from './RecordActionButtons.vue'
-
+<script setup lang="ts" generic="T">
 interface Props {
   alertTitle: string
   alertDescription: string
@@ -17,7 +15,7 @@ withDefaults(defineProps<Props>(), {
   showRecords: true,
 })
 
-defineEmits<{
+const emit = defineEmits<{
   (e: 'submit'): void
   (e: 'cancel'): void
   (e: 'view', row: T): void
@@ -49,16 +47,19 @@ defineEmits<{
       <template #header>
         <span class="card-title">报名记录</span>
       </template>
-      <el-table :data="records" stripe>
+      <el-table :data="records as any" stripe>
         <slot name="columns" />
-        <el-table-column label="操作" width="280" fixed="right" align="center">
+        <el-table-column label="操作" width="220" fixed="right" align="center">
           <template #default="{ row }">
-            <RecordActionButtons
-              :row="row as T"
-              @view="$emit('view', $event)"
-              @edit="$emit('edit', $event)"
-              @remove="$emit('remove', $event)"
-            />
+            <el-button size="small" type="primary" link @click="emit('view', row as T)"
+              >查看</el-button
+            >
+            <el-button size="small" type="primary" link @click="emit('edit', row as T)"
+              >编辑</el-button
+            >
+            <el-button size="small" type="danger" link @click="emit('remove', row as T)"
+              >删除</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
