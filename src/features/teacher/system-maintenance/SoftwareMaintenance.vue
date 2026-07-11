@@ -81,7 +81,9 @@ const maintenanceTypes = [
             <component
               :is="item.status === 'normal' ? CheckCircle2 : AlertTriangle"
               :size="20"
-              :color="item.status === 'normal' ? '#67c23a' : '#e6a23c'"
+              :color="
+                item.status === 'normal' ? 'var(--el-color-success)' : 'var(--el-color-warning)'
+              "
             />
             <div class="software-item__info">
               <span class="software-item__name">{{ item.name }}</span>
@@ -158,7 +160,8 @@ const maintenanceTypes = [
     background: var(--el-fill-color-light);
   }
   &--warning {
-    border-left: 3px solid #e6a23c;
+    background: var(--el-color-warning-light-9);
+    border-color: var(--el-color-warning-light-7);
   }
   &__left {
     display: flex;
@@ -186,8 +189,8 @@ const maintenanceTypes = [
   }
   &__alarm {
     font-size: 12px;
-    color: #e6a23c;
-    background: #fef3c7;
+    color: var(--el-color-warning);
+    background: var(--el-color-warning-light-9);
     padding: 2px 8px;
     border-radius: 4px;
   }

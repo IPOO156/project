@@ -69,9 +69,9 @@ const statusIcon: Record<string, any> = {
   fault: AlertTriangle,
 }
 const statusColor: Record<string, string> = {
-  normal: '#67c23a',
-  warning: '#e6a23c',
-  fault: '#f56c6c',
+  normal: 'var(--el-color-success)',
+  warning: 'var(--el-color-warning)',
+  fault: 'var(--el-color-danger)',
 }
 const statusLabel: Record<string, string> = { normal: '正常', warning: '告警', fault: '故障' }
 
@@ -178,10 +178,12 @@ function handleRefresh(item: any) {
     background: var(--el-fill-color-light);
   }
   &--warning {
-    border-left: 3px solid #e6a23c;
+    background: var(--el-color-warning-light-9);
+    border-color: var(--el-color-warning-light-7);
   }
   &--fault {
-    border-left: 3px solid #f56c6c;
+    background: var(--el-color-danger-light-9);
+    border-color: var(--el-color-danger-light-7);
   }
   &__left {
     display: flex;
@@ -222,8 +224,8 @@ function handleRefresh(item: any) {
   }
   &__alarm {
     font-size: 12px;
-    color: #e6a23c;
-    background: #fef3c7;
+    color: var(--el-color-warning);
+    background: var(--el-color-warning-light-9);
     padding: 2px 8px;
     border-radius: 4px;
   }
