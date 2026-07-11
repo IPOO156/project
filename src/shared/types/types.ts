@@ -101,6 +101,14 @@ export interface Interest {
   level: string
 }
 
+// 多维度画像（后端返回 current/target/previous，color 由前端按主题派生）
+export interface ProfileDimension {
+  label: string
+  current: number
+  target: number
+  previous: number
+}
+
 // 成绩与绩点
 export interface Grade {
   id: string
@@ -118,6 +126,7 @@ export interface Award {
   level: string
   type: string
   date: string
+  prize?: string
   description?: string
   proof?: string
 }
@@ -133,22 +142,58 @@ export interface TimelineNode {
   recordId?: string
 }
 
-// 职业规划
-export interface CareerPlan {
+// 职业规划记录（实际使用 CareerPlanRecord，见下文）
+// CareerPlan 为历史遗留，保留以兼容
+
+// === 审核类型 ===
+
+// 申报审核记录（支持 10 种申报类型的字段索引签名）
+export interface ReviewRecord {
   id: string
-  semester: Semester
-  planFile: string
+  type: string
+  typeLabel: string
+  title: string
   submitDate: string
-  status: 'draft' | 'submitted'
+  semester: string
+  status: string // draft | submitted | approved | rejected
+  proofMaterials: string[]
+  [key: string]: any
 }
 
-// 短板识别结果
-export interface WeaknessAnalysis {
+// 奖项审核记录（之星报名：竞赛之星/科研之星/双创之星）
+export interface StarRecord {
   id: string
-  dimension: string
-  score: number
-  weakness: string
-  suggestion: string
+  type: string
+  typeLabel: string
+  title: string
+  submitDate: string
+  semester: string
+  status: string
+  sourcePath: string
+  applicant: string
+  // 竞赛之星
+  competitionName?: string
+  competitionDate?: string
+  competitionLevel?: string
+  awardLevel?: string
+  // 科研项目
+  projectName?: string
+  projectLevel?: string
+  // 软著
+  softName?: string
+  issuer?: string
+  // 论文
+  paperName?: string
+  journalName?: string
+  // 公共
+  ranking?: string
+  projectDate?: string
+  approveDate?: string
+  publishDate?: string
+  // 双创之星
+  companyName?: string
+  industryType?: string
+  registerDate?: string
 }
 
 // === 申报模块基础类型 ===
@@ -286,17 +331,7 @@ export interface InnovationStar extends ApplicationBase {
   registerDate: string
 }
 
-// === 审批类型 ===
-
-export interface ApprovalItem {
-  id: string
-  type: ApplicationType
-  applicantName: string
-  title: string
-  submitDate: string
-  status: 'pending' | 'approved' | 'rejected'
-  content: any
-}
+// === 提交与筛选 ===
 
 export type ApplicationType =
   | 'competition'
@@ -325,6 +360,42 @@ export interface SubmissionRecord {
   semester: string
   status: 'draft' | 'submitted' | 'approved' | 'rejected'
   sourcePath: string
+}
+
+// 职业规划记录
+export interface CareerPlanRecord {
+  id: string
+  semester: string
+  title: string
+  submitDate: string
+  status: 'draft' | 'submitted'
+}
+
+// AI 职业规划短板分析结果（AI 助手生成 → 写入 store → 职业规划页渲染）
+export interface WeaknessItem {
+  /** 维度名称（如"科研创新"） */
+  dimension: string
+  /** 当前分数 */
+  score: number
+  /** 目标分数 */
+  target: number
+  /** 差距 = target - current */
+  gap: number
+  /** 短板描述（基于真实数据生成，如"60 分，差 22 分，0 项科研类成果"） */
+  weakness: string
+  /** 改进建议（基于真实数据生成） */
+  suggestion: string
+}
+
+export interface CareerAnalysis {
+  /** 问候语 */
+  greeting: string
+  /** 总体摘要（如"共分析 5 个维度，其中 2 个差距较大"） */
+  summary: string
+  /** 短板列表（按差距降序） */
+  weaknesses: WeaknessItem[]
+  /** 生成时间 */
+  generatedAt: string
 }
 
 // 提交记录筛选条件

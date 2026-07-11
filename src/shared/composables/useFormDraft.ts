@@ -20,9 +20,9 @@ function isNonEmpty(data: Record<string, unknown>): boolean {
   })
 }
 
-export function useFormDraft(
+export function useFormDraft<T extends Record<string, unknown>>(
   key: string,
-  form: Record<string, unknown>,
+  form: T,
   options?: { afterRestore?: () => void },
 ) {
   const storageKey = DRAFT_PREFIX + key
@@ -54,7 +54,7 @@ export function useFormDraft(
       if (!isNonEmpty(data)) return
       Object.keys(data).forEach((k) => {
         if (k in form) {
-          ;(form as Record<string, unknown>)[k] = data[k]
+          Object.assign(form, { [k]: data[k] })
         }
       })
     } catch {

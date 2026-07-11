@@ -17,8 +17,17 @@ function emptyForm() {
   }
 }
 
-const { form, submitting, handleSubmit: _submit } = useApplicationForm({ emptyForm })
-const { clearDraft } = useFormDraft('internship', form as Record<string, unknown>)
+const {
+  form,
+  submitting,
+  handleSubmit: _submit,
+} = useApplicationForm({
+  emptyForm,
+  requiredFields: ['company', 'location', 'position', 'startDate', 'endDate', 'semester'],
+  type: 'internship',
+  typeLabel: '实习经历',
+})
+const { clearDraft } = useFormDraft('internship', form)
 
 async function handleSubmit() {
   await _submit()

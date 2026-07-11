@@ -1,5 +1,6 @@
 import type { GrowthExperience } from '../timeline-constants'
 import { computed, ref } from 'vue'
+import { addTimelineEvent, deleteTimelineEvent } from '@/shared/api/archive'
 import { inferSemester, INITIAL_EXPERIENCES } from '../timeline-constants'
 import { useGrowthDataSources } from './useGrowthDataSources'
 
@@ -29,18 +30,27 @@ export function useGrowthTimeline() {
     formVisible.value = false
   }
 
-  function addExperience(payload: Omit<GrowthExperience, 'id' | 'semester'>) {
+  async function addExperience(payload: Omit<GrowthExperience, 'id' | 'semester'>) {
     const semester = inferSemester(payload.date)
     const newExperience: GrowthExperience = {
       ...payload,
       id: `${Date.now()}`,
       semester,
     }
+    // 同步到后端
+    addTimelineEvent({
+      semester,
+      type: 'other',
+      title: payload.title,
+      description: payload.description,
+      date: payload.date,
+    }).catch(() => {})
     experiences.value = sortExperiencesByDate([...experiences.value, newExperience])
   }
 
   function deleteExperience(id: string) {
     experiences.value = sortExperiencesByDate(experiences.value.filter((e) => e.id !== id))
+    deleteTimelineEvent(id).catch(() => {})
     if (selectedId.value === id) {
       selectedId.value = null
     }

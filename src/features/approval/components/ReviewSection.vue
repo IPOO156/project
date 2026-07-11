@@ -1,27 +1,22 @@
 <script setup lang="ts">
-import type { ColumnDef, TypeColumnConfig } from './review-columns'
-import { ElMessage } from 'element-plus'
-import { Search } from 'lucide-vue-next'
-/**
- * ReviewSection - 个人档案信息申报状态
- *
- * Tab 形式展示 10 个申报类型的提交状态。
- * 查看弹窗展示完整的类型特有字段内容，
- * 编辑在弹窗内转为可编辑表单，修改后重新提交。
- */
-import { computed, reactive, ref, watch } from 'vue'
-import { useSubmissionStore } from '@/app/stores/stores'
+import type { TypeColumnConfig } from './review-columns'
+import { CheckCircle, Clock, FileText, Search, XCircle } from 'lucide-vue-next'
+// ReviewSection - 个人档案信息申报状态
+// Tab形式展示10个申报类型，查看/编辑弹窗支持修改后重新提交
+import { computed, onMounted, ref, watch } from 'vue'
+import { useReviewStore, useSubmissionStore } from '@/app/stores/stores'
 import DictColumn from '@/shared/ui/DictColumn.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
-import { useAllReviewMockData, useReviewMockData } from '../composables/useReviewMockData'
 import {
   DECLARATION_TYPE_KEYS,
   DECLARATION_TYPE_LABELS,
   REVIEW_COLUMNS,
   STATUS_FILTER_OPTIONS,
 } from './review-columns'
+import ReviewDialog from './ReviewDialog.vue'
 
 const submissionStore = useSubmissionStore()
+const reviewStore = useReviewStore()
 
 /** 已驳回或待审核可编辑 */
 function canEdit(status: string): boolean {
@@ -29,79 +24,44 @@ function canEdit(status: string): boolean {
 }
 
 // ── 详情/编辑弹窗 ──
-const detailVisible = ref(false)
-const detailMode = ref<'view' | 'edit'>('view')
-const detailRecord = ref<any>(null)
-const editForm = reactive<Record<string, any>>({})
-const saving = ref(false)
+const dialogVisible = ref(false)
+const dialogMode = ref<'view' | 'edit'>('view')
+const dialogRecord = ref<any>(null)
+const tableKey = ref(0)
+const successPulse = ref(false)
 
-function getConfigForType(type: string): TypeColumnConfig | null {
-  return REVIEW_COLUMNS[type] || null
+function bumpTableAnimation() {
+  tableKey.value++
 }
 
-/** 查看模式：根据记录类型展示完整字段 */
-const detailFields = computed(() => {
-  const record = detailRecord.value
-  if (!record) return []
-  const config = getConfigForType(record.type)
-  if (!config) return []
-
-  return config.columns.map((c: ColumnDef) => {
-    let value = record[c.prop]
-    if (c.dictOptions && typeof value === 'string') {
-      const opt = c.dictOptions.find((o) => o.value === value)
-      value = opt ? opt.label : value
-    }
-    if (c.type === 'status' || c.prop === 'status') {
-      value = record.status
-    }
-    return { label: c.label, prop: c.prop, value: value ?? '-', type: c.type }
-  })
-})
-
-/** 编辑模式：可编辑的列（排除状态列） */
-const editColumns = computed(() => {
-  const record = detailRecord.value
-  if (!record) return []
-  const config = getConfigForType(record.type)
-  if (!config) return []
-  return config.columns.filter((c) => c.type !== 'status' && c.prop !== 'status')
-})
+function triggerSuccessPulse() {
+  successPulse.value = true
+  setTimeout(() => {
+    successPulse.value = false
+  }, 520)
+}
 
 function handleView(row: any) {
-  detailRecord.value = row
-  detailMode.value = 'view'
-  detailVisible.value = true
+  dialogRecord.value = row
+  dialogMode.value = 'view'
+  dialogVisible.value = true
 }
 
 function handleEdit(row: any) {
-  detailRecord.value = row
-  detailMode.value = 'edit'
-  Object.keys(editForm).forEach((k) => delete editForm[k])
-  const config = getConfigForType(row.type)
-  if (config) {
-    for (const c of config.columns) {
-      if (c.prop !== 'status' && row[c.prop] !== undefined) {
-        editForm[c.prop] = row[c.prop]
-      }
-    }
+  dialogRecord.value = row
+  dialogMode.value = 'edit'
+  dialogVisible.value = true
+}
+
+function handleSaved(_id: string) {
+  if (dialogRecord.value) {
+    Object.assign(dialogRecord.value, { status: 'submitted' })
   }
-  detailVisible.value = true
+  bumpTableAnimation()
+  triggerSuccessPulse()
 }
 
-function handleSave() {
-  saving.value = true
-  setTimeout(() => {
-    if (detailRecord.value) {
-      Object.assign(detailRecord.value, { ...editForm, status: 'submitted' })
-    }
-    saving.value = false
-    detailVisible.value = false
-    ElMessage.success('修改已保存，等待重新审核')
-  }, 400)
-}
-
-// ── Tab 状态 ──
+// Tab 状态
 const activeTab = ref<string>('all')
 
 const tabList = computed(() => {
@@ -112,27 +72,50 @@ const tabList = computed(() => {
   return tabs
 })
 
-// ── 数据源 ──
-const allData = useAllReviewMockData()
+// 数据源（来自 reviewStore，数据由 API 层填充）
+const rawRecords = computed(() => {
+  if (activeTab.value === 'all') return reviewStore.allRecords
+  return reviewStore.typeRecords[activeTab.value] ?? []
+})
+
+// 统计卡片（从 store 数据派生）
+const stats = computed(() => {
+  const data = reviewStore.allRecords
+  return [
+    {
+      label: '待审核',
+      value: data.filter((r) => r.status === 'submitted').length,
+      icon: Clock,
+      color: '#d4a574',
+    },
+    {
+      label: '已通过',
+      value: data.filter((r) => r.status === 'approved').length,
+      icon: CheckCircle,
+      color: '#10b981',
+    },
+    {
+      label: '已驳回',
+      value: data.filter((r) => r.status === 'rejected').length,
+      icon: XCircle,
+      color: '#ef4444',
+    },
+  ]
+})
 
 const currentConfig = computed<TypeColumnConfig | null>(() => {
   if (activeTab.value === 'all') return null
   return REVIEW_COLUMNS[activeTab.value] || null
 })
 
-const rawRecords = computed(() => {
-  if (activeTab.value === 'all') return allData.value
-  return useReviewMockData(activeTab.value).value
-})
-
-// ── 过滤状态 ──
+// 过滤状态
 const keyword = ref('')
 const typeFilter = ref('')
 const statusFilter = ref('')
 const dateRange = ref<[string, string] | null>(null)
 const dynamicFilters = ref<Record<string, any>>({})
 
-// ── 分页 ──
+// 分页
 const pageNum = ref(1)
 const pageSize = ref(10)
 
@@ -145,7 +128,7 @@ function getPageState(tab: string) {
   return tabPageState.value[tab]
 }
 
-// ── 过滤逻辑 ──
+// 过滤逻辑
 const filteredRecords = computed(() => {
   let records = rawRecords.value
 
@@ -201,15 +184,19 @@ const paginatedRecords = computed(() => {
 })
 
 // ── 事件 ──
-function handleTabChange(tab: string | number) {
+async function handleTabChange(tab: string | number) {
   activeTab.value = String(tab)
   const state = getPageState(activeTab.value)
   pageNum.value = state.pageNum
   pageSize.value = state.pageSize
   dynamicFilters.value = {}
+  // 切换到具体类型时，确保该类型数据已加载
+  if (activeTab.value !== 'all' && !reviewStore.typeRecords[activeTab.value]) {
+    await reviewStore.fetchByType(activeTab.value)
+  }
 }
 
-watch(activeTab, () => {
+watch(activeTab, async () => {
   const state = getPageState(activeTab.value)
   pageNum.value = state.pageNum
   pageSize.value = state.pageSize
@@ -218,7 +205,20 @@ watch(activeTab, () => {
   statusFilter.value = ''
   dateRange.value = null
   dynamicFilters.value = {}
+  // 确保数据已加载
+  if (activeTab.value !== 'all' && !reviewStore.typeRecords[activeTab.value]) {
+    await reviewStore.fetchByType(activeTab.value)
+  }
+  bumpTableAnimation()
 })
+
+watch(
+  [pageNum, pageSize, filteredRecords],
+  () => {
+    bumpTableAnimation()
+  },
+  { flush: 'post' },
+)
 
 function handlePageChange(page: number) {
   getPageState(activeTab.value).pageNum = page
@@ -243,10 +243,39 @@ function handleReset() {
 const typeOptions = computed(() =>
   DECLARATION_TYPE_KEYS.map((k) => ({ value: k, label: DECLARATION_TYPE_LABELS[k] || k })),
 )
+
+// 初始化：加载全部审核记录
+onMounted(() => {
+  reviewStore.fetchAll()
+})
 </script>
 
 <template>
   <div class="review-section">
+    <!-- 页面头部 -->
+    <header class="review-section__hero">
+      <div class="review-section__hero-main">
+        <div class="review-section__hero-icon">
+          <FileText :size="28" />
+        </div>
+        <div>
+          <h1 class="review-section__hero-title">申报审核</h1>
+          <p class="review-section__hero-subtitle">
+            查看各类型申报信息的提交状态与审核进度。待审核或被驳回的申报可点击编辑修改后重新提报
+          </p>
+        </div>
+      </div>
+      <div class="review-section__hero-stats">
+        <div v-for="stat in stats" :key="stat.label" class="review-section__hero-stat">
+          <div class="review-section__hero-stat-main" :style="{ color: stat.color }">
+            <component :is="stat.icon" :size="18" />
+            <span class="review-section__hero-stat-value">{{ stat.value }}</span>
+          </div>
+          <span class="review-section__hero-stat-label">{{ stat.label }}</span>
+        </div>
+      </div>
+    </header>
+
     <el-tabs v-model="activeTab" type="card" @tab-change="handleTabChange">
       <el-tab-pane v-for="tab in tabList" :key="tab.key" :label="tab.label" :name="tab.key" />
     </el-tabs>
@@ -317,184 +346,288 @@ const typeOptions = computed(() =>
       </template>
     </div>
 
-    <!-- 表格 -->
-    <el-table
-      v-loading="submissionStore.loading"
-      :data="paginatedRecords"
-      stripe
-      style="width: 100%"
-    >
-      <template v-if="activeTab === 'all'">
-        <el-table-column type="index" label="序号" width="60" />
-        <el-table-column label="模块类型" width="120">
-          <template #default="{ row }">
-            <DictColumn :value="row.type" :options="typeOptions as any" />
-          </template>
-        </el-table-column>
-        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-        <el-table-column prop="submitDate" label="提交日期" width="120" />
-        <el-table-column prop="semester" label="学期" width="110" />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }"><StatusTag :status="row.status" size="small" /></template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" align="center" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-if="canEdit(row.status)"
-              type="warning"
-              link
-              size="small"
-              @click="handleEdit(row)"
-              >编辑</el-button
-            >
-            <el-button v-else type="primary" link size="small" @click="handleView(row)"
-              >查看</el-button
-            >
-          </template>
-        </el-table-column>
-      </template>
-      <template v-else-if="currentConfig">
-        <el-table-column type="index" label="序号" width="60" />
-        <el-table-column
-          v-for="col in currentConfig.columns"
-          :key="col.prop"
-          :label="col.label"
-          :prop="col.prop"
-          :width="col.width"
-          :min-width="col.minWidth"
-          :show-overflow-tooltip="col.showOverflowTooltip"
-        >
-          <template #default="{ row }">
-            <DictColumn
-              v-if="col.dictOptions"
-              :value="row[col.prop]"
-              :options="col.dictOptions as any"
-            />
-            <StatusTag v-else-if="col.type === 'status'" :status="row[col.prop]" size="small" />
-            <span v-else>{{ row[col.prop] }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="120" align="center" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              v-if="canEdit(row.status)"
-              type="warning"
-              link
-              size="small"
-              @click="handleEdit(row)"
-              >编辑</el-button
-            >
-            <el-button v-else type="primary" link size="small" @click="handleView(row)"
-              >查看</el-button
-            >
-          </template>
-        </el-table-column>
-      </template>
-    </el-table>
+    <!-- 表格卡片 -->
+    <div :key="tableKey" v-loading="submissionStore.loading" class="review-section__card mc-card">
+      <el-table
+        :data="paginatedRecords"
+        class="mc-table mc-table--staggered"
+        :class="{ 'is-success-pulse': successPulse }"
+        stripe
+        style="width: 100%"
+      >
+        <template v-if="activeTab === 'all'">
+          <el-table-column type="index" label="序号" width="60" />
+          <el-table-column label="模块类型" width="120">
+            <template #default="{ row }">
+              <DictColumn :value="row.type" :options="typeOptions as any" />
+            </template>
+          </el-table-column>
+          <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="submitDate" label="提交日期" width="120" />
+          <el-table-column prop="semester" label="学期" width="110" />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }"><StatusTag :status="row.status" size="small" /></template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" align="center" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-if="canEdit(row.status)"
+                type="warning"
+                link
+                size="small"
+                @click="handleEdit(row)"
+                >编辑</el-button
+              >
+              <el-button v-else type="primary" link size="small" @click="handleView(row)"
+                >查看</el-button
+              >
+            </template>
+          </el-table-column>
+        </template>
+        <template v-else-if="currentConfig">
+          <el-table-column type="index" label="序号" width="60" />
+          <el-table-column
+            v-for="col in currentConfig.columns"
+            :key="col.prop"
+            :label="col.label"
+            :prop="col.prop"
+            :width="col.width"
+            :min-width="col.minWidth"
+            :show-overflow-tooltip="col.showOverflowTooltip"
+          >
+            <template #default="{ row }">
+              <DictColumn
+                v-if="col.dictOptions"
+                :value="row[col.prop]"
+                :options="col.dictOptions as any"
+              />
+              <StatusTag v-else-if="col.type === 'status'" :status="row[col.prop]" size="small" />
+              <span v-else>{{ row[col.prop] }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" align="center" fixed="right">
+            <template #default="{ row }">
+              <el-button
+                v-if="canEdit(row.status)"
+                type="warning"
+                link
+                size="small"
+                @click="handleEdit(row)"
+                >编辑</el-button
+              >
+              <el-button v-else type="primary" link size="small" @click="handleView(row)"
+                >查看</el-button
+              >
+            </template>
+          </el-table-column>
+        </template>
+      </el-table>
 
-    <div v-if="total > 0" class="review-section__pagination">
-      <el-pagination
-        v-model:current-page="pageNum"
-        v-model:page-size="pageSize"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next, jumper"
-        background
-        @current-change="handlePageChange"
-        @size-change="handleSizeChange"
-      />
+      <div v-if="total > 0" class="review-section__pagination mc-pagination">
+        <el-pagination
+          v-model:current-page="pageNum"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @current-change="handlePageChange"
+          @size-change="handleSizeChange"
+        />
+      </div>
     </div>
 
     <!-- 详情/编辑弹窗 -->
-    <el-dialog
-      v-model="detailVisible"
-      :title="detailMode === 'edit' ? '编辑申报信息' : '申报详情'"
-      width="640px"
-    >
-      <!-- 查看模式 -->
-      <template v-if="detailRecord && detailMode === 'view'">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item v-for="f in detailFields" :key="f.prop" :label="f.label">
-            <template v-if="f.type === 'status'">
-              <StatusTag :status="detailRecord.status" size="small" />
-            </template>
-            <span v-else>{{ f.value }}</span>
-          </el-descriptions-item>
-        </el-descriptions>
-      </template>
-
-      <!-- 编辑模式 -->
-      <template v-if="detailRecord && detailMode === 'edit'">
-        <el-alert title="编辑说明" type="warning" :closable="false" show-icon class="mb-16">
-          <p>修改后提交将进入待审核状态，请确保信息准确。</p>
-        </el-alert>
-        <el-form :model="editForm" label-width="120px">
-          <el-form-item v-for="col in editColumns" :key="col.prop" :label="col.label">
-            <el-select
-              v-if="col.dictOptions"
-              v-model="editForm[col.prop]"
-              placeholder="请选择"
-              class="form-control"
-            >
-              <el-option
-                v-for="opt in col.dictOptions"
-                :key="opt.value"
-                :label="opt.label"
-                :value="opt.value"
-              />
-            </el-select>
-            <el-date-picker
-              v-else-if="col.type === 'date'"
-              v-model="editForm[col.prop]"
-              type="month"
-              placeholder="选择年月"
-              class="form-control"
-            />
-            <el-input
-              v-else
-              v-model="editForm[col.prop]"
-              :placeholder="`请输入${col.label}`"
-              class="form-control"
-            />
-          </el-form-item>
-        </el-form>
-      </template>
-
-      <template #footer>
-        <el-button @click="detailVisible = false">关闭</el-button>
-        <el-button
-          v-if="detailMode === 'edit'"
-          type="primary"
-          :loading="saving"
-          @click="handleSave"
-        >
-          保存修改
-        </el-button>
-      </template>
-    </el-dialog>
+    <ReviewDialog
+      v-model="dialogVisible"
+      :record="dialogRecord"
+      :mode="dialogMode"
+      @saved="handleSaved"
+    />
   </div>
 </template>
 
 <style scoped lang="scss">
+@use '@/features/messages/styles/theme' as *;
+
 .review-section {
+  @include message-theme-vars;
+
   display: flex;
   flex-direction: column;
   gap: 16px;
+  font-family: $mc-font-body;
+  color: var(--mc-text);
 
+  // hero 头部
+  &__hero {
+    @include mc-fade-in;
+
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
+    border-radius: var(--mc-radius);
+    padding: 24px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-shadow: var(--mc-shadow);
+  }
+
+  &__hero-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__hero-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: var(--mc-wood);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__hero-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--el-text-color-primary);
+  }
+
+  &__hero-subtitle {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--mc-text-secondary);
+  }
+
+  &__hero-stats {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__hero-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 90px;
+    padding: 10px 16px;
+    background: var(--mc-bg);
+    border: 1px solid var(--mc-border);
+    border-radius: 8px;
+    transition:
+      border-color 0.2s ease,
+      box-shadow 0.2s ease;
+
+    &:hover {
+      border-color: var(--mc-wood);
+      box-shadow: 0 2px 8px var(--mc-primary-fade);
+    }
+  }
+
+  &__hero-stat-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__hero-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--el-text-color-primary);
+  }
+
+  &__hero-stat-label {
+    font-size: 12px;
+    color: var(--mc-text-secondary);
+  }
+
+  // 工具栏
   &__filters {
+    @include mc-fade-in(0.05s);
+
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
+    padding: 14px 16px;
+    background: var(--mc-card);
+    border: 1px solid var(--mc-border);
+    border-radius: var(--mc-radius);
+  }
+
+  // 表格卡片
+  &__card {
+    @include mc-fade-in(0.1s);
+    @include mc-card;
+
+    padding: 0;
+    overflow: hidden;
+
+    :deep(.el-table) {
+      @include mc-table;
+    }
   }
 
   &__pagination {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 8px;
+    @include mc-pagination;
+
+    margin: 0 16px 16px;
   }
 }
 
+// 行级 stagger 动画
+.mc-table--staggered {
+  --mc-row-duration: 0.54s;
+  --mc-row-delay: 0.05s;
+  --mc-row-offset: -28px;
+
+  :deep(.el-table__row) {
+    --_duration: var(--mc-row-duration, 0.6s);
+    --_delay: var(--mc-row-delay, 0.08s);
+    --_easing: var(--mc-row-easing, #{$ease-emphasized});
+
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: table-row-brush var(--_duration) var(--_easing) both;
+  }
+
+  @for $i from 1 through 24 {
+    :deep(.el-table__body .el-table__row:nth-child(#{$i})) {
+      animation-delay: calc((#{$i} - 1) * var(--_delay));
+    }
+  }
+}
+
+// 保存成功脉冲
+.is-success-pulse {
+  animation: review-table-pulse 0.52s ease;
+}
+
+@keyframes review-table-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(30, 58, 95, 0);
+    transform: translateY(0);
+  }
+  40% {
+    box-shadow: 0 10px 30px rgba(30, 58, 95, 0.12);
+    transform: translateY(-2px);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(30, 58, 95, 0);
+    transform: translateY(0);
+  }
+}
+
+// 输入控件
 .filter-input {
   width: 200px;
 }
@@ -503,12 +636,5 @@ const typeOptions = computed(() =>
 }
 .filter-date {
   width: 240px;
-}
-.form-control {
-  width: 360px;
-}
-
-:deep(.mb-16) {
-  margin-bottom: 16px;
 }
 </style>

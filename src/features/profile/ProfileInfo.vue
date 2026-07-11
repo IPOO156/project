@@ -1,111 +1,128 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
 import type { UserInfo } from '@/shared/types/types'
-import { ElMessage } from 'element-plus'
-import {
-  Award,
-  Edit2,
-  GraduationCap,
-  Heart,
-  Info,
-  Lightbulb,
-  Plus,
-  TrendingUp,
-} from 'lucide-vue-next'
-import { computed, reactive, ref } from 'vue'
-import { useUserStore } from '@/app/stores/stores'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Edit2, GraduationCap, Heart, Info, Lightbulb, Plus } from 'lucide-vue-next'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useArchiveStore, useThemeStore, useUserStore } from '@/app/stores/stores'
 import { useDict } from '@/shared/composables/composables'
 import { INTEREST_LEVEL } from '@/shared/constants/dict'
 import AvatarUploader from './components/AvatarUploader.vue'
+import AwardsPanel from './components/AwardsPanel.vue'
+import DimensionPanel from './components/DimensionPanel.vue'
+
+const archiveStore = useArchiveStore()
+const userStore = useUserStore()
+const themeStore = useThemeStore()
+
+onMounted(() => {
+  if (archiveStore.interests.length === 0) archiveStore.fetchArchive()
+})
+
+// ── 从 store 派生展示数据 ──
+const interests = computed(() => archiveStore.interests)
+const awards = computed(() => archiveStore.awards)
+
+// 成绩按学期聚合（archiveStore 存的是逐课程数据，页面展示按学期汇总）
+const gradeSummary = computed(() => {
+  const map = new Map<
+    string,
+    { courses: number; gpaSum: number; scoreSum: number; creditSum: number }
+  >()
+  for (const g of archiveStore.grades) {
+    const entry = map.get(g.semester) ?? { courses: 0, gpaSum: 0, scoreSum: 0, creditSum: 0 }
+    entry.courses++
+    entry.gpaSum += g.gpa * g.credits
+    entry.scoreSum += g.score * g.credits
+    entry.creditSum += g.credits
+    map.set(g.semester, entry)
+  }
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([semester, e]) => ({
+      semester,
+      courses: e.courses,
+      gpa: e.creditSum > 0 ? +(e.gpaSum / e.creditSum).toFixed(2) : 0,
+      totalScore: e.creditSum > 0 ? +(e.scoreSum / e.creditSum).toFixed(1) : 0,
+    }))
+})
+
+// 多维度画像：从 store 的 ProfileDimension 派生展示用的 score + color
+const dimensions = computed(() => {
+  const isDark = themeStore.isDark
+  const colorMap: Record<string, string> = isDark
+    ? {
+        学业成绩: '#60a5fa',
+        竞赛实践: '#34d399',
+        科研创新: '#f0b87b',
+        社会工作: '#a78bfa',
+        综合素质: '#fbbf24',
+      }
+    : {
+        学业成绩: '#2d5a87',
+        竞赛实践: '#10b981',
+        科研创新: '#d4a574',
+        社会工作: '#8b5cf6',
+        综合素质: '#f59e0b',
+      }
+  return archiveStore.dimensions.map((d) => ({
+    label: d.label,
+    score: d.current,
+    color: colorMap[d.label] ?? '#64748b',
+  }))
+})
 
 // ── 兴趣增删改 ──
 const interestDialogVisible = ref(false)
-const editingInterestIndex = ref(-1)
+const editingInterestId = ref<string | null>(null)
 const interestForm = reactive({ category: '', content: '', level: 'general' })
 
 function openAddInterest() {
-  editingInterestIndex.value = -1
+  editingInterestId.value = null
   interestForm.category = ''
   interestForm.content = ''
   interestForm.level = 'general'
   interestDialogVisible.value = true
 }
 
-function openEditInterest(index: number) {
-  editingInterestIndex.value = index
-  const item = interests.value[index]
+function openEditInterest(id: string) {
+  editingInterestId.value = id
+  const item = interests.value.find((i) => i.id === id)
+  if (!item) return
   interestForm.category = item.category
   interestForm.content = item.content
   interestForm.level = item.level
   interestDialogVisible.value = true
 }
 
-function saveInterest() {
+async function saveInterest() {
   if (!interestForm.category || !interestForm.content) {
     ElMessage.warning('请填写完整信息')
     return
   }
-  if (editingInterestIndex.value >= 0) {
-    interests.value[editingInterestIndex.value] = { ...interestForm }
-    ElMessage.success('兴趣已更新')
-  } else {
-    interests.value.push({ ...interestForm })
-    ElMessage.success('兴趣已添加')
+  try {
+    if (editingInterestId.value) {
+      await archiveStore.editInterest(editingInterestId.value, { ...interestForm })
+    } else {
+      await archiveStore.createInterest({ ...interestForm })
+    }
+    interestDialogVisible.value = false
+  } catch {
+    ElMessage.error('保存失败，请重试')
   }
-  interestDialogVisible.value = false
 }
 
-function deleteInterest(index: number) {
-  interests.value.splice(index, 1)
-  ElMessage.success('兴趣已删除')
+function deleteInterest(id: string) {
+  ElMessageBox.confirm('确定删除该兴趣吗？', '删除确认', {
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => archiveStore.removeInterest(id))
+    .catch(() => {})
 }
 
-// ── 奖项增删改 ──
-const awardDialogVisible = ref(false)
-const editingAwardIndex = ref(-1)
-const awardForm = reactive({ name: '', level: '', award: '', date: '' })
-
-function openAddAward() {
-  editingAwardIndex.value = -1
-  awardForm.name = ''
-  awardForm.level = ''
-  awardForm.award = ''
-  awardForm.date = ''
-  awardDialogVisible.value = true
-}
-
-function openEditAward(index: number) {
-  editingAwardIndex.value = index
-  const item = awards.value[index]
-  awardForm.name = item.name
-  awardForm.level = item.level
-  awardForm.award = item.award
-  awardForm.date = item.date
-  awardDialogVisible.value = true
-}
-
-function saveAward() {
-  if (!awardForm.name || !awardForm.level) {
-    ElMessage.warning('请填写完整信息')
-    return
-  }
-  if (editingAwardIndex.value >= 0) {
-    awards.value[editingAwardIndex.value] = { ...awardForm }
-    ElMessage.success('奖项已更新')
-  } else {
-    awards.value.push({ ...awardForm })
-    ElMessage.success('奖项已添加')
-  }
-  awardDialogVisible.value = false
-}
-
-function deleteAward(index: number) {
-  awards.value.splice(index, 1)
-  ElMessage.success('奖项已删除')
-}
-
-const userStore = useUserStore()
-
+// ── 基本资料编辑 ──
 const isEditing = ref(false)
 const formData = ref<Partial<UserInfo>>({})
 
@@ -122,8 +139,8 @@ function startEdit() {
   isEditing.value = true
 }
 
-function saveEdit() {
-  userStore.updateUserInfo(formData.value)
+async function saveEdit() {
+  await userStore.updateUserInfo(formData.value)
   isEditing.value = false
   ElMessage.success('基本资料已保存')
 }
@@ -133,34 +150,6 @@ function cancelEdit() {
   formData.value = {}
 }
 
-// ── Mock 数据（接口联调后替换） ──
-const interests = ref([
-  { category: '编程开发', content: 'Web 前端开发、人工智能应用', level: 'proficient' },
-  { category: '语言能力', content: '英语（CET-6）、日语（N3）', level: 'good' },
-  { category: '运动爱好', content: '篮球、跑步', level: 'general' },
-])
-
-const grades = ref([
-  { semester: '2022-2023-1', courses: 8, gpa: 3.2, totalScore: 85.6 },
-  { semester: '2022-2023-2', courses: 7, gpa: 3.4, totalScore: 87.2 },
-  { semester: '2023-2024-1', courses: 9, gpa: 3.6, totalScore: 89.5 },
-  { semester: '2023-2024-2', courses: 8, gpa: 3.8, totalScore: 91.3 },
-])
-
-const awards = ref([
-  { name: '全国大学生数学建模竞赛', level: '省级', award: '二等奖', date: '2025-09' },
-  { name: '校级优秀学生干部', level: '校级', award: '优秀干部', date: '2025-06' },
-  { name: 'ACM 程序设计竞赛', level: '校级', award: '一等奖', date: '2025-05' },
-])
-
-const dimensions = ref([
-  { label: '学业成绩', score: 88, color: '#2d5a87' },
-  { label: '竞赛实践', score: 65, color: '#10b981' },
-  { label: '科研创新', score: 60, color: '#d4a574' },
-  { label: '社会工作', score: 85, color: '#8b5cf6' },
-  { label: '综合素质', score: 80, color: '#f59e0b' },
-])
-
 const { getColor, getLabel } = useDict(INTEREST_LEVEL)
 
 const getInterestType = computed(() => (level: string): TagProps['type'] => {
@@ -168,12 +157,13 @@ const getInterestType = computed(() => (level: string): TagProps['type'] => {
 })
 
 const avgGpa = computed(() => {
-  const total = grades.value.reduce((s, g) => s + g.gpa, 0)
-  return (total / grades.value.length).toFixed(2)
+  if (gradeSummary.value.length === 0) return '0.00'
+  const total = gradeSummary.value.reduce((s, g) => s + g.gpa, 0)
+  return (total / gradeSummary.value.length).toFixed(2)
 })
 
-function handleAvatarUpload(base64: string) {
-  userStore.updateAvatar(base64 || undefined)
+async function handleAvatarUpload(base64: string) {
+  await userStore.updateAvatar(base64 || undefined)
   ElMessage.success(base64 ? '头像更新成功' : '头像已删除')
 }
 </script>
@@ -272,37 +262,7 @@ function handleAvatarUpload(base64: string) {
       </el-col>
 
       <el-col :span="10">
-        <el-card class="profile-card">
-          <template #header>
-            <div class="card-header">
-              <div class="card-header__left">
-                <TrendingUp :size="16" />
-                <span>多维度画像</span>
-              </div>
-              <span class="card-header__tag"
-                >综合评分
-                {{ dimensions.reduce((s, d) => s + d.score, 0) / dimensions.length }}分</span
-              >
-            </div>
-          </template>
-          <div class="dimension-list">
-            <div v-for="dim in dimensions" :key="dim.label" class="dimension-item">
-              <div class="dimension-item__head">
-                <span class="dimension-item__label">{{ dim.label }}</span>
-                <span class="dimension-item__score" :style="{ color: dim.color }"
-                  >{{ dim.score }}分</span
-                >
-              </div>
-              <el-progress
-                :percentage="dim.score"
-                :color="dim.color"
-                :stroke-width="8"
-                :format="() => ''"
-                class="dimension-item__bar"
-              />
-            </div>
-          </div>
-        </el-card>
+        <DimensionPanel :dimensions="dimensions" />
       </el-col>
     </el-row>
 
@@ -320,7 +280,7 @@ function handleAvatarUpload(base64: string) {
             </div>
           </template>
           <div class="grade-list">
-            <div v-for="g in grades" :key="g.semester" class="grade-item">
+            <div v-for="g in gradeSummary" :key="g.semester" class="grade-item">
               <div class="grade-item__semester">
                 {{ g.semester.replace(/-(\d)$/g, '第$1学期') }}
               </div>
@@ -344,42 +304,7 @@ function handleAvatarUpload(base64: string) {
       </el-col>
 
       <el-col :span="8">
-        <el-card class="profile-card">
-          <template #header>
-            <div class="card-header">
-              <div class="card-header__left">
-                <Award :size="16" />
-                <span>个人奖项</span>
-              </div>
-              <el-button link type="primary" size="small" :icon="Plus" @click="openAddAward">
-                新增
-              </el-button>
-            </div>
-          </template>
-          <div class="award-list">
-            <div v-for="(a, idx) in awards" :key="a.name" class="award-item">
-              <div class="award-item__icon">
-                <Award :size="18" />
-              </div>
-              <div class="award-item__body">
-                <div class="award-item__name">{{ a.name }}</div>
-                <div class="award-item__meta">
-                  <el-tag size="small" type="warning" effect="plain">{{ a.level }}</el-tag>
-                  <span>{{ a.award }}</span>
-                  <span>{{ a.date }}</span>
-                </div>
-              </div>
-              <div class="award-item__actions">
-                <el-button link type="primary" size="small" @click="openEditAward(idx)">
-                  编辑
-                </el-button>
-                <el-button link type="danger" size="small" @click="deleteAward(idx)">
-                  删除
-                </el-button>
-              </div>
-            </div>
-          </div>
-        </el-card>
+        <AwardsPanel :awards="awards" />
       </el-col>
 
       <el-col :span="8">
@@ -396,7 +321,7 @@ function handleAvatarUpload(base64: string) {
             </div>
           </template>
           <div class="interest-list">
-            <div v-for="(item, idx) in interests" :key="item.category" class="interest-item">
+            <div v-for="item in interests" :key="item.id" class="interest-item">
               <div class="interest-item__header">
                 <Lightbulb :size="14" />
                 <span class="interest-item__category">{{ item.category }}</span>
@@ -406,10 +331,10 @@ function handleAvatarUpload(base64: string) {
               </div>
               <p class="interest-item__content">{{ item.content }}</p>
               <div class="interest-item__actions">
-                <el-button link type="primary" size="small" @click="openEditInterest(idx)">
+                <el-button link type="primary" size="small" @click="openEditInterest(item.id)">
                   编辑
                 </el-button>
-                <el-button link type="danger" size="small" @click="deleteInterest(idx)">
+                <el-button link type="danger" size="small" @click="deleteInterest(item.id)">
                   删除
                 </el-button>
               </div>
@@ -422,7 +347,7 @@ function handleAvatarUpload(base64: string) {
     <!-- 兴趣弹窗 -->
     <el-dialog
       v-model="interestDialogVisible"
-      :title="editingInterestIndex >= 0 ? '编辑兴趣' : '新增兴趣'"
+      :title="editingInterestId ? '编辑兴趣' : '新增兴趣'"
       width="480px"
       :close-on-click-modal="false"
     >
@@ -444,46 +369,6 @@ function handleAvatarUpload(base64: string) {
       <template #footer>
         <el-button @click="interestDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="saveInterest">保存</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 奖项弹窗 -->
-    <el-dialog
-      v-model="awardDialogVisible"
-      :title="editingAwardIndex >= 0 ? '编辑奖项' : '新增奖项'"
-      width="480px"
-      :close-on-click-modal="false"
-    >
-      <el-form :model="awardForm" label-width="80px">
-        <el-form-item label="奖项名称" required>
-          <el-input v-model="awardForm.name" placeholder="请输入奖项名称" />
-        </el-form-item>
-        <el-form-item label="奖项级别" required>
-          <el-select v-model="awardForm.level" class="form-select" placeholder="请选择级别">
-            <el-option label="国家级" value="国家级" />
-            <el-option label="省级" value="省级" />
-            <el-option label="市级" value="市级" />
-            <el-option label="校级" value="校级" />
-            <el-option label="院级" value="院级" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="获奖等级">
-          <el-input v-model="awardForm.award" placeholder="如 一等奖、优秀干部" />
-        </el-form-item>
-        <el-form-item label="获奖时间">
-          <el-date-picker
-            v-model="awardForm.date"
-            type="month"
-            placeholder="选择月份"
-            format="YYYY-MM"
-            value-format="YYYY-MM"
-            class="form-select"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="awardDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveAward">保存</el-button>
       </template>
     </el-dialog>
   </div>
@@ -516,7 +401,7 @@ function handleAvatarUpload(base64: string) {
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #1e3a5f;
+    color: var(--el-text-color-primary);
   }
 
   &__tag {
@@ -525,7 +410,7 @@ function handleAvatarUpload(base64: string) {
     color: var(--el-text-color-secondary);
     padding: 2px 10px;
     border-radius: 4px;
-    background: rgba(30, 58, 95, 0.04);
+    background: var(--el-fill-color-light);
   }
 
   .edit-actions {
@@ -546,7 +431,7 @@ function handleAvatarUpload(base64: string) {
   &__name {
     font-size: 18px;
     font-weight: 600;
-    color: #1e3a5f;
+    color: var(--el-text-color-primary);
     margin: 0 0 4px;
   }
 
@@ -567,38 +452,6 @@ function handleAvatarUpload(base64: string) {
 
 .profile-form {
   margin-top: 12px;
-}
-
-// ─── 维度卡片 ───
-.dimension-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.dimension-item {
-  &__head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 4px;
-  }
-
-  &__label {
-    font-size: 13px;
-    color: var(--el-text-color-primary);
-  }
-
-  &__score {
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  &__bar {
-    :deep(.el-progress-bar__outer) {
-      background-color: var(--el-fill-color-light);
-    }
-  }
 }
 
 // ─── 成绩卡片 ───
@@ -643,66 +496,6 @@ function handleAvatarUpload(base64: string) {
   }
 }
 
-// ─── 奖项卡片 ───
-.award-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.award-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--el-border-color-lighter);
-  transition: border-color 0.2s;
-
-  &:hover {
-    border-color: #d4a574;
-  }
-
-  &__icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    background: rgba(212, 165, 116, 0.1);
-    color: #d4a574;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  &__body {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__name {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-    margin-bottom: 4px;
-  }
-
-  &__meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-
-  &__actions {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex-shrink: 0;
-  }
-}
-
 // ─── 兴趣卡片 ───
 .interest-list {
   display: flex;
@@ -721,7 +514,7 @@ function handleAvatarUpload(base64: string) {
     align-items: center;
     gap: 6px;
     margin-bottom: 4px;
-    color: #1e3a5f;
+    color: var(--el-text-color-primary);
   }
 
   &__category {
@@ -750,6 +543,23 @@ html.dark .profile-info {
   .el-table {
     --el-table-header-bg-color: var(--el-fill-color-light);
     --el-table-header-text-color: var(--el-text-color-primary);
+  }
+
+  .grade-item {
+    background: var(--el-bg-color);
+    border-color: var(--el-border-color);
+  }
+
+  .grade-item__semester {
+    color: var(--el-text-color-regular);
+  }
+
+  .grade-item__num {
+    color: var(--el-text-color-primary);
+  }
+
+  .grade-item__lbl {
+    color: var(--el-text-color-secondary);
   }
 }
 </style>

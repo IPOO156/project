@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { NotificationCategory, NotificationStatus } from '@/shared/types/types'
-import { Bell, CheckCheck, Filter, Mail, MailOpen, Search, Trash2, X } from 'lucide-vue-next'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Bell, CheckCheck, Filter, Mail, Search, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useNotificationStore, useThemeStore } from '@/app/stores/stores'
+import { useNotificationStore } from '@/app/stores/stores'
 import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
+import MessageCard from './components/MessageCard.vue'
 
 /**
  * 消息中心通知页面
@@ -14,7 +16,6 @@ import PageContainer from '@/shared/ui/PageContainer.vue'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
-const themeStore = useThemeStore()
 
 const keyword = ref('')
 const categoryFilter = ref<NotificationCategory | ''>('')
@@ -43,9 +44,18 @@ function handleBatchRead() {
 }
 
 function handleBatchDelete() {
-  selectedIds.value.forEach((id) => notificationStore.deleteNotification(id))
-  selectedIds.value = []
-  batchMode.value = false
+  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条通知吗？`, '批量删除确认', {
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      selectedIds.value.forEach((id) => notificationStore.deleteNotification(id))
+      selectedIds.value = []
+      batchMode.value = false
+      ElMessage.success('已删除')
+    })
+    .catch(() => {})
 }
 
 function handleCancelBatchMode() {
@@ -138,33 +148,21 @@ function handleSizeChange(size: number) {
   pageNum.value = 1
 }
 
-function categoryLabel(category: NotificationCategory) {
-  return NOTIFICATION_CATEGORY[category]?.label ?? category
-}
-
-function categoryStyle(category: NotificationCategory) {
-  const lightMap: Record<NotificationCategory, { backgroundColor: string; color: string }> = {
-    system: { backgroundColor: 'rgba(30, 136, 229, 0.10)', color: '#1e88e5' },
-    approval: { backgroundColor: 'rgba(255, 167, 38, 0.14)', color: '#f57c00' },
-    activity: { backgroundColor: 'rgba(67, 160, 71, 0.12)', color: '#388e3c' },
-    message: { backgroundColor: 'rgba(96, 125, 139, 0.12)', color: '#546e7a' },
-  }
-  const darkMap: Record<NotificationCategory, { backgroundColor: string; color: string }> = {
-    system: { backgroundColor: 'rgba(96, 165, 250, 0.15)', color: '#93c5fd' },
-    approval: { backgroundColor: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' },
-    activity: { backgroundColor: 'rgba(74, 222, 128, 0.15)', color: '#4ade80' },
-    message: { backgroundColor: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8' },
-  }
-  const map = themeStore.isDark ? darkMap : lightMap
-  return map[category] ?? lightMap.system
-}
-
 function markAsRead(id: string) {
   notificationStore.markAsRead(id)
 }
 
 function deleteItem(id: string) {
-  notificationStore.deleteNotification(id)
+  ElMessageBox.confirm('确定删除该通知吗？', '删除确认', {
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      notificationStore.deleteNotification(id)
+      ElMessage.success('已删除')
+    })
+    .catch(() => {})
 }
 
 function markAllAsRead() {
@@ -295,61 +293,16 @@ onMounted(() => {
       v-loading="notificationStore.loading"
       class="mc-card message-list message-list--staggered"
     >
-      <div
+      <MessageCard
         v-for="item in paginatedList"
         :key="item.id"
-        class="message-card"
-        :class="{ 'is-unread': !item.isRead }"
-      >
-        <label v-if="batchMode" class="message-card__checkbox">
-          <input
-            type="checkbox"
-            :checked="selectedIds.includes(item.id)"
-            @change="toggleSelect(item.id)"
-          />
-        </label>
-        <div class="message-card__accent" />
-        <div class="message-card__icon" :style="categoryStyle(item.category)">
-          <Mail :size="20" />
-        </div>
-
-        <div class="message-card__main">
-          <div class="message-card__header-row">
-            <span class="message-card__category">{{ categoryLabel(item.category) }}</span>
-            <h3 class="message-card__title">{{ item.title }}</h3>
-          </div>
-          <p class="message-card__content">{{ item.content }}</p>
-          <div class="message-card__meta">
-            <span class="message-card__time">
-              <MailOpen v-if="item.isRead" :size="12" />
-              <Mail v-else :size="12" />
-              {{ item.createdAt }}
-            </span>
-            <span v-if="item.sender" class="message-card__sender">来自：{{ item.sender }}</span>
-          </div>
-        </div>
-
-        <div class="message-card__actions">
-          <el-tooltip v-if="!item.isRead" content="标为已读" placement="top">
-            <button
-              type="button"
-              class="action-icon action-icon--read"
-              @click="markAsRead(item.id)"
-            >
-              <MailOpen :size="16" />
-            </button>
-          </el-tooltip>
-          <el-tooltip content="删除" placement="top">
-            <button
-              type="button"
-              class="action-icon action-icon--delete"
-              @click="deleteItem(item.id)"
-            >
-              <Trash2 :size="16" />
-            </button>
-          </el-tooltip>
-        </div>
-      </div>
+        :item="item"
+        :batch-mode="batchMode"
+        :checked="selectedIds.includes(item.id)"
+        @read="markAsRead"
+        @delete="deleteItem"
+        @toggle-select="toggleSelect"
+      />
 
       <div v-if="paginatedList.length > 0" class="mc-pagination">
         <el-pagination
@@ -408,7 +361,7 @@ onMounted(() => {
     width: 48px;
     height: 48px;
     border-radius: 10px;
-    background: #1e3a5f;
+    background: var(--el-color-primary);
     color: #fff;
     display: flex;
     align-items: center;
@@ -419,7 +372,7 @@ onMounted(() => {
     margin: 0;
     font-size: 22px;
     font-weight: 700;
-    color: #1e3a5f;
+    color: var(--el-text-color-primary);
   }
 
   &__subtitle {
@@ -457,7 +410,7 @@ onMounted(() => {
   &__stat-value {
     font-size: 20px;
     font-weight: 700;
-    color: #1e3a5f;
+    color: var(--el-text-color-primary);
   }
 
   &__stat-label {
@@ -535,159 +488,6 @@ onMounted(() => {
   }
 }
 
-.message-card {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 8px;
-  background: var(--mc-card);
-  border: 1px solid var(--mc-border);
-  transition:
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
-
-  &:hover {
-    border-color: #d4a574;
-  }
-
-  &.is-unread {
-    background: rgba(30, 58, 95, 0.02);
-    border-color: rgba(30, 58, 95, 0.2);
-
-    .message-card__title {
-      color: #1e3a5f;
-      font-weight: 600;
-    }
-  }
-
-  &__icon {
-    flex-shrink: 0;
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-top: 1px;
-  }
-
-  &__main {
-    flex: 1;
-    min-width: 0;
-  }
-
-  &__header-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 2px;
-  }
-
-  &__category {
-    flex-shrink: 0;
-    padding: 1px 7px;
-    border-radius: 4px;
-    background: var(--mc-bg);
-    color: var(--mc-text-secondary);
-    font-size: 11px;
-    font-weight: 500;
-  }
-
-  &__title {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--mc-text);
-    line-height: 1.5;
-  }
-
-  &__content {
-    margin: 0 0 6px;
-    font-size: 13px;
-    color: var(--mc-text-secondary);
-    line-height: 1.5;
-  }
-
-  &__checkbox {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    padding-top: 2px;
-
-    input[type='checkbox'] {
-      width: 16px;
-      height: 16px;
-      accent-color: #1e3a5f;
-      cursor: pointer;
-    }
-  }
-
-  &__meta {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 12px;
-    color: var(--mc-text-secondary);
-  }
-
-  &__time {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  &__sender {
-    padding-left: 10px;
-    border-left: 1px solid var(--mc-border);
-  }
-
-  &__actions {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-}
-
-.action-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: var(--mc-text-secondary);
-  background: transparent;
-
-  &:hover {
-    background: var(--mc-bg);
-    color: var(--mc-wood);
-  }
-
-  &--read {
-    color: var(--mc-sage);
-
-    &:hover {
-      background: var(--mc-sage-fade);
-      color: var(--mc-sage);
-    }
-  }
-
-  &--delete {
-    color: var(--mc-danger);
-
-    &:hover {
-      background: var(--mc-danger-fade);
-      color: var(--mc-danger);
-    }
-  }
-}
-
 @media (max-width: 768px) {
   .message-header {
     padding: 20px;
@@ -718,17 +518,6 @@ onMounted(() => {
   .mc-input-wrap,
   .mc-select {
     width: 100%;
-  }
-
-  .message-card {
-    flex-direction: column;
-
-    &__actions {
-      width: 100%;
-      justify-content: flex-end;
-      padding-top: 10px;
-      border-top: 1px solid var(--mc-border);
-    }
   }
 }
 </style>

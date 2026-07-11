@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
+import { submitApplication } from '@/shared/api/submission'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { INDUSTRY_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -23,7 +24,7 @@ function emptyForm() {
 }
 
 const form = reactive(emptyForm())
-const { clearDraft } = useFormDraft('innovation-star', form as Record<string, unknown>, {
+const { clearDraft } = useFormDraft('innovation-star', form, {
   afterRestore: () => sanitizeSemesterMonthPair(form, 'registerDate', 'semester'),
 })
 const submitting = ref(false)
@@ -41,19 +42,23 @@ function reset() {
   Object.assign(form, emptyForm())
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   sanitizeSemesterMonthPair(form, 'registerDate', 'semester')
   if (!isMonthInSemester(form.registerDate, form.semester)) {
     ElMessage.error('注册时间与学期不匹配，请重新选择')
     return
   }
   submitting.value = true
-  setTimeout(() => {
+  try {
+    await submitApplication({ type: 'innovationStar', typeLabel: '双创之星报名', ...form })
     ElMessage.success('报名提交成功')
     clearDraft()
     reset()
+  } catch {
+    ElMessage.error('提交失败，请重试')
+  } finally {
     submitting.value = false
-  }, 600)
+  }
 }
 </script>
 

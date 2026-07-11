@@ -38,16 +38,12 @@ const props = withDefaults(
   overflow: hidden;
 
   &--ai {
-    background: linear-gradient(
-      135deg,
-      var(--el-color-primary) 0%,
-      var(--el-color-primary-light-3) 100%
-    );
+    background: linear-gradient(135deg, var(--mc-primary) 0%, var(--mc-primary-light) 100%);
     color: #fff;
   }
 
   &--user {
-    background: var(--el-color-primary);
+    background: var(--mc-primary);
     color: #fff;
   }
 

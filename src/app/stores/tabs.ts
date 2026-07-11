@@ -5,17 +5,11 @@ import { computed, ref, watch } from 'vue'
 
 /**
  * 已访问页面 tab 状态
- *  - 记录用户访问过的路由（持久化到 sessionStorage，刷新不丢）
- *  - 当前激活 tab
- *  - 上限 12 个，超出按 FIFO 淘汰最早的（affix 永不淘汰）
+ *  - 持久化到 sessionStorage，刷新不丢
+ *  - 上限 7 个，affix 永不淘汰
  *
- * 规则引用：.cursor/rules/03-state-and-dataflow.mdc §2
- *  - 不在 actions 里操作 router/DOM（路由切换由 useTabs hook 处理）
- *  - 不在 localStorage 存结构化数据（仅用 sessionStorage）
- *
- * affix 来源：route.meta.affix（配置驱动），不是访问顺序。
- * ⚠️ 重要：readStorage() 被 store 初始化调用时，sessionStorage 中的旧脏数据
- *   （旧版本 "第一个访问 = affix" 逻辑产生的数据）会被实时反查修正。
+ * 规则：不在 actions 里操作 router/DOM；不在 localStorage 存结构化数据
+ * affix 来源：route.meta.affix（配置驱动）
  */
 
 const STORAGE_KEY = 'app:visited-tabs'
@@ -35,7 +29,7 @@ export interface NavTab {
 }
 
 /**
- * 按 path 去重，保留第一次出现的 tab（用于清理持久化层旧脏数据）。
+ * 按 path 去重，保留首次出现的 tab。
  */
 function dedupeTabs(tabs: NavTab[]): NavTab[] {
   const seen = new Set<string>()
@@ -105,30 +99,20 @@ function writeStorage(tabs: NavTab[]) {
 }
 
 /**
- * ⚠️ 全局 router 实例引用（用于 readStorage 实时反查 affix）。
- * 在 main.ts 中，tabsStore 实例化之前，tabsStore.initRouter() 会被调用。
+ * 全局 router 引用，main.ts 中通过 initTabsRouter() 注入
  */
 let _router: Router | undefined
 
 export const useTabsStore = defineStore('tabs', () => {
-  // state（store 实例化时，router 必然已注册）
   const visitedTabs = ref<NavTab[]>(readStorage(_router))
   const activePath = ref<string>('')
 
-  // getters
   const hasTabs = computed(() => visitedTabs.value.length > 0)
 
-  // actions
-  /**
-   * 添加 tab。
-   * @returns true：tab 已存在或添加成功；false：已达上限且为新 tab，未添加。
-   */
   function addTab(tab: NavTab): boolean {
-    // 防止重复添加
     if (visitedTabs.value.some((t) => t.path === tab.path)) {
       return true
     }
-    // 超出上限：不再自动淘汰，由调用方提示用户手动清理
     if (visitedTabs.value.length >= MAX_TABS) {
       return false
     }
@@ -146,7 +130,6 @@ export const useTabsStore = defineStore('tabs', () => {
       return ''
     }
     visitedTabs.value.splice(idx, 1)
-    // 关闭后建议下一个 tab：优先选被关闭 tab 的前一个
     const fallback = visitedTabs.value[idx - 1] ?? visitedTabs.value[0]
     return fallback?.path ?? ''
   }
@@ -156,7 +139,6 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   function removeAllTabs() {
-    // 保留所有 affix
     visitedTabs.value = visitedTabs.value.filter((t) => !t.closable)
     return visitedTabs.value[0]?.path ?? ''
   }
@@ -166,8 +148,7 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   /**
-   * 重新排序 tabs（拖拽后调用）。
-   * 注意：affix 标签仍保留在原始位置，不参与排序。
+   * 拖拽重新排序 tabs
    */
   function reorderTabs(newOrder: NavTab[]) {
     visitedTabs.value = newOrder
@@ -204,15 +185,7 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 })
 
-/**
- * 在 main.ts 中，tabsStore 实例化之前调用：
- *   import { useTabsStore } from '@/app/stores/tabs'
- *   import router from '@/app/router'
- *   const tabsStore = useTabsStore()
- *   tabsStore.initRouter(router)
- *
- * 这样 readStorage() 执行时就能拿到真实的 router.resolve() 能力。
- */
+/** 在 main.ts 中 store 实例化前调用，注入 router 用于 readStorage 反查 affix */
 export function initTabsRouter(router: Router) {
   _router = router
 }

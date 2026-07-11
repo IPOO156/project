@@ -507,9 +507,12 @@ watch(isLoading, async (loading) => {
   .layout-mask-leave-to,
   .layout-fade-enter-from,
   .layout-fade-leave-to,
+  .layout-route-enter-from,
+  .layout-route-leave-to,
   .layout-loading-enter-from,
   .layout-loading-leave-to {
     transform: none !important;
+    filter: none !important;
   }
 
   // spinner 旋转也停掉

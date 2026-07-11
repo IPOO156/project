@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, SwitchCamera } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
-import logoIcon from '@/assets/logo/logo-icon.jpg'
+import logoIcon from '@/assets/logo/logo-icon.png'
 import { getTeacherMenuItems } from '@/shared/config/teacherModuleRegistry'
 import { menuItems } from '@/shared/constants/menu'
 
@@ -140,7 +140,7 @@ function handleSwitchToStudent() {
   }
 
   &__logo {
-    height: 56px;
+    height: 80px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -154,8 +154,8 @@ function handleSwitchToStudent() {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 28px;
-      height: 28px;
+      width: 56px;
+      height: 56px;
       overflow: hidden;
     }
 
@@ -308,10 +308,15 @@ function handleSwitchToStudent() {
 </style>
 
 <style lang="scss">
-/* 夜间模式：logo 图标容器使用深色背景，避免白色 logo 背景过于突兀 */
+/* 夜间模式：logo 图标容器使用浅色背景 + 发光效果，避免 logo 看不清 */
 html.dark .sidebar__logo-icon {
-  background: rgba(30, 41, 59, 0.8);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 6px;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+  box-shadow:
+    0 0 12px rgba(148, 163, 184, 0.3),
+    inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+}
+html.dark .sidebar__logo-img {
+  filter: brightness(1.3);
 }
 </style>

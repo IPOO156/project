@@ -18,6 +18,7 @@ import {
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore, useNotificationStore, useThemeStore, useUserStore } from '@/app/stores/stores'
+import { useThemeRipple } from '@/shared/composables/useThemeRipple'
 import NavTabs from './NavTabs.vue'
 
 const userStore = useUserStore()
@@ -26,6 +27,7 @@ const notificationStore = useNotificationStore()
 const themeStore = useThemeStore()
 const router = useRouter()
 const route = useRoute()
+const { toggleThemeWithRipple } = useThemeRipple()
 const isGrowthTimeline = computed(() => route.path.startsWith('/growth-timeline'))
 const isTeacher = computed(() => userStore.isTeacher)
 
@@ -94,7 +96,7 @@ function switchToStudent() {
           text
           class="header__action"
           :aria-label="themeStore.isDark ? '切换至日间模式' : '切换至夜间模式'"
-          @click="themeStore.toggleTheme"
+          @click="toggleThemeWithRipple"
         >
           <component :is="themeStore.isDark ? Sun : Moon" :size="18" />
         </el-button>

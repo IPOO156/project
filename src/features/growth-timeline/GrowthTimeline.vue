@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ElMessageBox } from 'element-plus'
 import { RefreshCw } from 'lucide-vue-next'
 import { onBeforeUnmount, ref } from 'vue'
 import ExperienceDetail from './components/ExperienceDetail.vue'
@@ -109,7 +110,15 @@ function handleDeleteExperience(id: string) {
     handleCloseDetail()
     return
   }
-  deleteExperience(id)
+  ElMessageBox.confirm('确定删除该成长经历吗？删除后无法恢复。', '删除确认', {
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    type: 'warning',
+  })
+    .then(() => {
+      deleteExperience(id)
+    })
+    .catch(() => {})
 }
 
 function handleDetailClosed() {
@@ -329,6 +338,7 @@ function handleScrollToGrowth() {
 }
 
 .timeline-sync {
+  margin-top: 1.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;

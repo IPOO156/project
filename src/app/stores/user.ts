@@ -1,6 +1,11 @@
 import type { TeacherRole, UserInfo } from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import {
+  changePassword as apiChangePassword,
+  updateUserInfo as apiUpdateUserInfo,
+  uploadAvatar as apiUpload,
+} from '@/shared/api/user'
 import { ROLE_PERMISSIONS } from '@/shared/types/types'
 import { useTabsStore } from './tabs'
 
@@ -103,7 +108,10 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  function updateAvatar(avatarUrl: string | undefined) {
+  async function updateAvatar(avatarUrl: string | undefined) {
+    if (avatarUrl) {
+      await apiUpload(avatarUrl)
+    }
     cachedAvatar.value = avatarUrl
     writeAvatarCache(avatarUrl)
     if (userInfo.value) {
@@ -111,15 +119,25 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  function updateUserInfo(partial: Partial<UserInfo>) {
+  async function updateUserInfo(partial: Partial<UserInfo>) {
     const base = userInfo.value ?? ({ id: '', username: '' } as UserInfo)
-    userInfo.value = { ...base, ...partial }
-    // 持久化到 localStorage，避免刷新后丢失
+    const updated = { ...base, ...partial }
+    userInfo.value = updated
+    // 同步到后端
+    apiUpdateUserInfo(partial).catch(() => {})
+    // 持久化到 localStorage
     try {
       localStorage.setItem('user_info_cache', JSON.stringify(userInfo.value))
     } catch {
-      // 隐私模式或存储已满时静默失败
+      /* noop */
     }
+  }
+
+  async function changePassword(payload: {
+    oldPassword: string
+    newPassword: string
+  }): Promise<void> {
+    await apiChangePassword(payload)
   }
 
   function loadUserInfoCache(): UserInfo | null {
@@ -168,6 +186,7 @@ export const useUserStore = defineStore('user', () => {
     setUserInfo,
     updateAvatar,
     updateUserInfo,
+    changePassword,
     logout,
   }
 })

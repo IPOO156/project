@@ -15,8 +15,17 @@ function emptyForm() {
   }
 }
 
-const { form, submitting, handleSubmit: _submit } = useApplicationForm({ emptyForm })
-const { clearDraft } = useFormDraft('book-report', form as Record<string, unknown>)
+const {
+  form,
+  submitting,
+  handleSubmit: _submit,
+} = useApplicationForm({
+  emptyForm,
+  requiredFields: ['bookName', 'bookDate', 'review', 'semester'],
+  type: 'bookReport',
+  typeLabel: '图书心得',
+})
+const { clearDraft } = useFormDraft('book-report', form)
 
 async function handleSubmit() {
   await _submit()

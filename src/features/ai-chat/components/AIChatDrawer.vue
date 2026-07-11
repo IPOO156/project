@@ -78,11 +78,14 @@ watch(
     if (val) {
       nextTick(scrollToBottom)
       // 如果有初始问题且当前只有欢迎语，自动发送
+      // immediate: true 保证被 :key 强制重新挂载时（如 CareerPlan「重新分析」）
+      // 也能在挂载即 visible=true 的情况下触发自动发送
       if (props.initialQuestion && messages.value.length <= 1) {
         sendMessage(props.initialQuestion)
       }
     }
   },
+  { immediate: true },
 )
 
 onMounted(() => document.addEventListener('keydown', onEscKey))
@@ -213,11 +216,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     justify-content: space-between;
     padding: 14px 16px;
     flex-shrink: 0;
-    background: linear-gradient(
-      135deg,
-      var(--el-color-primary) 0%,
-      var(--el-color-primary-light-3) 100%
-    );
+    background: linear-gradient(135deg, var(--mc-primary) 0%, var(--mc-primary-light) 100%);
     color: #fff;
   }
 
@@ -310,7 +309,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   }
 
   &__msg--user &__bubble {
-    background: #1e3a5f;
+    background: var(--mc-primary);
     color: #fff;
     border-bottom-left-radius: 14px;
     border-bottom-right-radius: 4px;
@@ -336,7 +335,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
 
   &__thinking-icon {
     animation: aiDrawerPulse 1.6s ease-in-out infinite;
-    color: var(--el-color-primary);
+    color: var(--mc-primary);
   }
 
   @keyframes aiDrawerPulse {
@@ -371,9 +370,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     cursor: pointer;
     transition: all $duration-fast $ease-standard;
     &:hover:not(:disabled) {
-      border-color: var(--el-color-primary);
-      color: var(--el-color-primary);
-      background: rgba(30, 58, 95, 0.06);
+      border-color: var(--mc-primary);
+      color: var(--mc-primary);
+      background: color-mix(in srgb, var(--mc-primary) 6%, transparent);
     }
     &:disabled {
       opacity: 0.5;
@@ -406,8 +405,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
       color: var(--el-text-color-placeholder);
     }
     &:focus {
-      border-color: var(--el-color-primary);
-      box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.1);
+      border-color: var(--mc-primary);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--mc-primary) 10%, transparent);
     }
     &:disabled {
       opacity: 0.5;
@@ -419,7 +418,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     height: 38px;
     border-radius: 10px;
     border: none;
-    background: var(--el-color-primary);
+    background: var(--mc-primary);
     color: #fff;
     display: flex;
     align-items: center;
@@ -428,7 +427,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     flex-shrink: 0;
     transition: all $duration-fast $ease-standard;
     &:hover:not(:disabled) {
-      background: var(--el-color-primary-light-3);
+      background: var(--mc-primary-light);
       transform: translateY(-1px);
     }
     &:disabled {

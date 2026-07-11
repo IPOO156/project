@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
+import { useUserStore } from '@/app/stores/stores'
+
+const userStore = useUserStore()
 
 const passwordForm = reactive({
   oldPassword: '',
@@ -10,7 +13,7 @@ const passwordForm = reactive({
 
 const loading = ref(false)
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
     ElMessage.warning('请填写完整信息')
     return
@@ -25,13 +28,20 @@ function handleSubmit() {
   }
 
   loading.value = true
-  setTimeout(() => {
+  try {
+    await userStore.changePassword({
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword,
+    })
     ElMessage.success('密码修改成功')
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
+  } catch {
+    ElMessage.error('密码修改失败，请重试')
+  } finally {
     loading.value = false
-  }, 800)
+  }
 }
 </script>
 

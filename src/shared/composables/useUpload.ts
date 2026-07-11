@@ -38,14 +38,14 @@ export function useUpload(options: UploadOptions = {}) {
     progress.value = 0
 
     try {
-      const res = await request.post(mergedOptions.url!, formData, {
+      const res = (await request.post(mergedOptions.url!, formData, {
         onUploadProgress: (e) => {
           if (e.total) {
             progress.value = Math.round((e.loaded / e.total) * 100)
           }
         },
-      })
-      const url = res.data?.url ?? res.data
+      })) as any
+      const url = res.url ?? res
       uploadedUrls.value.push(url)
       return url
     } catch {

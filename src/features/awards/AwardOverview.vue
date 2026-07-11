@@ -2,12 +2,13 @@
 import { Award, CircleCheck, Clock, TrendingUp } from 'lucide-vue-next'
 import { computed, onMounted } from 'vue'
 import VChart from 'vue-echarts'
-import { useSubmissionStore } from '@/app/stores/stores'
+import { useSubmissionStore, useThemeStore } from '@/app/stores/stores'
 import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
 
 const submissionStore = useSubmissionStore()
+const themeStore = useThemeStore()
 
 const totalCount = computed(() => submissionStore.filteredRecords.length)
 const pendingCount = computed(
@@ -195,7 +196,13 @@ onMounted(() => {
               <p class="stat-card__label">总提交数</p>
               <p class="stat-card__value">{{ totalCount }}</p>
             </div>
-            <div class="stat-card__icon" style="background: #1e3a5f15; color: #1e3a5f">
+            <div
+              class="stat-card__icon"
+              :style="{
+                background: themeStore.isDark ? '#60a5fa18' : '#1e3a5f15',
+                color: themeStore.isDark ? '#60a5fa' : '#1e3a5f',
+              }"
+            >
               <Award :size="24" />
             </div>
           </div>
@@ -208,7 +215,7 @@ onMounted(() => {
               <p class="stat-card__label">待审核</p>
               <p class="stat-card__value">{{ pendingCount }}</p>
             </div>
-            <div class="stat-card__icon" style="background: #e6a23c15; color: #e6a23c">
+            <div class="stat-card__icon stat-card__icon--warning">
               <Clock :size="24" />
             </div>
           </div>
@@ -221,7 +228,7 @@ onMounted(() => {
               <p class="stat-card__label">已通过</p>
               <p class="stat-card__value">{{ approvedCount }}</p>
             </div>
-            <div class="stat-card__icon" style="background: #67c23a15; color: #67c23a">
+            <div class="stat-card__icon stat-card__icon--success">
               <CircleCheck :size="24" />
             </div>
           </div>
@@ -234,10 +241,7 @@ onMounted(() => {
               <p class="stat-card__label">本学期新增</p>
               <p class="stat-card__value">{{ semesterCount }}</p>
             </div>
-            <div
-              class="stat-card__icon"
-              style="background: #409eff15; color: var(--el-color-primary)"
-            >
+            <div class="stat-card__icon stat-card__icon--primary">
               <TrendingUp :size="24" />
             </div>
           </div>
@@ -272,12 +276,32 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+@use '@/features/messages/styles/theme' as *;
+
 :deep(.page-container) {
+  @include message-theme-vars;
+
+  font-family: $mc-font-body;
+  color: var(--mc-text);
   user-select: none;
 }
 
 .stats-row {
   margin-bottom: 16px;
+
+  .el-card {
+    border: 1px solid var(--mc-border);
+    border-radius: var(--mc-radius);
+    box-shadow: var(--mc-shadow);
+    transition:
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+
+    &:hover {
+      box-shadow: var(--mc-shadow-hover);
+      border-color: #d4a574;
+    }
+  }
 }
 
 .stat-card {
@@ -304,14 +328,37 @@ onMounted(() => {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+
+    &--warning {
+      background: #e6a23c15;
+      color: #e6a23c;
+    }
+    &--success {
+      background: #67c23a15;
+      color: #67c23a;
+    }
+    &--primary {
+      background: #409eff15;
+      color: var(--el-color-primary);
+    }
   }
 }
 
 .chart-card {
   margin-bottom: 16px;
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius);
+  box-shadow: var(--mc-shadow);
+
+  .el-card__header {
+    border-bottom: 1px solid var(--mc-border);
+    padding: 16px 20px;
+  }
+
   .chart-title {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
+    color: #1e3a5f;
   }
 }
 .chart {
