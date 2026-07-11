@@ -1,31 +1,52 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, SwitchCamera } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAppStore } from '@/app/stores/stores'
+import { useAppStore, useUserStore } from '@/app/stores/stores'
 import logoIcon from '@/assets/logo/logo-icon.jpg'
+import { getTeacherMenuItems } from '@/shared/config/teacherModuleRegistry'
 import { menuItems } from '@/shared/constants/menu'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
+const userStore = useUserStore()
+
+// 是否为教师端
+const isTeacher = computed(() => userStore.isTeacher)
+
+// 当前菜单：学生端/教师端自动切换
+const currentMenuItems = computed(() => {
+  if (isTeacher.value) {
+    return getTeacherMenuItems(userStore.currentRole)
+  }
+  return menuItems
+})
 
 // 当前路由所属的顶级菜单，用于 el-menu 的 default-active
 const activeMenu = computed(() => {
   const path = route.path
+  if (isTeacher.value) {
+    if (path.startsWith('/teacher/dashboard')) return '/teacher/dashboard'
+    return path
+  }
   if (path === '/dashboard') {
     return '/dashboard'
   }
-  // 返回当前路由 path，让 el-menu 高亮
   return path
 })
 
-function handleMenuSelect(index: string) {
-  if (index === route.fullPath) {
-    return
-  }
+// 教师端标题
+const sidebarTitle = computed(() => (isTeacher.value ? '教师档案管理系统' : '档案管理系统'))
 
+function handleMenuSelect(index: string) {
+  if (index === route.fullPath) return
   router.push(index)
+}
+
+function handleSwitchToStudent() {
+  userStore.logout()
+  router.push('/login')
 }
 </script>
 
@@ -37,7 +58,9 @@ function handleMenuSelect(index: string) {
         <img :src="logoIcon" alt="档案管理系统" class="sidebar__logo-img" />
       </div>
       <transition name="fade">
-        <span v-show="!appStore.isSidebarCollapsed" class="sidebar__logo-text">档案管理系统</span>
+        <span v-show="!appStore.isSidebarCollapsed" class="sidebar__logo-text">{{
+          sidebarTitle
+        }}</span>
       </transition>
     </div>
 
@@ -51,7 +74,7 @@ function handleMenuSelect(index: string) {
         class="sidebar__el-menu"
         @select="handleMenuSelect"
       >
-        <template v-for="item in menuItems" :key="item.label">
+        <template v-for="item in currentMenuItems" :key="item.label">
           <!-- 无子菜单 -->
           <el-menu-item v-if="!item.children && item.path" :index="item.path">
             <component :is="item.icon" v-if="item.icon" :size="18" />
@@ -81,8 +104,12 @@ function handleMenuSelect(index: string) {
       </el-menu>
     </el-scrollbar>
 
-    <!-- 折叠按钮 -->
+    <!-- 折叠按钮 + 教师端切换 -->
     <div class="sidebar__footer">
+      <el-button v-if="isTeacher" text class="sidebar__switch-btn" @click="handleSwitchToStudent">
+        <component :is="SwitchCamera" :size="16" />
+        <span v-show="!appStore.isSidebarCollapsed">切换学生端</span>
+      </el-button>
       <el-button text class="sidebar__collapse-btn" @click="appStore.toggleSidebar()">
         <component :is="appStore.isSidebarCollapsed ? ChevronRight : ChevronLeft" :size="16" />
         <span v-show="!appStore.isSidebarCollapsed">收起</span>

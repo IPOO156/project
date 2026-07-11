@@ -18,16 +18,13 @@ import {
 import { computed, onMounted, ref } from 'vue'
 import VChart from 'vue-echarts'
 import { useRouter } from 'vue-router'
-import { useActivityStore, useThemeStore, useUserStore } from '@/app/stores/stores'
-import GpaTrendChart from './components/GpaTrendChart.vue'
+import { useActivityStore, useThemeStore } from '@/app/stores/stores'
 import QuickEntrySettings from './components/QuickEntrySettings.vue'
 import { useQuickEntries } from './composables/useQuickEntries'
-import { dashboardMockData } from './dashboard-mock'
 
 use([CanvasRenderer, RadarComponent, RadarChart, TooltipComponent, LegendComponent])
 
 const router = useRouter()
-const userStore = useUserStore()
 const activityStore = useActivityStore()
 const themeStore = useThemeStore()
 const { visibleEntries, recordClick, refreshPool, updateOrder, toggleHidden } = useQuickEntries()
@@ -188,15 +185,6 @@ const radarOption = computed(() => ({
     },
   ],
 }))
-
-const todayLabel = computed(() => {
-  return new Date().toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
-  })
-})
 
 const recentActivities = computed(() => activityStore.filteredActivities.slice(0, 5))
 

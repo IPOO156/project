@@ -4,7 +4,17 @@
  *  - 左侧：移动端菜单按钮 + 已访问页面 tab 栏（NavTabs）
  *  - 右侧：通知 + 用户下拉（个人中心 / 修改密码 / 退出登录）
  */
-import { Bell, LogOut, Menu, Moon, Settings, Sun, User } from 'lucide-vue-next'
+import {
+  Bell,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Moon,
+  Settings,
+  Sun,
+  SwitchCamera,
+  User,
+} from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore, useNotificationStore, useThemeStore, useUserStore } from '@/app/stores/stores'
@@ -17,6 +27,16 @@ const themeStore = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 const isGrowthTimeline = computed(() => route.path.startsWith('/growth-timeline'))
+const isTeacher = computed(() => userStore.isTeacher)
+
+const roleLabel = computed(() => {
+  if (!isTeacher.value) return ''
+  if (userStore.isSuperAdmin) return '超级管理员'
+  if (userStore.isAdmin) return '管理员'
+  if (userStore.isReviewer) return '审核员'
+  if (userStore.isTeacherRole) return '课任教师'
+  return ''
+})
 
 function handleLogout() {
   userStore.logout()
@@ -25,6 +45,11 @@ function handleLogout() {
 
 function openSidebar() {
   appStore.setSidebarCollapsed(false)
+}
+
+function switchToStudent() {
+  userStore.logout()
+  router.push('/login')
 }
 </script>
 
@@ -79,15 +104,34 @@ function openSidebar() {
         <span class="header__user">
           <el-avatar :size="32" :src="userStore.avatar" :icon="User" />
           <span class="header__user-name">{{ userStore.userName || '用户' }}</span>
+          <el-tag
+            v-if="isTeacher"
+            size="small"
+            type="warning"
+            effect="light"
+            class="header__role-tag"
+          >
+            {{ roleLabel }}
+          </el-tag>
         </span>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item @click="router.push('/profile/info')">
-              <User :size="14" /> 个人中心
-            </el-dropdown-item>
-            <el-dropdown-item @click="router.push('/profile/edit-password')">
-              <Settings :size="14" /> 修改密码
-            </el-dropdown-item>
+            <template v-if="isTeacher">
+              <el-dropdown-item @click="router.push('/teacher/dashboard')">
+                <LayoutDashboard :size="14" /> 教师首页
+              </el-dropdown-item>
+              <el-dropdown-item divided @click="switchToStudent">
+                <SwitchCamera :size="14" /> 切换学生端
+              </el-dropdown-item>
+            </template>
+            <template v-else>
+              <el-dropdown-item @click="router.push('/profile/info')">
+                <User :size="14" /> 个人中心
+              </el-dropdown-item>
+              <el-dropdown-item @click="router.push('/profile/edit-password')">
+                <Settings :size="14" /> 修改密码
+              </el-dropdown-item>
+            </template>
             <el-dropdown-item divided @click="handleLogout">
               <LogOut :size="14" /> 退出登录
             </el-dropdown-item>
@@ -162,6 +206,10 @@ function openSidebar() {
     &-name {
       font-size: $font-size-base;
       color: var(--el-text-color-primary);
+    }
+
+    &-role-tag {
+      margin-left: $spacing-xs;
     }
   }
 }

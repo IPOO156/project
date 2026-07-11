@@ -1,5 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
+import teacherRoutes from './teacher-routes'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -170,6 +171,14 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
+  // ─── 教师端路由 ───
+  {
+    path: '/teacher',
+    component: () => import('@/app/layouts/DefaultLayout.vue'),
+    redirect: '/teacher/dashboard',
+    meta: { teacher: true },
+    children: teacherRoutes,
+  },
 ]
 
 const router = createRouter({
@@ -189,6 +198,26 @@ router.beforeEach((to, _from, next) => {
   if (to.name === 'Login' && token) {
     next({ path: '/dashboard' })
     return
+  }
+
+  // 教师端路由需 teacher 登录类型
+  if (to.meta?.teacher) {
+    const userCache = localStorage.getItem('user_info_cache')
+    if (userCache) {
+      try {
+        const info = JSON.parse(userCache)
+        if (info.loginType !== 'teacher') {
+          next({ path: '/dashboard' })
+          return
+        }
+      } catch {
+        next({ path: '/login' })
+        return
+      }
+    } else {
+      next({ path: '/login' })
+      return
+    }
   }
 
   next()

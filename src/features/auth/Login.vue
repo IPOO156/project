@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { Moon, Sun } from 'lucide-vue-next'
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useThemeStore, useUserStore } from '@/app/stores/stores'
 import logoIcon from '@/assets/logo/logo-icon.jpg'
@@ -21,6 +21,24 @@ const loginSuccess = ref(false)
 const loginType = ref<'student' | 'admin'>('student')
 const capsLockOn = ref(false)
 
+// ── Mock 教师账号数据 ──
+const adminAccounts: Record<string, { password: string; name: string; role: TeacherRole }> = {
+  superadmin: { password: 'admin123', name: '超级管理员', role: 'super_admin' },
+  admin: { password: 'admin123', name: '李老师', role: 'admin' },
+  reviewer: { password: 'admin123', name: '王审核员', role: 'reviewer' },
+  teacher: { password: 'admin123', name: '刘老师', role: 'teacher' },
+}
+
+const teacherInfoMap: Record<
+  TeacherRole,
+  { realName: string; college: string; department: string }
+> = {
+  super_admin: { realName: '超级管理员', college: '学校总部', department: '信息中心' },
+  admin: { realName: '李老师', college: '计算机学院', department: '计算机科学与技术系' },
+  reviewer: { realName: '王审核员', college: '计算机学院', department: '教务办公室' },
+  teacher: { realName: '刘老师', college: '计算机学院', department: '计算机科学与技术系' },
+}
+
 function checkCapsLock(event: KeyboardEvent) {
   capsLockOn.value = event.getModifierState?.('CapsLock') ?? false
 }
@@ -32,28 +50,69 @@ function handleLogin() {
   }
 
   loading.value = true
-  // 模拟登录 - 实际项目中替换为真实 API
+
   setTimeout(() => {
-    userStore.setToken(`mock-token-${Date.now()}`)
-    userStore.setUserInfo({
-      id: '1',
-      username: loginForm.username,
-      realName: '张三',
-      studentId: '2024060001',
-      grade: '2024级',
-      major: '计算机科学与技术',
-      className: '计科2401班',
-      email: 'zhangsan@edu.cn',
-      phone: '138****0000',
-    })
-    loading.value = false
-    loginSuccess.value = true
-    themeStore.applyTimeBasedTheme()
-    setTimeout(() => {
-      router.push('/dashboard')
-    }, 300)
+    if (loginType.value === 'student') {
+      // ── 学生端登录 ──
+      userStore.setToken(`mock-token-${Date.now()}`)
+      userStore.setUserInfo({
+        id: '1',
+        username: loginForm.username,
+        realName: loginForm.username === 'admin' ? '张三' : loginForm.username,
+        studentId: '2024060001',
+        grade: '2024级',
+        major: '计算机科学与技术',
+        className: '计科2401班',
+        email: 'zhangsan@edu.cn',
+        phone: '138****0000',
+        loginType: 'student',
+      })
+      loading.value = false
+      loginSuccess.value = true
+      themeStore.applyTimeBasedTheme()
+      setTimeout(() => router.push('/dashboard'), 300)
+    } else {
+      // ── 教师/管理员端登录 ──
+      const account = adminAccounts[loginForm.username.toLowerCase()]
+      if (account && account.password === loginForm.password) {
+        userStore.setToken(`mock-token-${Date.now()}`)
+        const info = teacherInfoMap[account.role]
+        userStore.setUserInfo({
+          id: `t-${Date.now()}`,
+          username: loginForm.username,
+          realName: info.realName,
+          studentId: '',
+          grade: '',
+          major: '',
+          className: '',
+          email: `${loginForm.username}@edu.cn`,
+          phone: '138****0000',
+          role: account.role,
+          college: info.college,
+          department: info.department,
+          loginType: 'teacher',
+        })
+        loading.value = false
+        loginSuccess.value = true
+        themeStore.applyTimeBasedTheme()
+        setTimeout(() => router.push('/teacher/dashboard'), 300)
+      } else {
+        loading.value = false
+        ElMessage.error('用户名或密码错误')
+      }
+    }
   }, 800)
 }
+
+const loginHint = computed(() => {
+  if (loginType.value === 'student') {
+    return { user: '请输入学号', pass: '密码区分大小写，请确认输入法状态' }
+  }
+  return {
+    user: '管理员账号：superadmin / admin / reviewer / teacher',
+    pass: '测试密码均为 admin123',
+  }
+})
 </script>
 
 <template>
@@ -75,7 +134,9 @@ function handleLogin() {
           <img :src="logoIcon" alt="档案管理系统" class="login__logo-img" />
         </div>
         <h1 class="login__title">档案管理系统</h1>
-        <p class="login__subtitle">学生端 · 综合档案管理平台</p>
+        <p class="login__subtitle">
+          {{ loginType === 'student' ? '学生端' : '教师端' }} · 综合档案管理平台
+        </p>
       </div>
 
       <el-tabs v-model="loginType" class="login__tabs" stretch>
@@ -88,11 +149,11 @@ function handleLogin() {
           <el-form-item>
             <el-input
               v-model="loginForm.username"
-              placeholder="请输入学号/用户名"
+              :placeholder="loginType === 'student' ? '请输入学号' : '请输入用户名'"
               prefix-icon="User"
               size="large"
             />
-            <p class="login__hint">请输入学号或用户名</p>
+            <p class="login__hint">{{ loginHint.user }}</p>
           </el-form-item>
           <el-form-item>
             <el-input
@@ -104,7 +165,7 @@ function handleLogin() {
               show-password
               @keyup="checkCapsLock"
             />
-            <p class="login__hint">密码区分大小写，请确认输入法状态</p>
+            <p class="login__hint">{{ loginHint.pass }}</p>
             <p v-if="capsLockOn" class="login__caps-warning">大写锁定已开启，可能输入错误密码</p>
           </el-form-item>
           <el-form-item>
@@ -184,7 +245,6 @@ function handleLogin() {
       background-color 0.2s,
       border-color 0.2s,
       color 0.2s;
-
     &:hover {
       background: rgba(255, 255, 255, 0.25);
     }
@@ -248,12 +308,10 @@ function handleLogin() {
   &__form {
     .el-form-item {
       margin-bottom: 16px;
-
       &:last-child {
         margin-bottom: 0;
       }
     }
-
     .el-form-item__content {
       flex-direction: column;
       align-items: flex-start;
@@ -294,12 +352,10 @@ function handleLogin() {
 .login-form-fade-leave-active {
   transition: all $duration-base $ease-standard;
 }
-
 .login-form-fade-enter-from {
   opacity: 0;
   transform: translateY(8px);
 }
-
 .login-form-fade-leave-to {
   opacity: 0;
   transform: translateY(-8px);
@@ -307,7 +363,7 @@ function handleLogin() {
 </style>
 
 <style lang="scss">
-/* 夜间模式：使用全局选择器确保覆盖日间样式 */
+/* 夜间模式 */
 html.dark .login {
   background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #1e293b 100%);
 
@@ -322,7 +378,6 @@ html.dark .login {
     background: rgba(30, 41, 59, 0.6);
     border-color: rgba(148, 163, 184, 0.3);
     color: #f1f5f9;
-
     &:hover {
       background: rgba(51, 65, 85, 0.8);
     }
@@ -340,59 +395,12 @@ html.dark .login {
     background: rgba(30, 41, 59, 0.8);
     box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
   }
-
   .login__title {
     color: #f1f5f9;
   }
-
   .login__subtitle,
   .login__hint {
     color: #94a3b8;
-  }
-
-  .login__tabs {
-    .el-tabs__item {
-      color: var(--el-text-color-secondary);
-    }
-
-    .el-tabs__item.is-active {
-      color: var(--el-color-primary);
-    }
-
-    .el-tabs__active-bar {
-      background-color: var(--el-color-primary);
-    }
-
-    .el-tabs__nav-wrap::after {
-      background-color: var(--el-border-color);
-    }
-  }
-
-  .login__form {
-    .el-input__wrapper {
-      background-color: var(--el-fill-color-blank);
-      box-shadow: 0 0 0 1px var(--el-border-color) inset;
-    }
-
-    .el-input__inner {
-      color: var(--el-text-color-primary);
-
-      &::placeholder {
-        color: var(--el-text-color-placeholder);
-      }
-    }
-
-    .el-input__icon {
-      color: var(--el-text-color-secondary);
-    }
-
-    .el-checkbox__label {
-      color: var(--el-text-color-primary);
-    }
-
-    .el-checkbox__input.is-checked + .el-checkbox__label {
-      color: var(--el-color-primary);
-    }
   }
 }
 </style>

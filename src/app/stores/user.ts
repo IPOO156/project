@@ -1,6 +1,7 @@
-import type { UserInfo } from '@/shared/types/types'
+import type { TeacherRole, UserInfo } from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { ROLE_PERMISSIONS } from '@/shared/types/types'
 import { useTabsStore } from './tabs'
 
 const AVATAR_CACHE_KEY = 'user_avatar_cache'
@@ -40,6 +41,47 @@ export const useUserStore = defineStore('user', () => {
   const userName = computed(() => userInfo.value?.realName ?? userInfo.value?.username ?? '')
   const studentId = computed(() => userInfo.value?.studentId ?? '')
   const avatar = computed(() => userInfo.value?.avatar || cachedAvatar.value)
+
+  // ── 教师端角色相关 ──
+  /** 是否为教师端登录 */
+  const isTeacher = computed(() => userInfo.value?.loginType === 'teacher')
+  /** 是否为超级管理员 */
+  const isSuperAdmin = computed(() => userInfo.value?.role === 'super_admin')
+  /** 是否为管理员 */
+  const isAdmin = computed(() => userInfo.value?.role === 'admin')
+  /** 是否为审核员 */
+  const isReviewer = computed(() => userInfo.value?.role === 'reviewer')
+  /** 是否为课任教师 */
+  const isTeacherRole = computed(() => userInfo.value?.role === 'teacher')
+  /** 当前角色标识 */
+  const currentRole = computed<TeacherRole | undefined>(() => userInfo.value?.role)
+  /** 当前角色拥有的模块权限列表 */
+  const permissions = computed<string[]>(() => {
+    const role = userInfo.value?.role
+    return role ? (ROLE_PERMISSIONS[role] ?? []) : []
+  })
+
+  /** 检查是否有指定模块的权限 */
+  function hasPermission(moduleKey: string): boolean {
+    return permissions.value.includes(moduleKey)
+  }
+
+  /** 设置角色（用于管理员登录后选择） */
+  function setRole(role: TeacherRole) {
+    if (userInfo.value) {
+      userInfo.value.role = role
+      userInfo.value.loginType = 'teacher'
+      localStorage.setItem('user_info_cache', JSON.stringify(userInfo.value))
+    }
+  }
+
+  /** 设置登录类型 */
+  function setLoginType(type: 'student' | 'teacher') {
+    if (userInfo.value) {
+      userInfo.value.loginType = type
+      localStorage.setItem('user_info_cache', JSON.stringify(userInfo.value))
+    }
+  }
 
   // actions
   function setToken(val: string) {
@@ -112,6 +154,16 @@ export const useUserStore = defineStore('user', () => {
     userName,
     studentId,
     avatar,
+    isTeacher,
+    isSuperAdmin,
+    isAdmin,
+    isReviewer,
+    isTeacherRole,
+    currentRole,
+    permissions,
+    hasPermission,
+    setRole,
+    setLoginType,
     setToken,
     setUserInfo,
     updateAvatar,

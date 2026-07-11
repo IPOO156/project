@@ -2,17 +2,12 @@
 import { Award, CircleCheck, Clock, TrendingUp } from 'lucide-vue-next'
 import { computed, onMounted } from 'vue'
 import VChart from 'vue-echarts'
-import { useSubmissionStore, useThemeStore } from '@/app/stores/stores'
+import { useSubmissionStore } from '@/app/stores/stores'
 import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
 
 const submissionStore = useSubmissionStore()
-const themeStore = useThemeStore()
-
-// 图表暗色模式适配色
-const chartTextColor = computed(() => (themeStore.isDark ? '#94a3b8' : '#333'))
-const chartBorderColor = computed(() => (themeStore.isDark ? '#334155' : '#fff'))
 
 const totalCount = computed(() => submissionStore.filteredRecords.length)
 const pendingCount = computed(

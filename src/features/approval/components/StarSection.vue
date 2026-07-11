@@ -16,14 +16,8 @@ import {
   PROJECT_LEVELS,
   SEMESTER_OPTIONS,
 } from '@/shared/constants/dict'
-import DictColumn from '@/shared/ui/DictColumn.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
-import {
-  canEditStar,
-  filterStarRecords,
-  SCIENTIFIC_SUB_TYPES,
-  useStarMockData,
-} from '../composables/useStarMockData'
+import { canEditStar, filterStarRecords, useStarMockData } from '../composables/useStarMockData'
 
 const starTabs = [
   { key: 'all', label: '全部' },
