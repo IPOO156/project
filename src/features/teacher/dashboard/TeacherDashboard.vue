@@ -209,6 +209,18 @@ const recentLogs = ref([
   flex-direction: column;
   gap: $spacing-lg;
 
+  // 统计卡片逐项入场
+  &__stats :deep(.el-col) {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: dash-card-enter 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    @for $i from 1 through 4 {
+      &:nth-child(#{$i}) {
+        animation-delay: #{$i * 0.08}s;
+      }
+    }
+  }
+
   &__welcome {
     display: flex;
     align-items: center;
@@ -265,6 +277,13 @@ const recentLogs = ref([
 }
 
 .stat-card {
+  transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  cursor: default;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
   &__body {
     display: flex;
     justify-content: space-between;
@@ -313,6 +332,7 @@ const recentLogs = ref([
   gap: $spacing-sm;
   padding: $spacing-xl;
   border: 1px solid var(--el-border-color-lighter);
+  transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   border-radius: $radius-lg;
   cursor: pointer;
   transition: all 0.2s;
@@ -321,6 +341,10 @@ const recentLogs = ref([
     transform: translateY(-2px);
     box-shadow: $shadow-base;
     border-color: var(--el-color-primary-light-7);
+  }
+
+  &:active {
+    transform: scale(0.97);
   }
 
   &__icon {
@@ -392,6 +416,22 @@ const recentLogs = ref([
   &__meta {
     font-size: 12px;
     color: var(--el-text-color-secondary);
+  }
+}
+
+// 卡片入场
+@keyframes dash-card-enter {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teacher-dashboard__stats :deep(.el-col) {
+    opacity: 1;
+    transform: none;
+    animation: none;
   }
 }
 </style>

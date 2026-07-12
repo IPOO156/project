@@ -79,6 +79,10 @@ const statusMap: Record<string, { label: string; type: string }> = {
   failed: { label: '失败', type: 'danger' },
 }
 
+function statusType(status: string): string {
+  return statusMap[status]?.type ?? 'info'
+}
+
 // ── 超级管理员专属功能 ──
 const semesterDialogVisible = ref(false)
 const newSemester = ref('')
@@ -225,10 +229,7 @@ function handleImport() {
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag
-              :type="statusMap[row.status]?.type as 'success' | 'warning' | 'danger' | 'info'"
-              size="small"
-            >
+            <el-tag :type="statusType(row.status)" size="small">
               {{ statusMap[row.status]?.label }}
             </el-tag>
           </template>

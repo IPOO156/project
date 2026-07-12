@@ -260,10 +260,7 @@ function getGpaClass(gpa: number) {
                         size="small"
                         @click="
                           () => {
-                            selectedStudent = {
-                              name: (row as any).name,
-                              id: (row as any).studentId,
-                            }
+                            selectedStudent = { name: row.name, id: row.studentId }
                             suggestionDialogVisible = true
                           }
                         "
