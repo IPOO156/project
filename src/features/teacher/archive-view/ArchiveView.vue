@@ -85,25 +85,25 @@ const categoryData = computed(() => [
     label: '平均绩点',
     value: overallStats.value.avgGpa,
     icon: TrendingUp,
-    color: '#2d5a87',
+    color: 'var(--el-color-primary)',
     percent: 76,
   },
   {
     label: '获奖总人次',
     value: overallStats.value.awardCount,
     icon: Trophy,
-    color: '#d4a574',
+    color: 'var(--el-color-warning)',
     percent: 68,
   },
   {
     label: '社会实践',
     value: overallStats.value.practiceCount,
     icon: Heart,
-    color: '#10b981',
+    color: 'var(--el-color-success)',
     percent: 82,
   },
   { label: '图书心得', value: 1562, icon: BookOpen, color: '#8b5cf6', percent: 55 },
-  { label: '学科竞赛', value: 892, icon: Star, color: '#f59e0b', percent: 31 },
+  { label: '学科竞赛', value: 892, icon: Star, color: 'var(--el-color-danger)', percent: 31 },
 ])
 
 // 档案等级分级展示

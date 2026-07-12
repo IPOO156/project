@@ -63,7 +63,7 @@ const securityItems = [
                 <component
                   :is="item.status === 'normal' ? CheckCircle2 : ShieldAlert"
                   :size="18"
-                  color="#67c23a"
+                  color="var(--el-color-success)"
                 />
                 <span class="security-item__name">{{ item.name }}</span>
               </div>

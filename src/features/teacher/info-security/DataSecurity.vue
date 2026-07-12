@@ -77,7 +77,7 @@ function handleBackup() {
           <div class="security-items">
             <div v-for="item in group.items" :key="item.name" class="security-item">
               <div class="security-item__left">
-                <component :is="CheckCircle2" :size="16" color="#67c23a" />
+                <component :is="CheckCircle2" :size="16" color="var(--el-color-success)" />
                 <span class="security-item__name">{{ item.name }}</span>
               </div>
               <span class="security-item__detail">{{ item.detail }}</span>

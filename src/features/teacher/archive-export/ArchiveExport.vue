@@ -225,7 +225,10 @@ function handleImport() {
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusMap[row.status]?.type as any" size="small">
+            <el-tag
+              :type="statusMap[row.status]?.type as 'success' | 'warning' | 'danger' | 'info'"
+              size="small"
+            >
               {{ statusMap[row.status]?.label }}
             </el-tag>
           </template>

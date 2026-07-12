@@ -7,7 +7,24 @@ import { ElMessage } from 'element-plus'
 import { AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-vue-next'
 import { ref } from 'vue'
 
-const hardwareStatus = ref([
+interface HardwareItem {
+  name: string
+  status: 'normal' | 'warning' | 'fault'
+  ip?: string
+  uptime?: string
+  cpu?: string
+  mem?: string
+  location?: string
+  value?: string
+  alarm?: string
+}
+
+interface HardwareGroup {
+  category: string
+  items: HardwareItem[]
+}
+
+const hardwareStatus = ref<HardwareGroup[]>([
   {
     category: '服务器',
     items: [
@@ -101,40 +118,29 @@ function handleRefresh(item: any) {
             v-for="item in group.items"
             :key="item.name"
             class="hardware-item"
-            :class="`hardware-item--${(item as any).status}`"
+            :class="`hardware-item--${item.status}`"
           >
             <div class="hardware-item__left">
               <component
-                :is="statusIcon[(item as any).status]"
+                :is="statusIcon[item.status]"
                 :size="20"
-                :color="statusColor[(item as any).status]"
+                :color="statusColor[item.status]"
               />
               <div class="hardware-item__info">
-                <span class="hardware-item__name">{{ (item as any).name }}</span>
+                <span class="hardware-item__name">{{ item.name }}</span>
                 <span class="hardware-item__meta">{{
-                  (item as any).ip || (item as any).location || (item as any).value || ''
+                  item.ip || item.location || item.value || ''
                 }}</span>
               </div>
             </div>
             <div class="hardware-item__right">
-              <span
-                class="hardware-item__status"
-                :style="{ color: statusColor[(item as any).status] }"
-              >
-                {{ statusLabel[(item as any).status] }}
+              <span class="hardware-item__status" :style="{ color: statusColor[item.status] }">
+                {{ statusLabel[item.status] }}
               </span>
-              <span v-if="(item as any).cpu" class="hardware-item__metric"
-                >CPU {{ (item as any).cpu }}</span
-              >
-              <span v-if="(item as any).mem" class="hardware-item__metric"
-                >内存 {{ (item as any).mem }}</span
-              >
-              <span v-if="(item as any).uptime" class="hardware-item__uptime"
-                >运行 {{ (item as any).uptime }}</span
-              >
-              <span v-if="(item as any).alarm" class="hardware-item__alarm">{{
-                (item as any).alarm
-              }}</span>
+              <span v-if="item.cpu" class="hardware-item__metric">CPU {{ item.cpu }}</span>
+              <span v-if="item.mem" class="hardware-item__metric">内存 {{ item.mem }}</span>
+              <span v-if="item.uptime" class="hardware-item__uptime">运行 {{ item.uptime }}</span>
+              <span v-if="item.alarm" class="hardware-item__alarm">{{ item.alarm }}</span>
               <el-button size="small" text @click="handleRefresh(item)">刷新</el-button>
             </div>
           </div>

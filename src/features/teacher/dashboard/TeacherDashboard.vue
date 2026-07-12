@@ -32,26 +32,26 @@ const statsCards = computed(() => {
   const role = currentRole.value
   if (role === 'super_admin' || role === 'admin') {
     return [
-      { label: '学生总数', value: 2846, icon: Users, color: '#2d5a87' },
-      { label: '教师总数', value: 186, icon: BookOpen, color: '#10b981' },
-      { label: '今日操作', value: 237, icon: TrendingUp, color: '#d4a574' },
-      { label: '待审核材料', value: 42, icon: ClipboardCheck, color: '#f59e0b' },
+      { label: '学生总数', value: 2846, icon: Users, color: 'var(--el-color-primary)' },
+      { label: '教师总数', value: 186, icon: BookOpen, color: 'var(--el-color-success)' },
+      { label: '今日操作', value: 237, icon: TrendingUp, color: 'var(--el-color-warning)' },
+      { label: '待审核材料', value: 42, icon: ClipboardCheck, color: 'var(--el-color-danger)' },
     ]
   }
   if (role === 'reviewer') {
     return [
-      { label: '待审核（院级）', value: 18, icon: UserCheck, color: '#2d5a87' },
-      { label: '待审核（系级）', value: 24, icon: UserCheck, color: '#d4a574' },
-      { label: '今日已审核', value: 15, icon: ClipboardCheck, color: '#10b981' },
-      { label: '审核通过率', value: '86%', icon: TrendingUp, color: '#2d5a87' },
+      { label: '待审核（院级）', value: 18, icon: UserCheck, color: 'var(--el-color-primary)' },
+      { label: '待审核（系级）', value: 24, icon: UserCheck, color: 'var(--el-color-warning)' },
+      { label: '今日已审核', value: 15, icon: ClipboardCheck, color: 'var(--el-color-success)' },
+      { label: '审核通过率', value: '86%', icon: TrendingUp, color: 'var(--el-color-primary)' },
     ]
   }
   // teacher
   return [
-    { label: '所教班级', value: 3, icon: BookOpen, color: '#2d5a87' },
-    { label: '学生总数', value: 126, icon: Users, color: '#10b981' },
-    { label: '本学期填报', value: 98, icon: FileText, color: '#d4a574' },
-    { label: '优秀档案', value: 32, icon: Eye, color: '#f59e0b' },
+    { label: '所教班级', value: 3, icon: BookOpen, color: 'var(--el-color-primary)' },
+    { label: '学生总数', value: 126, icon: Users, color: 'var(--el-color-success)' },
+    { label: '本学期填报', value: 98, icon: FileText, color: 'var(--el-color-warning)' },
+    { label: '优秀档案', value: 32, icon: Eye, color: 'var(--el-color-danger)' },
   ]
 })
 
@@ -366,15 +366,15 @@ const recentLogs = ref([
 
     &--success,
     &--approved {
-      background: #67c23a;
+      background: var(--el-color-success);
     }
 
     &--info {
-      background: #909399;
+      background: var(--el-text-color-disabled);
     }
 
     &--warning {
-      background: #e6a23c;
+      background: var(--el-color-warning);
     }
   }
 
