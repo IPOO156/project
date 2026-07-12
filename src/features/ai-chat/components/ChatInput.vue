@@ -9,7 +9,7 @@
  */
 import { ElMessage } from 'element-plus'
 import { Mic, Paperclip, Send, X } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useVoiceInput } from '../composables/useVoiceInput'
 
 const props = defineProps<{
@@ -35,16 +35,19 @@ const {
   toggle: toggleVoice,
 } = useVoiceInput({
   onFinal: (text) => {
-    // 追加到当前输入（保留已有内容）
+    if (!text) return
     inputValue.value = inputValue.value ? `${inputValue.value} ${text}`.trim() : text
   },
   onError: (msg) => ElMessage.warning(msg),
 })
 
-// 语音实时回显：识别中把 interim 文本显示在输入框
-watch(transcript, (t) => {
-  if (t) inputValue.value = t
-})
+const displayText = computed(() => (isRecording.value ? transcript.value : inputValue.value))
+
+function onInput(e: Event) {
+  const target = e.target as HTMLTextAreaElement
+  inputValue.value = target.value
+  autoResize()
+}
 
 const canSend = computed(() => inputValue.value.trim().length > 0 && !props.loading)
 
@@ -54,10 +57,6 @@ function autoResize() {
   if (!el) return
   el.style.height = 'auto'
   el.style.height = `${Math.min(el.scrollHeight, 120)}px`
-}
-
-function onInput() {
-  autoResize()
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -114,7 +113,7 @@ function formatSize(bytes: number): string {
 
 function handleVoiceClick() {
   if (!voiceSupported.value) {
-    ElMessage.warning('当前浏览器不支持语音输入，请使用 Chrome 或 Edge')
+    ElMessage.warning('当前环境不支持语音输入，请使用 HTTPS/localhost 下的最新版 Chrome 或 Edge')
     return
   }
   toggleVoice()
@@ -164,7 +163,7 @@ function handleVoiceClick() {
       <button
         class="ci__btn"
         :class="{ 'is-recording': isRecording }"
-        :title="voiceSupported ? '语音输入' : '当前浏览器不支持语音输入'"
+        :title="voiceSupported ? '语音输入' : '当前环境不支持语音输入'"
         @click="handleVoiceClick"
       >
         <Mic :size="18" />
@@ -173,7 +172,7 @@ function handleVoiceClick() {
       <!-- textarea -->
       <textarea
         ref="textareaRef"
-        v-model="inputValue"
+        :value="displayText"
         class="ci__textarea"
         rows="1"
         placeholder="输入你的问题…（Enter 发送，Shift+Enter 换行）"
