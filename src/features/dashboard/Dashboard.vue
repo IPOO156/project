@@ -70,6 +70,8 @@ const statsCards = computed(() => {
 // 多维度画像：直接读取 store 的 ProfileDimension（{ label, current, target, previous }）
 const profileDimensions = computed(() => archiveStore.dimensions)
 
+const hasProfileDimensions = computed(() => profileDimensions.value.length > 0)
+
 const profileSummary = computed(() => {
   return profileDimensions.value.map((item) => {
     const deltaFromPrevious = item.current - item.previous
@@ -100,105 +102,111 @@ const radarTooltipBg = computed(() =>
   themeStore.isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(17, 24, 39, 0.92)',
 )
 
-const radarOption = computed(() => ({
-  tooltip: {
-    trigger: 'item',
-    backgroundColor: radarTooltipBg.value,
-    borderWidth: 0,
-    textStyle: { color: '#fff' },
-  },
-  legend: {
-    bottom: 0,
-    icon: 'circle',
-    itemWidth: 10,
-    itemHeight: 10,
-    textStyle: {
-      color: radarTextColor.value,
-      fontSize: 12,
+const radarOption = computed(() => {
+  if (!hasProfileDimensions.value) {
+    return null
+  }
+
+  return {
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: radarTooltipBg.value,
+      borderWidth: 0,
+      textStyle: { color: '#fff' },
     },
-    data: ['当前画像', '目标值', '上一阶段'],
-  },
-  radar: {
-    radius: '62%',
-    center: ['50%', '44%'],
-    splitNumber: 5,
-    axisName: {
-      color: radarTextColor.value,
-      fontSize: 13,
-    },
-    splitLine: {
-      lineStyle: {
-        color: radarSplitColor.value,
+    legend: {
+      bottom: 0,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: {
+        color: radarTextColor.value,
+        fontSize: 12,
       },
+      data: ['当前画像', '目标值', '上一阶段'],
     },
-    splitArea: {
-      areaStyle: {
-        color: radarAreaColors.value,
+    radar: {
+      radius: '62%',
+      center: ['50%', '44%'],
+      splitNumber: 5,
+      axisName: {
+        color: radarTextColor.value,
+        fontSize: 13,
       },
-    },
-    axisLine: {
-      lineStyle: {
-        color: radarAxisColor.value,
+      splitLine: {
+        lineStyle: {
+          color: radarSplitColor.value,
+        },
       },
+      splitArea: {
+        areaStyle: {
+          color: radarAreaColors.value,
+        },
+      },
+      axisLine: {
+        lineStyle: {
+          color: radarAxisColor.value,
+        },
+      },
+      indicator: profileDimensions.value.map((item) => ({
+        name: item.label,
+        max: 100,
+      })),
     },
-    indicator: profileDimensions.value.map((item) => ({
-      name: item.label,
-      max: 100,
-    })),
-  },
-  series: [
-    {
-      type: 'radar',
-      symbol: 'circle',
-      symbolSize: 7,
-      data: [
-        {
-          value: profileDimensions.value.map((item) => item.current),
-          name: '当前画像',
-          areaStyle: {
-            color: 'rgba(45, 90, 135, 0.20)',
+    series: [
+      {
+        type: 'radar',
+        symbol: 'circle',
+        symbolSize: 7,
+        data: [
+          {
+            value: profileDimensions.value.map((item) => item.current),
+            name: '当前画像',
+            areaStyle: {
+              color: 'rgba(45, 90, 135, 0.20)',
+            },
+            lineStyle: {
+              color: '#2d5a87',
+              width: 3,
+            },
+            itemStyle: {
+              color: '#2d5a87',
+            },
           },
-          lineStyle: {
-            color: '#2d5a87',
-            width: 3,
+          {
+            value: profileDimensions.value.map((item) => item.target),
+            name: '目标值',
+            lineStyle: {
+              color: '#94a3b8',
+              width: 2,
+              type: 'dashed',
+            },
+            areaStyle: {
+              color: 'transparent',
+            },
+            itemStyle: {
+              color: '#94a3b8',
+            },
           },
-          itemStyle: {
-            color: '#2d5a87',
+          {
+            value: profileDimensions.value.map((item) => item.previous),
+            name: '上一阶段',
+            lineStyle: {
+              color: '#a855f7',
+              width: 2,
+            },
+            areaStyle: {
+              color: 'rgba(168, 85, 247, 0.08)',
+            },
+            itemStyle: {
+              color: '#a855f7',
+            },
           },
-        },
-        {
-          value: profileDimensions.value.map((item) => item.target),
-          name: '目标值',
-          lineStyle: {
-            color: '#94a3b8',
-            width: 2,
-            type: 'dashed',
-          },
-          areaStyle: {
-            color: 'transparent',
-          },
-          itemStyle: {
-            color: '#94a3b8',
-          },
-        },
-        {
-          value: profileDimensions.value.map((item) => item.previous),
-          name: '上一阶段',
-          lineStyle: {
-            color: '#a855f7',
-            width: 2,
-          },
-          areaStyle: {
-            color: 'rgba(168, 85, 247, 0.08)',
-          },
-          itemStyle: {
-            color: '#a855f7',
-          },
-        },
-      ],
-    },
-  ],
-}))
+        ],
+      },
+    ],
+  }
+})
 
 const recentActivities = computed(() => activityStore.filteredActivities.slice(0, 5))
 
@@ -242,8 +250,16 @@ onMounted(() => {
             <span class="section-title">多维度画像评估</span>
           </template>
           <div class="radar-panel">
-            <VChart class="radar-panel__chart" :option="radarOption" autoresize />
-            <div class="radar-panel__summary">
+            <VChart
+              v-if="radarOption"
+              class="radar-panel__chart"
+              :option="radarOption"
+              autoresize
+            />
+            <div v-else class="radar-panel__chart radar-panel__chart--empty">
+              <el-empty description="暂无维度数据" :image-size="80" />
+            </div>
+            <div v-if="profileSummary.length > 0" class="radar-panel__summary">
               <div v-for="item in profileSummary" :key="item.label" class="radar-metric">
                 <div class="radar-metric__title-row">
                   <span class="radar-metric__label">{{ item.label }}</span>
