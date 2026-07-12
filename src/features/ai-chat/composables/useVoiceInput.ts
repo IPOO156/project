@@ -66,6 +66,15 @@ export interface UseVoiceInputOptions {
   onError?: (msg: string) => void
 }
 
+const ERROR_MESSAGES: Record<string, string> = {
+  'not-allowed': '麦克风权限被拒绝，请在浏览器地址栏的站点权限中重新允许麦克风访问',
+  'service-not-allowed': '麦克风权限被拒绝，请在浏览器地址栏的站点权限中重新允许麦克风访问',
+  'no-speech': '未检测到语音，请重试',
+  network: '语音识别服务不可用，请检查网络或浏览器服务状态',
+  'audio-capture': '未检测到可用的麦克风设备',
+  aborted: '语音识别已取消',
+}
+
 export function useVoiceInput(options?: UseVoiceInputOptions) {
   const isRecording = ref(false)
   const transcript = ref('')
@@ -76,11 +85,27 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
       ? window.SpeechRecognition || window.webkitSpeechRecognition
       : undefined
 
-  const isSupported = computed(() => !!SpeechRecognitionCtor)
+  const isSecureContextForVoice = computed(() => {
+    if (typeof window === 'undefined') {
+      return false
+    }
+    const { protocol, hostname } = window.location
+    return protocol === 'https:' || hostname === 'localhost' || hostname === '127.0.0.1'
+  })
+
+  const isSupported = computed(() => !!SpeechRecognitionCtor && isSecureContextForVoice.value)
 
   let recognition: SpeechRecognition | null = null
   let finalText = ''
   let manualStop = false
+  let restartTimer: number | null = null
+
+  function clearRestartTimer() {
+    if (restartTimer) {
+      window.clearTimeout(restartTimer)
+      restartTimer = null
+    }
+  }
 
   function buildRecognition(): SpeechRecognition | null {
     if (!SpeechRecognitionCtor) return null
@@ -89,6 +114,10 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
     rec.continuous = true
     rec.interimResults = true
     rec.maxAlternatives = 1
+
+    rec.onstart = () => {
+      isRecording.value = true
+    }
 
     rec.onresult = (event: SpeechRecognitionEvent) => {
       let interim = ''
@@ -104,30 +133,34 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
     }
 
     rec.onerror = (event: SpeechRecognitionErrorEvent) => {
-      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        errorMsg.value = '麦克风权限被拒绝，请在浏览器设置中允许访问'
-      } else if (event.error === 'no-speech') {
-        errorMsg.value = '未检测到语音，请重试'
-      } else if (event.error === 'network') {
-        errorMsg.value = '网络异常，语音识别失败'
-      } else {
-        errorMsg.value = `语音识别出错：${event.error}`
-      }
-      options?.onError?.(errorMsg.value)
-      // 出错后停止
+      const message = ERROR_MESSAGES[event.error] || `语音识别出错：${event.error}`
+      errorMsg.value = message
+      options?.onError?.(message)
       isRecording.value = false
+      manualStop = false
     }
 
     rec.onend = () => {
-      // 非手动停止且仍处于录音状态 → 自动重启继续识别（浏览器超时保护）
-      if (!manualStop && isRecording.value) {
-        try {
-          rec.start()
-        } catch {
-          isRecording.value = false
-        }
-      } else {
+      clearRestartTimer()
+
+      if (manualStop) {
         isRecording.value = false
+        if (finalText && options?.onFinal) {
+          options.onFinal(finalText.trim())
+        }
+        finalText = ''
+        transcript.value = ''
+        return
+      }
+
+      if (isRecording.value) {
+        restartTimer = window.setTimeout(() => {
+          try {
+            rec.start()
+          } catch {
+            isRecording.value = false
+          }
+        }, 100)
       }
     }
 
@@ -135,14 +168,18 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
   }
 
   function start() {
-    if (!isSupported.value) {
-      errorMsg.value = '当前浏览器不支持语音输入，请使用 Chrome 或 Edge'
+    if (!SpeechRecognitionCtor) {
+      errorMsg.value = '当前浏览器不支持语音输入，请使用最新版 Chrome 或 Edge'
+      options?.onError?.(errorMsg.value)
+      return
+    }
+    if (!isSecureContextForVoice.value) {
+      errorMsg.value = '语音输入仅支持 HTTPS 或 localhost 环境，请切换到本地地址或安全协议'
       options?.onError?.(errorMsg.value)
       return
     }
     if (isRecording.value) return
 
-    // 每次重新构建实例，避免复用导致的 onstart 冲突
     recognition = buildRecognition()
     if (!recognition) return
 
@@ -153,7 +190,6 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
 
     try {
       recognition.start()
-      isRecording.value = true
     } catch {
       errorMsg.value = '启动语音识别失败，请重试'
       options?.onError?.(errorMsg.value)
@@ -162,15 +198,10 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
   }
 
   function stop() {
+    if (!isRecording.value && !recognition) return
     manualStop = true
-    isRecording.value = false
+    clearRestartTimer()
     recognition?.stop()
-    recognition = null
-    if (finalText && options?.onFinal) {
-      options.onFinal(finalText)
-    }
-    finalText = ''
-    transcript.value = ''
   }
 
   function toggle() {
@@ -182,12 +213,18 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
   }
 
   onBeforeUnmount(() => {
-    if (isRecording.value) {
-      manualStop = true
-      recognition?.stop()
+    clearRestartTimer()
+    manualStop = true
+    if (recognition) {
+      try {
+        recognition.abort()
+      } catch {
+        /* noop */
+      }
       recognition = null
-      isRecording.value = false
     }
+    isRecording.value = false
+    finalText = ''
   })
 
   return {
