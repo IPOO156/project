@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { TeacherRole } from '@/shared/types/types'
 import { ElMessage } from 'element-plus'
 import { Lock, Moon, Shield, Sun, User } from 'lucide-vue-next'
 import { nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
@@ -14,6 +15,24 @@ const router = useRouter()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 const { toggleThemeWithRipple } = useThemeRipple()
+
+// ── Mock 教师账号数据（接口联调后替换） ──
+const adminAccounts: Record<string, { password: string; name: string; role: TeacherRole }> = {
+  superadmin: { password: 'admin123', name: '超级管理员', role: 'super_admin' },
+  admin: { password: 'admin123', name: '李老师', role: 'admin' },
+  reviewer: { password: 'admin123', name: '王审核员', role: 'reviewer' },
+  teacher: { password: 'admin123', name: '刘老师', role: 'teacher' },
+}
+
+const teacherInfoMap: Record<
+  TeacherRole,
+  { realName: string; college: string; department: string }
+> = {
+  super_admin: { realName: '超级管理员', college: '学校总部', department: '信息中心' },
+  admin: { realName: '李老师', college: '计算机学院', department: '计算机科学与技术系' },
+  reviewer: { realName: '王审核员', college: '计算机学院', department: '教务办公室' },
+  teacher: { realName: '刘老师', college: '计算机学院', department: '计算机科学与技术系' },
+}
 
 const loginForm = reactive({ username: '', password: '', captcha: '', remember: false })
 const loading = ref(false)
@@ -86,20 +105,55 @@ async function handleLogin() {
     return
   }
   loading.value = true
-  try {
-    const { token, userInfo } = await login({
-      username: loginForm.username,
-      password: loginForm.password,
-      loginType: loginType.value,
-    })
-    userStore.setToken(token)
-    userStore.setUserInfo(userInfo)
-    loginSuccess.value = true
-    setTimeout(() => router.push('/dashboard'), 600)
-  } catch {
-    ElMessage.error('登录失败，请稍后重试')
-  } finally {
-    loading.value = false
+
+  if (loginType.value === 'admin') {
+    // ── 教师端 Mock 登录（接口联调后替换） ──
+    setTimeout(() => {
+      const account = adminAccounts[loginForm.username.toLowerCase()]
+      if (account && account.password === loginForm.password) {
+        userStore.setToken(`mock-token-${Date.now()}`)
+        const info = teacherInfoMap[account.role]
+        userStore.setUserInfo({
+          id: `t-${Date.now()}`,
+          username: loginForm.username,
+          realName: info.realName,
+          studentId: '',
+          grade: '',
+          major: '',
+          className: '',
+          email: `${loginForm.username}@edu.cn`,
+          phone: '138****0000',
+          role: account.role,
+          college: info.college,
+          department: info.department,
+          loginType: 'teacher',
+        })
+        loading.value = false
+        loginSuccess.value = true
+        themeStore.applyTimeBasedTheme()
+        setTimeout(() => router.push('/teacher/dashboard'), 300)
+      } else {
+        loading.value = false
+        ElMessage.error('用户名或密码错误')
+      }
+    }, 800)
+  } else {
+    // ── 学生端 API 登录 ──
+    try {
+      const { token, userInfo } = await login({
+        username: loginForm.username,
+        password: loginForm.password,
+        loginType: loginType.value,
+      })
+      userStore.setToken(token)
+      userStore.setUserInfo({ ...userInfo, loginType: 'student' })
+      loginSuccess.value = true
+      setTimeout(() => router.push('/dashboard'), 600)
+    } catch {
+      ElMessage.error('登录失败，请稍后重试')
+    } finally {
+      loading.value = false
+    }
   }
 }
 

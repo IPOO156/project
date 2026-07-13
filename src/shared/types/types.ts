@@ -30,6 +30,45 @@ export interface DictOption {
 // 学期：学年-学期格式，如 2024-2025-1
 export type Semester = string
 
+// === 角色与权限 ===
+
+/** 教师端角色枚举 */
+export type TeacherRole = 'super_admin' | 'admin' | 'reviewer' | 'teacher'
+
+/** 角色中文名映射 */
+export const TEACHER_ROLE_LABELS: Record<TeacherRole, string> = {
+  super_admin: '超级管理员',
+  admin: '管理员',
+  reviewer: '审核员',
+  teacher: '课任教师',
+}
+
+/** 角色可访问的模块 key */
+export const ROLE_PERMISSIONS: Record<TeacherRole, string[]> = {
+  super_admin: [
+    'archive-export',
+    'role-selection',
+    'form-customization',
+    'account-management',
+    'archive-view',
+    'system-maintenance',
+    'info-security',
+    'log-view',
+    'heat-map',
+  ],
+  admin: [
+    'archive-export',
+    'role-selection',
+    'form-customization',
+    'log-view',
+    'heat-map',
+    'account-management',
+    'archive-view',
+  ],
+  reviewer: ['material-review', 'log-view', 'heat-map'],
+  teacher: ['archive-view', 'archive-export', 'log-view', 'heat-map'],
+}
+
 // === 学生端核心类型 ===
 
 // 用户信息
@@ -44,6 +83,14 @@ export interface UserInfo {
   className: string
   email: string
   phone: string
+  /** 教师端角色（学生端无此字段） */
+  role?: TeacherRole
+  /** 所属学院 */
+  college?: string
+  /** 所属院系 */
+  department?: string
+  /** 登录类型 */
+  loginType?: 'student' | 'teacher'
 }
 
 // 个人兴趣

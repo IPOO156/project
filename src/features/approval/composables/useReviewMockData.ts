@@ -18,12 +18,6 @@ export interface ReviewRecordBase {
 
 export type ReviewRecord = ReviewRecordBase & Record<string, any>
 
-const statuses = ['draft', 'submitted', 'approved', 'rejected'] as const
-
-function randStatus(): string {
-  return statuses[Math.floor(Math.random() * statuses.length)]
-}
-
 /** 各类型 Mock 数据生成器 */
 const mockGenerators: Record<string, () => ReviewRecord[]> = {
   competition: () => [
