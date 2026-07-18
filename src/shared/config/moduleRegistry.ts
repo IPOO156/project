@@ -81,14 +81,14 @@ export const registeredModules: AppModule[] = [
     icon: User,
     order: 70,
     routePrefix: '/profile',
-    description: '个人档案信息与职业规划',
+    description: '档案概览与成长发展',
     menuItems: [
       {
         label: '个人中心',
         icon: User,
         children: [
-          { label: '个人档案信息', icon: IdCard, path: '/profile/info' },
-          { label: '职业规划', icon: Compass, path: '/profile/career-plan' },
+          { label: '档案概览', icon: IdCard, path: '/profile/info' },
+          { label: '成长发展', icon: Compass, path: '/profile/career-plan' },
         ],
       },
     ],

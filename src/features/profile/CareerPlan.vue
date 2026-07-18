@@ -1,346 +1,330 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { AlertTriangle, Download, Eye, Plus, Sparkles } from 'lucide-vue-next'
+import { AlertTriangle, Sparkles } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
 import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import { useDict } from '@/shared/composables/composables'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import GrowthRecords from './components/GrowthRecords.vue'
 
-// ── 响应式数据 ──
 const archiveStore = useArchiveStore()
 const careerPlanStore = useCareerPlanStore()
 
-const planForm = reactive({
-  semester: '',
-  title: '',
-  content: '',
-})
+const planForm = reactive({ semester: '', title: '', content: '' })
 const { clearDraft } = useFormDraft('career-plan', planForm)
-
 const planFiles = ref<{ name: string; url: string }[]>([])
-
-// 规划记录来自 store（数据由 API 层填充）
 const planRecords = computed(() => careerPlanStore.plans)
-
-// 短板识别与改进建议：由 AI 助手生成 → 写入 careerPlanStore.aiAnalysis → 此处响应式读取
-// 数据链路：useAIChat.simulateAIReply 命中职业规划关键词 → analyzeCareer 读真实档案数据
-//          → careerPlanStore.setAIAnalysis → 本 computed 更新 → 模板渲染
 const aiAnalysis = computed(() => careerPlanStore.aiAnalysis)
-
 const loading = ref(false)
 const dialogVisible = ref(false)
 const aiDrawerVisible = ref(false)
 const aiDrawerKey = ref(0)
 const aiInitialQuestion = '请分析我的职业规划短板并给出改进建议'
 
-/**
- * 打开 AI 抽屉并强制重新挂载：
- * - 自增 aiDrawerKey → AIChatDrawer 销毁旧实例、创建新实例（messages 重置为欢迎语）
- * - 配合 AIChatDrawer 的 watch(visible, { immediate: true })，挂载即 visible=true 时自动发送 initialQuestion
- * - 每次「AI 深度分析 / 重新分析」都会触发一次全新的 AI 回复 → 写入 store → 页面短板区域更新
- */
+const activeTab = ref<'plan' | 'growth'>('plan')
+
 function openAIDrawer() {
   aiDrawerKey.value++
   aiDrawerVisible.value = true
 }
 
-// ── Computed ──
 const { getColor, getLabel } = useDict(APPLICATION_STATUS)
+const getStatusType = computed(
+  () =>
+    (status: string): TagProps['type'] =>
+      (getColor(status) as TagProps['type']) ?? 'info',
+)
 
-const getStatusType = computed(() => (status: 'draft' | 'submitted'): TagProps['type'] => {
-  return (getColor(status) as TagProps['type']) ?? 'info'
-})
-
-// ── 方法函数 ──
 async function handleSubmit() {
   if (!planForm.semester || !planForm.title) {
-    ElMessage.warning('请填写完整信息')
+    ElMessage.warning('请填写学期和标题')
     return
   }
   loading.value = true
   try {
-    await careerPlanStore.submitPlan({
-      semester: planForm.semester,
-      title: planForm.title,
-    })
+    await careerPlanStore.submitPlan({ semester: planForm.semester, title: planForm.title })
     clearDraft()
-    dialogVisible.value = false
     planForm.semester = ''
     planForm.title = ''
     planForm.content = ''
-    planFiles.value = []
+    ElMessage.success('规划已提交')
   } catch {
-    ElMessage.error('提交失败，请重试')
+    ElMessage.error('提交失败')
   } finally {
     loading.value = false
   }
 }
 
+function handleRemove(id: string) {
+  careerPlanStore.plans = careerPlanStore.plans.filter((p: any) => p.id !== id)
+  ElMessage.success('已删除')
+}
+
 onMounted(() => {
   careerPlanStore.fetchPlans()
-  if (archiveStore.dimensions.length === 0) archiveStore.fetchArchive()
+  if (archiveStore.timelineEvents.length === 0) archiveStore.fetchArchive()
 })
 </script>
 
 <template>
-  <div class="career-plan">
-    <el-card>
-      <template #header>
-        <div class="career-plan__header">
-          <span class="card-title">职业规划与材料填写</span>
-          <el-button type="primary" :icon="Plus" @click="dialogVisible = true">
-            新增规划
-          </el-button>
-        </div>
-      </template>
+  <div class="growth-dev">
+    <div class="gd-header">
+      <h1 class="gd-header__title">成长发展</h1>
+      <p class="gd-header__subtitle">职业规划与成长记录管理</p>
+    </div>
 
-      <!-- 规划列表 -->
-      <el-table :data="planRecords" stripe class="career-plan__table">
-        <el-table-column prop="semester" label="学期" width="130" />
-        <el-table-column prop="title" label="规划名称" min-width="160" />
-        <el-table-column prop="submitDate" label="提交时间" width="110" />
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">
-              {{ getLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="180" fixed="right">
-          <template #default>
-            <div class="action-btns">
-              <el-button text type="primary" :icon="Eye" size="small">查看</el-button>
-              <el-button text type="primary" :icon="Download" size="small">下载</el-button>
-            </div>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <el-tabs v-model="activeTab" class="gd-tabs">
+      <el-tab-pane label="职业规划" name="plan">
+        <div class="gd-two-col">
+          <!-- 左侧：表单 -->
+          <el-card class="gd-card">
+            <template #header><span class="card-title">填写规划</span></template>
+            <el-form :model="planForm" label-width="70px" size="default">
+              <el-form-item label="学期" required>
+                <el-select v-model="planForm.semester" placeholder="请选择学期" class="form-w">
+                  <el-option
+                    v-for="s in SEMESTER_OPTIONS"
+                    :key="s.value"
+                    :label="s.label"
+                    :value="s.value"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="标题" required>
+                <el-input
+                  v-model="planForm.title"
+                  placeholder="如：大二下学期学习规划"
+                  class="form-w"
+                />
+              </el-form-item>
+              <el-form-item label="内容">
+                <el-input
+                  v-model="planForm.content"
+                  type="textarea"
+                  :rows="5"
+                  placeholder="请描述你的规划目标与具体措施..."
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="loading" @click="handleSubmit"
+                  >提交规划</el-button
+                >
+              </el-form-item>
+            </el-form>
+          </el-card>
 
-    <!-- 短板识别与改进建议（数据来源：AI 助手生成 → careerPlanStore.aiAnalysis） -->
-    <el-card class="career-plan__section">
-      <template #header>
-        <div class="career-plan__header">
-          <div class="section-title">
-            <AlertTriangle :size="18" />
-            <span>短板识别与改进建议</span>
-          </div>
-          <div class="section-actions">
-            <el-button type="primary" size="small" plain :icon="Sparkles" @click="openAIDrawer">
-              {{ aiAnalysis ? '重新分析' : 'AI 深度分析' }}
-            </el-button>
-            <el-tag size="small" type="warning">AI 生成</el-tag>
-          </div>
-        </div>
-      </template>
-
-      <!-- 有分析结果：渲染 AI 生成的短板列表 -->
-      <template v-if="aiAnalysis">
-        <p class="career-plan__summary">{{ aiAnalysis.summary }}</p>
-        <p class="career-plan__generated">生成时间：{{ aiAnalysis.generatedAt }}</p>
-        <div v-for="item in aiAnalysis.weaknesses" :key="item.dimension" class="weakness-item">
-          <div class="weakness-item__header">
-            <span class="weakness-item__dim">{{ item.dimension }}</span>
-            <div class="weakness-item__meta">
-              <span class="weakness-item__score"
-                >当前 {{ item.score }} / 目标 {{ item.target }}</span
-              >
-              <el-tag size="small" type="danger">差距 {{ item.gap }}</el-tag>
-            </div>
-          </div>
-          <el-progress
-            :percentage="item.score"
-            :stroke-width="8"
-            class="progress-fixed"
-            status="exception"
-            :format="() => `${item.score}分`"
-          />
-          <el-alert
-            :title="`短板：${item.weakness}`"
-            type="warning"
-            :closable="false"
-            show-icon
-            class="mb-8"
-          />
-          <el-alert
-            :title="`建议：${item.suggestion}`"
-            type="success"
-            :closable="false"
-            show-icon
-          />
-        </div>
-      </template>
-
-      <!-- 无分析结果：引导空状态 -->
-      <el-empty
-        v-else
-        description="尚未生成 AI 分析。点击右上角「AI 深度分析」，AI 将根据你的档案数据生成个性化短板识别与改进建议。"
-        :image-size="120"
-      />
-    </el-card>
-
-    <!-- 新增规划弹窗 -->
-    <el-dialog
-      v-model="dialogVisible"
-      title="填写职业规划"
-      width="640px"
-      :close-on-click-modal="false"
-    >
-      <el-form :model="planForm" label-width="100px">
-        <el-form-item label="学期" required>
-          <el-select v-model="planForm.semester" placeholder="请选择学期" class="form-select">
-            <el-option
-              v-for="s in SEMESTER_OPTIONS"
-              :key="s.value"
-              :label="s.label"
-              :value="s.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="规划标题" required>
-          <el-input v-model="planForm.title" placeholder="请输入规划标题" />
-        </el-form-item>
-        <el-form-item label="规划内容">
-          <el-input
-            v-model="planForm.content"
-            type="textarea"
-            :rows="6"
-            placeholder="请描述你的职业规划、学习目标..."
-          />
-        </el-form-item>
-        <el-form-item label="规划文件">
-          <el-upload v-model:file-list="planFiles" action="#" :auto-upload="false" list-type="text">
-            <el-button type="primary" plain>选择文件</el-button>
-            <template #tip>
-              <div class="el-upload__tip">支持 pdf、doc、docx 格式</div>
+          <!-- 右侧：AI 分析 -->
+          <el-card class="gd-card gd-card--ai">
+            <template #header>
+              <div class="card-space">
+                <span class="card-title">AI 深度分析</span>
+                <el-button size="small" type="primary" :icon="Sparkles" @click="openAIDrawer"
+                  >开始分析</el-button
+                >
+              </div>
             </template>
-          </el-upload>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="loading" @click="handleSubmit">提交</el-button>
-      </template>
-    </el-dialog>
+            <div v-if="aiAnalysis && Array.isArray(aiAnalysis)" class="ai-result">
+              <div v-for="(item, i) in aiAnalysis" :key="i" class="ai-item">
+                <div class="ai-item__head">
+                  <AlertTriangle :size="14" /><span class="ai-item__dim">{{ item.dimension }}</span>
+                </div>
+                <p class="ai-item__desc">{{ item.suggestion }}</p>
+              </div>
+            </div>
+            <div v-else class="ai-empty">
+              <Sparkles :size="28" class="ai-empty__icon" />
+              <p class="ai-empty__text">点击「开始分析」获取个性化改进建议</p>
+            </div>
+          </el-card>
+        </div>
 
-    <AIChatDrawer
-      :key="aiDrawerKey"
-      :visible="aiDrawerVisible"
-      :initial-question="aiInitialQuestion"
-      @close="aiDrawerVisible = false"
-    />
+        <!-- 规划记录 -->
+        <el-card class="gd-card gd-card--table">
+          <template #header><span class="card-title">规划记录</span></template>
+          <el-table
+            v-loading="careerPlanStore.loading"
+            :data="planRecords"
+            stripe
+            style="width: 100%"
+            size="small"
+          >
+            <el-table-column prop="semester" label="学期" width="160" />
+            <el-table-column prop="title" label="标题" min-width="200" />
+            <el-table-column prop="submitDate" label="提交时间" width="120" />
+            <el-table-column label="状态" width="90">
+              <template #default="{ row }"
+                ><el-tag :type="getStatusType(row.status)" size="small">{{
+                  getLabel(row.status)
+                }}</el-tag></template
+              >
+            </el-table-column>
+            <el-table-column label="操作" width="80" align="center">
+              <template #default="{ row }"
+                ><el-button type="danger" link size="small" @click="handleRemove(row.id)"
+                  >删除</el-button
+                ></template
+              >
+            </el-table-column>
+          </el-table>
+        </el-card>
+
+        <AIChatDrawer
+          :key="aiDrawerKey"
+          v-model:visible="aiDrawerVisible"
+          :initial-question="aiInitialQuestion"
+        />
+      </el-tab-pane>
+
+      <!-- Tab 2: 成长记录 -->
+      <el-tab-pane label="成长记录" name="growth">
+        <el-card class="gd-card">
+          <template #header><span class="card-title">成长时间轴</span></template>
+          <GrowthRecords :events="archiveStore.timelineEvents" />
+        </el-card>
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
 <style scoped lang="scss">
-.career-plan {
+.growth-dev {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   user-select: none;
+}
 
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+.gd-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.gd-header__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 4px;
+}
+
+.gd-header__subtitle {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.gd-tabs {
+  margin-top: 0;
+
+  :deep(.el-tabs__item) {
+    font-size: 14px;
+    height: 38px;
+    line-height: 38px;
   }
 
-  &__section {
-    .section-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 16px;
-      font-weight: 600;
-    }
+  :deep(.el-tabs__nav-wrap::after) {
+    height: 1px;
+  }
+}
+
+.gd-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.gd-card {
+  :deep(.el-card__body) {
+    padding: 16px 20px;
+  }
+
+  &--ai {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+  }
+
+  &--table :deep(.el-card__body) {
+    padding: 0;
   }
 }
 
 .card-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
+  color: #1e293b;
 }
 
-.section-actions {
+.card-space {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.form-w {
+  width: 100%;
+  max-width: 400px;
+}
+
+.ai-empty {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 12px;
+  padding: 32px 0;
+  color: #94a3b8;
+  font-size: 14px;
+
+  &__icon {
+    color: #d4a574;
+    opacity: 0.5;
+  }
 }
 
-.form-select {
-  width: 200px;
-}
-
-.action-btns {
+.ai-result {
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.career-plan__table {
-  :deep(td.el-table__cell:first-child) {
-    white-space: nowrap;
-  }
-}
+.ai-item {
+  padding: 12px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  transition: border-color 0.2s;
 
-.weakness-item {
-  margin-bottom: 20px;
-  padding: 16px;
-  background: var(--el-fill-color-lighter);
-  border-radius: 8px;
-
-  &:last-child {
-    margin-bottom: 0;
+  &:hover {
+    border-color: #d4a574;
   }
 
-  &__header {
+  &__head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    gap: 12px;
+    gap: 6px;
+    margin-bottom: 4px;
+    color: #d4a574;
   }
 
   &__dim {
+    font-size: 14px;
     font-weight: 600;
-    font-size: 15px;
+    color: #1e293b;
   }
 
-  &__meta {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-  }
-
-  &__score {
+  &__desc {
+    margin: 0;
     font-size: 13px;
-    color: var(--el-text-color-secondary);
-  }
-
-  .progress-fixed {
-    margin-bottom: 12px;
+    color: #64748b;
+    line-height: 1.5;
   }
 }
 
-.career-plan__summary {
-  margin: 0 0 4px;
-  padding: 12px 16px;
-  background: color-mix(in srgb, var(--mc-primary) 4%, transparent);
-  border-left: 3px solid var(--mc-primary);
-  border-radius: 4px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--el-text-color-primary);
-}
-
-.career-plan__generated {
-  margin: 0 0 16px;
-  padding: 0 16px;
-  font-size: 12px;
-  color: var(--el-text-color-placeholder);
+@media (max-width: 900px) {
+  .gd-two-col {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

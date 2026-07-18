@@ -60,7 +60,7 @@ watch(
   () => pageTitle.value,
   (title) => {
     if (typeof document !== 'undefined' && title) {
-      document.title = `${title} · 学生档案管理系统`
+      document.title = `${title} · 学生档鉴未来`
     }
   },
   { immediate: true },

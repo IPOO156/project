@@ -2,7 +2,7 @@
  * AI 助手结构化知识库
  *
  * 按 keywords 关键词匹配命中的 KnowledgeEntry，返回结构化 RichContent。
- * 内容对齐「学生端档案管理系统」业务语境（个人档案信息申报、奖项报名、成长时间轴等）。
+ * 内容对齐「学生端档鉴未来」业务语境（个人档案信息申报、奖项报名、成长时间轴等）。
  * 未命中时使用 defaultEntry 兜底。
  */
 import type { KnowledgeEntry } from '../types'

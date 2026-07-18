@@ -3,9 +3,8 @@
  * DeclarationBoard - 申报看板
  *
  * 统计总览 + 柱状图 + 学期趋势 + 档案完整度网格。
- * 一站式查看各类型申报情况，点击快速跳转到对应表单。
  */
-import { FileText, Plus, TrendingUp } from 'lucide-vue-next'
+import { Check, FileText, Plus, TrendingUp, X } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import PageContainer from '@/shared/ui/PageContainer.vue'
@@ -19,12 +18,10 @@ const router = useRouter()
 const allData = useAllReviewMockData()
 
 const totalCount = computed(() => allData.value.length)
-
 const currentSemester = computed(() => {
   const sorted = [...allData.value].sort((a, b) => b.submitDate?.localeCompare(a.submitDate) || 0)
   return sorted[0]?.semester || '2024-2025-2'
 })
-
 const semesterCount = computed(
   () => allData.value.filter((r) => r.semester === currentSemester.value).length,
 )
@@ -103,12 +100,8 @@ function goTo(path: string) {
     </el-row>
 
     <el-row :gutter="16">
-      <el-col :span="14">
-        <BoardCharts :data="typeData" title="各类型申报数量" />
-      </el-col>
-      <el-col :span="10">
-        <TrendChart :data="trendData" title="各学期申报趋势" />
-      </el-col>
+      <el-col :span="14"><BoardCharts :data="typeData" title="各类型申报数量" /></el-col>
+      <el-col :span="10"><TrendChart :data="trendData" title="各学期申报趋势" /></el-col>
     </el-row>
 
     <el-card class="completeness-card">
@@ -131,8 +124,8 @@ function goTo(path: string) {
             @click="goTo(item.path)"
           >
             <div class="completeness-item__icon">
-              <span v-if="item.hasData" class="check">✓</span>
-              <span v-else class="cross">✗</span>
+              <Check v-if="item.hasData" :size="18" class="check" />
+              <X v-else :size="18" class="cross" />
             </div>
             <div class="completeness-item__label">{{ item.label }}</div>
             <el-button
@@ -155,7 +148,6 @@ function goTo(path: string) {
 .stats-row {
   margin-bottom: 16px;
 }
-
 .stat-card {
   &__body {
     display: flex;
@@ -184,7 +176,6 @@ function goTo(path: string) {
     flex-shrink: 0;
   }
 }
-
 .completeness-card {
   margin-bottom: 16px;
 }
@@ -205,7 +196,6 @@ function goTo(path: string) {
 .completeness-col {
   margin-bottom: 12px;
 }
-
 .completeness-item {
   display: flex;
   flex-direction: column;
@@ -237,9 +227,10 @@ function goTo(path: string) {
     color: #94a3b8;
   }
   &__icon {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
   }
   &__label {
     font-size: 13px;

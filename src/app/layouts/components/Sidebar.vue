@@ -37,7 +37,7 @@ const activeMenu = computed(() => {
 })
 
 // 教师端标题
-const sidebarTitle = computed(() => (isTeacher.value ? '教师档案管理系统' : '档案管理系统'))
+const sidebarTitle = computed(() => (isTeacher.value ? '教师档鉴未来' : '档鉴未来'))
 
 function handleMenuSelect(index: string) {
   if (index === route.fullPath) return
@@ -55,7 +55,7 @@ function handleSwitchToStudent() {
     <!-- Logo -->
     <div class="sidebar__logo">
       <div class="sidebar__logo-icon">
-        <img :src="logoIcon" alt="档案管理系统" class="sidebar__logo-img" />
+        <img :src="logoIcon" alt="档鉴未来" class="sidebar__logo-img" />
       </div>
       <transition name="fade">
         <span v-show="!appStore.isSidebarCollapsed" class="sidebar__logo-text">{{

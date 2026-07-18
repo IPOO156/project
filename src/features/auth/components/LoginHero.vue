@@ -202,12 +202,12 @@ onUnmounted(() => {
 
       <!-- Logo -->
       <div class="login__brand-mark" :style="parallaxStyle">
-        <img :src="logoIcon" alt="档案管理系统" class="login__brand-logo" />
+        <img :src="logoIcon" alt="档鉴未来" class="login__brand-logo" />
       </div>
 
       <!-- 文字 -->
       <div class="login__hero-copy">
-        <p class="login__hero-kicker">学生档案管理系统</p>
+        <p class="login__hero-kicker">学生档鉴未来</p>
         <h1 class="login__hero-title">
           <span :key="`t-${loginType}`" class="login__hero-title-text">{{ sceneTitle }}</span>
         </h1>

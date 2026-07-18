@@ -4,7 +4,7 @@ import { ref } from 'vue'
 
 const softwareItems = ref([
   {
-    name: '档案管理系统 v3.2.1',
+    name: '档鉴未来 v3.2.1',
     type: '核心系统',
     status: 'normal',
     lastUpdate: '2026-06-15',

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ElMessageBox } from 'element-plus'
 import { useApplicationForm } from '@/shared/composables/useApplicationForm'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { useFormEdit } from '@/shared/composables/useFormEdit'
