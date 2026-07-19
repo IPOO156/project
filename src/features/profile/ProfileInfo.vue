@@ -2,23 +2,30 @@
 import type { TagProps } from 'element-plus'
 import type { UserInfo } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import html2canvas from 'html2canvas'
-import JSPDF from 'jspdf'
 import { Download, Edit2, GraduationCap, Heart, Info, Lightbulb, Plus } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
-import { useArchiveStore, useThemeStore, useUserStore } from '@/app/stores/stores'
+import {
+  useArchiveStore,
+  useSubmissionStore,
+  useThemeStore,
+  useUserStore,
+} from '@/app/stores/stores'
 import { useDict } from '@/shared/composables/composables'
 import { INTEREST_LEVEL } from '@/shared/constants/dict'
 import AvatarUploader from './components/AvatarUploader.vue'
 import AwardsPanel from './components/AwardsPanel.vue'
 import DimensionPanel from './components/DimensionPanel.vue'
+import { useResumeExport } from './composables/useResumeExport'
+import ResumeTemplate from './ResumeTemplate.vue'
 
 const archiveStore = useArchiveStore()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
+const submissionStore = useSubmissionStore()
 
 onMounted(() => {
   if (archiveStore.interests.length === 0) archiveStore.fetchArchive()
+  if (submissionStore.records.length === 0) submissionStore.fetchRecords()
 })
 
 const interests = computed(() => archiveStore.interests)
@@ -161,36 +168,33 @@ async function handleAvatarUpload(base64: string) {
   ElMessage.success(base64 ? '头像更新成功' : '头像已删除')
 }
 
-// ── PDF 导出 ──
-async function handleExportPDF() {
-  ElMessage.info('正在生成 PDF...')
-  const el = document.querySelector('.layout__content') as HTMLElement
-  if (!el) {
-    ElMessage.error('获取页面内容失败')
-    return
+// ── 简历导出 ──
+const resumeRef = ref<InstanceType<typeof ResumeTemplate>>()
+const { exportResumePDF } = useResumeExport()
+
+const resumeData = computed(() => ({
+  userInfo: userStore.userInfo ?? {},
+  avatar: userStore.avatar,
+  grades: archiveStore.grades,
+  awards: archiveStore.awards,
+  interests: archiveStore.interests,
+  dimensions: archiveStore.dimensions,
+  submissions: submissionStore.records.map((r) => ({
+    type: r.type,
+    title: r.title,
+    submitDate: r.submitDate,
+  })),
+}))
+
+async function handleExportResume() {
+  // 确保数据已加载
+  if (submissionStore.records.length === 0) {
+    await submissionStore.fetchRecords()
   }
-  try {
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new JSPDF('p', 'mm', 'a4')
-    const pw = pdf.internal.pageSize.getWidth()
-    const ph = (canvas.height * pw) / canvas.width
-    let left = ph
-    let pos = 0
-    const pageH = pdf.internal.pageSize.getHeight()
-    pdf.addImage(imgData, 'PNG', 0, pos, pw, ph)
-    left -= pageH
-    while (left > 0) {
-      pos -= pageH
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, pos, pw, ph)
-      left -= pageH
-    }
-    pdf.save('档案概览.pdf')
-    ElMessage.success('PDF 已下载')
-  } catch {
-    ElMessage.error('PDF 生成失败')
+  if (archiveStore.interests.length === 0) {
+    await archiveStore.fetchArchive()
   }
+  await exportResumePDF(resumeRef.value ?? null)
 }
 </script>
 
@@ -201,8 +205,8 @@ async function handleExportPDF() {
         <h1 class="page-head__title">档案概览</h1>
         <p class="page-head__desc">查看个人综合档案信息</p>
       </div>
-      <el-button type="primary" plain @click="handleExportPDF">
-        <Download :size="16" style="margin-right: 4px" />下载档案 PDF
+      <el-button type="primary" @click="handleExportResume">
+        <Download :size="16" style="margin-right: 4px" />导出简历 PDF
       </el-button>
     </div>
 
@@ -426,6 +430,11 @@ async function handleExportPDF() {
         ><el-button type="primary" @click="saveInterest">保存</el-button></template
       >
     </el-dialog>
+
+    <!-- 简历模板（隐藏于屏幕外，用于导出 PDF） -->
+    <div class="resume-render-area">
+      <ResumeTemplate ref="resumeRef" :data="resumeData" />
+    </div>
   </div>
 </template>
 
@@ -664,5 +673,12 @@ async function handleExportPDF() {
   .interest-grid {
     grid-template-columns: 1fr;
   }
+}
+
+// 简历渲染区域（屏幕外，html2canvas 可捕获）
+.resume-render-area {
+  position: absolute;
+  left: -9999px;
+  top: 0;
 }
 </style>
