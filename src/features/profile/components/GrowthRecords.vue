@@ -2,10 +2,10 @@
 /**
  * GrowthRecords - 成长记录列表
  *
- * 展示来自 archiveStore 的时间轴条目，按时间排序。
+ * 展示来自 archiveStore 的时间轴条目，按时间排序，带滚动渐入动画。
  */
 import type { TimelineNode } from '@/shared/types/types'
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 const props = defineProps<{
   events: TimelineNode[]
@@ -30,11 +30,59 @@ const typeColors: Record<string, string> = {
 }
 
 const sorted = computed(() => [...props.events].sort((a, b) => b.date.localeCompare(a.date)))
+
+/** 滚动渐入：使用 IntersectionObserver 给每张卡添加 .visible */
+const listRef = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
+const visibleIds = ref<Set<string>>(new Set())
+
+onMounted(() => {
+  // 兼容旧浏览器 & 用户偏好：默认全部显示
+  if (
+    typeof IntersectionObserver === 'undefined' ||
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
+    visibleIds.value = new Set(sorted.value.map((e) => e.id))
+    return
+  }
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        const id = (entry.target as HTMLElement).dataset.id
+        if (!id) continue
+        visibleIds.value.add(id)
+        // 触发响应式
+        visibleIds.value = new Set(visibleIds.value)
+        observer?.unobserve(entry.target)
+      }
+    },
+    { threshold: 0.12, rootMargin: '0px 0px -40px 0px' },
+  )
+
+  // 等 DOM 渲染完后挂载
+  requestAnimationFrame(() => {
+    const cards = listRef.value?.querySelectorAll<HTMLElement>('.growth-item')
+    cards?.forEach((el) => observer?.observe(el))
+  })
+})
+
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  observer = null
+})
 </script>
 
 <template>
-  <div v-if="events.length" class="growth-list">
-    <div v-for="evt in sorted" :key="evt.id" class="growth-item">
+  <div v-if="events.length" ref="listRef" class="growth-list">
+    <div
+      v-for="(evt, i) in sorted"
+      :key="evt.id"
+      :data-id="evt.id"
+      :class="{ visible: visibleIds.has(evt.id) }"
+      :style="{ transitionDelay: `${Math.min(i, 6) * 60}ms` }"
+    >
       <div class="growth-item__dot" :style="{ background: typeColors[evt.type] || '#94a3b8' }" />
       <div class="growth-item__body">
         <div class="growth-item__header">
@@ -66,7 +114,18 @@ const sorted = computed(() => [...props.events].sort((a, b) => b.date.localeComp
   border-radius: 8px;
   border: 1px solid var(--el-border-color-lighter);
   background: var(--el-bg-color);
-  transition: border-color 0.2s;
+  transition:
+    border-color 0.2s,
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.5s ease;
+  opacity: 0;
+  transform: translateY(14px);
+  will-change: opacity, transform;
+
+  &.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 
   &:hover {
     border-color: #d4a574;
@@ -115,6 +174,14 @@ const sorted = computed(() => [...props.events].sort((a, b) => b.date.localeComp
     font-size: 13px;
     color: var(--el-text-color-secondary);
     line-height: 1.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .growth-item {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
   }
 }
 </style>

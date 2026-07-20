@@ -126,12 +126,20 @@ function getTypeColor(tag: string): string {
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
   position: relative;
   overflow: hidden;
+  opacity: 0;
+  transform: translateY(18px) scale(0.985);
   transition:
+    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.35s ease,
     background 0.35s ease,
-    box-shadow 0.35s ease,
-    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: transform, box-shadow;
+    box-shadow 0.35s ease;
+  will-change: opacity, transform;
+}
+
+.growth-card.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .growth-card:hover {
@@ -465,6 +473,12 @@ function getTypeColor(tag: string): string {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .growth-card {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
   .card-skill-fill {
     opacity: 1 !important;
     transform: none !important;

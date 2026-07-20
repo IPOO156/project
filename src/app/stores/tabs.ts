@@ -13,7 +13,7 @@ import { computed, ref, watch } from 'vue'
  */
 
 const STORAGE_KEY = 'app:visited-tabs'
-const MAX_TABS = 7
+export const MAX_TABS = 7
 
 export interface NavTab {
   /** 唯一 key（用 fullPath） */
@@ -109,15 +109,29 @@ export const useTabsStore = defineStore('tabs', () => {
 
   const hasTabs = computed(() => visitedTabs.value.length > 0)
 
-  function addTab(tab: NavTab): boolean {
+  /**
+   * 添加标签，超过上限时自动淘汰最早的非固定标签
+   * @returns 添加结果：true 成功；false 表示未添加（应被调用方降级处理）
+   */
+  function addTab(tab: NavTab): { ok: boolean; evicted?: NavTab } {
+    // 已存在：直接更新（不重置位置）
     if (visitedTabs.value.some((t) => t.path === tab.path)) {
-      return true
+      return { ok: true }
     }
-    if (visitedTabs.value.length >= MAX_TABS) {
-      return false
+    // 固定标签永远不淘汰
+    if (!tab.affix && visitedTabs.value.length >= MAX_TABS) {
+      // 找到最早的可关闭标签（按数组顺序，固定标签在最前）
+      const evictIdx = visitedTabs.value.findIndex((t) => !t.affix)
+      if (evictIdx === -1) {
+        return { ok: false }
+      }
+      const evicted = visitedTabs.value[evictIdx]
+      visitedTabs.value.splice(evictIdx, 1)
+      visitedTabs.value.push(tab)
+      return { ok: true, evicted }
     }
     visitedTabs.value.push(tab)
-    return true
+    return { ok: true }
   }
 
   function removeTab(path: string) {

@@ -126,12 +126,31 @@ onMounted(() => {
                 >
               </div>
             </template>
-            <div v-if="aiAnalysis && Array.isArray(aiAnalysis)" class="ai-result">
-              <div v-for="(item, i) in aiAnalysis" :key="i" class="ai-item">
-                <div class="ai-item__head">
-                  <AlertTriangle :size="14" /><span class="ai-item__dim">{{ item.dimension }}</span>
+            <div v-if="aiAnalysis" class="ai-result">
+              <div class="ai-result__head">
+                <Sparkles :size="16" class="ai-result__icon" />
+                <h4 class="ai-result__title">个人化短板分析</h4>
+                <span class="ai-result__time">{{ aiAnalysis.generatedAt }}</span>
+              </div>
+              <p v-if="aiAnalysis.summary" class="ai-result__summary">
+                {{ aiAnalysis.summary }}
+              </p>
+              <div v-if="aiAnalysis.weaknesses?.length" class="ai-result__list">
+                <div
+                  v-for="(item, i) in aiAnalysis.weaknesses"
+                  :key="`${item.dimension}-${i}`"
+                  class="ai-item"
+                >
+                  <div class="ai-item__head">
+                    <AlertTriangle :size="14" />
+                    <span class="ai-item__dim">{{ item.dimension }}</span>
+                    <span class="ai-item__score"
+                      >{{ item.score }} / {{ item.target }}（差 {{ item.gap }}）</span
+                    >
+                  </div>
+                  <p class="ai-item__desc">{{ item.weakness }}</p>
+                  <p class="ai-item__suggest"><strong>建议：</strong>{{ item.suggestion }}</p>
                 </div>
-                <p class="ai-item__desc">{{ item.suggestion }}</p>
               </div>
             </div>
             <div v-else class="ai-empty">
@@ -173,8 +192,9 @@ onMounted(() => {
 
         <AIChatDrawer
           :key="aiDrawerKey"
-          v-model:visible="aiDrawerVisible"
+          :visible="aiDrawerVisible"
           :initial-question="aiInitialQuestion"
+          @close="aiDrawerVisible = false"
         />
       </el-tab-pane>
 
@@ -203,14 +223,14 @@ onMounted(() => {
 }
 
 .gd-header__title {
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 700;
   color: #1e293b;
-  margin: 0 0 4px;
+  margin: 0 0 6px;
 }
 
 .gd-header__subtitle {
-  font-size: 14px;
+  font-size: 16px;
   color: #64748b;
   margin: 0;
 }
@@ -219,9 +239,9 @@ onMounted(() => {
   margin-top: 0;
 
   :deep(.el-tabs__item) {
-    font-size: 14px;
-    height: 38px;
-    line-height: 38px;
+    font-size: 16px;
+    height: 44px;
+    line-height: 44px;
   }
 
   :deep(.el-tabs__nav-wrap::after) {
@@ -286,39 +306,87 @@ onMounted(() => {
 .ai-result {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+}
+
+.ai-result__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-result__icon {
+  color: var(--el-color-primary);
+}
+
+.ai-result__title {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ai-result__time {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.ai-result__summary {
+  margin: 0;
+  padding: 10px 14px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.ai-result__list {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
 
 .ai-item {
-  padding: 12px;
-  border-radius: 6px;
-  background: #ffffff;
-  border: 1px solid #f1f5f9;
-  transition: border-color 0.2s;
-
-  &:hover {
-    border-color: #d4a574;
-  }
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 60%);
+  border: 1px solid #fed7aa;
+  border-left: 3px solid #f97316;
 
   &__head {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 4px;
-    color: #d4a574;
+    margin-bottom: 6px;
+    color: #c2410c;
   }
 
   &__dim {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
-    color: #1e293b;
+  }
+
+  &__score {
+    margin-left: auto;
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
   }
 
   &__desc {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.6;
+  }
+
+  &__suggest {
     margin: 0;
-    font-size: 13px;
-    color: #64748b;
-    line-height: 1.5;
+    font-size: 14px;
+    color: #1e293b;
+    line-height: 1.6;
   }
 }
 
