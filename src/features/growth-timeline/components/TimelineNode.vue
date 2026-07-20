@@ -71,25 +71,19 @@ const { isVisible } = useScrollReveal(nodeRef, {
   user-select: none;
 }
 
-/* 进入动画：轨道标记默认隐藏，滚动进入视图后一次性淡入 */
+/* 进入动画：卡片与轨道标记默认隐藏，滚动进入视图后一次性淡入（不使用 blur，避免像蒙了一层玻璃） */
+:deep(.growth-card),
 .ring-marker {
   opacity: 0;
   transform: translateY(34px) scale(0.96);
 }
 
-.growth-node.visible .ring-marker {
-  animation: gt-marker-enter 0.85s cubic-bezier(0.16, 1, 0.3, 1) var(--stagger-delay, 0s) both;
-}
+/* 全局 keyframe 定义已移至 src/assets/styles/motion-override.scss
+   子组件内不再重复定义，避免 Vue scoped CSS 加 hash 后无法被外部引用 */
 
-@keyframes gt-marker-enter {
-  from {
-    opacity: 0;
-    transform: translateY(34px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+.growth-node.visible :deep(.growth-card),
+.growth-node.visible .ring-marker {
+  animation: gt-card-enter 0.85s cubic-bezier(0.16, 1, 0.3, 1) var(--stagger-delay, 0s) both;
 }
 
 .growth-node--odd :deep(.growth-card) {
@@ -210,16 +204,6 @@ const { isVisible } = useScrollReveal(nodeRef, {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .growth-node.visible .ring-marker {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .ring-marker-outer::before,
-  .ring-marker-outer::after {
-    animation: none !important;
-  }
-}
+/* 兜底规则已移至 src/assets/styles/motion-override.scss 统一管理
+   （项目内"强制启用动画"开关可一键覆盖） */
 </style>

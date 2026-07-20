@@ -10,7 +10,14 @@ import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import './assets/styles/themes.css'
 import './assets/styles/global.scss'
+import './assets/styles/motion-override.scss'
 import './shared/utils/echarts-setup'
+
+// 项目动画策略：始终启用，不受系统 prefers-reduced-motion 影响
+// 详细见 src/assets/styles/motion-override.scss 和 docs/2026-07-20.md
+if (typeof document !== 'undefined') {
+  document.documentElement.setAttribute('data-allow-motion', 'true')
+}
 
 const app = createApp(App)
 

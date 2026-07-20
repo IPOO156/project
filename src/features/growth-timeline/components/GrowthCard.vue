@@ -126,20 +126,12 @@ function getTypeColor(tag: string): string {
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
   position: relative;
   overflow: hidden;
-  opacity: 0;
-  transform: translateY(18px) scale(0.985);
+  /* 进入动画由父 TimelineNode 的 :deep(.growth-card) 控制 */
   transition:
-    opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.35s ease,
     background 0.35s ease,
     box-shadow 0.35s ease;
-  will-change: opacity, transform;
-}
-
-.growth-card.visible {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+  will-change: transform, box-shadow;
 }
 
 .growth-card:hover {
@@ -285,15 +277,15 @@ function getTypeColor(tag: string): string {
 
 .card-title {
   font-family: 'Instrument Serif', serif;
-  font-size: 1.6rem;
-  font-weight: 400;
+  font-size: 1.85rem;
+  font-weight: 500;
   color: var(--bark-dark, #2d1e12);
-  margin-bottom: 0.6rem;
-  line-height: 1.3;
+  margin-bottom: 0.7rem;
+  line-height: 1.35;
 }
 
 .card-body {
-  font-size: 0.88rem;
+  font-size: 0.98rem;
   color: var(--text-mid, #6b5443);
   line-height: 1.9;
   margin-bottom: 1.2rem;
@@ -316,15 +308,15 @@ function getTypeColor(tag: string): string {
 
 .card-skill-name {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
-  letter-spacing: 2px;
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--text-mid, #6b5443);
 }
 
 .card-skill-pct {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
+  font-size: 0.72rem;
   color: var(--text-light, #9a8474);
 }
 
@@ -348,6 +340,28 @@ function getTypeColor(tag: string): string {
     transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.growth-card.visible .card-skill-fill {
+  width: var(--fill-width, 0%);
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.growth-card.visible .card-skill:nth-child(1) .card-skill-fill {
+  transition-delay: 0.12s;
+}
+.growth-card.visible .card-skill:nth-child(2) .card-skill-fill {
+  transition-delay: 0.24s;
+}
+.growth-card.visible .card-skill:nth-child(3) .card-skill-fill {
+  transition-delay: 0.36s;
+}
+.growth-card.visible .card-skill:nth-child(4) .card-skill-fill {
+  transition-delay: 0.48s;
+}
+.growth-card.visible .card-skill:nth-child(5) .card-skill-fill {
+  transition-delay: 0.6s;
+}
+
 .card-tags {
   display: flex;
   flex-wrap: wrap;
@@ -357,7 +371,7 @@ function getTypeColor(tag: string): string {
 
 .card-tag {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   letter-spacing: 1.5px;
   padding: 0.3rem 0.65rem;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
@@ -406,28 +420,6 @@ function getTypeColor(tag: string): string {
   transition-delay: 0.28s;
 }
 
-.growth-card.visible .card-skill-fill {
-  width: var(--fill-width, 0%);
-  opacity: 1;
-  transform: translateX(0);
-}
-
-.growth-card.visible .card-skill:nth-child(1) .card-skill-fill {
-  transition-delay: 0.12s;
-}
-.growth-card.visible .card-skill:nth-child(2) .card-skill-fill {
-  transition-delay: 0.24s;
-}
-.growth-card.visible .card-skill:nth-child(3) .card-skill-fill {
-  transition-delay: 0.36s;
-}
-.growth-card.visible .card-skill:nth-child(4) .card-skill-fill {
-  transition-delay: 0.48s;
-}
-.growth-card.visible .card-skill:nth-child(5) .card-skill-fill {
-  transition-delay: 0.6s;
-}
-
 @media (hover: none) {
   .delete-btn {
     opacity: 1;
@@ -472,26 +464,8 @@ function getTypeColor(tag: string): string {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .growth-card {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-  }
-
-  .card-skill-fill {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-    width: var(--fill-width, 0%) !important;
-  }
-
-  .card-tag {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
-  }
-}
+/* 兜底规则已移至 src/assets/styles/motion-override.scss 统一管理
+   （项目内"强制启用动画"开关可一键覆盖） */
 
 [data-theme='dark'] .growth-card {
   background: #35302b;
