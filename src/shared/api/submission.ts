@@ -181,7 +181,7 @@ export function getScoreIndicators(
  * 检查重复申报
  * 后端就绪后替换为：return request.post('/submissions/check-duplicate', data)
  */
-export function checkDuplicate(_u_data: {
+export function checkDuplicate(data: {
   type: string
   title?: string
 }): Promise<{ duplicate: boolean; existing?: SubmissionRecord }> {

@@ -5,12 +5,12 @@ defineProps<{ history?: any[] }>()
 </script>
 
 <template>
-  <div v-if="history.length > 0" class="review-history">
+  <div v-if="history && history.length > 0" class="review-history">
     <div class="review-history__title">
       <Clock :size="14" /><span>审核记录（{{ history.length }}）</span>
     </div>
     <div class="review-history__list">
-      <div v-for="(item, idx) in history" :key="idx" class="review-history__item">
+      <div v-for="(item, idx) in history || []" :key="idx" class="review-history__item">
         <div class="review-history__dot" :class="`is-${item.action}`" />
         <div class="review-history__body">
           <div class="review-history__header">

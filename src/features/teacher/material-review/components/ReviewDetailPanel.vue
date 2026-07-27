@@ -29,6 +29,14 @@ const formFields = computed(() => {
     .map(([k, v]) => ({ key: k, label: getFieldLabel(k as string), value: v }))
 })
 
+function previewAttachment(url: string) {
+  previewUrl.value = url
+  previewVisible.value = true
+}
+function isImage(name: string) {
+  return /\.(?:jpg|jpeg|png|gif|webp)$/i.test(name)
+}
+
 function getFieldLabel(key: string): string {
   const labels: Record<string, string> = {
     competitionName: '竞赛名称',
@@ -124,16 +132,10 @@ function getFieldLabel(key: string): string {
               v-for="(file, idx) in record.attachments"
               :key="idx"
               class="review-panel__file"
-              @click="
-                previewUrl = file.url
-                previewVisible = true
-              "
+              @click="previewAttachment(file.url)"
             >
               <div class="review-panel__file-icon">
-                <component
-                  :is="file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? ImageIcon : FileText"
-                  :size="24"
-                />
+                <component :is="isImage(file.name) ? ImageIcon : FileText" :size="24" />
               </div>
               <div class="review-panel__file-info">
                 <span class="review-panel__file-name">{{ file.name }}</span>
@@ -162,7 +164,7 @@ function getFieldLabel(key: string): string {
   &__layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    gap: $spacing-lg;
     min-height: 300px;
   }
   &__form {
@@ -171,66 +173,68 @@ function getFieldLabel(key: string): string {
   }
   &__attachments {
     border-left: 1px solid var(--el-border-color-light);
-    padding-left: 16px;
+    padding-left: $spacing-lg;
     overflow-y: auto;
     max-height: 50vh;
   }
   &__section-title {
-    font-size: 14px;
+    font-size: $font-size-base;
     font-weight: 600;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
+    color: $color-text-primary;
+    margin-bottom: $spacing-md;
+    padding-bottom: $spacing-sm;
     border-bottom: 1px solid var(--el-border-color-light);
   }
   &__files {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: $spacing-sm;
   }
   &__file {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md;
     border: 1px solid var(--el-border-color-light);
-    border-radius: 8px;
+    border-radius: $radius-lg;
     cursor: pointer;
     transition: all 0.2s;
     &:hover {
-      border-color: var(--el-color-primary);
-      background: var(--el-color-primary-light-9);
+      border-color: $color-accent;
+      background: $color-primary-lightest;
     }
   }
   &__file-icon {
     width: 40px;
     height: 40px;
-    border-radius: 6px;
+    border-radius: $radius-base;
     background: var(--el-fill-color-light);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--el-color-primary);
+    color: $color-primary-lighter;
   }
   &__file-info {
     flex: 1;
     min-width: 0;
   }
   &__file-name {
-    font-size: 13px;
+    font-size: $font-size-sm;
     font-weight: 500;
-    color: var(--el-text-color-primary);
+    color: $color-text-primary;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   &__file-preview {
-    color: var(--el-color-primary);
+    color: $color-primary-lighter;
     flex-shrink: 0;
   }
   &__no-files {
     text-align: center;
-    padding: 40px;
+    padding: $spacing-2xl;
     color: var(--el-text-color-secondary);
+    font-size: $font-size-base;
   }
   &__footer {
     display: flex;
@@ -240,11 +244,13 @@ function getFieldLabel(key: string): string {
   }
   &__nav {
     display: flex;
-    gap: 8px;
+    gap: $spacing-sm;
   }
   &__actions {
     display: flex;
-    gap: 8px;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+    align-items: center;
   }
 }
 @media (max-width: 900px) {
@@ -255,7 +261,7 @@ function getFieldLabel(key: string): string {
     border-left: none;
     padding-left: 0;
     border-top: 1px solid var(--el-border-color-light);
-    padding-top: 16px;
+    padding-top: $spacing-lg;
   }
 }
 </style>
