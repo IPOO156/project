@@ -202,7 +202,7 @@ function handleSearch() {
         <el-table-column prop="time" label="操作时间" width="170" />
         <el-table-column prop="status" label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)" size="small">
+            <el-tag :type="statusType(row.status) as any" size="small">
               {{ statusMap[row.status]?.label }}
             </el-tag>
           </template>

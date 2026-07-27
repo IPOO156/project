@@ -153,7 +153,7 @@ async function handleSubmit() {
             <el-option v-for="t in AWARD_LEVELS" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="佐证材料">
+        <el-form-item label="佐证材料" required>
           <ProofUpload v-model:file-list="form.proofMaterials" />
         </el-form-item>
       </el-form>

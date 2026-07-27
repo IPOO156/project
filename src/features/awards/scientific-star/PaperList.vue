@@ -143,7 +143,7 @@ async function handleSubmit() {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="证明材料">
+        <el-form-item label="证明材料" required>
           <ProofUpload v-model:file-list="form.proofMaterials" />
         </el-form-item>
       </el-form>
