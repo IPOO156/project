@@ -1,7 +1,7 @@
 <script setup>
 import UiButton from '../ui/UiButton.vue'
 
-const props = defineProps({
+defineProps({
   collapsed: { type: Boolean, required: true },
   section: { type: String, default: '' },
   title: { type: String, default: '' },

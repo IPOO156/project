@@ -4,7 +4,7 @@ import UiButton from '../../../components/ui/UiButton.vue'
 import UiCard from '../../../components/ui/UiCard.vue'
 import UiTag from '../../../components/ui/UiTag.vue'
 
-const tab = ref('base')
+const _u_tab = ref('base')
 const activeNav = ref('base')
 
 const userInfo = {

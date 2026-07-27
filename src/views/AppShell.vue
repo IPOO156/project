@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 import SidebarNav from '../components/layout/SidebarNav.vue'
 import TopBar from '../components/layout/TopBar.vue'
 
-const props = defineProps({
+defineProps({
   navGroups: {
     type: Array,
     required: true,

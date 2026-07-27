@@ -3,8 +3,18 @@
  * 业务页面统一从这里 import，避免深路径引用
  */
 
+export { default as ApplicationFormRecord } from './ApplicationFormRecord.vue'
+export { default as CorrectionDialog } from './CorrectionDialog.vue'
+export { default as DictColumn } from './DictColumn.vue'
+export { default as DuplicateCheckDialog } from './DuplicateCheckDialog.vue'
 export { default as EmptyState } from './EmptyState.vue'
+export { default as GreetingToast } from './GreetingToast.vue'
 export { default as PageContainer } from './PageContainer.vue'
 export { default as PageHeader } from './PageHeader.vue'
 export { default as PageToolbar } from './PageToolbar.vue'
+export { default as ProofUpload } from './ProofUpload.vue'
+export { default as RecordActionButtons } from './RecordActionButtons.vue'
+export { default as RejectionBanner } from './RejectionBanner.vue'
+export { default as ScoreIndicatorDialog } from './ScoreIndicatorDialog.vue'
 export { default as StatusTag } from './StatusTag.vue'
+export { default as StudentInfoBar } from './StudentInfoBar.vue'

@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { useApplicationForm } from '@/shared/composables/useApplicationForm'
-import { useFormDraft } from '@/shared/composables/useFormDraft'
-import { useFormEdit } from '@/shared/composables/useFormEdit'
-import { useFormRecords } from '@/shared/composables/useFormRecords'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { onMounted, reactive } from 'vue'
+import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
+import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
+import DuplicateCheckDialog from '@/shared/ui/DuplicateCheckDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
+import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 function emptyForm() {
   return {
@@ -19,60 +21,35 @@ function emptyForm() {
   }
 }
 
-const {
-  form,
-  submitting,
-  handleSubmit: _submit,
-} = useApplicationForm({
-  emptyForm,
-  requiredFields: ['company', 'location', 'position', 'startDate', 'endDate', 'semester'],
-  type: 'internship',
-  typeLabel: '实习经历',
-})
-const { clearDraft } = useFormDraft('internship', form)
-const { records, addRecord, updateRecord, removeRecord } = useFormRecords('internship')
-
-const {
-  editingId,
-  detailVisible,
-  detailRecord,
-  isEditing,
-  viewRecord,
-  startEdit,
-  cancelEdit,
-  closeDetail,
-} = useFormEdit()
-
-async function handleSubmit() {
-  const name = form.company || '新记录'
-  await _submit()
-  if (editingId.value) {
-    updateRecord(editingId.value, {
-      title: name,
-      ...form,
-      submitDate: new Date().toISOString().slice(0, 10),
-    })
-    editingId.value = null
-  } else {
-    addRecord(name)
-  }
-  clearDraft()
-}
+const page = reactive(useApplicationPage('internship', '实习经历', emptyForm))
 
 function handleEditClick(row: any) {
-  form.company = row.company || ''
-  form.location = row.location || ''
-  form.position = row.position || ''
-  form.startDate = row.startDate || ''
-  form.endDate = row.endDate || ''
-  form.semester = row.semester || ''
-  startEdit(row)
+  page.form.company = row.company || ''
+  page.form.location = row.location || ''
+  page.form.position = row.position || ''
+  page.form.startDate = row.startDate || ''
+  page.form.endDate = row.endDate || ''
+  page.form.semester = row.semester || ''
+  page.handleEditClick(row)
 }
 
-function handleCancel() {
-  cancelEdit()
-  Object.assign(form, emptyForm())
+async function handleRemove(row: any) {
+  try {
+    await ElMessageBox.confirm('确定删除该记录吗？删除后不可恢复。', '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    page.removeRecord(row.id)
+    ElMessage.success('已删除')
+  } catch {
+    /* cancel */
+  }
 }
+
+onMounted(() => {
+  page.init()
+})
 </script>
 
 <template>
@@ -80,34 +57,47 @@ function handleCancel() {
     alert-title="实习经历申报说明"
     alert-description="请填写实习经历相关信息，并上传实习证明等佐证材料。"
     :show-records="true"
-    :records="records"
-    :submitting="submitting"
-    :is-editing="isEditing"
-    @submit="handleSubmit"
-    @view="(row) => viewRecord(row)"
+    :records="page.records"
+    :submitting="page.submitting"
+    :is-editing="page.isEditing"
+    :status="page.currentStatus"
+    :enrollment-info="page.enrollmentInfo"
+    :show-extended-fields="true"
+    :extended-form="page.extendedForm"
+    @update:extended-form="
+      (field, val) => {
+        ;(page.extendedForm as any)[field] = val
+      }
+    "
+    @save-draft="page.handleSaveDraft"
+    @submit="page.handleSubmit"
+    @view="(row) => page.viewRecord(row)"
     @edit="(row) => handleEditClick(row)"
-    @remove="(row) => removeRecord(row.id)"
-    @cancel="handleCancel"
+    @remove="(row) => handleRemove(row)"
+    @cancel="page.handleCancel"
+    @withdraw="(row) => page.handleWithdraw(row)"
+    @correction="(row) => page.handleCorrection(row)"
+    @score="(row) => page.handleViewScore(row)"
   >
     <template #form>
-      <el-form :model="form" label-width="120px">
+      <el-form :model="page.form" label-width="120px">
         <el-form-item label="实习公司" required
-          ><el-input v-model="form.company" placeholder="请输入实习公司"
+          ><el-input v-model="page.form.company" placeholder="请输入实习公司"
         /></el-form-item>
         <el-form-item label="实习地点" required
-          ><el-input v-model="form.location" placeholder="请输入实习地点"
+          ><el-input v-model="page.form.location" placeholder="请输入实习地点"
         /></el-form-item>
         <el-form-item label="实习岗位" required
-          ><el-input v-model="form.position" placeholder="请输入实习岗位"
+          ><el-input v-model="page.form.position" placeholder="请输入实习岗位"
         /></el-form-item>
         <el-form-item label="开始时间" required
-          ><el-date-picker v-model="form.startDate" type="date" placeholder="选择日期"
+          ><el-date-picker v-model="page.form.startDate" type="date" placeholder="选择日期"
         /></el-form-item>
         <el-form-item label="结束时间" required
-          ><el-date-picker v-model="form.endDate" type="date" placeholder="选择日期"
+          ><el-date-picker v-model="page.form.endDate" type="date" placeholder="选择日期"
         /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="form.semester" placeholder="请选择" class="form-select">
+          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
             <el-option
               v-for="s in SEMESTER_OPTIONS"
               :key="s.value"
@@ -117,7 +107,7 @@ function handleCancel() {
           </el-select>
         </el-form-item>
         <el-form-item label="佐证材料">
-          <ProofUpload v-model:file-list="form.proofMaterials" />
+          <ProofUpload v-model:file-list="page.form.proofMaterials" :status="page.currentStatus" />
         </el-form-item>
       </el-form>
     </template>
@@ -127,25 +117,44 @@ function handleCancel() {
       <el-table-column prop="submitDate" label="提交日期" width="120" />
     </template>
   </ApplicationFormRecord>
-  <el-dialog v-model="detailVisible" title="记录详情" width="560px">
-    <template v-if="detailRecord">
-      <el-descriptions :column="1" border>
-        <el-descriptions-item
-          v-for="(val, key) in detailRecord"
-          :key="String(key)"
-          :label="String(key)"
-        >
-          {{ String(val) }}
-        </el-descriptions-item>
-      </el-descriptions>
-    </template>
-    <template #footer>
-      <el-button @click="closeDetail">关闭</el-button>
-    </template>
-  </el-dialog>
+
+  <DuplicateCheckDialog
+    :visible="page.duplicateVisible"
+    :duplicates="page.duplicateItems"
+    @confirm="page.confirmDuplicateSubmit"
+    @cancel="page.cancelDuplicateSubmit"
+    @update:visible="
+      (v) => {
+        if (!v) page.cancelDuplicateSubmit()
+      }
+    "
+  />
+  <CorrectionDialog
+    :visible="page.correctionVisible"
+    :submitting="page.correctionSubmitting"
+    :original-record="page.originalSnapshot"
+    :form="page.correctionForm"
+    @update:visible="
+      (v) => {
+        if (!v) page.closeCorrection()
+      }
+    "
+    @update:form="(field, val) => page.setChangedField(field, val)"
+    @submit="page.submitCorrection"
+  />
+  <ScoreIndicatorDialog
+    :visible="page.indicatorVisible"
+    :loading="page.indicatorLoading"
+    :title="page.indicatorTitle"
+    :indicators="page.indicators"
+    @close="page.closeIndicator"
+  />
 </template>
 
 <style scoped lang="scss">
+.form-select {
+  width: 200px;
+}
 :deep(.page-container) {
   user-select: none;
 }
