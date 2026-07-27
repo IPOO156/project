@@ -49,6 +49,33 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
+  // ── 从已通过的提交记录同步档案数据 ──
+  function syncFromSubmissions(
+    records: { type: string; title: string; submitDate: string; status: string }[],
+  ) {
+    const approved = records.filter((r) => r.status === 'approved')
+    const newAwards = approved
+      .filter((r) => ['competition', 'innovation', 'competitionStar'].includes(r.type))
+      .map((r, i) => ({
+        id: `award-${Date.now()}-${i}`,
+        name: r.title,
+        level: 'school' as const,
+        type: 'competition' as const,
+        date: r.submitDate,
+      }))
+    if (newAwards.length > 0) awards.value = [...newAwards, ...awards.value]
+
+    const newEvents = approved.map((r, i) => ({
+      id: `tl-${Date.now()}-${i}`,
+      semester: '2024-2025-1',
+      type: 'award' as const,
+      title: r.title,
+      description: `${r.type} 申报已通过`,
+      date: r.submitDate,
+    }))
+    if (newEvents.length > 0) timelineEvents.value = [...newEvents, ...timelineEvents.value]
+  }
+
   // ── 兴趣 CRUD ──
   async function createInterest(data: Omit<Interest, 'id'>): Promise<void> {
     const item = await apiAddInterest(data)
@@ -97,6 +124,7 @@ export const useArchiveStore = defineStore('archive', () => {
     timelineEvents,
     loading,
     fetchArchive,
+    syncFromSubmissions,
     createInterest,
     editInterest,
     removeInterest,

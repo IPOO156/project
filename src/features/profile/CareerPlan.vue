@@ -15,11 +15,11 @@ const careerPlanStore = useCareerPlanStore()
 
 const planForm = reactive({ semester: '', title: '', content: '' })
 const { clearDraft } = useFormDraft('career-plan', planForm)
-const planFiles = ref<{ name: string; url: string }[]>([])
+const _u_planFiles = ref<{ name: string; url: string }[]>([])
 const planRecords = computed(() => careerPlanStore.plans)
 const aiAnalysis = computed(() => careerPlanStore.aiAnalysis)
 const loading = ref(false)
-const dialogVisible = ref(false)
+const _u_dialogVisible = ref(false)
 const aiDrawerVisible = ref(false)
 const aiDrawerKey = ref(0)
 const aiInitialQuestion = '请分析我的职业规划短板并给出改进建议'

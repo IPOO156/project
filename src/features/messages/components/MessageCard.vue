@@ -26,19 +26,19 @@ function categoryLabel(category: NotificationCategory) {
 
 function categoryStyle(category: NotificationCategory) {
   const lightMap: Record<NotificationCategory, { backgroundColor: string; color: string }> = {
-    system: { backgroundColor: 'rgba(30, 136, 229, 0.10)', color: '#1e88e5' },
-    approval: { backgroundColor: 'rgba(255, 167, 38, 0.14)', color: '#f57c00' },
-    activity: { backgroundColor: 'rgba(67, 160, 71, 0.12)', color: '#388e3c' },
-    message: { backgroundColor: 'rgba(96, 125, 139, 0.12)', color: '#546e7a' },
+    review: { backgroundColor: 'rgba(255, 167, 38, 0.14)', color: '#f57c00' },
+    'ai-feedback': { backgroundColor: 'rgba(67, 160, 71, 0.12)', color: '#388e3c' },
+    'plan-comment': { backgroundColor: 'rgba(30, 136, 229, 0.10)', color: '#1e88e5' },
+    announcement: { backgroundColor: 'rgba(96, 125, 139, 0.12)', color: '#546e7a' },
   }
   const darkMap: Record<NotificationCategory, { backgroundColor: string; color: string }> = {
-    system: { backgroundColor: 'rgba(96, 165, 250, 0.15)', color: '#93c5fd' },
-    approval: { backgroundColor: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' },
-    activity: { backgroundColor: 'rgba(74, 222, 128, 0.15)', color: '#4ade80' },
-    message: { backgroundColor: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8' },
+    review: { backgroundColor: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' },
+    'ai-feedback': { backgroundColor: 'rgba(74, 222, 128, 0.15)', color: '#4ade80' },
+    'plan-comment': { backgroundColor: 'rgba(96, 165, 250, 0.15)', color: '#93c5fd' },
+    announcement: { backgroundColor: 'rgba(148, 163, 184, 0.15)', color: '#94a3b8' },
   }
   const map = themeStore.isDark ? darkMap : lightMap
-  return map[category] ?? lightMap.system
+  return map[category] ?? lightMap.review
 }
 </script>
 

@@ -25,21 +25,9 @@ const teacherRoutes: RouteRecordRaw[] = [
   },
   {
     path: 'material-review',
-    redirect: '/teacher/material-review/college',
-    children: [
-      {
-        path: 'college',
-        name: 'TeacherMaterialReviewCollege',
-        component: () => import('@/features/teacher/material-review/CollegeReview.vue'),
-        meta: { title: '院领导审核', teacher: true, permission: 'material-review' },
-      },
-      {
-        path: 'department',
-        name: 'TeacherMaterialReviewDepartment',
-        component: () => import('@/features/teacher/material-review/DepartmentReview.vue'),
-        meta: { title: '系领导审核', teacher: true, permission: 'material-review' },
-      },
-    ],
+    name: 'TeacherMaterialReview',
+    component: () => import('@/features/teacher/material-review/CollegeReview.vue'),
+    meta: { title: '材料审核', teacher: true, permission: 'material-review' },
   },
   {
     path: 'heat-map',

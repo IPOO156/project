@@ -5,10 +5,11 @@ import { ElMessage } from 'element-plus'
  * 管理员：筛选条件（年级→学院→专业→时间）→ 查看操作记录
  * 审核员/课任教师：筛选时间 → 查看全部操作记录
  */
-import { Eye, RefreshCw, Search } from 'lucide-vue-next'
+import { RefreshCw, Search } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 
 import { useUserStore } from '@/app/stores/stores'
+import LogTable from './components/LogTable.vue'
 
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.isAdmin || userStore.isSuperAdmin)
@@ -18,103 +19,148 @@ const filters = ref({
   college: '',
   major: '',
   dateRange: [] as string[],
+  actionType: '',
 })
+
+const actionTypeOptions = [
+  { value: '', label: '全部类型' },
+  { value: 'create', label: '新增' },
+  { value: 'update', label: '修改' },
+  { value: 'delete', label: '删除' },
+  { value: 'review', label: '审核' },
+  { value: 'login', label: '登录' },
+  { value: 'export', label: '导出' },
+]
 
 const logList = ref([
   {
     id: 1,
     user: '管理员-李老师',
     role: '管理员',
+    actionType: 'export',
     action: '导出2024级学生基本信息',
     target: '2024级全校',
+    targetId: '',
     ip: '192.168.1.100',
     time: '2026-07-08 10:32:15',
     status: 'success',
+    beforeSnapshot: null,
+    afterSnapshot: { type: 'export', fields: ['name', 'studentId', 'class'], count: 356 },
   },
   {
     id: 2,
     user: '审核员-王老师',
     role: '审核员',
+    actionType: 'review',
     action: '通过张三的竞赛之星申报',
-    target: '张三(2024060001)',
+    target: '张三',
+    targetId: '2024060001',
     ip: '192.168.1.101',
     time: '2026-07-08 10:15:42',
     status: 'approved',
+    beforeSnapshot: { status: 'pending' },
+    afterSnapshot: { status: 'approved', reviewer: '王老师' },
   },
   {
     id: 3,
     user: '课任教师-刘老师',
     role: '课任教师',
+    actionType: 'login',
     action: '查看计科2401班档案',
     target: '计科2401班',
+    targetId: '',
     ip: '192.168.1.102',
     time: '2026-07-08 09:48:20',
     status: 'info',
+    beforeSnapshot: null,
+    afterSnapshot: null,
   },
   {
     id: 4,
     user: '管理员-赵老师',
     role: '管理员',
+    actionType: 'update',
     action: '修改学生密码',
-    target: '李四(2024060002)',
+    target: '李四',
+    targetId: '2024060002',
     ip: '192.168.1.103',
     time: '2026-07-08 09:22:05',
     status: 'success',
+    beforeSnapshot: null,
+    afterSnapshot: { action: 'password_reset' },
   },
   {
     id: 5,
     user: '审核员-钱老师',
     role: '审核员',
+    actionType: 'review',
     action: '驳回王五的社会实践申报',
-    target: '王五(2024060003)',
+    target: '王五',
+    targetId: '2024060003',
     ip: '192.168.1.104',
     time: '2026-07-08 08:55:33',
     status: 'rejected',
+    beforeSnapshot: { status: 'pending' },
+    afterSnapshot: { status: 'rejected', reason: '材料不齐全' },
   },
   {
     id: 6,
     user: '管理员-李老师',
     role: '管理员',
+    actionType: 'create',
     action: '新增管理员账号',
     target: '孙老师',
+    targetId: '',
     ip: '192.168.1.100',
     time: '2026-07-07 17:20:10',
     status: 'success',
+    beforeSnapshot: null,
+    afterSnapshot: { role: 'admin', username: 'sun' },
   },
   {
     id: 7,
     user: '系统',
     role: '系统',
+    actionType: 'export',
     action: '每日数据备份完成',
     target: '数据库',
+    targetId: '',
     ip: '-',
     time: '2026-07-08 03:00:00',
     status: 'info',
+    beforeSnapshot: null,
+    afterSnapshot: { backupSize: '2.3GB', tables: 24 },
   },
   {
     id: 8,
     user: '课任教师-刘老师',
     role: '课任教师',
+    actionType: 'export',
     action: '下载成绩汇总表',
     target: '软件2401班',
+    targetId: '',
     ip: '192.168.1.102',
     time: '2026-07-07 16:10:45',
     status: 'success',
+    beforeSnapshot: null,
+    afterSnapshot: { format: 'xlsx', records: 42 },
   },
 ])
 
 const gradeOptions = ['2024级', '2023级', '2022级', '2021级']
 const collegeOptions = ['计算机学院', '数学学院', '物理学院', '外语学院']
 
-const statusMap: Record<string, { label: string; type: string }> = {
-  success: { label: '成功', type: 'success' },
-  approved: { label: '通过', type: 'success' },
-  rejected: { label: '驳回', type: 'danger' },
-  info: { label: '信息', type: 'info' },
-}
+// ─── 数据快照弹窗 ───
+const snapshotVisible = ref(false)
+const snapshotData = ref<{ before: any; after: any; title: string } | null>(null)
 
-function statusType(status: string): string {
-  return statusMap[status]?.type ?? 'info'
+function handleViewSnapshot(row: any) {
+  snapshotData.value = {
+    before: row.beforeSnapshot,
+    after: row.afterSnapshot,
+    title: `${row.action} - ${row.target}`,
+  }
+  snapshotVisible.value = true
 }
 
 function handleSearch() {
@@ -154,6 +200,23 @@ function handleSearch() {
             </el-select>
           </el-form-item>
         </el-col>
+        <el-col :xs="12" :sm="6" :md="4">
+          <el-form-item label="操作类型">
+            <el-select
+              v-model="filters.actionType"
+              placeholder="操作类型"
+              clearable
+              style="width: 100%"
+            >
+              <el-option
+                v-for="opt in actionTypeOptions"
+                :key="opt.value"
+                :label="opt.label"
+                :value="opt.value"
+              />
+            </el-select>
+          </el-form-item>
+        </el-col>
         <el-col :xs="12" :sm="8" :md="6">
           <el-form-item label="时间范围">
             <el-date-picker
@@ -184,40 +247,41 @@ function handleSearch() {
         </div>
       </template>
 
-      <el-table :data="logList" stripe style="width: 100%">
-        <el-table-column type="index" label="#" width="50" />
-        <el-table-column prop="user" label="操作人" width="140" />
-        <el-table-column prop="role" label="角色" width="90">
-          <template #default="{ row }">
-            <el-tag size="small">{{ row.role }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="action" label="操作内容" min-width="220" />
-        <el-table-column prop="target" label="操作对象" width="160" />
-        <el-table-column prop="ip" label="IP 地址" width="140">
-          <template #default="{ row }">
-            <code class="log-view__ip">{{ row.ip }}</code>
-          </template>
-        </el-table-column>
-        <el-table-column prop="time" label="操作时间" width="170" />
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="statusType(row.status)" size="small">
-              {{ statusMap[row.status]?.label }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right">
-          <template #default>
-            <el-button link type="primary" size="small" :icon="Eye">详情</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <LogTable :data="logList" @view="handleViewSnapshot" />
 
       <div class="log-view__pagination">
         <el-pagination :total="256" :page-size="10" layout="prev, pager, next, total" small />
       </div>
     </el-card>
+
+    <!-- 数据快照弹窗 -->
+    <el-dialog
+      v-model="snapshotVisible"
+      title="数据快照"
+      width="640px"
+      @close="snapshotData = null"
+    >
+      <template v-if="snapshotData">
+        <h4 class="snapshot-title">{{ snapshotData.title }}</h4>
+        <el-tabs>
+          <el-tab-pane label="变更前">
+            <template v-if="snapshotData.before">
+              <pre class="snapshot-json">{{ JSON.stringify(snapshotData.before, null, 2) }}</pre>
+            </template>
+            <el-empty v-else description="无变更前数据" />
+          </el-tab-pane>
+          <el-tab-pane label="变更后">
+            <template v-if="snapshotData.after">
+              <pre class="snapshot-json">{{ JSON.stringify(snapshotData.after, null, 2) }}</pre>
+            </template>
+            <el-empty v-else description="无变更后数据" />
+          </el-tab-pane>
+        </el-tabs>
+      </template>
+      <template #footer>
+        <el-button @click="snapshotVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -246,14 +310,6 @@ function handleSearch() {
     color: var(--el-text-color-secondary);
   }
 
-  &__ip {
-    font-size: 12px;
-    background: var(--el-fill-color-light);
-    padding: 2px 6px;
-    border-radius: 3px;
-    color: var(--el-text-color-secondary);
-  }
-
   &__pagination {
     margin-top: $spacing-lg;
     display: flex;
@@ -265,5 +321,24 @@ function handleSearch() {
   font-size: 16px;
   font-weight: 600;
   color: var(--el-text-color-primary);
+}
+
+.snapshot-title {
+  margin: 0 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.snapshot-json {
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 6px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  max-height: 360px;
+  color: var(--el-text-color-regular);
 }
 </style>

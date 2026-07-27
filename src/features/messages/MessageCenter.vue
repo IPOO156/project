@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { NotificationCategory, NotificationStatus } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Bell, CheckCheck, Filter, Mail, Search, X } from 'lucide-vue-next'
+import { Archive, Bell, CheckCheck, Filter, Mail, Search, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/app/stores/stores'
@@ -12,6 +12,7 @@ import MessageCard from './components/MessageCard.vue'
 /**
  * 消息中心通知页面
  * 采用蓝白配色的自定义卡片风格，与系统页面布局一致。
+ * 支持归档筛选、批量归档、批量已读、批量删除。
  */
 
 const router = useRouter()
@@ -20,6 +21,25 @@ const notificationStore = useNotificationStore()
 const keyword = ref('')
 const categoryFilter = ref<NotificationCategory | ''>('')
 const statusFilter = ref<NotificationStatus | ''>('')
+const archiveFilter = ref<'all' | 'active' | 'archived'>('active')
+
+// ─── 归档本地持久化 ───
+const archivedIds = ref<Set<string>>(
+  new Set(JSON.parse(localStorage.getItem('messageArchivedIds') || '[]')),
+)
+
+function persistArchivedIds() {
+  localStorage.setItem('messageArchivedIds', JSON.stringify([...archivedIds.value]))
+}
+
+function _u_toggleArchive(id: string) {
+  if (archivedIds.value.has(id)) {
+    archivedIds.value.delete(id)
+  } else {
+    archivedIds.value.add(id)
+  }
+  persistArchivedIds()
+}
 
 const pageNum = ref(1)
 const pageSize = ref(10)
@@ -43,6 +63,14 @@ function handleBatchRead() {
   batchMode.value = false
 }
 
+function handleBatchArchive() {
+  selectedIds.value.forEach((id) => archivedIds.value.add(id))
+  selectedIds.value = []
+  batchMode.value = false
+  persistArchivedIds()
+  ElMessage.success('已归档')
+}
+
 function handleBatchDelete() {
   ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条通知吗？`, '批量删除确认', {
     confirmButtonText: '删除',
@@ -64,7 +92,6 @@ function handleCancelBatchMode() {
 }
 
 // ─── 卡片逐行刷入动画触发 ───
-// 通过改变 key 强制消息列表重新渲染，使 CSS animation 在每次数据加载、筛选、分页变化时重新触发
 const listKey = ref(0)
 
 function bumpListAnimation() {
@@ -74,22 +101,14 @@ function bumpListAnimation() {
 watch(
   () => notificationStore.loading,
   (loading) => {
-    if (!loading) {
-      bumpListAnimation()
-    }
+    if (!loading) bumpListAnimation()
   },
 )
 
-watch(
-  [pageNum, pageSize],
-  () => {
-    bumpListAnimation()
-  },
-  { flush: 'post' },
-)
+watch([pageNum, pageSize], () => bumpListAnimation(), { flush: 'post' })
 
 const categoryOptions = computed(() => [
-  { value: '', label: '全部分类' },
+  { value: '' as const, label: '全部分类' },
   ...Object.entries(NOTIFICATION_CATEGORY).map(([value, config]) => ({
     value,
     label: config.label,
@@ -97,9 +116,15 @@ const categoryOptions = computed(() => [
 ])
 
 const statusOptions = [
-  { value: '', label: '全部状态' },
-  { value: 'unread', label: '未读' },
-  { value: 'read', label: '已读' },
+  { value: '' as const, label: '全部状态' },
+  { value: 'unread' as const, label: '未读' },
+  { value: 'read' as const, label: '已读' },
+]
+
+const archiveOptions = [
+  { value: 'active' as const, label: '未归档' },
+  { value: 'archived' as const, label: '已归档' },
+  { value: 'all' as const, label: '全部' },
 ]
 
 const stats = computed(() => [
@@ -113,14 +138,26 @@ const stats = computed(() => [
     value: notificationStore.notifications.length,
     icon: Bell,
   },
+  {
+    label: '已归档',
+    value: archivedIds.value.size,
+    icon: Archive,
+  },
 ])
+
+const filteredByArchive = computed(() => {
+  const all = notificationStore.filteredNotifications
+  if (archiveFilter.value === 'active') return all.filter((n) => !archivedIds.value.has(n.id))
+  if (archiveFilter.value === 'archived') return all.filter((n) => archivedIds.value.has(n.id))
+  return all
+})
 
 const paginatedList = computed(() => {
   const start = (pageNum.value - 1) * pageSize.value
-  return notificationStore.filteredNotifications.slice(start, start + pageSize.value)
+  return filteredByArchive.value.slice(start, start + pageSize.value)
 })
 
-const total = computed(() => notificationStore.filteredNotifications.length)
+const total = computed(() => filteredByArchive.value.length)
 
 function handleSearch() {
   pageNum.value = 1
@@ -135,6 +172,7 @@ function handleReset() {
   keyword.value = ''
   categoryFilter.value = ''
   statusFilter.value = ''
+  archiveFilter.value = 'active'
   pageNum.value = 1
   notificationStore.fetchNotifications()
 }
@@ -252,6 +290,19 @@ onMounted(() => {
             :value="opt.value"
           />
         </el-select>
+        <el-select
+          v-model="archiveFilter"
+          placeholder="归档筛选"
+          class="mc-select"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="opt in archiveOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
         <el-button type="primary" size="default" @click="handleSearch">
           <Filter :size="14" style="margin-right: 4px" />筛选
         </el-button>
@@ -270,6 +321,9 @@ onMounted(() => {
             @click="handleBatchRead"
           >
             批量已读
+          </el-button>
+          <el-button size="small" :disabled="selectedIds.length === 0" @click="handleBatchArchive">
+            <Archive :size="14" style="margin-right: 4px" />批量归档
           </el-button>
           <el-button
             size="small"

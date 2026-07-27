@@ -55,7 +55,7 @@ const dimAvg = computed(() => {
 })
 
 /** 将 submission 按类型分组，过滤有意义的活动 */
-const experienceGroups = computed(() => {
+const _u_experienceGroups = computed(() => {
   const groupLabels: Record<string, string> = {
     internship: '实习经历',
     organization: '组织/社团经历',
