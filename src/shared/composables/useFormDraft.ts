@@ -74,10 +74,11 @@ export function useFormDraft<T extends Record<string, unknown>>(
       const raw = localStorage.getItem(storageKey)
       if (raw) {
         const data = JSON.parse(raw)
-        if (isNonEmpty(data))
+        if (isNonEmpty(data)) {
           Object.keys(data).forEach((k) => {
             if (k in form) Object.assign(form, { [k]: data[k] })
           })
+        }
       }
     } catch {
       /* ignore */
@@ -85,10 +86,11 @@ export function useFormDraft<T extends Record<string, unknown>>(
     if (enableBackend) {
       try {
         const backendData = await loadDraft(key)
-        if (backendData && isNonEmpty(backendData))
+        if (backendData && isNonEmpty(backendData)) {
           Object.keys(backendData).forEach((k) => {
             if (k in form) Object.assign(form, { [k]: backendData[k] })
           })
+        }
       } catch {
         /* ignore */
       }

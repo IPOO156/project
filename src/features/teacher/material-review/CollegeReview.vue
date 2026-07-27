@@ -143,8 +143,9 @@ const filteredList = computed(() =>
       filters.value.keyword &&
       !r.name.includes(filters.value.keyword) &&
       !r.studentId.includes(filters.value.keyword)
-    )
+    ) {
       return false
+    }
     return true
   }),
 )
