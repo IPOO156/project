@@ -36,33 +36,43 @@ function generateSemesterOptions(startYear: number, endYear: number) {
 // 学期选项：学年-学期格式，如 2024-2025第一学期
 export const SEMESTER_OPTIONS = generateSemesterOptions(2022, 2028)
 
+// 本人角色
+export const ROLE_OPTIONS = [
+  { label: '负责人', value: 'leader' },
+  { label: '成员', value: 'member' },
+  { label: '独立完成', value: 'individual' },
+] as const
+
 // 申请状态（含标签颜色）
 export const APPLICATION_STATUS = {
   draft: { label: '草稿', color: 'info' },
-  submitted: { label: '待审核', color: 'warning' },
-  approved: { label: '已通过', color: 'success' },
+  pending: { label: '待审核', color: 'warning' },
   rejected: { label: '已驳回', color: 'danger' },
+  approved: { label: '已通过', color: 'success' },
+  withdrawn: { label: '已撤销', color: 'info' },
 } as const
 
 // 通知分类（消息中心使用）
 export const NOTIFICATION_CATEGORY = {
-  system: { label: '系统通知', color: 'primary' },
-  approval: { label: '审批提醒', color: 'warning' },
-  activity: { label: '动态提醒', color: 'success' },
-  message: { label: '私信', color: 'info' },
+  review: { label: '档案审核通知', color: 'warning' },
+  'ai-feedback': { label: 'AI 成长反馈', color: 'success' },
+  'plan-comment': { label: '成长规划教师评语', color: 'primary' },
+  announcement: { label: '系统公告', color: 'info' },
 } as const
 
 // 通知状态
 export const NOTIFICATION_STATUS = {
-  read: { label: '已读', color: 'info' },
   unread: { label: '未读', color: 'primary' },
+  read: { label: '已读', color: 'info' },
+  archived: { label: '已归档', color: 'default' },
 } as const
 
 // 审批状态筛选选项
 export const APPROVAL_STATUS_OPTIONS = [
+  { label: '待审核', value: 'pending' },
   { label: '已通过', value: 'approved' },
   { label: '已驳回', value: 'rejected' },
-  { label: '待审批', value: 'pending' },
+  { label: '已撤销', value: 'withdrawn' },
 ] as const
 
 // 竞赛类型
@@ -161,4 +171,6 @@ export const ACTIVITY_STATUS = {
   submitted: { label: '已提交', color: '#e6a23c' },
   approved: { label: '已通过', color: '#67c23a' },
   rejected: { label: '需修改', color: '#f56c6c' },
+  withdrawn: { label: '已撤销', color: '#909399' },
+  correction: { label: '更正申请', color: '#409eff' },
 } as const

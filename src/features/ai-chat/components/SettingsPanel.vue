@@ -74,7 +74,7 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
           <div class="sp__about">
             <p>档案智能助手 V2.0</p>
             <p class="sp__about-sub">
-              基于学生端档案管理系统知识库，提供档案申报、成长记录、审批流程等智能问答。
+              基于学生端档鉴未来知识库，提供档案申报、成长记录、审批流程等智能问答。
             </p>
           </div>
         </section>

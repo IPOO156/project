@@ -48,13 +48,13 @@ const routes: RouteRecordRaw[] = [
             path: 'info',
             name: 'ProfileInfo',
             component: () => import('@/features/profile/ProfileInfo.vue'),
-            meta: { title: '个人档案信息' },
+            meta: { title: '档案概览' },
           },
           {
             path: 'career-plan',
             name: 'CareerPlan',
             component: () => import('@/features/profile/CareerPlan.vue'),
-            meta: { title: '职业规划' },
+            meta: { title: '成长发展' },
           },
         ],
       },
@@ -158,7 +158,7 @@ const routes: RouteRecordRaw[] = [
           },
         ],
       },
-      // ─── 报名审核 ───
+      // ─── 我的申报 ───
       {
         path: 'approval',
         children: [
@@ -166,13 +166,13 @@ const routes: RouteRecordRaw[] = [
             path: 'pending',
             name: 'ApprovalPending',
             component: () => import('@/features/approval/PendingApproval.vue'),
-            meta: { title: '申报审核' },
+            meta: { title: '申报看板' },
           },
           {
             path: 'award-review',
             name: 'AwardReview',
             component: () => import('@/features/approval/AwardReview.vue'),
-            meta: { title: '奖项审核' },
+            meta: { title: '奖项看板' },
           },
         ],
       },

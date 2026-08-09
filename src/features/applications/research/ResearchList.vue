@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { useApplicationForm } from '@/shared/composables/useApplicationForm'
-import { useFormDraft } from '@/shared/composables/useFormDraft'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { onMounted, reactive } from 'vue'
+import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
+import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
+import DuplicateCheckDialog from '@/shared/ui/DuplicateCheckDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
+import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 function emptyForm() {
   return {
@@ -17,58 +21,83 @@ function emptyForm() {
   }
 }
 
-const {
-  form,
-  submitting,
-  handleSubmit: _submit,
-} = useApplicationForm({
-  emptyForm,
-  requiredFields: [
-    'projectName',
-    'projectLevel',
-    'researchType',
-    'teamRole',
-    'projectDate',
-    'semester',
-  ],
-  type: 'research',
-  typeLabel: '学术研究',
-})
-const { clearDraft } = useFormDraft('research', form)
+const page = reactive(useApplicationPage('research', '学术研究', emptyForm))
 
-async function handleSubmit() {
-  await _submit()
-  clearDraft()
+function handleEditClick(row: any) {
+  page.form.projectName = row.projectName || ''
+  page.form.projectLevel = row.projectLevel || ''
+  page.form.researchType = row.researchType || ''
+  page.form.teamRole = row.teamRole || ''
+  page.form.projectDate = row.projectDate || ''
+  page.form.semester = row.semester || ''
+  page.handleEditClick(row)
 }
+
+async function handleRemove(row: any) {
+  try {
+    await ElMessageBox.confirm('确定删除该记录吗？删除后不可恢复。', '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    page.removeRecord(row.id)
+    ElMessage.success('已删除')
+  } catch {
+    /* cancel */
+  }
+}
+
+onMounted(() => {
+  page.init()
+})
 </script>
 
 <template>
   <ApplicationFormRecord
     alert-title="学术研究申报说明"
     alert-description="请填写参与的学术研究项目信息，并上传项目立项书、结题报告等佐证材料。"
-    :show-records="false"
-    :submitting="submitting"
-    @submit="handleSubmit"
+    :show-records="true"
+    :records="page.records"
+    :submitting="page.submitting"
+    :is-editing="page.isEditing"
+    :status="page.currentStatus"
+    :enrollment-info="page.enrollmentInfo"
+    :show-extended-fields="true"
+    :extended-form="page.extendedForm"
+    @update:extended-form="
+      (field, val) => {
+        ;(page.extendedForm as any)[field] = val
+      }
+    "
+    @save-draft="page.handleSaveDraft"
+    @submit="page.handleSubmit"
+    @view="(row) => page.viewRecord(row)"
+    @edit="(row) => handleEditClick(row)"
+    @remove="(row) => handleRemove(row)"
+    @cancel="page.handleCancel"
+    @withdraw="(row) => page.handleWithdraw(row)"
+    @correction="(row) => page.handleCorrection(row)"
+    @score="(row) => page.handleViewScore(row)"
   >
     <template #form>
-      <el-form :model="form" label-width="120px">
+      <el-form :model="page.form" label-width="120px">
         <el-form-item label="项目名称" required
-          ><el-input v-model="form.projectName" placeholder="请输入项目名称"
+          ><el-input v-model="page.form.projectName" placeholder="请输入项目名称"
         /></el-form-item>
         <el-form-item label="项目级别" required
-          ><el-input v-model="form.projectLevel" placeholder="请输入项目级别"
+          ><el-input v-model="page.form.projectLevel" placeholder="请输入项目级别"
         /></el-form-item>
         <el-form-item label="研究类型" required
-          ><el-input v-model="form.researchType" placeholder="请输入研究类型"
+          ><el-input v-model="page.form.researchType" placeholder="请输入研究类型"
         /></el-form-item>
         <el-form-item label="团队角色" required
-          ><el-input v-model="form.teamRole" placeholder="请输入团队角色"
+          ><el-input v-model="page.form.teamRole" placeholder="请输入团队角色"
         /></el-form-item>
         <el-form-item label="项目时间" required
-          ><el-date-picker v-model="form.projectDate" type="month" placeholder="选择年月"
+          ><el-date-picker v-model="page.form.projectDate" type="month" placeholder="选择年月"
         /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="form.semester" placeholder="请选择" class="form-select">
+          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
             <el-option
               v-for="s in SEMESTER_OPTIONS"
               :key="s.value"
@@ -78,14 +107,54 @@ async function handleSubmit() {
           </el-select>
         </el-form-item>
         <el-form-item label="佐证材料">
-          <ProofUpload v-model:file-list="form.proofMaterials" />
+          <ProofUpload v-model:file-list="page.form.proofMaterials" :status="page.currentStatus" />
         </el-form-item>
       </el-form>
     </template>
+    <template #columns>
+      <el-table-column type="index" label="序号" width="60" />
+      <el-table-column prop="title" label="标题" min-width="200" />
+      <el-table-column prop="submitDate" label="提交日期" width="120" />
+    </template>
   </ApplicationFormRecord>
+
+  <DuplicateCheckDialog
+    :visible="page.duplicateVisible"
+    :duplicates="page.duplicateItems"
+    @confirm="page.confirmDuplicateSubmit"
+    @cancel="page.cancelDuplicateSubmit"
+    @update:visible="
+      (v) => {
+        if (!v) page.cancelDuplicateSubmit()
+      }
+    "
+  />
+  <CorrectionDialog
+    :visible="page.correctionVisible"
+    :submitting="page.correctionSubmitting"
+    :original-record="page.originalSnapshot"
+    :form="page.correctionForm"
+    @update:visible="
+      (v) => {
+        if (!v) page.closeCorrection()
+      }
+    "
+    @update:form="(field, val) => page.setChangedField(field, val)"
+    @submit="page.submitCorrection"
+  />
+  <ScoreIndicatorDialog
+    :visible="page.indicatorVisible"
+    :loading="page.indicatorLoading"
+    :title="page.indicatorTitle"
+    :indicators="page.indicators"
+    @close="page.closeIndicator"
+  />
 </template>
 
 <style scoped lang="scss">
+.form-select {
+  width: 200px;
+}
 :deep(.page-container) {
   user-select: none;
 }

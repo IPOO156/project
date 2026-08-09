@@ -83,16 +83,7 @@ export const teacherModules: TeacherModule[] = [
     routePrefix: '/teacher/material-review',
     permission: 'material-review',
     description: '审核学生提交的材料',
-    menuItems: [
-      {
-        label: '材料审核',
-        icon: ClipboardCheck,
-        children: [
-          { label: '院领导审核', icon: UserCheck, path: '/teacher/material-review/college' },
-          { label: '系领导审核', icon: UserCog, path: '/teacher/material-review/department' },
-        ],
-      },
-    ],
+    menuItems: [{ label: '材料审核', icon: ClipboardCheck, path: '/teacher/material-review' }],
   },
   {
     id: 'heat-map',

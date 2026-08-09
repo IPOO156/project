@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { useApplicationForm } from '@/shared/composables/useApplicationForm'
-import { useFormDraft } from '@/shared/composables/useFormDraft'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { onMounted, reactive } from 'vue'
+import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { AWARD_LEVELS, COMPETITION_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
+import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
+import DuplicateCheckDialog from '@/shared/ui/DuplicateCheckDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
+import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 function emptyForm() {
   return {
@@ -16,39 +20,70 @@ function emptyForm() {
   }
 }
 
-const {
-  form,
-  submitting,
-  handleSubmit: _submit,
-} = useApplicationForm({
-  emptyForm,
-  requiredFields: ['competitionName', 'competitionType', 'awardLevel', 'awardDate', 'semester'],
-  type: 'competition',
-  typeLabel: '学科竞赛',
-})
-const { clearDraft } = useFormDraft('competition', form)
+const page = reactive(useApplicationPage('competition', '学科竞赛', emptyForm))
 
-async function handleSubmit() {
-  await _submit()
-  clearDraft()
+function handleEditClick(row: any) {
+  page.form.competitionName = row.competitionName || ''
+  page.form.competitionType = row.competitionType || ''
+  page.form.awardLevel = row.awardLevel || ''
+  page.form.awardDate = row.awardDate || ''
+  page.form.semester = row.semester || ''
+  page.handleEditClick(row)
 }
+
+async function handleRemove(row: any) {
+  try {
+    await ElMessageBox.confirm('确定删除该记录吗？删除后不可恢复。', '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    page.removeRecord(row.id)
+    ElMessage.success('已删除')
+  } catch {
+    /* cancel */
+  }
+}
+
+onMounted(() => {
+  page.init()
+})
 </script>
 
 <template>
   <ApplicationFormRecord
     alert-title="学科竞赛申报说明"
     alert-description="请如实填写参与的学科竞赛信息，并上传相关佐证材料（获奖证书扫描件等）。材料经审核通过后将记入个人档案，作为评奖评优依据。"
-    :show-records="false"
-    :submitting="submitting"
-    @submit="handleSubmit"
+    :show-records="true"
+    :records="page.records"
+    :submitting="page.submitting"
+    :is-editing="page.isEditing"
+    :status="page.currentStatus"
+    :enrollment-info="page.enrollmentInfo"
+    :show-extended-fields="true"
+    :extended-form="page.extendedForm"
+    @update:extended-form="
+      (field, val) => {
+        ;(page.extendedForm as any)[field] = val
+      }
+    "
+    @save-draft="page.handleSaveDraft"
+    @submit="page.handleSubmit"
+    @view="(row) => page.viewRecord(row)"
+    @edit="(row) => handleEditClick(row)"
+    @remove="(row) => handleRemove(row)"
+    @cancel="page.handleCancel"
+    @withdraw="(row) => page.handleWithdraw(row)"
+    @correction="(row) => page.handleCorrection(row)"
+    @score="(row) => page.handleViewScore(row)"
   >
     <template #form>
-      <el-form :model="form" label-width="120px">
+      <el-form :model="page.form" label-width="120px">
         <el-form-item label="竞赛名称" required
-          ><el-input v-model="form.competitionName" placeholder="请输入竞赛名称"
+          ><el-input v-model="page.form.competitionName" placeholder="请输入竞赛名称"
         /></el-form-item>
         <el-form-item label="竞赛类型" required>
-          <el-select v-model="form.competitionType" placeholder="请选择" class="form-select">
+          <el-select v-model="page.form.competitionType" placeholder="请选择" class="form-select">
             <el-option
               v-for="t in COMPETITION_TYPES"
               :key="t.value"
@@ -58,15 +93,15 @@ async function handleSubmit() {
           </el-select>
         </el-form-item>
         <el-form-item label="获奖等级" required>
-          <el-select v-model="form.awardLevel" placeholder="请选择" class="form-select">
+          <el-select v-model="page.form.awardLevel" placeholder="请选择" class="form-select">
             <el-option v-for="t in AWARD_LEVELS" :key="t.value" :label="t.label" :value="t.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="获奖时间" required
-          ><el-date-picker v-model="form.awardDate" type="month" placeholder="选择年月"
+          ><el-date-picker v-model="page.form.awardDate" type="month" placeholder="选择年月"
         /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="form.semester" placeholder="请选择" class="form-select">
+          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
             <el-option
               v-for="s in SEMESTER_OPTIONS"
               :key="s.value"
@@ -76,14 +111,69 @@ async function handleSubmit() {
           </el-select>
         </el-form-item>
         <el-form-item label="佐证材料">
-          <ProofUpload v-model:file-list="form.proofMaterials" />
+          <ProofUpload v-model:file-list="page.form.proofMaterials" :status="page.currentStatus" />
         </el-form-item>
       </el-form>
     </template>
+    <template #columns>
+      <el-table-column type="index" label="序号" width="60" />
+      <el-table-column prop="title" label="标题" min-width="200" />
+      <el-table-column prop="submitDate" label="提交日期" width="120" />
+    </template>
   </ApplicationFormRecord>
+
+  <DuplicateCheckDialog
+    :visible="page.duplicateVisible"
+    :duplicates="page.duplicateItems"
+    @confirm="page.confirmDuplicateSubmit"
+    @cancel="page.cancelDuplicateSubmit"
+    @update:visible="
+      (v) => {
+        if (!v) page.cancelDuplicateSubmit()
+      }
+    "
+  />
+  <CorrectionDialog
+    :visible="page.correctionVisible"
+    :submitting="page.correctionSubmitting"
+    :original-record="page.originalSnapshot"
+    :form="page.correctionForm"
+    @update:visible="
+      (v) => {
+        if (!v) page.closeCorrection()
+      }
+    "
+    @update:form="(field, val) => page.setChangedField(field, val)"
+    @submit="page.submitCorrection"
+  />
+  <ScoreIndicatorDialog
+    :visible="page.indicatorVisible"
+    :loading="page.indicatorLoading"
+    :title="page.indicatorTitle"
+    :indicators="page.indicators"
+    @close="page.closeIndicator"
+  />
+
+  <!-- 查看详情弹窗 -->
+  <el-dialog v-model="page.detailVisible" title="记录详情" width="560px">
+    <template v-if="page.detailRecord">
+      <el-descriptions :column="1" border>
+        <el-descriptions-item
+          v-for="(val, key) in page.detailRecord"
+          :key="String(key)"
+          :label="String(key)"
+          >{{ String(val) }}</el-descriptions-item
+        >
+      </el-descriptions>
+    </template>
+    <template #footer><el-button @click="page.closeDetail">关闭</el-button></template>
+  </el-dialog>
 </template>
 
 <style scoped lang="scss">
+.form-select {
+  width: 200px;
+}
 :deep(.page-container) {
   user-select: none;
 }

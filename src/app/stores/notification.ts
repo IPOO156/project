@@ -63,11 +63,37 @@ export const useNotificationStore = defineStore('notification', () => {
     ElMessage.success('全部已读')
   }
 
+  const processedIds = ref<Set<string>>(new Set())
+
   async function deleteNotification(id: string): Promise<void> {
     await apiDelete(id)
     notifications.value = notifications.value.filter((n) => n.id !== id)
     filteredNotifications.value = filteredNotifications.value.filter((n) => n.id !== id)
     ElMessage.success('通知已删除')
+  }
+
+  function addNotification(notification: {
+    title: string
+    content: string
+    category: Notification['category']
+    link?: string
+  }) {
+    const dedupKey = `${notification.category}|${notification.title}`
+    if (processedIds.value.has(dedupKey)) return
+    processedIds.value.add(dedupKey)
+
+    const newNotification: Notification = {
+      id: `notif-${Date.now()}`,
+      title: notification.title,
+      content: notification.content,
+      category: notification.category,
+      status: 'unread',
+      isRead: false,
+      createdAt: new Date().toLocaleString('zh-CN'),
+      link: notification.link,
+    }
+    notifications.value.unshift(newNotification)
+    filteredNotifications.value.unshift(newNotification)
   }
 
   return {
@@ -79,5 +105,6 @@ export const useNotificationStore = defineStore('notification', () => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    addNotification,
   }
 })

@@ -1,13 +1,8 @@
 import type { SubmissionFilters, SubmissionRecord } from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getSubmissionRecords, withdrawSubmission } from '@/shared/api/submission'
+import { getSubmissionRecords, pushNotification, withdrawSubmission } from '@/shared/api/submission'
 
-/**
- * 统一提交记录 Store
- * 聚合所有申报模块与奖项模块的提交记录，支持筛选/搜索
- * 数据来源：submissionApi（后端就绪后只需改 API 层）
- */
 export const useSubmissionStore = defineStore('submission', () => {
   const records = ref<SubmissionRecord[]>([])
   const filteredRecords = ref<SubmissionRecord[]>([])
@@ -16,11 +11,7 @@ export const useSubmissionStore = defineStore('submission', () => {
   async function fetchRecords(filters?: SubmissionFilters): Promise<void> {
     loading.value = true
     try {
-      // 全量数据（用于计数/成长时间轴同步），首次加载后缓存
-      if (records.value.length === 0) {
-        records.value = await getSubmissionRecords()
-      }
-      // 筛选数据
+      if (records.value.length === 0) records.value = await getSubmissionRecords()
       filteredRecords.value = filters ? await getSubmissionRecords(filters) : records.value
     } finally {
       loading.value = false
@@ -29,16 +20,43 @@ export const useSubmissionStore = defineStore('submission', () => {
 
   async function withdrawRecord(id: string): Promise<void> {
     await withdrawSubmission(id)
-    // 同步更新本地状态
-    const idx = records.value.findIndex((r) => r.id === id)
-    if (idx >= 0) {
-      records.value[idx] = { ...records.value[idx], status: 'draft' }
-    }
-    const fIdx = filteredRecords.value.findIndex((r) => r.id === id)
-    if (fIdx >= 0) {
-      filteredRecords.value[fIdx] = { ...filteredRecords.value[fIdx], status: 'draft' }
-    }
+    updateLocalStatus(id, 'withdrawn')
+    await pushNotification({
+      title: '申报已撤销',
+      content: '您的申报已成功撤销。',
+      category: 'review',
+    })
   }
 
-  return { records, filteredRecords, loading, fetchRecords, withdrawRecord }
+  function updateLocalStatus(id: string, newStatus: string) {
+    const idx = records.value.findIndex((r) => r.id === id)
+    if (idx >= 0) records.value[idx] = { ...records.value[idx], status: newStatus as any }
+    const fIdx = filteredRecords.value.findIndex((r) => r.id === id)
+    if (fIdx >= 0)
+      filteredRecords.value[fIdx] = { ...filteredRecords.value[fIdx], status: newStatus as any }
+  }
+
+  function addRecord(record: SubmissionRecord) {
+    records.value.unshift(record)
+    filteredRecords.value.unshift(record)
+  }
+  function removeRecord(id: string) {
+    records.value = records.value.filter((r) => r.id !== id)
+    filteredRecords.value = filteredRecords.value.filter((r) => r.id !== id)
+  }
+  function getRecordById(id: string): SubmissionRecord | undefined {
+    return records.value.find((r) => r.id === id)
+  }
+
+  return {
+    records,
+    filteredRecords,
+    loading,
+    fetchRecords,
+    withdrawRecord,
+    updateLocalStatus,
+    addRecord,
+    removeRecord,
+    getRecordById,
+  }
 })

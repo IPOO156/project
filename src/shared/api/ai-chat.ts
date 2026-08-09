@@ -64,33 +64,63 @@ function timeStr(): string {
   return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
-function simulateAIReply(userText: string): { plain: string; rich: RichContent } {
-  const entry = matchKnowledge(userText)
+function simulateAIReply(userText: string): Promise<{ plain: string; rich: RichContent }> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const entry = matchKnowledge(userText)
 
-  if (entry.topic === '职业规划') {
-    const archiveStore = useArchiveStore()
-    const careerPlanStore = useCareerPlanStore()
-    const analysis = analyzeCareer(
-      archiveStore.dimensions,
-      archiveStore.awards,
-      archiveStore.grades,
-      careerPlanStore.plans,
-    )
+      if (entry.topic === '职业规划') {
+        const archiveStore = useArchiveStore()
+        const careerPlanStore = useCareerPlanStore()
 
-    if (analysis) {
-      careerPlanStore.setAIAnalysis(analysis)
-      const { greeting, blocks } = analysisToRichBlocks(analysis)
-      const rich: RichContent = { greeting, blocks }
-      return { plain: richToPlain(rich), rich }
-    }
+        const analysis = analyzeCareer(
+          archiveStore.dimensions,
+          archiveStore.awards,
+          archiveStore.grades,
+          careerPlanStore.plans,
+        )
 
-    if (archiveStore.dimensions.length === 0) {
-      archiveStore.fetchArchive()
-    }
-  }
+        if (analysis) {
+          careerPlanStore.setAIAnalysis(analysis)
+          const { greeting, blocks } = analysisToRichBlocks(analysis)
+          const rich: RichContent = { greeting, blocks }
+          resolve({ plain: richToPlain(rich), rich })
+          return
+        }
 
-  const plain = richToPlain(entry.rich)
-  return { plain, rich: entry.rich }
+        // 数据未就绪：先异步拉取档案数据，再重试一次分析
+        if (archiveStore.dimensions.length === 0) {
+          archiveStore
+            .fetchArchive()
+            .then(() => {
+              const retry = analyzeCareer(
+                archiveStore.dimensions,
+                archiveStore.awards,
+                archiveStore.grades,
+                careerPlanStore.plans,
+              )
+              if (retry) {
+                careerPlanStore.setAIAnalysis(retry)
+                const { greeting, blocks } = analysisToRichBlocks(retry)
+                const rich: RichContent = { greeting, blocks }
+                resolve({ plain: richToPlain(rich), rich })
+              } else {
+                const plain = richToPlain(entry.rich)
+                resolve({ plain, rich: entry.rich })
+              }
+            })
+            .catch(() => {
+              const plain = richToPlain(entry.rich)
+              resolve({ plain, rich: entry.rich })
+            })
+          return
+        }
+      }
+
+      const plain = richToPlain(entry.rich)
+      resolve({ plain, rich: entry.rich })
+    }, 800)
+  })
 }
 
 // ── API 函数 ──
@@ -102,9 +132,9 @@ export function sendMessage(
   _context?: Record<string, any>,
 ): Promise<SendMessageResult> {
   return new Promise((resolve) => {
-    setTimeout(() => {
+    setTimeout(async () => {
       const cid = conversationId ?? nextConvId()
-      const { plain, rich } = simulateAIReply(text)
+      const { plain, rich } = await simulateAIReply(text)
       const msgResult = {
         id: `ai-${Date.now()}`,
         role: 'ai' as const,

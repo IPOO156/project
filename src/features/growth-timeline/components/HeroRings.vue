@@ -402,27 +402,8 @@ const { extinguishedRings } = useRingEffects(
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hero-rings__halo::before,
-  .hero-rings__halo::after {
-    animation: none !important;
-  }
-
-  .hero-rings__scroll svg {
-    animation: none !important;
-  }
-
-  .hero-rings__title,
-  .hero-rings__desc {
-    animation: none !important;
-    opacity: 1 !important;
-  }
-
-  .hero-rings__scroll {
-    opacity: 1 !important;
-    animation: none !important;
-  }
-}
+/* 兜底规则已移至 src/assets/styles/motion-override.scss 统一管理
+   （项目内"强制启用动画"开关可一键覆盖） */
 
 .hero-rings__content {
   position: absolute;

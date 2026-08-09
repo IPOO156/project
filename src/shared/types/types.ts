@@ -46,6 +46,7 @@ export const TEACHER_ROLE_LABELS: Record<TeacherRole, string> = {
 /** 角色可访问的模块 key */
 export const ROLE_PERMISSIONS: Record<TeacherRole, string[]> = {
   super_admin: [
+    'material-review',
     'archive-export',
     'role-selection',
     'form-customization',
@@ -57,6 +58,7 @@ export const ROLE_PERMISSIONS: Record<TeacherRole, string[]> = {
     'heat-map',
   ],
   admin: [
+    'material-review',
     'archive-export',
     'role-selection',
     'form-customization',
@@ -423,7 +425,7 @@ export interface ActivityFilters {
 
 // === 消息中心 ===
 
-export type NotificationCategory = 'system' | 'approval' | 'activity' | 'message'
+export type NotificationCategory = 'review' | 'ai-feedback' | 'plan-comment' | 'announcement'
 
 export type NotificationStatus = 'read' | 'unread'
 

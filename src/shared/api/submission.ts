@@ -134,3 +134,99 @@ export function submitApplication(data: Record<string, any>): Promise<Submission
     }, 300)
   })
 }
+
+/**
+ * 提交纠错申请
+ * 后端就绪后替换为：return request.post('/submissions/correction', data)
+ */
+export function submitCorrection(_u_data: {
+  recordId: string
+  reason: string
+  changedFields: Record<string, { old: any; new: any }>
+}): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(), 300)
+  })
+}
+
+/**
+ * 推送通知
+ * 后端就绪后替换为：return request.post('/notifications/push', data)
+ */
+export function pushNotification(_u_data: Record<string, any>): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(), 200)
+  })
+}
+
+/**
+ * 获取评分指标
+ * 后端就绪后替换为：return request.get(`/score-indicators/${type}`)
+ */
+export function getScoreIndicators(
+  _u_type: string,
+): Promise<{ label: string; score: number; maxScore: number; weight: number; remark?: string }[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve([
+        { label: '材料完整性', score: 85, maxScore: 100, weight: 0.3, remark: '材料齐全' },
+        { label: '学术价值', score: 78, maxScore: 100, weight: 0.4, remark: '良好' },
+        { label: '创新性', score: 90, maxScore: 100, weight: 0.3, remark: '优秀' },
+      ])
+    }, 300)
+  })
+}
+
+/**
+ * 检查重复申报
+ * 后端就绪后替换为：return request.post('/submissions/check-duplicate', data)
+ */
+export function checkDuplicate(data: {
+  type: string
+  title?: string
+}): Promise<{ duplicate: boolean; existing?: SubmissionRecord }> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const duplicate = Math.random() < 0.3 // 30% 概率模拟重复
+      resolve({
+        duplicate,
+        existing: duplicate
+          ? {
+              id: 'existing-1',
+              type: data.type as ApplicationType,
+              typeLabel: APPLICATION_TYPE_MAP[data.type] ?? data.type,
+              title: data.title ?? '已有申报',
+              submitDate: '2026-06-15',
+              semester: '2025-2026-2',
+              status: 'submitted',
+              sourcePath: '',
+            }
+          : undefined,
+      })
+    }, 300)
+  })
+}
+
+export function getEnrollmentInfo(): Promise<Record<string, string>> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        grade: '2022级',
+        className: '计算机科学1班',
+        major: '计算机科学与技术',
+        studentId: '20220101001',
+        college: '信息工程学院',
+      })
+    }, 200)
+  })
+}
+
+export function saveDraft(_u_type: string, _data: Record<string, any>): Promise<void> {
+  return new Promise((resolve) => setTimeout(() => resolve(), 200))
+}
+export function loadDraft(_u_type: string): Promise<Record<string, any> | null> {
+  return new Promise((resolve) => setTimeout(() => resolve(null), 200))
+}
+export function deleteDraft(_type: string): Promise<void> {
+  return new Promise((resolve) => setTimeout(() => resolve(), 200))
+}

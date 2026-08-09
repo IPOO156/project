@@ -3,7 +3,8 @@ import type { RouteLocationMatched, RouteLocationNormalized } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useTabsStore } from '@/app/stores/tabs'
+import { MAX_TABS, useTabsStore } from '@/app/stores/tabs'
+
 import { findMenuItemByPath } from '@/shared/constants/menu'
 
 /**
@@ -76,23 +77,28 @@ export function useTabs() {
     const affix = resolveAffix(to)
     // 个人档案信息申报使用 query 参数切换内部模块，合并为单个 tab
     const tabPath = to.path === '/applications' ? to.path : to.fullPath
-    const added = tabsStore.addTab({
+    const result = tabsStore.addTab({
       path: tabPath,
       title,
       icon: resolveIcon(tabPath),
       closable: !affix,
       affix,
     })
-    if (!added) {
+    if (!result.ok) {
+      // 所有 tab 都是固定的，关闭失败（理论上不会发生）
+      return
+    }
+    // 自动淘汰最早非固定标签时，给出明确提示
+    if (result.evicted) {
       const now = Date.now()
       if (now - lastWarningAt > WARNING_DEBOUNCE_MS) {
         lastWarningAt = now
-        ElMessage.warning('页面标签数量已达到上限 7 个，请先关闭部分标签后再打开新页面。')
+        ElMessage({
+          type: 'warning',
+          message: `标签已达上限 ${MAX_TABS} 个，已自动关闭最早打开的「${result.evicted.title}」，并打开当前「${title}」`,
+          duration: 3500,
+        })
       }
-      // 回退到上一个激活的 tab，避免用户停留在无标签的新页面
-      const fallback = tabsStore.activePath || '/dashboard'
-      router.replace(fallback).catch(() => {})
-      return
     }
     tabsStore.setActive(tabPath)
   }
