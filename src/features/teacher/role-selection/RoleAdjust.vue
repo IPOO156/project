@@ -4,7 +4,7 @@ import { ElMessage } from 'element-plus'
  * RoleAdjust - 教师职位调整
  * 筛选路径：选择学院→选择专业→选择教师→修改职位
  */
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const filters = ref({ college: '', major: '', teacher: '' })
 const collegeOptions = ['计算机学院', '数学学院', '物理学院', '外语学院']
@@ -49,6 +49,30 @@ const roleOptions = ['管理员', '审核员', '课任教师']
 const editDialogVisible = ref(false)
 const currentTeacher = ref<any>(null)
 const selectedRole = ref('')
+
+/** 按学院/专业/教师名过滤（Mock 阶段实时过滤，接口就绪后替换） */
+const filteredTeachers = computed(() => {
+  let list = teacherList.value
+  if (filters.value.college) {
+    list = list.filter((t) => t.college === filters.value.college)
+  }
+  if (filters.value.major) {
+    list = list.filter((t) => t.major === filters.value.major)
+  }
+  if (filters.value.teacher) {
+    list = list.filter((t) => t.name === filters.value.teacher)
+  }
+  return list
+})
+
+function handleQuery() {
+  ElMessage.success(`查询到 ${filteredTeachers.value.length} 名教师`)
+}
+
+function handleResetFilters() {
+  filters.value = { college: '', major: '', teacher: '' }
+  ElMessage.success('筛选条件已重置')
+}
 
 function handleEdit(teacher: any) {
   currentTeacher.value = teacher
@@ -102,8 +126,8 @@ function handleSave() {
           </el-form-item>
         </el-col>
         <el-col :xs="8" :sm="6">
-          <el-button type="primary">查询</el-button>
-          <el-button>重置</el-button>
+          <el-button type="primary" @click="handleQuery">查询</el-button>
+          <el-button @click="handleResetFilters">重置</el-button>
         </el-col>
       </el-row>
     </el-card>
@@ -113,7 +137,7 @@ function handleSave() {
       <template #header>
         <span class="section-title">教师列表</span>
       </template>
-      <el-table :data="teacherList" stripe>
+      <el-table :data="filteredTeachers" stripe>
         <el-table-column prop="name" label="姓名" width="120" />
         <el-table-column prop="college" label="学院" width="140" />
         <el-table-column prop="major" label="专业" width="180" />

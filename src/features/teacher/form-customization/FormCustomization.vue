@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 /**
  * FormCustomization - 表单自定义
  * 添加菜单→输入新增项目→发布信息
@@ -48,7 +48,16 @@ function handleToggle(item: any) {
   ElMessage.success(`项目已${item.status === 'published' ? '发布' : '下架'}`)
 }
 
-function handleDelete(id: number) {
+async function handleDelete(id: number) {
+  try {
+    await ElMessageBox.confirm('确认删除该项目？删除后学生将无法申报该类别。', '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
   formItems.value = formItems.value.filter((i) => i.id !== id)
   ElMessage.success('项目已删除')
 }
@@ -58,11 +67,19 @@ function handlePublishAll() {
   ElMessage.success('全部信息已发布')
 }
 
+/** 排序变更后同步每个项目的 order 序号 */
+function syncOrders() {
+  formItems.value.forEach((item, idx) => {
+    item.order = idx + 1
+  })
+}
+
 function moveUp(index: number) {
   if (index > 0) {
     const temp = formItems.value[index]
     formItems.value[index] = formItems.value[index - 1]
     formItems.value[index - 1] = temp
+    syncOrders()
   }
 }
 
@@ -71,6 +88,7 @@ function moveDown(index: number) {
     const temp = formItems.value[index]
     formItems.value[index] = formItems.value[index + 1]
     formItems.value[index + 1] = temp
+    syncOrders()
   }
 }
 </script>

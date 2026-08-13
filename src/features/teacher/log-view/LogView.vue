@@ -9,6 +9,7 @@ import { RefreshCw, Search } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 
 import { useUserStore } from '@/app/stores/stores'
+import { LOG_ACTION_TYPES } from '@/shared/constants/dict'
 import LogTable from './components/LogTable.vue'
 
 const userStore = useUserStore()
@@ -22,14 +23,10 @@ const filters = ref({
   actionType: '',
 })
 
+// 操作类型选项：统一从 LOG_ACTION_TYPES 派生，与 LogTable 共享同一字典
 const actionTypeOptions = [
   { value: '', label: '全部类型' },
-  { value: 'create', label: '新增' },
-  { value: 'update', label: '修改' },
-  { value: 'delete', label: '删除' },
-  { value: 'review', label: '审核' },
-  { value: 'login', label: '登录' },
-  { value: 'export', label: '导出' },
+  ...Object.entries(LOG_ACTION_TYPES).map(([value, { label }]) => ({ value, label })),
 ]
 
 const logList = ref([
@@ -163,8 +160,37 @@ function handleViewSnapshot(row: any) {
   snapshotVisible.value = true
 }
 
+/** 按筛选条件过滤日志（Mock 阶段基于 target/time/actionType 匹配，接口就绪后替换） */
+const filteredLogs = computed(() => {
+  let list = logList.value
+  if (filters.value.grade) {
+    list = list.filter((l) => (l.target || l.action || '').includes(filters.value.grade))
+  }
+  if (filters.value.college) {
+    list = list.filter((l) => (l.target || l.action || '').includes(filters.value.college))
+  }
+  if (filters.value.major) {
+    list = list.filter((l) => (l.target || l.action || '').includes(filters.value.major))
+  }
+  if (filters.value.actionType) {
+    list = list.filter((l) => l.actionType === filters.value.actionType)
+  }
+  if (filters.value.dateRange?.length === 2) {
+    const [start, end] = filters.value.dateRange
+    if (start && end) {
+      list = list.filter((l) => l.time.slice(0, 10) >= start && l.time.slice(0, 10) <= end)
+    }
+  }
+  return list
+})
+
 function handleSearch() {
-  ElMessage.success('查询完成')
+  ElMessage.success(`查询到 ${filteredLogs.value.length} 条记录`)
+}
+
+function handleReset() {
+  filters.value = { grade: '', college: '', major: '', dateRange: [], actionType: '' }
+  ElMessage.success('筛选条件已重置')
 }
 </script>
 
@@ -233,7 +259,7 @@ function handleSearch() {
           <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
         </el-col>
         <el-col :xs="12" :sm="4" :md="2">
-          <el-button :icon="RefreshCw" @click="handleSearch">刷新</el-button>
+          <el-button :icon="RefreshCw" @click="handleReset">刷新</el-button>
         </el-col>
       </el-row>
     </el-card>
@@ -243,14 +269,19 @@ function handleSearch() {
       <template #header>
         <div class="log-view__header">
           <span class="section-title">操作记录</span>
-          <span class="log-view__total">共 {{ logList.length }} 条记录</span>
+          <span class="log-view__total">共 {{ filteredLogs.length }} 条记录</span>
         </div>
       </template>
 
-      <LogTable :data="logList" @view="handleViewSnapshot" />
+      <LogTable :data="filteredLogs" @view="handleViewSnapshot" />
 
       <div class="log-view__pagination">
-        <el-pagination :total="256" :page-size="10" layout="prev, pager, next, total" small />
+        <el-pagination
+          :total="filteredLogs.length"
+          :page-size="10"
+          layout="prev, pager, next, total"
+          small
+        />
       </div>
     </el-card>
 

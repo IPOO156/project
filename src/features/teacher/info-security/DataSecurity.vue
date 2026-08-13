@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { CheckCircle2, Database, Eye, KeyRound, RefreshCw } from 'lucide-vue-next'
 import { ref } from 'vue'
 
@@ -60,6 +60,23 @@ const backupHistory = ref([
 function handleBackup() {
   ElMessage.success('手动备份已启动')
 }
+
+async function handleRestore(row: any) {
+  try {
+    await ElMessageBox.confirm(
+      `确认恢复到备份「${row.date}」？恢复后将覆盖当前数据，操作不可撤销。`,
+      '恢复确认',
+      {
+        confirmButtonText: '确认恢复',
+        cancelButtonText: '取消',
+        type: 'warning',
+      },
+    )
+  } catch {
+    return
+  }
+  ElMessage.success('数据恢复任务已启动')
+}
 </script>
 
 <template>
@@ -111,7 +128,12 @@ function handleBackup() {
         </el-table-column>
         <el-table-column label="操作" width="100">
           <template #default="{ row }">
-            <el-button v-if="row.status === 'success'" link size="small" :icon="Database"
+            <el-button
+              v-if="row.status === 'success'"
+              link
+              size="small"
+              :icon="Database"
+              @click="handleRestore(row)"
               >恢复</el-button
             >
           </template>

@@ -28,7 +28,8 @@ export default defineConfig({
     preprocessorOptions: {
       scss: {
         api: 'legacy',
-        additionalData: `@use "${srcDir}/assets/styles/variables.scss" as *;\n`,
+        additionalData: `@use "variables.scss" as *;\n`,
+        includePaths: [resolve(__dirname, 'src/assets/styles')],
       },
     },
   },

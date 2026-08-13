@@ -95,6 +95,10 @@ const statusLabel: Record<string, string> = { normal: '正常', warning: '告警
 function handleRefresh(item: any) {
   ElMessage.success(`${item.name || '设备'} 状态已刷新`)
 }
+
+function handleRefreshAll() {
+  ElMessage.success('全部设备状态已刷新')
+}
 </script>
 
 <template>
@@ -103,7 +107,7 @@ function handleRefresh(item: any) {
       <el-row justify="space-between" align="middle">
         <el-col :span="12"><span class="section-title">硬件设备状态总览</span></el-col>
         <el-col :span="12" style="text-align: right">
-          <el-button :icon="RefreshCw" @click="ElMessage.success('状态已刷新')">刷新状态</el-button>
+          <el-button :icon="RefreshCw" @click="handleRefreshAll">刷新状态</el-button>
         </el-col>
       </el-row>
     </el-card>

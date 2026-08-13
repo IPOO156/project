@@ -197,6 +197,9 @@ export const teacherModules: TeacherModule[] = [
 
 /**
  * 根据角色获取有权限的菜单项
+ *
+ * 权限过滤在模块（module）粒度进行：子菜单项共享所属模块的权限，
+ * 因此模块通过过滤后其 children 一并保留，无需重复做子项过滤。
  */
 export function getTeacherMenuItems(role: TeacherRole | undefined): TeacherMenuItem[] {
   const allowedPermissions = role ? (ROLE_PERMISSIONS[role] ?? []) : []
@@ -208,11 +211,27 @@ export function getTeacherMenuItems(role: TeacherRole | undefined): TeacherMenuI
       return allowedPermissions.includes(mod.permission)
     })
     .sort((a, b) => a.order - b.order)
-    .map((mod) => ({
-      ...mod.menuItems[0],
-      children: mod.menuItems[0].children?.filter((child) => {
-        if (!child.permission) return true
-        return allowedPermissions.includes(child.permission)
-      }),
-    }))
+    .map((mod) => mod.menuItems[0])
+}
+
+/**
+ * 根据路径查找教师端菜单项（递归查找子菜单）。
+ * 用于标签栏根据当前路由匹配图标（教师端路由以 /teacher 为前缀）。
+ */
+export function findTeacherMenuItemByPath(
+  path: string,
+  items: TeacherMenuItem[] = teacherModules.map((m) => m.menuItems[0]),
+): TeacherMenuItem | undefined {
+  for (const item of items) {
+    if (item.path === path) {
+      return item
+    }
+    if (item.children) {
+      const found = findTeacherMenuItemByPath(path, item.children)
+      if (found) {
+        return found
+      }
+    }
+  }
+  return undefined
 }

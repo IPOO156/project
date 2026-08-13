@@ -74,7 +74,9 @@ function switchToStudent() {
     </div>
 
     <div class="header__right">
+      <!-- 通知铃铛：学生端可用；教师端暂无独立消息中心，隐藏避免跳转到学生端页面 -->
       <el-badge
+        v-if="!isTeacher"
         :value="notificationStore.unreadCount"
         :hidden="notificationStore.unreadCount === 0"
         class="header__action"

@@ -97,7 +97,7 @@ function getFieldLabel(key: string): string {
 <template>
   <el-dialog
     :model-value="visible"
-    :title="record ? `${record.name} - ${record.type}` : '审核详情'"
+    :title="record ? `${record.name} - ${record.typeLabel ?? record.type}` : '审核详情'"
     width="700px"
     top="5vh"
     :close-on-click-modal="false"
@@ -112,10 +112,12 @@ function getFieldLabel(key: string): string {
             <el-descriptions-item label="姓名">{{ record.name }}</el-descriptions-item>
             <el-descriptions-item label="学号">{{ record.studentId }}</el-descriptions-item>
             <el-descriptions-item label="班级">{{ record.className }}</el-descriptions-item>
-            <el-descriptions-item label="申报类型">{{ record.type }}</el-descriptions-item>
+            <el-descriptions-item label="申报类型">{{
+              record.typeLabel ?? record.type
+            }}</el-descriptions-item>
             <el-descriptions-item label="提交时间">{{ record.submitDate }}</el-descriptions-item>
           </el-descriptions>
-          <div class="review-panel__section-title" style="margin-top: 16px">填报内容</div>
+          <div class="review-panel__section-title review-panel__section-title--gap">填报内容</div>
           <el-descriptions :column="1" border size="small">
             <el-descriptions-item
               v-for="field in formFields"
@@ -184,6 +186,10 @@ function getFieldLabel(key: string): string {
     margin-bottom: $spacing-md;
     padding-bottom: $spacing-sm;
     border-bottom: 1px solid var(--el-border-color-light);
+
+    &--gap {
+      margin-top: $spacing-lg;
+    }
   }
   &__files {
     display: flex;

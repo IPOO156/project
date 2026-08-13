@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { LogActionTag } from '@/shared/constants/dict'
 import { computed } from 'vue'
 import { useUserStore } from '@/app/stores/stores'
+import { LOG_ACTION_TYPES } from '@/shared/constants/dict'
 
 interface Props {
   data: any[]
@@ -32,27 +34,12 @@ function maskIp(ip: string) {
         .map((p, i) => (i >= 2 ? '*' : p))
         .join('.')
 }
-function getActionTypeTag(type: string) {
-  const m: Record<string, string> = {
-    create: 'success',
-    update: 'warning',
-    delete: 'danger',
-    review: 'primary',
-    login: 'info',
-    export: '',
-  }
-  return m[type] || 'info'
+/** 操作类型标签颜色：统一走 LOG_ACTION_TYPES 集中字典 */
+function getActionTypeTag(type: string): LogActionTag {
+  return LOG_ACTION_TYPES[type]?.tag ?? 'info'
 }
-function getActionTypeLabel(type: string) {
-  const m: Record<string, string> = {
-    create: '新增',
-    update: '修改',
-    delete: '删除',
-    review: '审核',
-    login: '登录',
-    export: '导出',
-  }
-  return m[type] || type
+function getActionTypeLabel(type: string): string {
+  return LOG_ACTION_TYPES[type]?.label ?? type
 }
 </script>
 
@@ -67,7 +54,7 @@ function getActionTypeLabel(type: string) {
     <el-table-column prop="role" label="角色" width="90" />
     <el-table-column label="操作类型" width="90"
       ><template #default="{ row }"
-        ><el-tag :type="getActionTypeTag(row.actionType) as any" size="small">{{
+        ><el-tag :type="getActionTypeTag(row.actionType)" size="small">{{
           getActionTypeLabel(row.actionType)
         }}</el-tag></template
       ></el-table-column
@@ -76,9 +63,7 @@ function getActionTypeLabel(type: string) {
     <el-table-column label="操作对象" width="160"
       ><template #default="{ row }"
         ><div>{{ maskName(row.target) }}</div>
-        <div style="font-size: 11px; color: var(--el-text-color-secondary)">
-          {{ maskStudentId(row.targetId) }}
-        </div></template
+        <div class="log-table__target-id">{{ maskStudentId(row.targetId) }}</div></template
       ></el-table-column
     >
     <el-table-column label="IP 地址" width="130"
@@ -106,5 +91,9 @@ function getActionTypeLabel(type: string) {
 .no-data {
   color: var(--el-text-color-placeholder);
   font-size: 12px;
+}
+.log-table__target-id {
+  font-size: 11px;
+  color: var(--el-text-color-secondary);
 }
 </style>

@@ -5,7 +5,7 @@ import { ElMessage } from 'element-plus'
  * 选择账号→查看信息→修改密码/权限/基础信息
  */
 import { Eye, Lock, Pencil } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 const search = ref({ keyword: '', grade: '', major: '' })
 const studentList = ref([
@@ -14,6 +14,8 @@ const studentList = ref([
     name: '张三',
     studentId: '2024060001',
     className: '计科2401班',
+    grade: '2024级',
+    major: '计算机科学与技术',
     status: 'active',
     lastLogin: '2026-07-08',
   },
@@ -22,6 +24,8 @@ const studentList = ref([
     name: '李四',
     studentId: '2024060002',
     className: '计科2401班',
+    grade: '2024级',
+    major: '计算机科学与技术',
     status: 'active',
     lastLogin: '2026-07-07',
   },
@@ -30,10 +34,32 @@ const studentList = ref([
     name: '王五',
     studentId: '2024060003',
     className: '计科2401班',
+    grade: '2024级',
+    major: '计算机科学与技术',
     status: 'inactive',
     lastLogin: '2026-06-20',
   },
 ])
+
+/** 按关键字/年级/专业过滤（Mock 阶段实时过滤，接口就绪后替换为真实查询） */
+const filteredStudents = computed(() => {
+  let list = studentList.value
+  const kw = search.value.keyword.trim()
+  if (kw) {
+    list = list.filter((s) => s.name.includes(kw) || s.studentId.includes(kw))
+  }
+  if (search.value.grade) {
+    list = list.filter((s) => s.grade === search.value.grade)
+  }
+  if (search.value.major) {
+    list = list.filter((s) => s.major === search.value.major)
+  }
+  return list
+})
+
+function handleQuery() {
+  ElMessage.success(`查询到 ${filteredStudents.value.length} 名学生`)
+}
 
 const detailDialogVisible = ref(false)
 const editDialogVisible = ref(false)
@@ -59,6 +85,14 @@ function editInfo(student: any) {
 }
 
 function saveEdit() {
+  if (!currentStudent.value) return
+  // 同步更新列表中的姓名与状态（Mock 阶段；邮箱/手机字段接口就绪后补全）
+  const target = studentList.value.find((s) => s.id === currentStudent.value.id)
+  if (target) {
+    target.name = editForm.value.name
+    target.status = editForm.value.status
+    currentStudent.value = target
+  }
   ElMessage.success('信息已更新')
   editDialogVisible.value = false
 }
@@ -96,13 +130,13 @@ function savePassword() {
             <el-option label="计算机科学与技术" value="计算机科学与技术" />
             <el-option label="软件工程" value="软件工程" /> </el-select
         ></el-col>
-        <el-col :span="4"><el-button type="primary">查询</el-button></el-col>
+        <el-col :span="4"><el-button type="primary" @click="handleQuery">查询</el-button></el-col>
       </el-row>
     </el-card>
 
     <el-card>
       <template #header><span class="section-title">学生账号列表</span></template>
-      <el-table :data="studentList" stripe>
+      <el-table :data="filteredStudents" stripe>
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="studentId" label="学号" width="140" />
         <el-table-column prop="className" label="班级" width="140" />
@@ -122,6 +156,14 @@ function savePassword() {
           </template>
         </el-table-column>
       </el-table>
+      <div class="student-account__pagination">
+        <el-pagination
+          :total="filteredStudents.length"
+          :page-size="10"
+          layout="prev, pager, next, total"
+          small
+        />
+      </div>
     </el-card>
 
     <el-dialog v-model="detailDialogVisible" title="学生详情" width="500px">
@@ -183,6 +225,11 @@ function savePassword() {
   gap: $spacing-lg;
   &__filters {
     margin-bottom: 0;
+  }
+  &__pagination {
+    margin-top: $spacing-lg;
+    display: flex;
+    justify-content: flex-end;
   }
 }
 .section-title {

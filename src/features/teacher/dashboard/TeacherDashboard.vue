@@ -140,10 +140,7 @@ const recentLogs = ref([
               <p class="stat-card__label">{{ card.label }}</p>
               <p class="stat-card__value">{{ card.value }}</p>
             </div>
-            <div
-              class="stat-card__icon"
-              :style="{ background: `${card.color}15`, color: card.color }"
-            >
+            <div class="stat-card__icon" :style="{ '--chip': card.color }">
               <component :is="card.icon" :size="24" />
             </div>
           </div>
@@ -166,13 +163,7 @@ const recentLogs = ref([
               class="quick-link-card"
               @click="router.push(link.path)"
             >
-              <div
-                class="quick-link-card__icon"
-                :style="{
-                  background: 'var(--el-color-primary-light-9)',
-                  color: 'var(--el-color-primary)',
-                }"
-              >
+              <div class="quick-link-card__icon">
                 <component :is="link.icon" :size="22" />
               </div>
               <span class="quick-link-card__label">{{ link.label }}</span>
@@ -222,17 +213,32 @@ const recentLogs = ref([
   }
 
   &__welcome {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(135deg, var(--el-color-primary-light-9), var(--el-bg-color));
+    overflow: hidden;
+    background: linear-gradient(120deg, var(--el-color-primary-light-9) 0%, var(--el-bg-color) 62%);
     border: 1px solid var(--el-border-color-light);
-    border-radius: $radius-lg;
+    border-radius: $radius-xl;
     padding: $spacing-xl $spacing-2xl;
+
+    // 右上角品牌金晕，营造档案册质感
+    &::after {
+      content: '';
+      position: absolute;
+      right: -60px;
+      top: -60px;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba($color-accent, 0.16), transparent 70%);
+      pointer-events: none;
+    }
   }
 
   &__greeting {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 700;
     color: var(--el-text-color-primary);
     margin-bottom: 4px;
@@ -244,13 +250,25 @@ const recentLogs = ref([
   }
 
   &__role-tag {
-    display: inline-block;
-    padding: 4px 14px;
-    background: var(--el-color-primary);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 16px;
+    background: linear-gradient(135deg, var(--el-color-primary), $color-primary-light);
     color: #fff;
     border-radius: 20px;
     font-size: 13px;
     font-weight: 500;
+    box-shadow: 0 4px 12px rgba($color-primary, 0.22);
+
+    &::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: $color-accent-light;
+    }
   }
 
   &__stats {
@@ -305,11 +323,17 @@ const recentLogs = ref([
   &__icon {
     width: 48px;
     height: 48px;
-    border-radius: $radius-lg;
+    border-radius: $radius-xl;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    // 用 CSS 变量注入语义色，统一生成淡色底 + 描边 + 高光
+    background: color-mix(in srgb, var(--chip, var(--el-color-primary)) 12%, transparent);
+    color: var(--chip, var(--el-color-primary));
+    box-shadow: inset 0 0 0 1px
+      color-mix(in srgb, var(--chip, var(--el-color-primary)) 16%, transparent);
+    transition: transform 0.25s $ease-standard;
   }
 }
 
@@ -332,10 +356,9 @@ const recentLogs = ref([
   gap: $spacing-sm;
   padding: $spacing-xl;
   border: 1px solid var(--el-border-color-lighter);
-  transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   border-radius: $radius-lg;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
 
   &:hover {
     transform: translateY(-2px);
@@ -350,10 +373,18 @@ const recentLogs = ref([
   &__icon {
     width: 48px;
     height: 48px;
-    border-radius: $radius-lg;
+    border-radius: $radius-xl;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: linear-gradient(145deg, var(--el-color-primary-light-9), rgba($color-accent, 0.16));
+    color: var(--el-color-primary);
+    box-shadow: inset 0 0 0 1px rgba($color-accent, 0.28);
+    transition: transform 0.25s $ease-standard;
+  }
+
+  &:hover &__icon {
+    transform: scale(1.06) rotate(-3deg);
   }
 
   &__label {

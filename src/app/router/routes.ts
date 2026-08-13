@@ -1,5 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
+import { ROLE_PERMISSIONS } from '@/shared/types/types'
 import teacherRoutes from './teacher-routes'
 
 const routes: RouteRecordRaw[] = [
@@ -207,7 +208,7 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
-  // 教师端路由需 teacher 登录类型
+  // 教师端路由需 teacher 登录类型 + 模块权限校验
   if (to.meta?.teacher) {
     const userCache = localStorage.getItem('user_info_cache')
     if (userCache) {
@@ -216,6 +217,14 @@ router.beforeEach((to, _from, next) => {
         if (info.loginType !== 'teacher') {
           next({ path: '/dashboard' })
           return
+        }
+        // 模块权限校验：未授权角色直接访问 URL 时重定向回教师首页，防止绕过菜单
+        if (to.meta?.permission) {
+          const allowed = info.role ? (ROLE_PERMISSIONS[info.role] ?? []) : []
+          if (!allowed.includes(to.meta.permission)) {
+            next({ path: '/teacher/dashboard' })
+            return
+          }
         }
       } catch {
         next({ path: '/login' })

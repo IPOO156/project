@@ -1,0 +1,111 @@
+@use './variables.scss' as *;
+
+// =============================================================================
+// 教师端（管理员）控制台视觉层
+//
+// 全部规则限定在 `#app .layout--teacher` 作用域（DefaultLayout 按登录类型注入
+// `layout--teacher` 类），因此仅管理员端生效，不影响学生端。
+//
+// 设计目标（沿用 ui-ux-pro-max "Data-Dense Dashboard" 思路）：
+//   在保留品牌色「深海蓝 #1e3a5f + 琥珀金 #d4a574」的前提下，强化
+//   「校园档案审核工作台」的质感 —— 档案丝带强调条、数据密集表格、
+//   KPI 数值感、克制的悬浮反馈。全部颜色使用 Element Plus 语义变量，
+//   自动适配日间/夜间模式。
+// =============================================================================
+
+#app .layout--teacher {
+  /* ── 卡片：统一圆角、克制的悬浮反馈 ── */
+  .el-card {
+    border-radius: $radius-lg;
+    border-color: var(--el-border-color-light);
+    transition:
+      box-shadow 0.25s $ease-standard,
+      border-color 0.25s $ease-standard;
+
+    &:hover {
+      box-shadow: $shadow-base;
+      border-color: rgba($color-accent, 0.4);
+    }
+  }
+
+  /* 卡片头部：左侧「档案丝带」强调条（琥珀金→深海蓝渐变） */
+  .el-card__header {
+    position: relative;
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 14px;
+      bottom: 14px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+      background: linear-gradient(180deg, var(--el-color-primary), var(--mc-accent, $color-accent));
+    }
+  }
+
+  /* ── 页面小标题：统一字号与字距，强化层级 ── */
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  /* ── KPI 统计卡（TeacherDashboard / 材料审核等共用 .stat-card） ── */
+  .stat-card {
+    border-color: var(--el-border-color-light);
+    transition:
+      transform 0.25s $ease-standard,
+      box-shadow 0.25s $ease-standard,
+      border-color 0.25s $ease-standard;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: $shadow-lg;
+      border-color: rgba($color-accent, 0.45);
+    }
+
+    &__value {
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  /* ── 表格：表头品牌淡色、行悬浮品牌高亮 ── */
+  .el-table {
+    --el-table-header-bg-color: rgba($color-primary, 0.05);
+    --el-table-row-hover-bg-color: rgba($color-primary, 0.03);
+
+    th.el-table__cell {
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+      background-color: var(--el-table-header-bg-color);
+    }
+  }
+
+  /* ── 主按钮：轻投影增加按钮浮起感 ── */
+  .el-button--primary {
+    box-shadow: 0 1px 2px rgba($color-primary, 0.18);
+  }
+
+  /* ── 标签：统一为更柔和的高光样式 ── */
+  .el-tag {
+    border-radius: $radius-sm;
+  }
+
+  /* ── 空态 ── */
+  .el-empty {
+    .el-empty__description p {
+      color: var(--el-text-color-secondary);
+    }
+  }
+
+  /* ── 尊重减少动画偏好 ── */
+  @media (prefers-reduced-motion: reduce) {
+    .el-card,
+    .stat-card {
+      transition: none;
+    }
+  }
+}

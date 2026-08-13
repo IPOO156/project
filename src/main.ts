@@ -11,6 +11,7 @@ import 'element-plus/theme-chalk/dark/css-vars.css'
 import './assets/styles/themes.css'
 import './assets/styles/global.scss'
 import './assets/styles/motion-override.scss'
+import './assets/styles/teacher-console.scss'
 import './shared/utils/echarts-setup'
 
 // 项目动画策略：始终启用，不受系统 prefers-reduced-motion 影响

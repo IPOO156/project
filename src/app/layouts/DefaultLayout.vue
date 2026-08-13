@@ -92,6 +92,7 @@ watch(isLoading, async (loading) => {
       'layout--collapsed': appStore.isSidebarCollapsed,
       'layout--mobile': appStore.isMobile,
       'layout--has-footer': hasFooter,
+      'layout--teacher': userStore.isTeacher,
     }"
   >
     <!-- 侧边栏（折叠/展开动画：280ms 横向滑入） -->
@@ -183,9 +184,11 @@ watch(isLoading, async (loading) => {
       {{ userStore.userName }}
     </div>
 
-    <!-- AI 悬浮球 -->
-    <AIFloatingBall :open="drawerVisible" @toggle="drawerVisible = !drawerVisible" />
-    <AIChatDrawer :visible="drawerVisible" @close="drawerVisible = false" />
+    <!-- AI 悬浮球：仅学生端展示（教师端不提供 AI 助手入口） -->
+    <template v-if="!userStore.isTeacher">
+      <AIFloatingBall :open="drawerVisible" @toggle="drawerVisible = !drawerVisible" />
+      <AIChatDrawer :visible="drawerVisible" @close="drawerVisible = false" />
+    </template>
 
     <!-- 人性化问候通知条 -->
     <GreetingToast

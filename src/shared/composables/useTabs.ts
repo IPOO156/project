@@ -5,6 +5,7 @@ import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MAX_TABS, useTabsStore } from '@/app/stores/tabs'
 
+import { findTeacherMenuItemByPath } from '@/shared/config/teacherModuleRegistry'
 import { findMenuItemByPath } from '@/shared/constants/menu'
 
 /**
@@ -55,12 +56,15 @@ export function useTabs() {
 
   /**
    * 根据路由路径匹配菜单图标。
-   * - 优先从菜单配置中查找（与侧边栏保持一致）
-   * - 未找到时返回 undefined，标签栏不显示图标
+   * - 优先从学生端菜单配置中查找（与侧边栏保持一致）
+   * - 教师端路由（/teacher 前缀）回退到教师端菜单查找
+   * - 均未找到时返回 undefined，标签栏不显示图标
    */
   function resolveIcon(path: string): Component | undefined {
-    const menuItem = findMenuItemByPath(path)
-    return menuItem?.icon
+    if (path.startsWith('/teacher')) {
+      return findTeacherMenuItemByPath(path)?.icon
+    }
+    return findMenuItemByPath(path)?.icon
   }
 
   function handleRoute(to: RouteLocationNormalized) {

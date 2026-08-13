@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 /**
  * ArchiveExport - 档案导出
  * 筛选维度：全校 / 选择学院→选择专业→选择班级
@@ -73,15 +73,34 @@ const exportRecords = ref([
 const scopeOptions = ['全校', '选择学院', '选择专业', '选择班级']
 const statusOptions = ['全部', '已完成', '处理中', '失败']
 
-const statusMap: Record<string, { label: string; type: string }> = {
+type TagType = 'success' | 'warning' | 'danger' | 'info'
+const statusMap: Record<string, { label: string; type: TagType }> = {
   completed: { label: '已完成', type: 'success' },
   processing: { label: '处理中', type: 'warning' },
   failed: { label: '失败', type: 'danger' },
 }
 
-function statusType(status: string): string {
+function statusType(status: string): TagType {
   return statusMap[status]?.type ?? 'info'
 }
+
+/** 按状态 / 时间范围过滤导出记录（Mock 阶段实时过滤，接口就绪后替换） */
+const filteredExportRecords = computed(() => {
+  let list = exportRecords.value
+  if (filters.value.status) {
+    const key = Object.entries(statusMap).find(([, v]) => v.label === filters.value.status)?.[0]
+    if (key) list = list.filter((r) => r.status === key)
+  }
+  if (filters.value.dateRange?.length === 2) {
+    const [start, end] = filters.value.dateRange
+    if (start && end) {
+      list = list.filter(
+        (r) => r.createdAt.slice(0, 10) >= start && r.createdAt.slice(0, 10) <= end,
+      )
+    }
+  }
+  return list
+})
 
 // ── 超级管理员专属功能 ──
 const semesterDialogVisible = ref(false)
@@ -96,12 +115,38 @@ function handleExport() {
   ElMessage.success('导出任务已创建，请稍后在列表中查看')
 }
 
-function handleDeleteExport(_id: number) {
+async function handleDeleteExport(id: number) {
+  try {
+    await ElMessageBox.confirm('确认删除该导出记录？删除后不可恢复。', '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  exportRecords.value = exportRecords.value.filter((r) => r.id !== id)
   ElMessage.success('导出记录已删除')
 }
 
 function handleBatchExport() {
   ElMessage.success('批量导出任务已提交')
+}
+
+function handleExportBasic() {
+  ElMessage.success('基本信息导出任务已提交')
+}
+
+function handleDownload(row: any) {
+  ElMessage.success(`已开始下载「${row.fileName}」`)
+}
+
+function handleQuery() {
+  ElMessage.success(`查询到 ${filteredExportRecords.value.length} 条记录`)
+}
+
+function handleDeleteTeacherExport() {
+  ElMessage.info('请先在列表中选择要删除的教师导出记录')
 }
 
 function addSemester() {
@@ -160,7 +205,7 @@ function handleImport() {
           </el-form-item>
         </el-col>
         <el-col :xs="12" :sm="4">
-          <el-button type="primary" :icon="Search">查询</el-button>
+          <el-button type="primary" :icon="Search" @click="handleQuery">查询</el-button>
         </el-col>
         <el-col :xs="12" :sm="4" class="archive-export__actions">
           <el-button type="primary" :icon="Download" @click="handleExport">新建导出</el-button>
@@ -173,8 +218,10 @@ function handleImport() {
       <el-row :gutter="8">
         <el-col :span="12">
           <el-button :icon="Download" @click="handleBatchExport">导出学生文件</el-button>
-          <el-button :icon="FileDown" @click="handleBatchExport">一键导出基本信息</el-button>
-          <el-button :icon="Trash2" type="danger" plain>教师删除导出</el-button>
+          <el-button :icon="FileDown" @click="handleExportBasic">一键导出基本信息</el-button>
+          <el-button :icon="Trash2" type="danger" plain @click="handleDeleteTeacherExport"
+            >教师删除导出</el-button
+          >
         </el-col>
         <el-col :span="12" style="text-align: right">
           <template v-if="isSuperAdmin">
@@ -218,7 +265,7 @@ function handleImport() {
       <template #header>
         <span class="section-title">导出记录</span>
       </template>
-      <el-table :data="exportRecords" stripe style="width: 100%">
+      <el-table :data="filteredExportRecords" stripe style="width: 100%">
         <el-table-column prop="fileName" label="文件名" min-width="240">
           <template #default="{ row }">
             <div class="file-name">
@@ -229,7 +276,7 @@ function handleImport() {
         </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status) as any" size="small">
+            <el-tag :type="statusType(row.status)" size="small">
               {{ statusMap[row.status]?.label }}
             </el-tag>
           </template>
@@ -241,7 +288,13 @@ function handleImport() {
         <el-table-column prop="updatedAt" label="更新时间" width="170" />
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.status === 'completed'" link type="primary" size="small">
+            <el-button
+              v-if="row.status === 'completed'"
+              link
+              type="primary"
+              size="small"
+              @click="handleDownload(row)"
+            >
               <Download :size="14" /> 下载
             </el-button>
             <el-button link type="danger" size="small" @click="handleDeleteExport(row.id)">
@@ -252,7 +305,12 @@ function handleImport() {
       </el-table>
 
       <div class="archive-export__pagination">
-        <el-pagination :total="50" :page-size="10" layout="prev, pager, next, total" small />
+        <el-pagination
+          :total="filteredExportRecords.length"
+          :page-size="10"
+          layout="prev, pager, next, total"
+          small
+        />
       </div>
     </el-card>
 
@@ -277,14 +335,10 @@ function handleImport() {
     >
       <el-upload drag :auto-upload="false" accept=".xlsx,.xls">
         <template #default>
-          <div style="padding: 20px">
-            <Upload :size="40" style="color: var(--el-color-primary); margin-bottom: 12px" />
-            <p style="font-size: 14px; color: var(--el-text-color-primary); margin-bottom: 4px">
-              拖拽文件到此处，或点击上传
-            </p>
-            <p style="font-size: 12px; color: var(--el-text-color-secondary)">
-              仅支持 .xlsx / .xls 格式
-            </p>
+          <div class="upload-hint">
+            <Upload :size="40" class="upload-hint__icon" />
+            <p class="upload-hint__title">拖拽文件到此处，或点击上传</p>
+            <p class="upload-hint__desc">仅支持 .xlsx / .xls 格式</p>
           </div>
         </template>
       </el-upload>
@@ -337,5 +391,23 @@ function handleImport() {
   gap: $spacing-sm;
   color: var(--el-color-primary);
   font-weight: 500;
+}
+
+// 导入弹窗上传区提示
+.upload-hint {
+  padding: $spacing-xl;
+  &__icon {
+    color: var(--el-color-primary);
+    margin-bottom: $spacing-sm;
+  }
+  &__title {
+    font-size: 14px;
+    color: var(--el-text-color-primary);
+    margin-bottom: 4px;
+  }
+  &__desc {
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
 }
 </style>

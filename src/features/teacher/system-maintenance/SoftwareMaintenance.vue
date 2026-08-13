@@ -1,6 +1,11 @@
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
 import { AlertTriangle, Bug, CheckCircle2, RefreshCw, Shield, Zap } from 'lucide-vue-next'
 import { ref } from 'vue'
+
+function handleUpdate(item: any) {
+  ElMessage.success(`已发起「${item.name}」的更新`)
+}
 
 const softwareItems = ref([
   {
@@ -94,7 +99,9 @@ const maintenanceTypes = [
             <span class="software-item__update">上次更新：{{ item.lastUpdate }}</span>
             <span class="software-item__next">下次计划：{{ item.nextUpdate }}</span>
             <span v-if="item.alarm" class="software-item__alarm">{{ item.alarm }}</span>
-            <el-button size="small" type="primary" plain>更新</el-button>
+            <el-button size="small" type="primary" plain @click="handleUpdate(item)"
+              >更新</el-button
+            >
           </div>
         </div>
       </div>
@@ -115,7 +122,6 @@ const maintenanceTypes = [
 }
 .maint-type-card {
   text-align: center;
-  cursor: pointer;
   transition: all 0.2s;
   &:hover {
     transform: translateY(-2px);

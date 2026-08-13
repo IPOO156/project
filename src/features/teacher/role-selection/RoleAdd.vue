@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { UserPlus } from 'lucide-vue-next'
 import { reactive, ref } from 'vue'
+
+// 账号类型：与 ROLE_PERMISSIONS 中的角色保持一致
+const ROLE_TYPE_LABELS: Record<string, string> = {
+  admin: '管理员',
+  reviewer: '审核员',
+  teacher: '课任教师',
+}
 
 const form = reactive({
   username: '',
@@ -38,6 +45,19 @@ const accountList = ref([
 ])
 
 function handleAdd() {
+  // 必填校验（用户名/真实姓名/密码/确认密码）
+  if (!form.username.trim() || !form.realName.trim()) {
+    ElMessage.warning('请填写用户名和真实姓名')
+    return
+  }
+  if (!form.password) {
+    ElMessage.warning('请填写密码')
+    return
+  }
+  if (form.password.length < 6) {
+    ElMessage.warning('密码长度至少 6 位')
+    return
+  }
   if (form.password !== form.confirmPassword) {
     ElMessage.error('两次输入的密码不一致')
     return
@@ -47,7 +67,7 @@ function handleAdd() {
     id: Date.now(),
     username: form.username,
     realName: form.realName,
-    role: form.role === 'admin' ? '管理员' : '审核员',
+    role: ROLE_TYPE_LABELS[form.role] ?? '课任教师',
     college: form.college,
     createdAt: new Date().toISOString().slice(0, 10),
   })
@@ -65,7 +85,16 @@ function handleAdd() {
   addDialogVisible.value = false
 }
 
-function handleDelete(id: number) {
+async function handleDelete(id: number) {
+  try {
+    await ElMessageBox.confirm('确认删除该账号？删除后不可恢复。', '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
   accountList.value = accountList.value.filter((a) => a.id !== id)
   ElMessage.success('账号已删除')
 }
@@ -141,6 +170,7 @@ const addDialogVisible = ref(false)
           <el-radio-group v-model="form.role">
             <el-radio value="admin">管理员</el-radio>
             <el-radio value="reviewer">审核员</el-radio>
+            <el-radio value="teacher">课任教师</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-row :gutter="16">

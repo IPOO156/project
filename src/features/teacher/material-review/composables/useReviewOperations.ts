@@ -24,6 +24,21 @@ export function useReviewOperations() {
     return true
   }
 
+  /** 申报类型显示名：优先 typeLabel（Mock/接口可能只给 key），否则回退 type */
+  function typeLabel(item: any): string {
+    return item?.typeLabel || item?.type || ''
+  }
+
+  /**
+   * 列表移除某条记录后，修正 currentIndex 防止越界
+   * （审核弹窗当前项被处理时，索引指向下一项；若超出末尾则回退到最后一项）
+   */
+  function clampIndex(listLength: number) {
+    if (currentIndex.value > listLength - 1) {
+      currentIndex.value = Math.max(0, listLength - 1)
+    }
+  }
+
   async function approve(item: any, list: any[]): Promise<boolean> {
     if (!checkDebounce()) return false
     if (processedIds.value.has(item.id)) {
@@ -31,7 +46,7 @@ export function useReviewOperations() {
       return false
     }
     try {
-      await ElMessageBox.confirm(`确认通过「${item.name}」的${item.type}？`, '审批确认', {
+      await ElMessageBox.confirm(`确认通过「${item.name}」的${typeLabel(item)}？`, '审批确认', {
         confirmButtonText: '确定通过',
         cancelButtonText: '取消',
         type: 'success',
@@ -44,15 +59,16 @@ export function useReviewOperations() {
       processedIds.value.add(item.id)
       const idx = list.findIndex((p) => p.id === item.id)
       if (idx > -1) list.splice(idx, 1)
+      clampIndex(list.length)
       await pushNotification({
-        title: `${item.type}已通过`,
-        content: `您的${item.type}已通过审核。`,
+        title: `${typeLabel(item)}已通过`,
+        content: `您的${typeLabel(item)}已通过审核。`,
         category: 'review',
         link: '/approval/pending',
       })
       notificationStore.addNotification({
-        title: `${item.type}已通过`,
-        content: `您的${item.type}已通过审核。`,
+        title: `${typeLabel(item)}已通过`,
+        content: `您的${typeLabel(item)}已通过审核。`,
         category: 'review',
         link: '/approval/pending',
       })
@@ -78,15 +94,16 @@ export function useReviewOperations() {
       processedIds.value.add(item.id)
       const idx = list.findIndex((p) => p.id === item.id)
       if (idx > -1) list.splice(idx, 1)
+      clampIndex(list.length)
       await pushNotification({
-        title: `${item.type}已被驳回`,
-        content: `您的${item.type}已被驳回，原因：${reviewComment.value}`,
+        title: `${typeLabel(item)}已被驳回`,
+        content: `您的${typeLabel(item)}已被驳回，原因：${reviewComment.value}`,
         category: 'review',
         link: '/applications',
       })
       notificationStore.addNotification({
-        title: `${item.type}已被驳回`,
-        content: `您的${item.type}已被驳回，原因：${reviewComment.value}`,
+        title: `${typeLabel(item)}已被驳回`,
+        content: `您的${typeLabel(item)}已被驳回，原因：${reviewComment.value}`,
         category: 'review',
         link: '/applications',
       })
@@ -120,8 +137,8 @@ export function useReviewOperations() {
       if (idx > -1) list.splice(idx, 1)
       count++
       await pushNotification({
-        title: `${item.type}已通过`,
-        content: `您的${item.type}已通过审核。`,
+        title: `${typeLabel(item)}已通过`,
+        content: `您的${typeLabel(item)}已通过审核。`,
         category: 'review',
         link: '/approval/pending',
       })
@@ -156,8 +173,8 @@ export function useReviewOperations() {
       if (idx > -1) list.splice(idx, 1)
       count++
       await pushNotification({
-        title: `${item.type}已被驳回`,
-        content: `您的${item.type}已被驳回，原因：${reason}`,
+        title: `${typeLabel(item)}已被驳回`,
+        content: `您的${typeLabel(item)}已被驳回，原因：${reason}`,
         category: 'review',
         link: '/applications',
       })

@@ -174,3 +174,14 @@ export const ACTIVITY_STATUS = {
   withdrawn: { label: '已撤销', color: '#909399' },
   correction: { label: '更正申请', color: '#409eff' },
 } as const
+
+// 日志操作类型（管理员端日志查看模块使用，LogView 与 LogTable 共用）
+export type LogActionTag = 'success' | 'warning' | 'danger' | 'info' | 'primary'
+export const LOG_ACTION_TYPES: Record<string, { label: string; tag: LogActionTag }> = {
+  create: { label: '新增', tag: 'success' },
+  update: { label: '修改', tag: 'warning' },
+  delete: { label: '删除', tag: 'danger' },
+  review: { label: '审核', tag: 'primary' },
+  login: { label: '登录', tag: 'info' },
+  export: { label: '导出', tag: 'info' },
+}

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
-import { Check, ClipboardList, Eye, FileText, TrendingUp, X } from 'lucide-vue-next'
+import { Check, ClipboardList, TrendingUp, X } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useUserStore } from '@/app/stores/stores'
+import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
 import ReviewDetailPanel from './components/ReviewDetailPanel.vue'
-import ReviewHistory from './components/ReviewHistory.vue'
+import ReviewList from './components/ReviewList.vue'
 import { useReviewOperations } from './composables/useReviewOperations'
 
 const userStore = useUserStore()
@@ -24,27 +25,13 @@ const {
   goNext,
   clearComment,
 } = useReviewOperations()
-const batchRejectReason = ref('')
 
 const filters = ref({ grade: '', major: '', className: '', type: '', keyword: '' })
-const typeOptions = [
-  { label: '全部类型', value: '' },
-  { label: '学科竞赛', value: 'competition' },
-  { label: '创新创业', value: 'innovation' },
-  { label: '学术研究', value: 'research' },
-  { label: '奖学金', value: 'scholarship' },
-  { label: '荣誉证书', value: 'certificate' },
-  { label: '实习经历', value: 'internship' },
-  { label: '组织履历', value: 'organization' },
-  { label: '实训项目', value: 'training' },
-  { label: '社会实践', value: 'socialPractice' },
-  { label: '图书心得', value: 'bookReport' },
-  { label: '竞赛之星', value: 'competitionStar' },
-  { label: '双创之星', value: 'innovationStar' },
-  { label: '科研项目', value: 'scientificProject' },
-  { label: '软件著作权', value: 'softwareCopyright' },
-  { label: '发表论文', value: 'paper' },
-]
+// 申报类型选项：统一从 APPLICATION_TYPE_MAP 派生，禁止在页面内重复定义字典
+const typeOptions = Object.entries(APPLICATION_TYPE_MAP).map(([value, label]) => ({
+  label,
+  value,
+}))
 
 const pendingList = ref([
   {
@@ -52,7 +39,8 @@ const pendingList = ref([
     name: '张三',
     studentId: '2024060001',
     className: '计科2401班',
-    type: '学科竞赛',
+    type: 'competition',
+    typeLabel: '学科竞赛',
     major: '计算机科学与技术',
     grade: '2024级',
     duplicate: false,
@@ -64,77 +52,87 @@ const pendingList = ref([
       awardLevel: 'first',
       awardDate: '2026-06',
     },
+    history: [],
   },
   {
     id: 2,
     name: '李四',
     studentId: '2024060002',
     className: '计科2401班',
-    type: '社会实践',
+    type: 'socialPractice',
+    typeLabel: '社会实践',
     major: '计算机科学与技术',
     grade: '2024级',
     duplicate: true,
     submitDate: '2026-07-14',
     attachments: [{ name: '实践报告.pdf', url: '#', type: 'pdf' }],
     formData: { activityName: '暑期三下乡社会实践', location: '湖南湘西' },
+    history: [],
   },
   {
     id: 3,
     name: '王五',
     studentId: '2024060003',
     className: '计科2402班',
-    type: '奖学金',
+    type: 'scholarship',
+    typeLabel: '奖学金',
     major: '计算机科学与技术',
     grade: '2024级',
     duplicate: false,
     submitDate: '2026-07-13',
     attachments: [{ name: '奖学金申请表.pdf', url: '#', type: 'pdf' }],
     formData: { awardName: '国家奖学金', scholarshipLevel: 'national' },
+    history: [],
   },
   {
     id: 4,
     name: '赵六',
     studentId: '2024060004',
     className: '软件2401班',
-    type: '竞赛之星',
+    type: 'competitionStar',
+    typeLabel: '竞赛之星',
     major: '软件工程',
     grade: '2024级',
     duplicate: false,
     submitDate: '2026-07-12',
     attachments: [],
     formData: { competitionName: 'ACM 程序设计竞赛', awardLevel: 'second' },
+    history: [],
   },
   {
     id: 5,
     name: '孙七',
     studentId: '2024060005',
     className: '软件2401班',
-    type: '学术研究',
+    type: 'research',
+    typeLabel: '学术研究',
     major: '软件工程',
     grade: '2024级',
     duplicate: true,
     submitDate: '2026-07-11',
     attachments: [],
     formData: { projectName: '基于深度学习的图像识别研究', projectLevel: 'national' },
+    history: [],
   },
   {
     id: 6,
     name: '周八',
     studentId: '2024060006',
     className: '计科2402班',
-    type: '实训项目',
+    type: 'training',
+    typeLabel: '实训项目',
     major: '计算机科学与技术',
     grade: '2024级',
     duplicate: false,
     submitDate: '2026-07-10',
     attachments: [],
     formData: { projectName: 'Vue3 企业级开发实训' },
+    history: [
+      { reviewer: '刘老师', time: '2026-07-15 10:30', action: 'rejected', comment: '材料不完整' },
+    ],
   },
 ])
 
-const reviewHistoryMap: Record<string | number, any[]> = {
-  1: [{ reviewer: '刘老师', time: '2026-07-15 10:30', action: 'rejected', comment: '材料不完整' }],
-}
 const filteredList = computed(() =>
   pendingList.value.filter((r) => {
     if (filters.value.type && r.type !== filters.value.type) return false
@@ -160,15 +158,6 @@ const stats = computed(() => ({
   rejected: 0,
 }))
 
-function getTypeColor(type: string) {
-  if (type.includes('竞赛') || type.includes('之星')) return '#e6a23c'
-  if (type.includes('社会')) return '#10b981'
-  if (type.includes('科研') || type.includes('论文')) return '#8b5cf6'
-  if (type.includes('奖学金')) return '#ef4444'
-  if (type.includes('实训')) return '#1e3a5f'
-  return '#64748b'
-}
-
 async function handleApprove(item: any) {
   await approve(item, pendingList.value)
 }
@@ -181,29 +170,32 @@ async function handleBatchApprove() {
   await batchApprove(items, pendingList.value)
   selectedIds.value.clear()
 }
-async function handleBatchReject() {
-  if (!batchRejectReason.value.trim()) {
+async function handleBatchReject(reason: string) {
+  if (!reason.trim()) {
     ElMessage.warning('请填写驳回原因')
     return
   }
   const items = filteredList.value.filter((r) => selectedIds.value.has(r.id))
-  const count = await batchReject(items, pendingList.value, batchRejectReason.value)
+  const count = await batchReject(items, pendingList.value, reason)
   if (count > 0) {
     selectedIds.value.clear()
-    batchRejectReason.value = ''
   }
 }
 function toggleSelect(id: string | number) {
   if (selectedIds.value.has(id)) selectedIds.value.delete(id)
   else selectedIds.value.add(id)
 }
-function handleSelectAll(checked: any) {
+function handleSelectAll(checked: boolean) {
   if (checked) filteredList.value.forEach((i) => selectedIds.value.add(i.id))
   else selectedIds.value.clear()
 }
 function openDetail(item: any) {
   currentIndex.value = filteredList.value.indexOf(item)
   detailVisible.value = true
+}
+function openArchive(item: any) {
+  currentIndex.value = filteredList.value.indexOf(item)
+  studentArchiveVisible.value = true
 }
 </script>
 
@@ -301,44 +293,7 @@ function openDetail(item: any) {
       </div>
     </el-card>
 
-    <!-- 批量操作栏 -->
-    <div class="batch-bar">
-      <div class="batch-bar__left">
-        <el-checkbox
-          :indeterminate="selectedIds.size > 0 && selectedIds.size < filteredList.length"
-          :checked="selectedIds.size === filteredList.length"
-          @change="handleSelectAll"
-          >全选</el-checkbox
-        >
-        <span v-if="selectedIds.size > 0" class="batch-bar__count"
-          >已选 {{ selectedIds.size }} 条</span
-        >
-      </div>
-      <div class="batch-bar__right">
-        <el-input
-          v-model="batchRejectReason"
-          placeholder="批量驳回原因…"
-          size="small"
-          class="batch-reject-input"
-        />
-        <el-button
-          type="danger"
-          size="small"
-          :disabled="selectedIds.size === 0 || !batchRejectReason.trim()"
-          @click="handleBatchReject"
-          >批量驳回</el-button
-        >
-        <el-button
-          type="success"
-          size="small"
-          :disabled="selectedIds.size === 0"
-          @click="handleBatchApprove"
-          >批量通过</el-button
-        >
-      </div>
-    </div>
-
-    <!-- 待审核列表 -->
+    <!-- 待审核列表（含批量操作） -->
     <el-card shadow="never" class="list-card">
       <template #header>
         <div class="list-card__header">
@@ -347,82 +302,20 @@ function openDetail(item: any) {
         </div>
       </template>
 
-      <div v-if="filteredList.length > 0" class="review-cards">
-        <div
-          v-for="item in filteredList"
-          :key="item.id"
-          class="review-card"
-          :class="{ 'is-duplicate': item.duplicate }"
-        >
-          <el-checkbox
-            v-if="isAdmin"
-            :checked="selectedIds.has(item.id)"
-            class="review-card__checkbox"
-            @change="toggleSelect(item.id)"
-          />
-          <div class="review-card__main">
-            <div class="review-card__top">
-              <div class="review-card__student">
-                <el-avatar :size="36" class="review-card__avatar">{{
-                  item.name.charAt(0)
-                }}</el-avatar>
-                <div>
-                  <div class="review-card__name">{{ item.name }}</div>
-                  <div class="review-card__meta">{{ item.className }} · {{ item.studentId }}</div>
-                </div>
-              </div>
-              <el-tag
-                :color="getTypeColor(item.type)"
-                effect="dark"
-                size="small"
-                style="color: #fff; border: 0"
-                >{{ item.type }}</el-tag
-              >
-            </div>
-            <div class="review-card__info">
-              <span>提交：{{ item.submitDate }}</span>
-              <el-tag
-                v-if="item.duplicate"
-                type="warning"
-                size="small"
-                effect="plain"
-                class="dup-tag"
-                >有同类重复</el-tag
-              >
-            </div>
-            <ReviewHistory :history="reviewHistoryMap[item.id] || []" />
-            <div class="review-card__actions">
-              <el-button type="primary" size="small" plain :icon="Eye" @click="openDetail(item)"
-                >审核</el-button
-              >
-              <el-button size="small" plain :icon="FileText" @click="studentArchiveVisible = true"
-                >档案</el-button
-              >
-              <el-button
-                v-if="isAdmin"
-                type="success"
-                size="small"
-                plain
-                :icon="Check"
-                :loading="isProcessing"
-                @click="handleApprove(item)"
-                >通过</el-button
-              >
-              <el-button
-                v-if="isAdmin"
-                type="danger"
-                size="small"
-                plain
-                :icon="X"
-                :loading="isProcessing"
-                @click="handleReject(item)"
-                >驳回</el-button
-              >
-            </div>
-          </div>
-        </div>
-      </div>
-      <el-empty v-else description="暂无待审核材料" :image-size="80" />
+      <ReviewList
+        :items="filteredList"
+        :selected-ids="selectedIds"
+        :is-admin="isAdmin"
+        :is-processing="isProcessing"
+        @toggle="toggleSelect"
+        @toggle-all="handleSelectAll"
+        @batch-reject="handleBatchReject"
+        @batch-approve="handleBatchApprove"
+        @view-detail="openDetail"
+        @view-archive="openArchive"
+        @approve="handleApprove"
+        @reject="handleReject"
+      />
     </el-card>
 
     <!-- 双栏审核弹窗 -->
@@ -530,25 +423,26 @@ function openDetail(item: any) {
   &__icon {
     width: 40px;
     height: 40px;
-    border-radius: $radius-lg;
+    border-radius: $radius-xl;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
     &--blue {
-      background: #e8f0fe;
+      background: linear-gradient(145deg, #e8f0fe 0%, #d7e4f6 100%);
       color: $color-primary-lighter;
     }
     &--green {
-      background: #e6f7ee;
+      background: linear-gradient(145deg, #e6f7ee 0%, #d2efe0 100%);
       color: $color-success;
     }
     &--purple {
-      background: #f0e6ff;
+      background: linear-gradient(145deg, #f0e6ff 0%, #e4d4fb 100%);
       color: #8b5cf6;
     }
     &--orange {
-      background: #fef3e2;
+      background: linear-gradient(145deg, #fef3e2 0%, #fbe8c9 100%);
       color: $color-warning;
     }
   }
@@ -571,33 +465,6 @@ function openDetail(item: any) {
   }
 }
 
-// ── 批量操作 ──
-.batch-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-sm $spacing-lg;
-  background: #f0f4ff;
-  border: 1px solid #d0d9f5;
-  border-radius: $radius-lg;
-  margin-bottom: $spacing-md;
-  &__left {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-  }
-  &__right {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-  }
-  &__count {
-    font-size: $font-size-sm;
-    color: $color-primary-lighter;
-    font-weight: 600;
-  }
-}
-
 // ── 列表卡片 ──
 .list-card {
   margin-bottom: $spacing-lg;
@@ -613,100 +480,16 @@ function openDetail(item: any) {
   color: $color-text-primary;
 }
 
-// ── 审核卡片 ──
-.review-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: $spacing-md;
-}
-.review-card {
-  position: relative;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: $radius-lg;
-  padding: $spacing-lg;
-  background: var(--el-bg-color);
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-  &:hover {
-    border-color: $color-accent;
-    box-shadow: $shadow-sm;
-  }
-  &.is-duplicate {
-    border-color: $color-warning;
-    background: #fffbeb;
-  }
-  &__checkbox {
-    position: absolute;
-    top: $spacing-md;
-    left: $spacing-md;
-  }
-  &__main {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-  }
-  &__top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: $spacing-md;
-  }
-  &__student {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-  }
-  &__avatar {
-    background: $color-primary-lightest;
-    color: $color-primary;
-    font-weight: 600;
-  }
-  &__name {
-    font-size: $font-size-base;
-    font-weight: 600;
-    color: $color-text-primary;
-  }
-  &__meta {
-    font-size: $font-size-xs;
-    color: var(--el-text-color-secondary);
-    margin-top: 1px;
-  }
-  &__info {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    font-size: $font-size-sm;
-    color: var(--el-text-color-secondary);
-  }
-  &__actions {
-    display: flex;
-    gap: $spacing-sm;
-    flex-wrap: wrap;
-    padding-top: $spacing-sm;
-    border-top: 1px solid var(--el-border-color-lighter);
-  }
-}
-.dup-tag {
-  font-size: $font-size-xs;
-}
-
 .reject-template {
   width: 200px;
 }
 .reject-input {
   width: 240px;
 }
-.batch-reject-input {
-  width: 220px;
-}
 
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-  .review-cards {
-    grid-template-columns: 1fr;
   }
   .filter-item {
     width: 100%;

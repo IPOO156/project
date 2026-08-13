@@ -29,7 +29,7 @@ const overallStats = ref({
 
 const studentList = ref([
   {
-    id: '2024060001',
+    studentId: '2024060001',
     name: '张三',
     grade: '2024级',
     major: '计算机科学与技术',
@@ -39,7 +39,7 @@ const studentList = ref([
     practices: 2,
   },
   {
-    id: '2024060002',
+    studentId: '2024060002',
     name: '李四',
     grade: '2024级',
     major: '计算机科学与技术',
@@ -49,7 +49,7 @@ const studentList = ref([
     practices: 3,
   },
   {
-    id: '2024060003',
+    studentId: '2024060003',
     name: '王五',
     grade: '2024级',
     major: '计算机科学与技术',
@@ -59,7 +59,7 @@ const studentList = ref([
     practices: 4,
   },
   {
-    id: '2024060004',
+    studentId: '2024060004',
     name: '赵六',
     grade: '2024级',
     major: '软件工程',
@@ -69,7 +69,7 @@ const studentList = ref([
     practices: 1,
   },
   {
-    id: '2024060005',
+    studentId: '2024060005',
     name: '孙七',
     grade: '2024级',
     major: '软件工程',
@@ -138,16 +138,29 @@ const archiveLevels = computed(() => [
   },
 ])
 
-function handleSearch(_filters: StudentFilters) {
-  // 接口就绪后替换为真实查询
+// 查询条件（由 StudentSelector 触发），Mock 阶段仅按姓名/学号过滤
+const searchFilters = ref<StudentFilters | null>(null)
+const filteredStudentList = computed(() => {
+  const f = searchFilters.value
+  if (!f?.keyword) return studentList.value
+  const kw = f.keyword.trim()
+  return studentList.value.filter((s) =>
+    f.keywordType === 'name' ? s.name.includes(kw) : s.studentId.includes(kw),
+  )
+})
+
+function handleSearch(filters: StudentFilters) {
+  searchFilters.value = { ...filters }
+  // 接口就绪后替换为真实查询（含年级/学院/专业/班级条件）
 }
 
 function handleReset() {
+  searchFilters.value = null
   // 接口就绪后替换为真实重置
 }
 
 function viewStudentDetail(student: any) {
-  selectedStudent.value = { name: student.name, id: student.studentId || student.id }
+  selectedStudent.value = { name: student.name, id: student.studentId }
   activeTab.value = 'detail'
 }
 
@@ -177,11 +190,6 @@ function getGpaClass(gpa: number) {
       <!-- 汇总概览 -->
       <el-tab-pane label="档案总览" name="overview">
         <div class="archive-overview">
-          <!-- 统计卡片 -->
-          <el-row v-show="false" :gutter="16" class="archive-overview__stats">
-            <!-- 统计卡片占位 - 预留给接口数据 -->
-          </el-row>
-
           <!-- 档案价值分级展示 -->
           <el-card class="archive-overview__section">
             <template #header>
@@ -215,10 +223,7 @@ function getGpaClass(gpa: number) {
                 </template>
                 <div class="dimension-list">
                   <div v-for="cat in categoryData" :key="cat.label" class="dimension-item">
-                    <div
-                      class="dimension-item__icon"
-                      :style="{ background: `${cat.color}15`, color: cat.color }"
-                    >
+                    <div class="dimension-item__icon" :style="{ '--chip': cat.color }">
                       <component :is="cat.icon" :size="18" />
                     </div>
                     <div class="dimension-item__info">
@@ -235,10 +240,12 @@ function getGpaClass(gpa: number) {
                 <template #header>
                   <div class="archive-overview__section-header">
                     <span class="section-title">学生列表</span>
-                    <el-button size="small" :icon="Eye" @click="() => {}">查看全部</el-button>
+                    <el-tag v-if="searchFilters" type="info" effect="plain" size="small"
+                      >已筛选 {{ filteredStudentList.length }} 人</el-tag
+                    >
                   </div>
                 </template>
-                <el-table :data="studentList" stripe style="width: 100%">
+                <el-table :data="filteredStudentList" stripe style="width: 100%">
                   <el-table-column prop="name" label="姓名" width="100" />
                   <el-table-column prop="studentId" label="学号" width="130" />
                   <el-table-column prop="className" label="班级" min-width="140" />
@@ -289,7 +296,6 @@ function getGpaClass(gpa: number) {
                 <h3>{{ selectedStudent.name }}</h3>
                 <p>{{ selectedStudent.id }}</p>
               </div>
-              <el-button type="primary" size="small" :icon="Eye">查看完整档案</el-button>
             </div>
             <el-divider />
             <el-row :gutter="16">
@@ -450,11 +456,16 @@ function getGpaClass(gpa: number) {
     &__icon {
       width: 36px;
       height: 36px;
-      border-radius: $radius-base;
+      border-radius: $radius-lg;
       display: flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      // 用 CSS 变量注入语义色，统一生成淡色底 + 描边
+      background: color-mix(in srgb, var(--chip, var(--el-color-primary)) 12%, transparent);
+      color: var(--chip, var(--el-color-primary));
+      box-shadow: inset 0 0 0 1px
+        color-mix(in srgb, var(--chip, var(--el-color-primary)) 16%, transparent);
     }
 
     &__info {
