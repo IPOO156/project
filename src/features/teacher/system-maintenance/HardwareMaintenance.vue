@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 /**
  * HardwareMaintenance - 硬件维护
- * 服务器、网络设备、终端外设、机房环境
+ * 覆盖：服务器维护、网络设备维护、终端和外设维护、机房环境配套
+ * 说明：本页为运维台账，数据由监控平台提供，后端暂无专门接口。
  */
 import { AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-vue-next'
 import { ref } from 'vue'
@@ -10,72 +10,67 @@ import { ref } from 'vue'
 interface HardwareItem {
   name: string
   status: 'normal' | 'warning' | 'fault'
-  ip?: string
-  uptime?: string
-  cpu?: string
-  mem?: string
-  location?: string
-  value?: string
+  meta?: string
+  metric?: string
   alarm?: string
 }
 
 interface HardwareGroup {
   category: string
+  desc: string
   items: HardwareItem[]
 }
 
 const hardwareStatus = ref<HardwareGroup[]>([
   {
-    category: '服务器',
+    category: '服务器维护',
+    desc: '应用、数据库与备份服务器的运行状态',
     items: [
       {
         name: '主数据库服务器',
         status: 'normal',
-        ip: '192.168.1.10',
-        uptime: '128天',
-        cpu: '23%',
-        mem: '45%',
+        meta: '应用运行 128 天',
+        metric: 'CPU 23% · 内存 45%',
       },
       {
         name: '应用服务器',
         status: 'normal',
-        ip: '192.168.1.11',
-        uptime: '128天',
-        cpu: '35%',
-        mem: '62%',
+        meta: '应用运行 128 天',
+        metric: 'CPU 35% · 内存 62%',
       },
       {
         name: '备份服务器',
         status: 'warning',
-        ip: '192.168.1.12',
-        uptime: '30天',
-        cpu: '12%',
-        mem: '78%',
+        meta: '应用运行 30 天',
+        metric: '内存 78%',
         alarm: '磁盘空间不足',
       },
     ],
   },
   {
-    category: '网络设备',
+    category: '网络设备维护',
+    desc: '核心交换、防火墙与无线设备的连通与负载',
     items: [
-      { name: '核心交换机', status: 'normal', ip: '192.168.1.1', uptime: '365天', cpu: '8%' },
-      { name: '防火墙', status: 'normal', ip: '192.168.1.2', uptime: '365天', cpu: '15%' },
-      { name: '无线控制器', status: 'normal', ip: '192.168.1.3', uptime: '200天', cpu: '5%' },
+      { name: '核心交换机', status: 'normal', meta: '持续运行 365 天', metric: 'CPU 8%' },
+      { name: '边界防火墙', status: 'normal', meta: '持续运行 365 天', metric: 'CPU 15%' },
+      { name: '无线控制器', status: 'normal', meta: '持续运行 200 天', metric: 'CPU 5%' },
     ],
   },
   {
-    category: '终端与外设',
+    category: '终端和外设维护',
+    desc: '打印机、扫描仪等办公外设的可用状态',
     items: [
-      { name: '打印机-行政楼3F', status: 'normal', location: '行政楼3楼' },
-      { name: '扫描仪-档案室', status: 'fault', location: '档案室', alarm: '需更换耗材' },
+      { name: '打印机 · 行政楼3F', status: 'normal', meta: '就绪' },
+      { name: '扫描仪 · 档案室', status: 'fault', meta: '离线', alarm: '需更换耗材' },
     ],
   },
   {
-    category: '机房环境',
+    category: '机房环境配套',
+    desc: '温湿度、供电与门禁等环境保障',
     items: [
-      { name: '精密空调', status: 'normal', value: '温度 22°C / 湿度 45%' },
-      { name: 'UPS电源', status: 'normal', value: '负载 35% / 续航 45min' },
-      { name: '门禁系统', status: 'normal', value: '运行正常' },
+      { name: '精密空调', status: 'normal', meta: '温度 22°C · 湿度 45%' },
+      { name: 'UPS 电源', status: 'normal', meta: '负载 35% · 续航约 45 分钟' },
+      { name: '机房门禁', status: 'normal', meta: '运行正常' },
     ],
   },
 ])
@@ -92,31 +87,38 @@ const statusColor: Record<string, string> = {
 }
 const statusLabel: Record<string, string> = { normal: '正常', warning: '告警', fault: '故障' }
 
-function handleRefresh(item: any) {
-  ElMessage.success(`${item.name || '设备'} 状态已刷新`)
-}
-
+const refreshing = ref(false)
 function handleRefreshAll() {
-  ElMessage.success('全部设备状态已刷新')
+  refreshing.value = true
+  setTimeout(() => {
+    refreshing.value = false
+  }, 500)
 }
 </script>
 
 <template>
-  <div class="hardware-maint">
-    <el-card class="hardware-maint__header">
-      <el-row justify="space-between" align="middle">
-        <el-col :span="12"><span class="section-title">硬件设备状态总览</span></el-col>
-        <el-col :span="12" style="text-align: right">
-          <el-button :icon="RefreshCw" @click="handleRefreshAll">刷新状态</el-button>
-        </el-col>
-      </el-row>
-    </el-card>
+  <div class="mc-page">
+    <div class="mc-page-head">
+      <div class="mc-page-head__left">
+        <p class="mc-page-head__eyebrow">系统维护 · Hardware</p>
+        <h2 class="mc-page-head__title">硬件维护</h2>
+        <p class="mc-page-head__desc">
+          服务器、网络设备、终端外设与机房环境的运维台账。状态数据由监控平台同步，后端暂未提供专门接口。
+        </p>
+      </div>
+      <div class="mc-page-head__actions">
+        <el-button :icon="RefreshCw" :loading="refreshing" @click="handleRefreshAll">
+          刷新状态
+        </el-button>
+      </div>
+    </div>
 
-    <div v-for="group in hardwareStatus" :key="group.category" class="hardware-maint__group">
-      <el-card>
-        <template #header
-          ><span class="section-title">{{ group.category }}</span></template
-        >
+    <div v-for="group in hardwareStatus" :key="group.category" class="mc-card">
+      <div class="mc-card__head">
+        <span class="mc-card__title">{{ group.category }}</span>
+        <span class="hardware-maint__desc">{{ group.desc }}</span>
+      </div>
+      <div class="mc-card__body">
         <div class="hardware-items">
           <div
             v-for="item in group.items"
@@ -132,44 +134,27 @@ function handleRefreshAll() {
               />
               <div class="hardware-item__info">
                 <span class="hardware-item__name">{{ item.name }}</span>
-                <span class="hardware-item__meta">{{
-                  item.ip || item.location || item.value || ''
-                }}</span>
+                <span class="hardware-item__meta">{{ item.meta }}</span>
               </div>
             </div>
             <div class="hardware-item__right">
+              <span v-if="item.metric" class="hardware-item__metric">{{ item.metric }}</span>
+              <span v-if="item.alarm" class="hardware-item__alarm">{{ item.alarm }}</span>
               <span class="hardware-item__status" :style="{ color: statusColor[item.status] }">
                 {{ statusLabel[item.status] }}
               </span>
-              <span v-if="item.cpu" class="hardware-item__metric">CPU {{ item.cpu }}</span>
-              <span v-if="item.mem" class="hardware-item__metric">内存 {{ item.mem }}</span>
-              <span v-if="item.uptime" class="hardware-item__uptime">运行 {{ item.uptime }}</span>
-              <span v-if="item.alarm" class="hardware-item__alarm">{{ item.alarm }}</span>
-              <el-button size="small" text @click="handleRefresh(item)">刷新</el-button>
             </div>
           </div>
         </div>
-      </el-card>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-.hardware-maint {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-  &__header {
-    margin-bottom: 0;
-  }
-  &__group {
-    margin-bottom: 0;
-  }
-}
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+.hardware-maint__desc {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 .hardware-items {
   display: flex;
@@ -222,15 +207,15 @@ function handleRefreshAll() {
   &__status {
     font-weight: 600;
     font-size: 13px;
-    min-width: 36px;
+    min-width: 32px;
   }
-  &__metric,
-  &__uptime {
+  &__metric {
     font-size: 12px;
     color: var(--el-text-color-secondary);
     background: var(--el-fill-color);
     padding: 2px 8px;
     border-radius: 4px;
+    font-variant-numeric: tabular-nums;
   }
   &__alarm {
     font-size: 12px;

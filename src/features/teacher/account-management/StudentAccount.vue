@@ -1,240 +1,101 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 /**
  * StudentAccount - 学生账号管理
- * 选择账号→查看信息→修改密码/权限/基础信息
+ *
+ * 后端现状：账号列表接口（/admin/users）尚未实现，列表区展示待就绪空态；
+ * 查看详情、编辑信息、重置密码的交互已按契约预留。
  */
-import { Eye, Lock, Pencil } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { Search, Users } from 'lucide-vue-next'
+import { reactive, ref } from 'vue'
 
-const search = ref({ keyword: '', grade: '', major: '' })
-const studentList = ref([
-  {
-    id: 1,
-    name: '张三',
-    studentId: '2024060001',
-    className: '计科2401班',
-    grade: '2024级',
-    major: '计算机科学与技术',
-    status: 'active',
-    lastLogin: '2026-07-08',
-  },
-  {
-    id: 2,
-    name: '李四',
-    studentId: '2024060002',
-    className: '计科2401班',
-    grade: '2024级',
-    major: '计算机科学与技术',
-    status: 'active',
-    lastLogin: '2026-07-07',
-  },
-  {
-    id: 3,
-    name: '王五',
-    studentId: '2024060003',
-    className: '计科2401班',
-    grade: '2024级',
-    major: '计算机科学与技术',
-    status: 'inactive',
-    lastLogin: '2026-06-20',
-  },
-])
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 
-/** 按关键字/年级/专业过滤（Mock 阶段实时过滤，接口就绪后替换为真实查询） */
-const filteredStudents = computed(() => {
-  let list = studentList.value
-  const kw = search.value.keyword.trim()
-  if (kw) {
-    list = list.filter((s) => s.name.includes(kw) || s.studentId.includes(kw))
-  }
-  if (search.value.grade) {
-    list = list.filter((s) => s.grade === search.value.grade)
-  }
-  if (search.value.major) {
-    list = list.filter((s) => s.major === search.value.major)
-  }
-  return list
-})
+const { me } = useTeacherMe()
 
-function handleQuery() {
-  ElMessage.success(`查询到 ${filteredStudents.value.length} 名学生`)
-}
+const colleges = [
+  ...new Set(
+    (me.value?.scopes ?? [])
+      .filter((s) => s.scopeType === 2)
+      .map((s) => s.scopeName)
+      .filter((n): n is string => Boolean(n)),
+  ),
+]
+
+const search = reactive({ keyword: '', college: '', status: '' })
 
 const detailDialogVisible = ref(false)
-const editDialogVisible = ref(false)
 const passwordDialogVisible = ref(false)
-const currentStudent = ref<any>(null)
-const editForm = ref({ name: '', email: '', phone: '', status: '' })
-const newPassword = ref('')
-
-function viewDetail(student: any) {
-  currentStudent.value = student
-  detailDialogVisible.value = true
-}
-
-function editInfo(student: any) {
-  currentStudent.value = student
-  editForm.value = {
-    name: student.name,
-    email: `${student.studentId}@edu.cn`,
-    phone: '138****0000',
-    status: student.status,
-  }
-  editDialogVisible.value = true
-}
-
-function saveEdit() {
-  if (!currentStudent.value) return
-  // 同步更新列表中的姓名与状态（Mock 阶段；邮箱/手机字段接口就绪后补全）
-  const target = studentList.value.find((s) => s.id === currentStudent.value.id)
-  if (target) {
-    target.name = editForm.value.name
-    target.status = editForm.value.status
-    currentStudent.value = target
-  }
-  ElMessage.success('信息已更新')
-  editDialogVisible.value = false
-}
-
-function changePassword(student: any) {
-  currentStudent.value = student
-  newPassword.value = ''
-  passwordDialogVisible.value = true
-}
-
-function savePassword() {
-  if (newPassword.value.length < 6) {
-    ElMessage.warning('密码长度至少6位')
-    return
-  }
-  ElMessage.success('密码已重置')
-  passwordDialogVisible.value = false
-}
+const currentStudent = ref<{ name: string; studentId: string } | null>(null)
 </script>
 
 <template>
-  <div class="student-account">
-    <el-card class="student-account__filters">
-      <el-row :gutter="16">
-        <el-col :span="6"
-          ><el-input v-model="search.keyword" placeholder="搜索姓名/学号" clearable
-        /></el-col>
-        <el-col :span="4"
-          ><el-select v-model="search.grade" placeholder="年级" clearable style="width: 100%">
-            <el-option label="2024级" value="2024级" />
-            <el-option label="2023级" value="2023级" /> </el-select
-        ></el-col>
-        <el-col :span="4"
-          ><el-select v-model="search.major" placeholder="专业" clearable style="width: 100%">
-            <el-option label="计算机科学与技术" value="计算机科学与技术" />
-            <el-option label="软件工程" value="软件工程" /> </el-select
-        ></el-col>
-        <el-col :span="4"><el-button type="primary" @click="handleQuery">查询</el-button></el-col>
-      </el-row>
-    </el-card>
-
-    <el-card>
-      <template #header><span class="section-title">学生账号列表</span></template>
-      <el-table :data="filteredStudents" stripe>
-        <el-table-column prop="name" label="姓名" width="100" />
-        <el-table-column prop="studentId" label="学号" width="140" />
-        <el-table-column prop="className" label="班级" width="140" />
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">
-              {{ row.status === 'active' ? '正常' : '未激活' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="lastLogin" label="上次登录" width="120" />
-        <el-table-column label="操作" width="280" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" :icon="Eye" @click="viewDetail(row)">查看</el-button>
-            <el-button size="small" :icon="Pencil" @click="editInfo(row)">编辑</el-button>
-            <el-button size="small" :icon="Lock" @click="changePassword(row)">重置密码</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div class="student-account__pagination">
-        <el-pagination
-          :total="filteredStudents.length"
-          :page-size="10"
-          layout="prev, pager, next, total"
-          small
-        />
+  <div class="mc-page">
+    <div class="mc-page-head">
+      <div class="mc-page-head__left">
+        <p class="mc-page-head__eyebrow">账号管理 · Students</p>
+        <h2 class="mc-page-head__title">学生账号管理</h2>
+        <p class="mc-page-head__desc">
+          查看学生账号信息，修改密码、权限与基础信息。账号列表由后端 /admin/users 提供。
+        </p>
       </div>
-    </el-card>
+    </div>
 
-    <el-dialog v-model="detailDialogVisible" title="学生详情" width="500px">
-      <el-descriptions v-if="currentStudent" :column="2" border size="small">
-        <el-descriptions-item label="姓名">{{ currentStudent.name }}</el-descriptions-item>
-        <el-descriptions-item label="学号">{{ currentStudent.studentId }}</el-descriptions-item>
-        <el-descriptions-item label="班级">{{ currentStudent.className }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{
-          currentStudent.status === 'active' ? '正常' : '未激活'
-        }}</el-descriptions-item>
-        <el-descriptions-item label="邮箱"
-          >{{ currentStudent.studentId }}@edu.cn</el-descriptions-item
-        >
-        <el-descriptions-item label="上次登录">{{ currentStudent.lastLogin }}</el-descriptions-item>
-      </el-descriptions>
-    </el-dialog>
-
-    <el-dialog v-model="editDialogVisible" title="编辑信息" width="450px">
-      <el-form :model="editForm" label-width="80px">
-        <el-form-item label="姓名"><el-input v-model="editForm.name" /></el-form-item>
-        <el-form-item label="邮箱"><el-input v-model="editForm.email" /></el-form-item>
-        <el-form-item label="手机"><el-input v-model="editForm.phone" /></el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="editForm.status" active-value="active" inactive-value="inactive" />
+    <div class="mc-filter-bar">
+      <el-form inline @submit.prevent>
+        <el-form-item label="关键词">
+          <el-input
+            v-model="search.keyword"
+            placeholder="姓名 / 学号"
+            clearable
+            style="width: 180px"
+          />
+        </el-form-item>
+        <el-form-item label="学院">
+          <el-select v-model="search.college" placeholder="全部学院" clearable style="width: 150px">
+            <el-option v-for="c in colleges" :key="c" :label="c" :value="c" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search">查询</el-button>
         </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="editDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveEdit">保存</el-button>
-      </template>
+    </div>
+
+    <div class="mc-card">
+      <div class="mc-card__head">
+        <span class="mc-card__title">学生账号列表</span>
+      </div>
+      <div class="mc-card__body">
+        <div class="mc-empty">
+          <div class="mc-empty__icon"><Users :size="24" /></div>
+          <p class="mc-empty__title">学生账号数据待后端就绪</p>
+          <p class="mc-empty__desc">
+            查看、编辑与重置密码操作已按契约预留，账号列表接口（/admin/users）就绪后自动加载。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <el-dialog v-model="detailDialogVisible" title="学生详情" width="460px">
+      <el-descriptions :column="2" border size="small">
+        <el-descriptions-item label="姓名">{{ currentStudent?.name }}</el-descriptions-item>
+        <el-descriptions-item label="学号">{{ currentStudent?.studentId }}</el-descriptions-item>
+      </el-descriptions>
     </el-dialog>
 
     <el-dialog v-model="passwordDialogVisible" title="重置密码" width="400px">
       <el-form>
-        <el-form-item label="学生"
-          >{{ currentStudent?.name }}（{{ currentStudent?.studentId }}）</el-form-item
-        >
+        <el-form-item label="学生">
+          {{ currentStudent?.name }}（{{ currentStudent?.studentId }}）
+        </el-form-item>
         <el-form-item label="新密码" required>
-          <el-input
-            v-model="newPassword"
-            type="password"
-            show-password
-            placeholder="输入新密码（至少6位）"
-          />
+          <el-input type="password" show-password placeholder="输入新密码（至少 6 位）" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="passwordDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="savePassword">确认重置</el-button>
+        <el-button type="primary">确认重置</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
-
-<style scoped lang="scss">
-.student-account {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-  &__filters {
-    margin-bottom: 0;
-  }
-  &__pagination {
-    margin-top: $spacing-lg;
-    display: flex;
-    justify-content: flex-end;
-  }
-}
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-</style>

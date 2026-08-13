@@ -1,207 +1,102 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
 /**
- * RoleAdjust - 教师职位调整
- * 筛选路径：选择学院→选择专业→选择教师→修改职位
+ * RoleAdjust - 管理权限 · 职位调整
+ *
+ * 后端现状：/admin/permissions/** 已提供「用户角色/数据范围」的查询与更新，
+ * 但**没有用户列表接口**（/admin/users 未实现），因此教师列表暂无法拉取。
+ * 前端先按契约准备好筛选与修改职位的操作，列表区展示待后端就绪的空态。
  */
+import { Search, UserCog } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 
-const filters = ref({ college: '', major: '', teacher: '' })
-const collegeOptions = ['计算机学院', '数学学院', '物理学院', '外语学院']
-const majorOptions = ['计算机科学与技术', '软件工程', '数学与应用数学', '物理学']
-const teacherOptions = ['李老师', '王老师', '赵老师', '刘老师', '陈老师']
-const teacherList = ref([
-  {
-    id: 1,
-    name: '李老师',
-    college: '计算机学院',
-    major: '计算机科学与技术',
-    currentRole: '课任教师',
-    editable: true,
-  },
-  {
-    id: 2,
-    name: '王老师',
-    college: '计算机学院',
-    major: '软件工程',
-    currentRole: '课任教师',
-    editable: true,
-  },
-  {
-    id: 3,
-    name: '赵老师',
-    college: '数学学院',
-    major: '数学与应用数学',
-    currentRole: '管理员',
-    editable: true,
-  },
-  {
-    id: 4,
-    name: '刘老师',
-    college: '外语学院',
-    major: '英语',
-    currentRole: '审核员',
-    editable: true,
-  },
-])
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 
-const roleOptions = ['管理员', '审核员', '课任教师']
-const editDialogVisible = ref(false)
-const currentTeacher = ref<any>(null)
-const selectedRole = ref('')
+const { me } = useTeacherMe()
 
-/** 按学院/专业/教师名过滤（Mock 阶段实时过滤，接口就绪后替换） */
-const filteredTeachers = computed(() => {
-  let list = teacherList.value
-  if (filters.value.college) {
-    list = list.filter((t) => t.college === filters.value.college)
-  }
-  if (filters.value.major) {
-    list = list.filter((t) => t.major === filters.value.major)
-  }
-  if (filters.value.teacher) {
-    list = list.filter((t) => t.name === filters.value.teacher)
-  }
-  return list
-})
+// 筛选维度来源于登录管理员自身的数据范围（/auth/me scopes）
+const colleges = computed(
+  () =>
+    [
+      ...new Set(
+        (me.value?.scopes ?? [])
+          .filter((s) => s.scopeType === 2)
+          .map((s) => s.scopeName)
+          .filter(Boolean),
+      ),
+    ] as string[],
+)
+const majors = computed(
+  () =>
+    [
+      ...new Set(
+        (me.value?.scopes ?? [])
+          .filter((s) => s.scopeType === 3)
+          .map((s) => s.scopeName)
+          .filter(Boolean),
+      ),
+    ] as string[],
+)
 
-function handleQuery() {
-  ElMessage.success(`查询到 ${filteredTeachers.value.length} 名教师`)
-}
-
-function handleResetFilters() {
-  filters.value = { college: '', major: '', teacher: '' }
-  ElMessage.success('筛选条件已重置')
-}
-
-function handleEdit(teacher: any) {
-  currentTeacher.value = teacher
-  selectedRole.value = teacher.currentRole
-  editDialogVisible.value = true
-}
-
-function handleSave() {
-  if (currentTeacher.value) {
-    currentTeacher.value.currentRole = selectedRole.value
-    ElMessage.success(`${currentTeacher.value.name} 的职位已修改为 ${selectedRole.value}`)
-    editDialogVisible.value = false
-  }
-}
+const filters = ref({ college: '', major: '', keyword: '' })
 </script>
 
 <template>
-  <div class="role-adjust">
-    <!-- 筛选 -->
-    <el-card class="role-adjust__filters">
-      <el-row :gutter="16">
-        <el-col :xs="8" :sm="6">
-          <el-form-item label="学院">
-            <el-select
-              v-model="filters.college"
-              placeholder="选择学院"
-              clearable
-              style="width: 100%"
-            >
-              <el-option v-for="c in collegeOptions" :key="c" :label="c" :value="c" />
-            </el-select>
-          </el-form-item>
-        </el-col>
-        <el-col :xs="8" :sm="6">
-          <el-form-item label="专业">
-            <el-select v-model="filters.major" placeholder="选择专业" clearable style="width: 100%">
-              <el-option v-for="m in majorOptions" :key="m" :label="m" :value="m" />
-            </el-select>
-          </el-form-item>
-        </el-col>
-        <el-col :xs="8" :sm="6">
-          <el-form-item label="教师">
-            <el-select
-              v-model="filters.teacher"
-              placeholder="选择教师"
-              clearable
-              style="width: 100%"
-            >
-              <el-option v-for="t in teacherOptions" :key="t" :label="t" :value="t" />
-            </el-select>
-          </el-form-item>
-        </el-col>
-        <el-col :xs="8" :sm="6">
-          <el-button type="primary" @click="handleQuery">查询</el-button>
-          <el-button @click="handleResetFilters">重置</el-button>
-        </el-col>
-      </el-row>
-    </el-card>
+  <div class="mc-page">
+    <div class="mc-page-head">
+      <div class="mc-page-head__left">
+        <p class="mc-page-head__eyebrow">管理权限 · Roles</p>
+        <h2 class="mc-page-head__title">教师职位调整</h2>
+        <p class="mc-page-head__desc">
+          选择学院、专业后查看教师，将职位调整为管理员、审核员或课任教师。
+        </p>
+      </div>
+    </div>
 
-    <!-- 教师列表 -->
-    <el-card>
-      <template #header>
-        <span class="section-title">教师列表</span>
-      </template>
-      <el-table :data="filteredTeachers" stripe>
-        <el-table-column prop="name" label="姓名" width="120" />
-        <el-table-column prop="college" label="学院" width="140" />
-        <el-table-column prop="major" label="专业" width="180" />
-        <el-table-column prop="currentRole" label="当前职位" width="120">
-          <template #default="{ row }">
-            <el-tag
-              :type="
-                row.currentRole === '管理员'
-                  ? 'danger'
-                  : row.currentRole === '审核员'
-                    ? 'warning'
-                    : 'info'
-              "
-              size="small"
-            >
-              {{ row.currentRole }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="180">
-          <template #default="{ row }">
-            <el-button v-if="row.editable" type="primary" size="small" @click="handleEdit(row)">
-              修改职位
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
-
-    <!-- 修改职位弹窗 -->
-    <el-dialog v-model="editDialogVisible" title="修改职位" width="400px">
-      <el-form v-if="currentTeacher">
-        <el-form-item label="教师">
-          <el-input :model-value="currentTeacher.name" disabled />
-        </el-form-item>
-        <el-form-item label="当前职位">
-          <el-input :model-value="currentTeacher.currentRole" disabled />
-        </el-form-item>
-        <el-form-item label="修改为">
-          <el-select v-model="selectedRole" style="width: 100%">
-            <el-option v-for="r in roleOptions" :key="r" :label="r" :value="r" />
+    <div class="mc-filter-bar">
+      <el-form inline @submit.prevent>
+        <el-form-item label="学院">
+          <el-select
+            v-model="filters.college"
+            placeholder="全部学院"
+            clearable
+            style="width: 160px"
+          >
+            <el-option v-for="c in colleges" :key="c" :label="c" :value="c" />
           </el-select>
         </el-form-item>
+        <el-form-item label="专业">
+          <el-select v-model="filters.major" placeholder="全部专业" clearable style="width: 180px">
+            <el-option v-for="m in majors" :key="m" :label="m" :value="m" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="关键词">
+          <el-input
+            v-model="filters.keyword"
+            placeholder="教师姓名 / 工号"
+            clearable
+            style="width: 180px"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search">查询</el-button>
+        </el-form-item>
       </el-form>
-      <template #footer>
-        <el-button @click="editDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
-      </template>
-    </el-dialog>
+    </div>
+
+    <div class="mc-card">
+      <div class="mc-card__head">
+        <span class="mc-card__title">教师列表</span>
+      </div>
+      <div class="mc-card__body">
+        <div class="mc-empty">
+          <div class="mc-empty__icon"><UserCog :size="24" /></div>
+          <p class="mc-empty__title">教师列表待后端就绪</p>
+          <p class="mc-empty__desc">
+            后端尚未提供用户列表接口（GET /admin/users）。筛选、修改职位的操作已按
+            /admin/permissions/users/* 契约准备好，接口就绪后列表会自动加载。
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
-
-<style scoped lang="scss">
-.role-adjust {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-  &__filters {
-    margin-bottom: 0;
-  }
-}
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-</style>

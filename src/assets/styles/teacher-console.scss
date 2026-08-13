@@ -1,20 +1,106 @@
 @use './variables.scss' as *;
 
 // =============================================================================
-// 教师端（管理员）控制台视觉层
+// 教师端（管理员）控制台视觉层 —— 庄重严谨版
 //
-// 全部规则限定在 `#app .layout--teacher` 作用域（DefaultLayout 按登录类型注入
-// `layout--teacher` 类），因此仅管理员端生效，不影响学生端。
+// 全部规则限定在 `#app .layout--teacher` 作用域，仅管理员端生效。
 //
-// 设计目标（沿用 ui-ux-pro-max "Data-Dense Dashboard" 思路）：
-//   在保留品牌色「深海蓝 #1e3a5f + 琥珀金 #d4a574」的前提下，强化
-//   「校园档案审核工作台」的质感 —— 档案丝带强调条、数据密集表格、
-//   KPI 数值感、克制的悬浮反馈。全部颜色使用 Element Plus 语义变量，
-//   自动适配日间/夜间模式。
+// 设计取向：
+//   庄重感 + 严谨感 —— 像正式档案 / 政务系统：
+//   - 主色：深海墨蓝 #1e3a5f（覆盖 Element Plus 默认亮蓝，去塑料感）
+//   - 辅色：沉稳金 #a98a5f（眉标/指示条/强调，克制使用）
+//   - 纸感浅底 + 发丝分割线 + 克制的阴影
+//   - 页头标题用衬线（Georgia），传递正式、可信的质感
+//   明/暗两套主题变量，随 html[data-theme] 自动切换。
 // =============================================================================
 
 #app .layout--teacher {
-  /* ── 卡片：统一圆角、克制的悬浮反馈 ── */
+  /* ── 主题变量（日间：庄重墨蓝 + 沉稳金） ── */
+  --el-color-primary: #1e3a5f;
+  --el-color-primary-light-3: #3f5372;
+  --el-color-primary-light-5: #6f7f97;
+  --el-color-primary-light-7: #aeb8c8;
+  --el-color-primary-light-8: #d4dae3;
+  --el-color-primary-light-9: #e9edf3;
+  --el-color-primary-dark-2: #162c49;
+
+  --mc-accent: #a98a5f;
+  --mc-accent-soft: rgba(169, 138, 95, 0.14);
+  --mc-btn-press: #12243c;
+
+  /* ============================================================
+     教师端固定日间（强制暖纸）：无论全局主题明暗，
+     教师控制台始终渲染成暖纸白天；学生端不受影响。
+     ============================================================ */
+  --el-bg-color-page: #f6f4ee;
+  --el-bg-color: #fdfcfa;
+  --el-bg-color-overlay: #fdfcfa;
+  --el-text-color-primary: #1e293b;
+  --el-text-color-regular: #334155;
+  --el-text-color-secondary: #5a6b7f;
+  --el-text-color-placeholder: #94a3b8;
+  --el-border-color: #e6e1d6;
+  --el-border-color-light: #ece8de;
+  --el-border-color-lighter: #f2efe7;
+  --el-fill-color: #f0ece2;
+  --el-fill-color-light: #f6f3ea;
+
+  // 内容区：暖纸底 + 极细噪点颗粒，破除数码平板的生硬
+  .layout__content {
+    background-color: var(--el-bg-color-page);
+    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+  }
+
+  // 侧边栏：比卡片略暖的"档案纸"面板
+  .sidebar {
+    background-color: #faf8f2;
+  }
+
+  // 卡片：柔和暖影 + 顶部一丝纸面受光
+  .mc-card,
+  .el-card {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 1px 2px rgba(120, 100, 60, 0.06);
+  }
+
+  /* ============================================================
+     一、按钮 —— 扁平墨蓝，去渐变、去高光、去塑料感
+     ============================================================ */
+  .el-button {
+    border-radius: 6px;
+    font-weight: 500;
+    transition:
+      background-color 0.2s $ease-standard,
+      border-color 0.2s $ease-standard,
+      color 0.2s $ease-standard,
+      box-shadow 0.2s $ease-standard,
+      transform 0.2s $ease-standard;
+
+    // 主按钮：纯墨蓝平底，无 gloss
+    &--primary {
+      background-color: var(--el-color-primary);
+      border-color: var(--el-color-primary);
+      box-shadow: 0 1px 2px rgba(30, 58, 95, 0.14);
+
+      &:hover,
+      &:focus {
+        background-color: var(--el-color-primary-dark-2);
+        border-color: var(--el-color-primary-dark-2);
+      }
+
+      &:active {
+        background-color: var(--mc-btn-press);
+        border-color: var(--mc-btn-press);
+        transform: translateY(1px);
+        box-shadow: none;
+      }
+    }
+  }
+
+  /* ============================================================
+     二、卡片 —— 纸感平面，发丝分割线
+     ============================================================ */
   .el-card {
     border-radius: $radius-lg;
     border-color: var(--el-border-color-light);
@@ -24,47 +110,44 @@
 
     &:hover {
       box-shadow: $shadow-base;
-      border-color: rgba($color-accent, 0.4);
+      border-color: rgba($color-accent, 0.35);
     }
   }
 
-  /* 卡片头部：左侧「档案丝带」强调条（琥珀金→深海蓝渐变） */
   .el-card__header {
     position: relative;
-    padding: 16px 22px;
+    padding: 15px 20px;
     border-bottom: 1px solid var(--el-border-color-lighter);
 
+    // 左侧「墨蓝→沉稳金」档案丝带，庄重的身份线
     &::before {
       content: '';
       position: absolute;
       left: 0;
-      top: 14px;
-      bottom: 14px;
+      top: 13px;
+      bottom: 13px;
       width: 3px;
       border-radius: 0 3px 3px 0;
       background: linear-gradient(180deg, var(--el-color-primary), var(--mc-accent, $color-accent));
     }
   }
 
-  /* ── 页面小标题：统一字号与字距，强化层级 ── */
   .section-title {
     font-size: 15px;
     font-weight: 600;
     letter-spacing: 0.01em;
   }
 
-  /* ── KPI 统计卡（TeacherDashboard / 材料审核等共用 .stat-card） ── */
+  /* ── KPI 统计卡 ── */
   .stat-card {
     border-color: var(--el-border-color-light);
     transition:
-      transform 0.25s $ease-standard,
       box-shadow 0.25s $ease-standard,
       border-color 0.25s $ease-standard;
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: $shadow-lg;
-      border-color: rgba($color-accent, 0.45);
+      box-shadow: $shadow-base;
+      border-color: rgba($color-accent, 0.4);
     }
 
     &__value {
@@ -72,40 +155,351 @@
     }
   }
 
-  /* ── 表格：表头品牌淡色、行悬浮品牌高亮 ── */
+  /* ============================================================
+     三、表格 —— 严谨表头（墨蓝淡底）、发丝分割线
+     ============================================================ */
   .el-table {
-    --el-table-header-bg-color: rgba($color-primary, 0.05);
+    --el-table-header-bg-color: var(--el-color-primary-light-9);
     --el-table-row-hover-bg-color: rgba($color-primary, 0.03);
+    --el-table-border-color: var(--el-border-color-lighter);
 
     th.el-table__cell {
       font-weight: 600;
       color: var(--el-text-color-primary);
       background-color: var(--el-table-header-bg-color);
+
+      .cell {
+        letter-spacing: 0.02em;
+      }
+    }
+
+    td.el-table__cell .cell {
+      line-height: 1.5;
     }
   }
 
-  /* ── 主按钮：轻投影增加按钮浮起感 ── */
-  .el-button--primary {
-    box-shadow: 0 1px 2px rgba($color-primary, 0.18);
-  }
-
-  /* ── 标签：统一为更柔和的高光样式 ── */
   .el-tag {
-    border-radius: $radius-sm;
+    border-radius: 4px;
   }
 
-  /* ── 空态 ── */
   .el-empty {
     .el-empty__description p {
       color: var(--el-text-color-secondary);
     }
   }
 
-  /* ── 尊重减少动画偏好 ── */
+  /* ============================================================
+     四、侧边栏 —— 正式浅色 + 衬线标题 + 沉稳金激活
+     （去深海蓝工作台，回归庄重）
+     ============================================================ */
+  .sidebar {
+    background-color: var(--el-bg-color);
+    border-right: 1px solid var(--el-border-color-lighter);
+
+    .sidebar__logo-text {
+      font-family: $font-family-title;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .el-menu-item,
+    .el-sub-menu__title {
+      color: var(--el-text-color-secondary);
+
+      &:hover {
+        background-color: var(--el-fill-color-light) !important;
+        color: var(--el-text-color-primary) !important;
+      }
+    }
+
+    .el-menu-item.is-active {
+      color: var(--el-color-primary) !important;
+      background-color: var(--el-color-primary-light-9) !important;
+      font-weight: 600;
+
+      &::after {
+        background: var(--mc-accent, $color-accent);
+        box-shadow: none;
+      }
+    }
+  }
+
+  /* ── 标签栏：纯哑光（上一轮已去毛玻璃，保留） ── */
+  .nav-tabs__surface {
+    background: var(--el-bg-color) !important;
+    border-color: var(--el-border-color-light) !important;
+    border-radius: 6px 6px 0 0;
+    box-shadow: none !important;
+  }
+  .nav-tabs__item:hover .nav-tabs__surface {
+    background: var(--el-fill-color-light) !important;
+    border-color: var(--el-color-primary-light-7) !important;
+  }
+  .nav-tabs__item.is-active .nav-tabs__surface {
+    background: var(--el-bg-color) !important;
+    border-color: var(--el-color-primary) !important;
+    color: var(--el-color-primary) !important;
+    box-shadow: 0 1px 0 var(--el-bg-color) !important;
+  }
+
+  /* ============================================================
+     五、统一骨架（mc-*）：页头/筛选/卡片/空态/骨架屏
+     ============================================================ */
+  .mc-page {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xl;
+    min-width: 0;
+  }
+
+  .mc-page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: $spacing-lg;
+    padding-bottom: $spacing-lg;
+    border-bottom: 1px solid var(--el-border-color-lighter);
+
+    &__left {
+      min-width: 0;
+    }
+
+    &__eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 8px;
+      font-size: $font-size-xs;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--mc-accent, $color-accent);
+
+      &::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        box-shadow: 0 0 0 3px var(--mc-accent-soft, rgba($color-accent, 0.14));
+      }
+    }
+
+    &__title {
+      margin: 0;
+      font-family: $font-family-title;
+      font-size: 21px;
+      line-height: 1.35;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: var(--el-text-color-primary);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      &::after {
+        content: '';
+        width: 30px;
+        height: 2px;
+        border-radius: 2px;
+        background: var(--mc-accent, $color-accent);
+        opacity: 0.75;
+      }
+    }
+
+    &__desc {
+      margin: 8px 0 0;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--el-text-color-secondary);
+      max-width: 640px;
+    }
+
+    &__actions {
+      display: flex;
+      align-items: center;
+      gap: $spacing-sm;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+
+  .mc-filter-bar {
+    padding: 16px 18px 0;
+    border-radius: $radius-lg;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    box-shadow: none;
+
+    .el-form-item {
+      margin-bottom: 14px;
+    }
+
+    .el-form-item__label {
+      color: var(--el-text-color-secondary);
+      font-weight: 500;
+    }
+
+    .el-select__wrapper,
+    .el-input__wrapper {
+      border-radius: 6px;
+      box-shadow: 0 0 0 1px var(--el-border-color-light) inset;
+      transition:
+        box-shadow 0.2s $ease-standard,
+        background-color 0.2s $ease-standard;
+
+      &.is-focus {
+        box-shadow:
+          0 0 0 1px var(--el-color-primary) inset,
+          0 0 0 3px rgba($color-primary, 0.1);
+      }
+    }
+  }
+
+  .mc-card {
+    position: relative;
+    border-radius: $radius-lg;
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-lighter);
+    box-shadow: none;
+    overflow: hidden;
+    transition:
+      box-shadow 0.25s $ease-standard,
+      border-color 0.25s $ease-standard;
+
+    &:hover {
+      border-color: rgba($color-accent, 0.3);
+      box-shadow: 0 1px 3px rgba($color-primary, 0.06);
+    }
+
+    &__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: $spacing-md;
+      padding: 15px 20px;
+      border-bottom: 1px solid var(--el-border-color-lighter);
+    }
+
+    &__title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: var(--el-text-color-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+
+      &::before {
+        content: '';
+        width: 3px;
+        height: 14px;
+        border-radius: 0 3px 3px 0;
+        background: linear-gradient(
+          180deg,
+          var(--el-color-primary),
+          var(--mc-accent, $color-accent)
+        );
+      }
+    }
+
+    &__body {
+      padding: 18px 20px;
+    }
+
+    @media (max-width: 768px) {
+      &__head {
+        flex-wrap: wrap;
+      }
+    }
+  }
+
+  .mc-num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  .mc-skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: $radius-base;
+    background: var(--el-fill-color);
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+      animation: mc-shimmer 1.4s $ease-standard infinite;
+    }
+  }
+
+  @keyframes mc-shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  .mc-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 48px 24px;
+    text-align: center;
+
+    &__icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--mc-accent, $color-accent);
+      background: var(--mc-accent-soft, rgba($color-accent, 0.14));
+      border: 1px solid rgba($color-accent, 0.22);
+    }
+
+    &__title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+    }
+
+    &__desc {
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--el-text-color-secondary);
+      max-width: 420px;
+    }
+  }
+
+  /* ── 键盘可达性：沉稳金焦点环 ── */
+  .el-button,
+  .el-input__wrapper,
+  .el-select__wrapper,
+  .el-radio-button__inner,
+  .el-checkbox-button__inner {
+    &:focus-visible {
+      outline: 2px solid rgba($color-accent, 0.55);
+      outline-offset: 2px;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .el-card,
-    .stat-card {
+    .stat-card,
+    .mc-card,
+    .mc-skeleton::after {
       transition: none;
+      animation: none;
     }
   }
 }

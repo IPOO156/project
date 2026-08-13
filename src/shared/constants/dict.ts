@@ -176,12 +176,29 @@ export const ACTIVITY_STATUS = {
 } as const
 
 // 日志操作类型（管理员端日志查看模块使用，LogView 与 LogTable 共用）
+// action 取值对齐后端 audit_logs.action（create/update/delete/audit 等）
 export type LogActionTag = 'success' | 'warning' | 'danger' | 'info' | 'primary'
 export const LOG_ACTION_TYPES: Record<string, { label: string; tag: LogActionTag }> = {
   create: { label: '新增', tag: 'success' },
   update: { label: '修改', tag: 'warning' },
   delete: { label: '删除', tag: 'danger' },
   review: { label: '审核', tag: 'primary' },
+  audit: { label: '审核', tag: 'primary' },
   login: { label: '登录', tag: 'info' },
+  logout: { label: '登出', tag: 'info' },
   export: { label: '导出', tag: 'info' },
+}
+
+// 日志业务模块映射（后端 system_logs.module）
+export const LOG_MODULES: Record<string, string> = {
+  archive: '档案',
+  award: '奖项',
+  indicator: '指标',
+  score: '成绩',
+  career_plan: '职业规划',
+  user: '账号',
+  permission: '权限',
+  message: '消息',
+  system: '系统',
+  export: '导出',
 }

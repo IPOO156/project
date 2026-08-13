@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { TeacherRole } from '@/shared/types/types'
+import type { TeacherRole, UserInfo } from '@/shared/types/types'
 import { ElMessage } from 'element-plus'
 import { Lock, Moon, Shield, Sun, User } from 'lucide-vue-next'
-import { nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useThemeStore, useUserStore } from '@/app/stores/stores'
 import { login } from '@/shared/api/auth'
+import { getCaptcha, teacherLogin } from '@/shared/api/teacher'
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { useThemeRipple } from '@/shared/composables/useThemeRipple'
 import LoginBackground from './components/LoginBackground.vue'
 import LoginHero from './components/LoginHero.vue'
@@ -15,23 +17,58 @@ const router = useRouter()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
 const { toggleThemeWithRipple } = useThemeRipple()
+const { refresh: refreshTeacherMe } = useTeacherMe()
 
-// ── Mock 教师账号数据（接口联调后替换） ──
-const adminAccounts: Record<string, { password: string; name: string; role: TeacherRole }> = {
-  superadmin: { password: 'admin123', name: '超级管理员', role: 'super_admin' },
-  admin: { password: 'admin123', name: '李老师', role: 'admin' },
-  reviewer: { password: 'admin123', name: '王审核员', role: 'reviewer' },
-  teacher: { password: 'admin123', name: '刘老师', role: 'teacher' },
+// ── 后端角色 → 前端教师角色映射（后端 role code：admin=超级管理员 / teacher / counselor=辅导员≈审核员）──
+function mapBackendRole(roles: string[]): TeacherRole {
+  if (roles.includes('admin')) return 'super_admin'
+  if (roles.includes('counselor')) return 'reviewer'
+  return 'teacher'
 }
 
-const teacherInfoMap: Record<
-  TeacherRole,
-  { realName: string; college: string; department: string }
-> = {
-  super_admin: { realName: '超级管理员', college: '学校总部', department: '信息中心' },
-  admin: { realName: '李老师', college: '计算机学院', department: '计算机科学与技术系' },
-  reviewer: { realName: '王审核员', college: '计算机学院', department: '教务办公室' },
-  teacher: { realName: '刘老师', college: '计算机学院', department: '计算机科学与技术系' },
+function toUserInfo(user: {
+  userId: number
+  userNo: string
+  name: string
+  email: string | null
+  phone?: string | null
+  schoolName: string | null
+  roles: string[]
+  avatar: string | null
+}): UserInfo {
+  const role = mapBackendRole(user.roles)
+  return {
+    id: String(user.userId),
+    username: user.userNo,
+    realName: user.name,
+    avatar: user.avatar ?? undefined,
+    studentId: '',
+    grade: '',
+    major: '',
+    className: '',
+    email: user.email ?? '',
+    phone: user.phone ?? '',
+    role,
+    college: user.schoolName ?? '',
+    department: '',
+    loginType: 'teacher',
+  }
+}
+
+// ── 管理员登录：后端验证码 ──
+const isAdminLogin = computed(() => loginType.value === 'admin')
+const backendCaptcha = ref<{ key: string; image: string } | null>(null)
+let captchaKey = ''
+
+async function loadBackendCaptcha() {
+  try {
+    const res = await getCaptcha()
+    backendCaptcha.value = res
+    captchaKey = res.key
+    loginForm.captcha = ''
+  } catch {
+    backendCaptcha.value = null
+  }
 }
 
 const loginForm = reactive({ username: '', password: '', captcha: '', remember: false })
@@ -75,30 +112,45 @@ function getCaptchaCharStyle(idx: number) {
   }
 }
 function refreshCaptcha() {
-  generateCaptcha()
+  if (isAdminLogin.value) {
+    void loadBackendCaptcha()
+  } else {
+    generateCaptcha()
+  }
+}
+function handleThemeToggle(e: MouseEvent) {
+  toggleThemeWithRipple(e, () => refreshCaptcha())
 }
 
 /* ===================== 交互 ===================== */
 function switchLoginType(type: 'student' | 'admin') {
-  if (loginType.value !== type) loginType.value = type
+  if (loginType.value !== type) {
+    loginType.value = type
+    if (type === 'admin') {
+      void loadBackendCaptcha()
+    } else {
+      generateCaptcha()
+    }
+  }
 }
 function checkCapsLock(event: KeyboardEvent) {
   capsLockOn.value = event.getModifierState?.('CapsLock') ?? false
 }
-function handleThemeToggle(e: MouseEvent) {
-  toggleThemeWithRipple(e, () => generateCaptcha())
-}
-
 async function handleLogin() {
   if (!loginForm.username || !loginForm.password) {
     ElMessage.warning('请输入用户名和密码')
+    return
+  }
+  if (isAdminLogin.value && !backendCaptcha.value) {
+    ElMessage.warning('验证码加载中，请稍候再试')
+    void loadBackendCaptcha()
     return
   }
   if (!loginForm.captcha) {
     ElMessage.warning('请输入验证码')
     return
   }
-  if (loginForm.captcha.toUpperCase() !== captchaCode.value) {
+  if (!isAdminLogin.value && loginForm.captcha.toUpperCase() !== captchaCode.value) {
     ElMessage.warning('验证码错误，请重新输入')
     refreshCaptcha()
     loginForm.captcha = ''
@@ -107,36 +159,31 @@ async function handleLogin() {
   loading.value = true
 
   if (loginType.value === 'admin') {
-    // ── 教师端 Mock 登录（接口联调后替换） ──
-    setTimeout(() => {
-      const account = adminAccounts[loginForm.username.toLowerCase()]
-      if (account && account.password === loginForm.password) {
-        userStore.setToken(`mock-token-${Date.now()}`)
-        const info = teacherInfoMap[account.role]
-        userStore.setUserInfo({
-          id: `t-${Date.now()}`,
-          username: loginForm.username,
-          realName: info.realName,
-          studentId: '',
-          grade: '',
-          major: '',
-          className: '',
-          email: `${loginForm.username}@edu.cn`,
-          phone: '138****0000',
-          role: account.role,
-          college: info.college,
-          department: info.department,
-          loginType: 'teacher',
+    // ── 管理员登录：对接后端 /auth/login（含后端验证码）──
+    try {
+      const res = await teacherLogin({
+        userNo: loginForm.username,
+        password: loginForm.password,
+        captchaKey,
+        captchaCode: loginForm.captcha,
+        rememberMe: loginForm.remember,
+      })
+      userStore.setToken(res.accessToken)
+      userStore.setUserInfo(toUserInfo(res.user))
+      // 拉取完整身份（roles / permissions / scopes），供教师端授权范围过滤
+      refreshTeacherMe()
+        .then((me) => {
+          if (me) userStore.setUserInfo(toUserInfo(me))
         })
-        loading.value = false
-        loginSuccess.value = true
-        themeStore.applyTimeBasedTheme()
-        setTimeout(() => router.push('/teacher/dashboard'), 300)
-      } else {
-        loading.value = false
-        ElMessage.error('用户名或密码错误')
-      }
-    }, 800)
+        .catch(() => null)
+      loading.value = false
+      loginSuccess.value = true
+      themeStore.applyTimeBasedTheme()
+      setTimeout(() => router.push('/teacher/dashboard'), 300)
+    } catch {
+      loading.value = false
+      refreshCaptcha()
+    }
   } else {
     // ── 学生端 API 登录 ──
     try {
@@ -296,16 +343,25 @@ onUnmounted(() => {
                     :key="captchaRefreshKey"
                     type="button"
                     class="login__captcha-box"
+                    :class="{ 'login__captcha-box--img': isAdminLogin }"
                     title="点击刷新验证码"
                     @click="refreshCaptcha"
                   >
-                    <span
-                      v-for="(ch, i) in getCaptchaChars()"
-                      :key="i"
-                      class="login__captcha-char"
-                      :style="getCaptchaCharStyle(i)"
-                      >{{ ch }}</span
-                    >
+                    <img
+                      v-if="isAdminLogin && backendCaptcha"
+                      :src="backendCaptcha.image"
+                      alt="验证码"
+                      class="login__captcha-img"
+                    />
+                    <template v-else-if="!isAdminLogin">
+                      <span
+                        v-for="(ch, i) in getCaptchaChars()"
+                        :key="i"
+                        class="login__captcha-char"
+                        :style="getCaptchaCharStyle(i)"
+                        >{{ ch }}</span
+                      >
+                    </template>
                   </button>
                 </div>
                 <p class="login__hint">看不清？点击右侧验证码图片刷新</p>
@@ -732,6 +788,15 @@ onUnmounted(() => {
       border-color: var(--login-input-focus-border);
       transform: translateY(-1px);
     }
+    &--img {
+      padding: 4px;
+    }
+  }
+  &__captcha-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 14px;
   }
   &__captcha-char {
     display: inline-block;

@@ -1,118 +1,93 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
-import { Lock } from 'lucide-vue-next'
-import { ref } from 'vue'
+/**
+ * TeacherAccount - 教师账号管理
+ *
+ * 后端现状：账号列表接口（/admin/users）尚未实现，列表区展示待就绪空态；
+ * 重置密码的交互已按契约预留。
+ */
+import { Search, Users } from 'lucide-vue-next'
+import { reactive, ref } from 'vue'
 
-const teacherList = ref([
-  {
-    id: 1,
-    name: '李老师',
-    username: 'li_laoshi',
-    role: '管理员',
-    college: '计算机学院',
-    status: 'active',
-  },
-  {
-    id: 2,
-    name: '王老师',
-    username: 'wang_laoshi',
-    role: '审核员',
-    college: '计算机学院',
-    status: 'active',
-  },
-  {
-    id: 3,
-    name: '赵老师',
-    username: 'zhao_laoshi',
-    role: '课任教师',
-    college: '数学学院',
-    status: 'active',
-  },
-])
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+
+const { me } = useTeacherMe()
+
+const colleges = [
+  ...new Set(
+    (me.value?.scopes ?? [])
+      .filter((s) => s.scopeType === 2)
+      .map((s) => s.scopeName)
+      .filter((n): n is string => Boolean(n)),
+  ),
+]
+
+const search = reactive({ keyword: '', college: '' })
 
 const passwordDialogVisible = ref(false)
-const currentTeacher = ref<any>(null)
-const newPassword = ref('')
-
-function changePassword(teacher: any) {
-  currentTeacher.value = teacher
-  newPassword.value = ''
-  passwordDialogVisible.value = true
-}
-
-function savePassword() {
-  if (newPassword.value.length < 6) {
-    ElMessage.warning('密码长度至少6位')
-    return
-  }
-  ElMessage.success('密码已重置')
-  passwordDialogVisible.value = false
-}
+const currentTeacher = ref<{ name: string; username: string } | null>(null)
 </script>
 
 <template>
-  <div class="teacher-account">
-    <el-card>
-      <template #header><span class="section-title">教师账号列表</span></template>
-      <el-table :data="teacherList" stripe>
-        <el-table-column prop="name" label="姓名" width="120" />
-        <el-table-column prop="username" label="用户名" width="140" />
-        <el-table-column prop="role" label="角色" width="120">
-          <template #default="{ row }"
-            ><el-tag
-              :type="row.role === '管理员' ? 'danger' : row.role === '审核员' ? 'warning' : 'info'"
-              size="small"
-              >{{ row.role }}</el-tag
-            ></template
-          >
-        </el-table-column>
-        <el-table-column prop="college" label="学院" width="150" />
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }"
-            ><el-tag :type="row.status === 'active' ? 'success' : 'info'" size="small">{{
-              row.status === 'active' ? '正常' : '停用'
-            }}</el-tag></template
-          >
-        </el-table-column>
-        <el-table-column label="操作" width="160">
-          <template #default="{ row }">
-            <el-button size="small" :icon="Lock" @click="changePassword(row)">重置密码</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+  <div class="mc-page">
+    <div class="mc-page-head">
+      <div class="mc-page-head__left">
+        <p class="mc-page-head__eyebrow">账号管理 · Teachers</p>
+        <h2 class="mc-page-head__title">教师账号管理</h2>
+        <p class="mc-page-head__desc">
+          查看教师账号信息，修改密码、权限与信息。账号列表由后端 /admin/users 提供。
+        </p>
+      </div>
+    </div>
+
+    <div class="mc-filter-bar">
+      <el-form inline @submit.prevent>
+        <el-form-item label="关键词">
+          <el-input
+            v-model="search.keyword"
+            placeholder="教师姓名 / 用户名"
+            clearable
+            style="width: 180px"
+          />
+        </el-form-item>
+        <el-form-item label="学院">
+          <el-select v-model="search.college" placeholder="全部学院" clearable style="width: 150px">
+            <el-option v-for="c in colleges" :key="c" :label="c" :value="c" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search">查询</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <div class="mc-card">
+      <div class="mc-card__head">
+        <span class="mc-card__title">教师账号列表</span>
+      </div>
+      <div class="mc-card__body">
+        <div class="mc-empty">
+          <div class="mc-empty__icon"><Users :size="24" /></div>
+          <p class="mc-empty__title">教师账号数据待后端就绪</p>
+          <p class="mc-empty__desc">
+            查看、修改密码与权限的操作已按契约预留，账号列表接口（/admin/users）就绪后自动加载。
+          </p>
+        </div>
+      </div>
+    </div>
 
     <el-dialog v-model="passwordDialogVisible" title="重置密码" width="400px">
       <el-form>
-        <el-form-item label="教师"
-          >{{ currentTeacher?.name }}（{{ currentTeacher?.username }}）</el-form-item
-        >
+        <el-form-item label="教师">
+          {{ currentTeacher?.name }}（{{ currentTeacher?.username }}）
+        </el-form-item>
         <el-form-item label="新密码" required>
-          <el-input
-            v-model="newPassword"
-            type="password"
-            show-password
-            placeholder="输入新密码（至少6位）"
-          />
+          <el-input type="password" show-password placeholder="输入新密码（至少 6 位）" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="passwordDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="savePassword">确认重置</el-button>
+        <el-button type="primary">确认重置</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
-
-<style scoped lang="scss">
-.teacher-account {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-}
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-</style>

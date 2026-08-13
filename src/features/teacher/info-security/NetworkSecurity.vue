@@ -1,126 +1,133 @@
 <script setup lang="ts">
-import { Activity, CheckCircle2, Lock, Shield, ShieldAlert, Wifi } from 'lucide-vue-next'
+/**
+ * NetworkSecurity - 网络安全
+ * 覆盖：网络安全（边界防护/流量防护/传输安全/无线安全/入侵防护）
+ *       + 主机终端安全（服务器安全）
+ * 说明：本页为安全防护配置台账，状态由安全平台同步。
+ */
+import { Activity, CheckCircle2, Lock, Radar, Server, ShieldCheck, Wifi } from 'lucide-vue-next'
 
-const securityItems = [
+interface SecurityGroup {
+  title: string
+  icon: any
+  items: { name: string; detail: string }[]
+}
+
+const networkGroups: SecurityGroup[] = [
   {
-    category: '边界防护',
-    icon: Shield,
+    title: '边界防护',
+    icon: ShieldCheck,
     items: [
-      { name: '防火墙', status: 'normal', detail: '策略已更新 · 拦截 1,247 次攻击' },
-      { name: '入侵检测系统(IDS)', status: 'normal', detail: '运行正常 · 今日告警 3 条' },
+      { name: '防火墙策略', detail: '按来源/目的端口放行，其余默认拒绝' },
+      { name: '入侵防御系统（IPS）', detail: '实时匹配攻击特征并拦截' },
     ],
   },
   {
-    category: '流量防护',
+    title: '流量防护',
     icon: Activity,
     items: [
-      { name: '流量监控', status: 'normal', detail: '当前带宽使用率 34%' },
-      { name: 'DDoS防护', status: 'normal', detail: '清洗中 · 今日拦截 2 次' },
+      { name: '流量监控', detail: '记录出入流量与连接数，超阈值告警' },
+      { name: 'DDoS 清洗', detail: '异常流量自动牵引清洗' },
     ],
   },
   {
-    category: '传输安全',
+    title: '传输安全',
     icon: Lock,
     items: [
-      { name: 'SSL/TLS证书', status: 'normal', detail: '证书有效期至 2026-12-31' },
-      { name: 'VPN通道', status: 'normal', detail: '4 条隧道 · 全部加密' },
+      { name: 'HTTPS 证书', detail: '全站启用 TLS，证书到期前自动续期提醒' },
+      { name: 'VPN 隧道', detail: '远程接入走加密隧道' },
     ],
   },
   {
-    category: '无线安全',
+    title: '无线安全',
     icon: Wifi,
     items: [
-      { name: 'Wi-Fi加密', status: 'normal', detail: 'WPA3-Enterprise · 802.1X' },
-      { name: '无线入侵防护', status: 'normal', detail: '运行正常 · 已隔离 1 个恶意AP' },
+      { name: 'Wi-Fi 加密', detail: 'WPA3 企业级认证' },
+      { name: '无线接入审计', detail: '非法接入点自动隔离' },
+    ],
+  },
+  {
+    title: '入侵防护',
+    icon: Radar,
+    items: [
+      { name: '入侵检测（IDS）', detail: '旁路镜像分析异常行为' },
+      { name: '行为基线', detail: '按正常访问基线识别异常登录' },
+    ],
+  },
+  {
+    title: '主机终端安全',
+    icon: Server,
+    items: [
+      { name: '服务器加固', detail: '最小化开放端口，关闭无用服务' },
+      { name: '终端管控', detail: '统一补丁与防病毒策略' },
+      { name: '系统资源监控', detail: 'CPU / 内存 / 磁盘阈值告警' },
     ],
   },
 ]
 </script>
 
 <template>
-  <div class="network-security">
-    <el-card class="network-security__header">
-      <el-row justify="space-between" align="middle">
-        <el-col :span="12"><span class="section-title">网络安全防护</span></el-col>
-        <el-col :span="12" style="text-align: right">
-          <el-tag type="success" size="large" effect="dark"><Shield :size="14" /> 防护中</el-tag>
-        </el-col>
-      </el-row>
-    </el-card>
+  <div class="mc-page">
+    <div class="mc-page-head">
+      <div class="mc-page-head__left">
+        <p class="mc-page-head__eyebrow">信息安全 · Network</p>
+        <h2 class="mc-page-head__title">网络安全</h2>
+        <p class="mc-page-head__desc">
+          边界、流量、传输、无线与入侵防护的配置台账，以及主机终端安全加固项。
+        </p>
+      </div>
+      <div class="mc-page-head__actions">
+        <el-tag type="success" size="large" effect="dark"><ShieldCheck :size="14" /> 防护中</el-tag>
+      </div>
+    </div>
 
     <el-row :gutter="16">
-      <el-col v-for="group in securityItems" :key="group.category" :span="12">
-        <el-card class="network-security__group">
-          <template #header>
-            <div class="network-security__group-header">
-              <component :is="group.icon" :size="18" style="color: var(--el-color-primary)" />
-              <span class="section-title">{{ group.category }}</span>
-            </div>
-          </template>
-          <div class="security-items">
-            <div v-for="item in group.items" :key="item.name" class="security-item">
-              <div class="security-item__left">
-                <component
-                  :is="item.status === 'normal' ? CheckCircle2 : ShieldAlert"
-                  :size="18"
-                  color="var(--el-color-success)"
-                />
-                <span class="security-item__name">{{ item.name }}</span>
+      <el-col v-for="group in networkGroups" :key="group.title" :xs="24" :sm="12" :lg="8">
+        <div class="mc-card sec-group">
+          <div class="mc-card__head">
+            <span class="mc-card__title">{{ group.title }}</span>
+          </div>
+          <div class="mc-card__body">
+            <div v-for="item in group.items" :key="item.name" class="sec-item">
+              <component :is="CheckCircle2" :size="16" color="var(--el-color-success)" />
+              <div class="sec-item__info">
+                <span class="sec-item__name">{{ item.name }}</span>
+                <span v-if="item.detail" class="sec-item__detail">{{ item.detail }}</span>
               </div>
-              <span class="security-item__detail">{{ item.detail }}</span>
             </div>
           </div>
-        </el-card>
+        </div>
       </el-col>
     </el-row>
   </div>
 </template>
 
 <style scoped lang="scss">
-.network-security {
+.sec-group {
+  height: 100%;
+}
+.sec-item {
   display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-  &__header {
-    margin-bottom: 0;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  padding: $spacing-sm 0;
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--el-border-color-lighter);
   }
-  &__group {
-    height: 100%;
-  }
-  &__group-header {
+  &__info {
     display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-  }
-}
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-.security-items {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
-}
-.security-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: $spacing-md;
-  border-radius: $radius-base;
-  background: var(--el-fill-color-light);
-  &__left {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
   }
   &__name {
     font-size: 14px;
     font-weight: 500;
+    color: var(--el-text-color-primary);
   }
   &__detail {
     font-size: 12px;
+    line-height: 1.6;
     color: var(--el-text-color-secondary);
   }
 }

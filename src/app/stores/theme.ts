@@ -40,10 +40,9 @@ function applyTheme(theme: ThemeMode) {
 
 /**
  * 全局主题状态
- * - 支持 light / dark 两套主题
+ * - 支持 light / dark 两套主题（学生端保留切换）
  * - 主题偏好持久化到 localStorage
- * - 通过 data-theme 属性驱动 CSS 变量切换
- * - 登录时若用户无手动偏好，根据时间段自动切换（6:00-18:00 日间，18:00-6:00 夜间）
+ * - 教师端控制台通过 teacher-console.scss 强制渲染为日间，与本 store 无关
  */
 export const useThemeStore = defineStore('theme', () => {
   const theme: Ref<ThemeMode> = ref(readTheme())

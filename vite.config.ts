@@ -34,7 +34,9 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5175,
+    // 端口必须是后端 WebConfig 默认 CORS 白名单中的地址（3000/5173/8080），
+    // 否则登录等带 Origin 的请求会被后端以 403 Invalid CORS request 拒绝。
+    port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

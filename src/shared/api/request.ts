@@ -2,7 +2,9 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
 const request = axios.create({
-  baseURL: '/api',
+  // 后端全局 context-path 为 /api/v1（见后端 application.yml），接口文档基础 URL 亦为 /api/v1。
+  // 此前为 /api 与后端前缀不一致，联调时全部 404；现统一对齐后端契约。
+  baseURL: '/api/v1',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',

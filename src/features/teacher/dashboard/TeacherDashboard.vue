@@ -2,58 +2,108 @@
 /**
  * TeacherDashboard - 教师端首页仪表盘
  *
- * 根据角色展示不同内容：
- * - 超级管理员/管理员：系统总览数据 + 快捷管理入口
- * - 审核员：待审核材料汇总 + 审核通道
- * - 课任教师：所教班级档案概况
+ * 数据来源（能接就接，均为后端真实接口）：
+ *   - 欢迎区：userStore（登录后已写入）
+ *   - 未读消息：GET /messages
+ *   - 数据范围：GET /auth/me 的 scopes
+ *   - 最近操作：管理员 → GET /admin/logs/system；其余角色 → 最近消息
  */
 import {
+  Activity,
+  Bell,
   BookOpen,
   ClipboardCheck,
   Download,
   Eye,
-  FileText,
+  MapPin,
   TrendingUp,
-  UserCheck,
   Users,
 } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores/stores'
+import { getSystemLogs, listMessages } from '@/shared/api/teacher'
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+import { TEACHER_ROLE_LABELS } from '@/shared/types/types'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { me } = useTeacherMe()
 
 const currentRole = computed(() => userStore.currentRole)
 const userName = computed(() => userStore.userName)
+const isAdmin = computed(() => userStore.isSuperAdmin || userStore.isAdmin)
+const roleLabel = computed(() =>
+  currentRole.value ? (TEACHER_ROLE_LABELS[currentRole.value] ?? '') : '',
+)
 
-// ── Mock 统计卡片 ──
-const statsCards = computed(() => {
-  const role = currentRole.value
-  if (role === 'super_admin' || role === 'admin') {
-    return [
-      { label: '学生总数', value: 2846, icon: Users, color: 'var(--el-color-primary)' },
-      { label: '教师总数', value: 186, icon: BookOpen, color: 'var(--el-color-success)' },
-      { label: '今日操作', value: 237, icon: TrendingUp, color: 'var(--el-color-warning)' },
-      { label: '待审核材料', value: 42, icon: ClipboardCheck, color: 'var(--el-color-danger)' },
-    ]
+// ── 真实统计数据 ──
+const unreadCount = ref<number | null>(null)
+const scopeText = ref('')
+const recentTotal = ref<number | null>(null)
+
+/** 数据范围摘要：从 /auth/me scopes 派生「X 学院 · Y 专业」 */
+function buildScopeText() {
+  const scopes = me.value?.scopes ?? []
+  const colleges = new Set(
+    scopes
+      .filter((s) => s.scopeType === 2)
+      .map((s) => s.scopeName)
+      .filter(Boolean),
+  )
+  const majors = new Set(
+    scopes
+      .filter((s) => s.scopeType === 3)
+      .map((s) => s.scopeName)
+      .filter(Boolean),
+  )
+  const parts: string[] = []
+  if (colleges.size) parts.push(`${colleges.size} 学院`)
+  if (majors.size) parts.push(`${majors.size} 专业`)
+  scopeText.value = parts.length ? parts.join(' · ') : '全校'
+}
+
+async function loadStats() {
+  try {
+    const msg = await listMessages({ page: 1, per_page: 1 })
+    unreadCount.value = msg.unread
+  } catch {
+    unreadCount.value = null
   }
-  if (role === 'reviewer') {
-    return [
-      { label: '待审核（院级）', value: 18, icon: UserCheck, color: 'var(--el-color-primary)' },
-      { label: '待审核（系级）', value: 24, icon: UserCheck, color: 'var(--el-color-warning)' },
-      { label: '今日已审核', value: 15, icon: ClipboardCheck, color: 'var(--el-color-success)' },
-      { label: '审核通过率', value: '86%', icon: TrendingUp, color: 'var(--el-color-primary)' },
-    ]
+  buildScopeText()
+  if (isAdmin.value) {
+    try {
+      const logs = await getSystemLogs({ page: 1, per_page: 1 })
+      recentTotal.value = logs.total
+    } catch {
+      recentTotal.value = null
+    }
+  } else {
+    recentTotal.value = null
   }
-  // teacher
-  return [
-    { label: '所教班级', value: 3, icon: BookOpen, color: 'var(--el-color-primary)' },
-    { label: '学生总数', value: 126, icon: Users, color: 'var(--el-color-success)' },
-    { label: '本学期填报', value: 98, icon: FileText, color: 'var(--el-color-warning)' },
-    { label: '优秀档案', value: 32, icon: Eye, color: 'var(--el-color-danger)' },
-  ]
-})
+}
+
+const statsCards = computed(() => [
+  {
+    label: '未读消息',
+    value: unreadCount.value ?? '—',
+    icon: Bell,
+    color: 'var(--el-color-primary)',
+  },
+  {
+    label: '数据范围',
+    value: scopeText.value || '—',
+    icon: MapPin,
+    color: 'var(--el-color-success)',
+  },
+  {
+    label: isAdmin.value ? '系统操作' : '消息总数',
+    value: recentTotal.value ?? '—',
+    icon: Activity,
+    color: 'var(--el-color-warning)',
+  },
+  { label: '当前角色', value: roleLabel.value, icon: Users, color: 'var(--el-color-danger)' },
+])
 
 const quickLinks = computed(() => {
   const role = currentRole.value
@@ -87,6 +137,12 @@ const quickLinks = computed(() => {
       path: '/teacher/account-management',
       desc: '管理学生与教师账号',
     })
+    links.push({
+      label: '表单自定义',
+      icon: BookOpen,
+      path: '/teacher/form-customization',
+      desc: '维护申报菜单与模板',
+    })
   }
   return links
 })
@@ -100,12 +156,47 @@ const todayDate = computed(() => {
   })
 })
 
-const recentLogs = ref([
-  { user: '李老师', action: '导出2024级学生档案', time: '10:32', status: 'success' },
-  { user: '王审核员', action: '通过张三的竞赛申报', time: '10:15', status: 'approved' },
-  { user: '赵老师', action: '查看计科2401班档案', time: '09:48', status: 'info' },
-  { user: '系统', action: '自动备份完成', time: '03:00', status: 'success' },
-])
+// ── 最近动态：管理员看系统日志，其余角色看最近消息 ──
+interface RecentItem {
+  user: string
+  action: string
+  time: string
+  status: 'success' | 'info' | 'warning'
+}
+const recentLogs = ref<RecentItem[]>([])
+
+async function loadRecent() {
+  if (isAdmin.value) {
+    try {
+      const logs = await getSystemLogs({ page: 1, per_page: 5 })
+      recentLogs.value = logs.list.map((l) => ({
+        user: l.operatorName ?? '系统',
+        action: l.description ?? `${l.module ?? ''}${l.action ?? ''}`,
+        time: l.createdAt ? l.createdAt.slice(11, 16) : '',
+        status: 'success' as const,
+      }))
+    } catch {
+      recentLogs.value = []
+    }
+  } else {
+    try {
+      const msg = await listMessages({ page: 1, per_page: 5 })
+      recentLogs.value = msg.list.map((m) => ({
+        user: m.senderName ?? '系统',
+        action: m.title,
+        time: m.createdAt ? m.createdAt.slice(11, 16) : '',
+        status: (m.isImportant ? 'warning' : 'info') as RecentItem['status'],
+      }))
+    } catch {
+      recentLogs.value = []
+    }
+  }
+}
+
+onMounted(() => {
+  void loadStats()
+  void loadRecent()
+})
 </script>
 
 <template>

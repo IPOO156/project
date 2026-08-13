@@ -90,7 +90,9 @@ function switchToStudent() {
         </el-button>
       </el-badge>
 
+      <!-- 主题切换：仅学生端显示；教师端控制台固定日间（teacher-console.scss 强制） -->
       <el-tooltip
+        v-if="!isTeacher"
         :content="themeStore.isDark ? '切换至日间模式' : '切换至夜间模式'"
         placement="bottom"
       >

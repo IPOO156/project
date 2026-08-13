@@ -1,192 +1,227 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
+import type { FormTemplate, NavigationItem } from '@/shared/types/teacher'
 /**
- * FormCustomization - 表单自定义
- * 添加菜单→输入新增项目→发布信息
- * 超级管理员/管理员可用
+ * FormCustomization - 表单自定义（菜单/申报项目）
+ * 对接后端：
+ *   - GET  /admin/form-templates           申报项目模板列表
+ *   - POST /admin/form-templates           添加申报项目
+ *   - PUT  /admin/form-templates/{id}      编辑/启停
+ *   - POST /admin/form-templates/{id}/publish  发布
+ *   - GET  /admin/navigation               当前菜单树（只读展示）
  */
-import { Eye, EyeOff, Plus, Save, Trash2 } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Plus, RefreshCw, Save } from 'lucide-vue-next'
 
-const formItems = ref([
-  { id: 1, label: '学科竞赛', type: 'input', required: true, status: 'published', order: 1 },
-  { id: 2, label: '创新创业', type: 'input', required: false, status: 'published', order: 2 },
-  { id: 3, label: '学术研究', type: 'textarea', required: false, status: 'published', order: 3 },
-  { id: 4, label: '社会实践', type: 'input', required: true, status: 'draft', order: 4 },
-])
+import { onMounted, ref } from 'vue'
+import {
+  createFormTemplate,
+  getNavigation,
+  listFormTemplates,
+  publishFormTemplate,
+  updateFormTemplate,
+} from '@/shared/api/teacher'
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 
-const dialogVisible = ref(false)
-const newItem = ref({ label: '', type: 'input', required: false })
+const { me } = useTeacherMe()
 
-const typeOptions = [
-  { value: 'input', label: '单行文本' },
-  { value: 'textarea', label: '多行文本' },
-  { value: 'select', label: '下拉选择' },
-  { value: 'file', label: '文件上传' },
+const loading = ref(false)
+const templates = ref<FormTemplate[]>([])
+const menus = ref<NavigationItem[]>([])
+
+const categoryOptions = [
+  { value: 'archive', label: '档案申报' },
+  { value: 'award', label: '奖项申报' },
+  { value: 'career_plan', label: '职业规划' },
 ]
 
-function handleAdd() {
-  if (!newItem.value.label.trim()) {
+function categoryLabel(c: string): string {
+  return categoryOptions.find((o) => o.value === c)?.label ?? c ?? '-'
+}
+
+async function load() {
+  loading.value = true
+  try {
+    const schoolId = me.value?.schoolId
+    templates.value = await listFormTemplates(schoolId)
+  } catch {
+    templates.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadMenus() {
+  try {
+    menus.value = await getNavigation()
+  } catch {
+    menus.value = []
+  }
+}
+
+// ── 新增申报项目 ──
+const dialogVisible = ref(false)
+const saving = ref(false)
+const form = ref({ templateName: '', code: '', category: 'archive', description: '' })
+
+async function handleAdd() {
+  if (!form.value.templateName.trim()) {
     ElMessage.warning('请输入项目名称')
     return
   }
-  formItems.value.push({
-    id: Date.now(),
-    label: newItem.value.label,
-    type: newItem.value.type,
-    required: newItem.value.required,
-    status: 'draft',
-    order: formItems.value.length + 1,
-  })
-  newItem.value = { label: '', type: 'input', required: false }
-  dialogVisible.value = false
-  ElMessage.success('新增项目已添加')
-}
-
-function handleToggle(item: any) {
-  item.status = item.status === 'published' ? 'draft' : 'published'
-  ElMessage.success(`项目已${item.status === 'published' ? '发布' : '下架'}`)
-}
-
-async function handleDelete(id: number) {
-  try {
-    await ElMessageBox.confirm('确认删除该项目？删除后学生将无法申报该类别。', '删除确认', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
-  } catch {
+  if (!form.value.code.trim()) {
+    ElMessage.warning('请输入项目编码')
     return
   }
-  formItems.value = formItems.value.filter((i) => i.id !== id)
-  ElMessage.success('项目已删除')
-}
-
-function handlePublishAll() {
-  formItems.value.forEach((i) => (i.status = 'published'))
-  ElMessage.success('全部信息已发布')
-}
-
-/** 排序变更后同步每个项目的 order 序号 */
-function syncOrders() {
-  formItems.value.forEach((item, idx) => {
-    item.order = idx + 1
-  })
-}
-
-function moveUp(index: number) {
-  if (index > 0) {
-    const temp = formItems.value[index]
-    formItems.value[index] = formItems.value[index - 1]
-    formItems.value[index - 1] = temp
-    syncOrders()
+  saving.value = true
+  try {
+    await createFormTemplate({
+      templateName: form.value.templateName.trim(),
+      code: form.value.code.trim(),
+      category: form.value.category,
+      description: form.value.description.trim() || undefined,
+      schoolId: me.value?.schoolId,
+    })
+    ElMessage.success('申报项目已创建')
+    dialogVisible.value = false
+    form.value = { templateName: '', code: '', category: 'archive', description: '' }
+    void load()
+  } catch {
+    /* 拦截器已提示 */
+  } finally {
+    saving.value = false
   }
 }
 
-function moveDown(index: number) {
-  if (index < formItems.value.length - 1) {
-    const temp = formItems.value[index]
-    formItems.value[index] = formItems.value[index + 1]
-    formItems.value[index + 1] = temp
-    syncOrders()
+// ── 发布 / 启停 ──
+async function handleToggle(item: any) {
+  const next = item.status === 1 ? 0 : 1
+  try {
+    await updateFormTemplate(item.id as number, { status: next })
+    ElMessage.success(next === 1 ? '已发布' : '已下架')
+    void load()
+  } catch {
+    /* 拦截器已提示 */
   }
 }
+
+async function handlePublish(item: any) {
+  try {
+    await publishFormTemplate(item.id as number)
+    ElMessage.success('版本已发布')
+    void load()
+  } catch {
+    /* 拦截器已提示 */
+  }
+}
+
+onMounted(() => {
+  void load()
+  void loadMenus()
+})
 </script>
 
 <template>
-  <div class="form-custom">
-    <!-- 操作栏 -->
-    <el-card class="form-custom__toolbar">
-      <el-row justify="space-between" align="middle">
-        <el-col :span="12">
-          <span class="section-title">表单自定义管理</span>
-        </el-col>
-        <el-col :span="12" style="text-align: right">
-          <el-button type="primary" :icon="Save" @click="handlePublishAll">发布全部</el-button>
-          <el-button type="primary" :icon="Plus" @click="dialogVisible = true">添加菜单</el-button>
-        </el-col>
-      </el-row>
-    </el-card>
+  <div class="mc-page form-custom">
+    <div class="mc-page-head">
+      <div class="mc-page-head__left">
+        <p class="mc-page-head__eyebrow">菜单与模板 · Templates</p>
+        <h2 class="mc-page-head__title">表单自定义</h2>
+        <p class="mc-page-head__desc">维护学生端申报项目菜单，新增申报类别、调整字段并发布版本。</p>
+      </div>
+      <div class="mc-page-head__actions">
+        <el-button :icon="RefreshCw" :loading="loading" @click="load">刷新</el-button>
+        <el-button type="primary" :icon="Plus" @click="dialogVisible = true">添加菜单</el-button>
+      </div>
+    </div>
 
-    <!-- 表单项目列表 -->
-    <el-card>
-      <template #header>
-        <span class="section-title">申报项目列表</span>
-      </template>
-
-      <div class="form-items">
-        <div v-for="(item, index) in formItems" :key="item.id" class="form-item">
-          <div class="form-item__order">{{ item.order }}</div>
-          <div class="form-item__main">
-            <div class="form-item__info">
-              <span class="form-item__label">{{ item.label }}</span>
-              <el-tag size="small" type="info">{{
-                typeOptions.find((t) => t.value === item.type)?.label
-              }}</el-tag>
-              <el-tag v-if="item.required" size="small" type="danger" effect="plain">必填</el-tag>
-            </div>
-            <div class="form-item__meta">
-              <el-tag
-                :type="item.status === 'published' ? 'success' : 'info'"
-                size="small"
-                effect="plain"
-              >
-                {{ item.status === 'published' ? '已发布' : '草稿' }}
+    <div class="mc-card">
+      <div class="mc-card__head">
+        <span class="mc-card__title">申报项目列表</span>
+        <span class="form-custom__count">共 {{ templates.length }} 项</span>
+      </div>
+      <div class="mc-card__body">
+        <el-table v-loading="loading" :data="templates" stripe>
+          <el-table-column prop="templateName" label="项目名称" min-width="160" />
+          <el-table-column label="类别" width="120">
+            <template #default="{ row }">
+              <el-tag size="small" effect="plain">{{ categoryLabel(row.category) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="code" label="编码" width="130" />
+          <el-table-column prop="version" label="版本" width="80" class-name="mc-num" />
+          <el-table-column label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
+                {{ row.status === 1 ? '已发布' : '草稿' }}
               </el-tag>
-            </div>
-          </div>
-          <div class="form-item__actions">
-            <el-button link size="small" :disabled="index === 0" @click="moveUp(index)">
-              上移
-            </el-button>
-            <el-button
-              link
-              size="small"
-              :disabled="index === formItems.length - 1"
-              @click="moveDown(index)"
-            >
-              下移
-            </el-button>
-            <el-button
-              link
-              size="small"
-              :icon="item.status === 'published' ? EyeOff : Eye"
-              @click="handleToggle(item)"
-            >
-              {{ item.status === 'published' ? '下架' : '发布' }}
-            </el-button>
-            <el-button
-              link
-              size="small"
-              type="danger"
-              :icon="Trash2"
-              @click="handleDelete(item.id)"
-            >
-              删除
-            </el-button>
-          </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="updatedAt" label="更新时间" width="170">
+            <template #default="{ row }">
+              {{ row.updatedAt ? row.updatedAt.replace('T', ' ').slice(0, 16) : '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="150" align="center">
+            <template #default="{ row }">
+              <el-button v-if="row.status === 1" link size="small" @click="handleToggle(row)">
+                下架
+              </el-button>
+              <el-button v-else link type="primary" size="small" @click="handlePublish(row)">
+                发布
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </div>
+
+    <div class="mc-card">
+      <div class="mc-card__head">
+        <span class="mc-card__title">当前菜单结构</span>
+      </div>
+      <div class="mc-card__body">
+        <el-tree
+          v-if="menus.length"
+          :data="menus"
+          node-key="key"
+          :props="{ label: 'name', children: 'children' }"
+          default-expand-all
+        />
+        <div v-else class="mc-empty">
+          <div class="mc-empty__icon"><Save :size="22" /></div>
+          <p class="mc-empty__title">暂无菜单数据</p>
+          <p class="mc-empty__desc">
+            菜单由后端 /admin/navigation 按登录角色返回，登录后自动加载。
+          </p>
         </div>
       </div>
-    </el-card>
+    </div>
 
-    <!-- 添加弹窗 -->
-    <el-dialog v-model="dialogVisible" title="新增菜单项目" width="480px">
-      <el-form label-width="80px">
+    <el-dialog v-model="dialogVisible" title="添加菜单" width="480px">
+      <el-form :model="form" label-width="90px">
         <el-form-item label="项目名称" required>
-          <el-input v-model="newItem.label" placeholder="请输入项目名称" />
+          <el-input v-model="form.templateName" placeholder="如：学科竞赛" />
         </el-form-item>
-        <el-form-item label="字段类型">
-          <el-select v-model="newItem.type" style="width: 100%">
-            <el-option v-for="t in typeOptions" :key="t.value" :label="t.label" :value="t.value" />
+        <el-form-item label="项目编码" required>
+          <el-input v-model="form.code" placeholder="如：competition（英文唯一标识）" />
+        </el-form-item>
+        <el-form-item label="申报类别">
+          <el-select v-model="form.category" style="width: 100%">
+            <el-option
+              v-for="o in categoryOptions"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="是否必填">
-          <el-switch v-model="newItem.required" />
+        <el-form-item label="说明">
+          <el-input v-model="form.description" type="textarea" :rows="2" placeholder="选填" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleAdd">确定新增</el-button>
+        <el-button type="primary" :loading="saving" @click="handleAdd">确定新增</el-button>
       </template>
     </el-dialog>
   </div>
@@ -194,80 +229,9 @@ function moveDown(index: number) {
 
 <style scoped lang="scss">
 .form-custom {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-lg;
-
-  &__toolbar {
-    margin-bottom: 0;
-  }
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.form-items {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-}
-
-.form-item {
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-  padding: $spacing-md $spacing-lg;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: $radius-base;
-  transition: all 0.2s;
-
-  &:hover {
-    background: var(--el-fill-color-light);
-    border-color: var(--el-color-primary-light-7);
-  }
-
-  &__order {
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--el-color-primary-light-9);
-    color: var(--el-color-primary);
-    border-radius: 50%;
+  &__count {
     font-size: 13px;
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-
-  &__main {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $spacing-md;
-  }
-
-  &__info {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-  }
-
-  &__label {
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--el-text-color-primary);
-    min-width: 80px;
-  }
-
-  &__actions {
-    display: flex;
-    gap: 4px;
-    flex-shrink: 0;
+    color: var(--el-text-color-secondary);
   }
 }
 </style>
