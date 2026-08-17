@@ -76,6 +76,11 @@ function handleSizeChange(size: number) {
   void load()
 }
 
+function handlePageChange(p: number) {
+  page.value = p
+  void load()
+}
+
 // ── 数据快照弹窗 ──
 const snapshotVisible = ref(false)
 const snapshotData = ref<{ before: unknown; after: unknown; title: string } | null>(null)
@@ -166,10 +171,7 @@ onMounted(() => {
             :total="total"
             :page-sizes="[10, 20, 50]"
             layout="total, sizes, prev, pager, next"
-            @current-change="
-              page = $event
-              load()
-            "
+            @current-change="handlePageChange"
             @size-change="handleSizeChange"
           />
         </div>

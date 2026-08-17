@@ -1,32 +1,53 @@
 <script setup lang="ts">
 /**
  * RoleAdd - 管理权限 · 新增账号
- * 添加管理员、审核员账号。
- * 后端现状：无用户创建接口（POST /admin/users 未实现），
- * 提交时仅做前端校验并提示，接口就绪后接入。
+ *
+ * 对接后端 POST /admin/users 创建管理员 / 审核员（辅导员）/ 课任教师账号。
+ * schoolId 取登录者 /auth/me 的 schoolId；学院下拉来自登录者授权范围（scopeType=2）。
+ * 角色编码 → roleId：admin=2 / reviewer(辅导员)=4 / teacher=3。
  */
 import { ElMessage } from 'element-plus'
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
+
+import { createUser } from '@/shared/api/teacher'
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+
+const { me } = useTeacherMe()
+
+const ROLE_ID_MAP: Record<string, number> = {
+  admin: 2,
+  reviewer: 4, // 审核员 = 辅导员 counselor
+  teacher: 3,
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: '管理员',
+  reviewer: '审核员',
+  teacher: '课任教师',
+}
 
 const form = reactive({
-  username: '',
-  realName: '',
+  userNo: '',
+  name: '',
   password: '',
   confirmPassword: '',
   role: 'admin' as string,
-  college: '',
-  major: '',
+  collegeId: undefined as number | undefined,
   email: '',
   phone: '',
 })
 
-const colleges = ['计算机学院', '数学学院', '物理学院', '外语学院']
-const majors = ['计算机科学与技术', '软件工程', '数学与应用数学', '英语']
+// 学院来自登录者授权范围（/auth/me scopes 中 scopeType=2 的学院）
+const colleges = computed(() =>
+  (me.value?.scopes ?? [])
+    .filter((s) => s.scopeType === 2 && s.scopeId != null)
+    .map((s) => ({ id: s.scopeId, name: s.scopeName ?? `学院 ${s.scopeId}` })),
+)
 
 const submitting = ref(false)
 
-function handleAdd() {
-  if (!form.username.trim() || !form.realName.trim()) {
+async function handleAdd() {
+  if (!form.userNo.trim() || !form.name.trim()) {
     ElMessage.warning('请填写用户名和真实姓名')
     return
   }
@@ -42,12 +63,41 @@ function handleAdd() {
     ElMessage.error('两次输入的密码不一致')
     return
   }
+  if (form.role === 'teacher' && !form.collegeId) {
+    ElMessage.warning('课任教师账号需选择所属学院')
+    return
+  }
+  const schoolId = me.value?.schoolId
+  if (!schoolId) {
+    ElMessage.warning('未获取到学校信息，请重新登录')
+    return
+  }
+
   submitting.value = true
-  // 后端暂无创建账号接口（POST /admin/users），此处仅完成前端校验
-  setTimeout(() => {
+  try {
+    await createUser({
+      userNo: form.userNo.trim(),
+      name: form.name.trim(),
+      password: form.password,
+      email: form.email || undefined,
+      phone: form.phone || undefined,
+      schoolId,
+      roleIds: [ROLE_ID_MAP[form.role]],
+      collegeId: form.collegeId,
+    })
+    ElMessage.success(`已创建${ROLE_LABELS[form.role]}账号「${form.name.trim()}」`)
+    form.userNo = ''
+    form.name = ''
+    form.password = ''
+    form.confirmPassword = ''
+    form.collegeId = undefined
+    form.email = ''
+    form.phone = ''
+  } catch {
+    /* 拦截器已提示 */
+  } finally {
     submitting.value = false
-    ElMessage.warning('账号创建接口待后端就绪（POST /admin/users），暂未写入系统')
-  }, 400)
+  }
 }
 </script>
 
@@ -58,7 +108,7 @@ function handleAdd() {
         <p class="mc-page-head__eyebrow">管理权限 · Accounts</p>
         <h2 class="mc-page-head__title">新增账号</h2>
         <p class="mc-page-head__desc">
-          添加管理员、审核员账号。表单校验已完成，写入接口待后端就绪。
+          添加管理员、审核员（辅导员）、课任教师账号。数据写入后端 /admin/users。
         </p>
       </div>
     </div>
@@ -72,19 +122,24 @@ function handleAdd() {
           <el-row :gutter="16">
             <el-col :span="12">
               <el-form-item label="用户名" required>
-                <el-input v-model="form.username" placeholder="登录用户名" />
+                <el-input v-model="form.userNo" placeholder="登录用户名（学号/工号）" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="真实姓名" required>
-                <el-input v-model="form.realName" placeholder="教师真实姓名" />
+                <el-input v-model="form.name" placeholder="真实姓名" />
               </el-form-item>
             </el-col>
           </el-row>
           <el-row :gutter="16">
             <el-col :span="12">
               <el-form-item label="密码" required>
-                <el-input v-model="form.password" type="password" show-password />
+                <el-input
+                  v-model="form.password"
+                  type="password"
+                  show-password
+                  placeholder="至少 6 位"
+                />
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -100,22 +155,16 @@ function handleAdd() {
               <el-radio value="teacher">课任教师</el-radio>
             </el-radio-group>
           </el-form-item>
-          <el-row :gutter="16">
-            <el-col :span="12">
-              <el-form-item label="学院">
-                <el-select v-model="form.college" placeholder="选择学院" style="width: 100%">
-                  <el-option v-for="c in colleges" :key="c" :label="c" :value="c" />
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="专业">
-                <el-select v-model="form.major" placeholder="选择专业" style="width: 100%">
-                  <el-option v-for="m in majors" :key="m" :label="m" :value="m" />
-                </el-select>
-              </el-form-item>
-            </el-col>
-          </el-row>
+          <el-form-item v-if="form.role === 'teacher'" label="所属学院" required>
+            <el-select
+              v-model="form.collegeId"
+              placeholder="选择学院"
+              clearable
+              style="width: 100%"
+            >
+              <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
+            </el-select>
+          </el-form-item>
           <el-row :gutter="16">
             <el-col :span="12">
               <el-form-item label="邮箱">
