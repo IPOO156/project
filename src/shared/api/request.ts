@@ -49,6 +49,9 @@ request.interceptors.response.use(
         case 500:
           ElMessage.error('服务器异常，请稍后重试')
           break
+        case 404:
+          // 接口未实现/路径不存在：静默降级，由调用方 catch 处理（展示空态），不弹全局错误
+          break
         default:
           ElMessage.error(error.response.data?.message || '网络错误')
       }

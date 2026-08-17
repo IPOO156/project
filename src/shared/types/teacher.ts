@@ -114,105 +114,259 @@ export interface SystemLogItem {
   createdAt: string | null
 }
 
-/* ===================== 管理权限 ===================== */
+/* ===================== 用户管理（/admin/users）===================== */
 
-export interface PermissionItem {
-  id: number
+export interface UserListQuery extends PageQuery {
+  roleId?: number
+  status?: number
+  grade?: string
+  keyword?: string
+  schoolId?: number
+}
+
+export interface UserListItem {
+  userId: number
+  userNo: string
   name: string
-  code: string
-  type: number
-  parentId: number | null
-  sort: number
+  gender: number | null
+  genderLabel: string | null
+  email: string | null
+  phone: string | null
+  schoolId: number | null
+  schoolName: string | null
+  roles: string[]
+  roleNames: string[]
   status: number
+  statusLabel: string
+  departmentPath: string | null
+  createdAt: string | null
 }
 
-export interface RolePermission {
+export interface UserRoleItem {
   roleId: number
   roleName: string
-  roleCode: string
-  permissionIds: number[]
-  permissionCodes: string[]
+  level: number
 }
 
-export interface RolePermissionUpdatePayload {
-  roleId: number
-  permissionIds: number[]
-}
-
-export interface UserRoleUpdatePayload {
-  userId: number
-  roleIds: number[]
-}
-
-export interface UserScope {
-  userId: number
-  roleId: number
-  roleName: string
+export interface UserScopeItem {
   scopeType: number
   scopeTypeLabel: string
   scopeId: number
-  scopeName: string
-  isPrimary: number
-  validFrom: string | null
-  validUntil: string | null
-  status: number
+  scopeName: string | null
 }
 
-/* ===================== 导航菜单 ===================== */
-
-export interface NavigationItem {
-  key: string
+export interface UserDetail {
+  userId: number
+  userNo: string
   name: string
-  path: string
-  icon: string | null
-  requiredPermission: string | null
-  children: NavigationItem[]
+  email: string | null
+  phone: string | null
+  gender: number | null
+  genderLabel: string | null
+  birthDate: string | null
+  schoolId: number | null
+  schoolName: string | null
+  roles: UserRoleItem[]
+  status: number
+  statusLabel: string
+  scopes: UserScopeItem[]
+  createdAt: string | null
+  lastLoginAt: string | null
 }
 
-/* ===================== 表单模板 ===================== */
-
-export interface FormTemplate {
-  id: number
+export interface CreateUserPayload {
+  userNo: string
+  name: string
+  email?: string
+  phone?: string
+  gender?: number
   schoolId: number
-  templateName: string
-  code: string
-  category: string
+  roleIds: number[]
+  classId?: number
+  collegeId?: number
+  password?: string
+}
+
+export interface UpdateUserPayload {
+  name?: string
+  email?: string
+  phone?: string
+  gender?: number
+  classId?: number
+  majorId?: number
+  collegeId?: number
+}
+
+export interface UpdateStatusPayload {
+  status: number
+}
+
+export interface ResetPasswordPayload {
+  newPassword: string
+}
+
+export interface UpdateRolesPayload {
+  roleIds: number[]
+}
+
+export interface ScopeConfigItem {
+  scopeType: number
+  scopeId: number
+  semesterId?: number
+}
+
+export interface UpdateScopesPayload {
+  scopes: ScopeConfigItem[]
+}
+
+/* ===================== 数据导出（/admin/exports）===================== */
+
+export interface ArchiveExportPayload {
+  semesterId?: number
+  scopeType: number
+  scopeId?: number
+  grade?: string
+  fileType: string
+  templateId?: number
+  sections?: string[]
+  archiveStatus?: number
+  purpose?: string
+  includeMetadata?: boolean
+}
+
+export interface ArchiveExportResult {
+  jobId: number
+  exportType: string
+  status: number
+  statusLabel: string
+  estimatedSeconds: number | null
+}
+
+export interface ExportJobItem {
+  id: number
+  exportType: string
+  status: number
+  statusLabel: string
+  progress: number
+  downloadUrl: string | null
+  expireAt: string | null
+  createdAt: string | null
+  completedAt: string | null
+}
+
+/* ===================== 能力维度（/admin/ability-dimensions）===================== */
+
+export interface AbilityDimensionItem {
+  id: number
+  dimensionName: string
+  dimensionCode: string
   description: string | null
-  fields: unknown | null
-  layoutConfig: unknown | null
-  applicableRoles: unknown | null
-  isDefault: number
-  version: number
+  sort: number
   status: number
-  createdAt: string
-  updatedAt: string
+  statusLabel: string
 }
 
-export type FormTemplatePayload = Partial<FormTemplate> & {
-  templateName: string
-  code: string
+export interface AbilityDimensionPayload {
+  dimensionName: string
+  dimensionCode: string
+  description?: string
+  sort: number
 }
 
-/* ===================== 公告 ===================== */
+/* ===================== 评分重算（/admin/scores）===================== */
 
-export interface Announcement {
-  id: number
-  schoolId: number
-  title: string
-  content: string
-  publisherId: number
-  targetType: string
-  targetId: number | null
-  publishedAt: string
-  status: number
-}
-
-export interface AnnouncementPublishPayload {
-  schoolId: number
-  title: string
-  content: string
-  targetType: string
+export interface ScoreRecalculatePayload {
+  targetType: number
   targetId?: number
+  semesterId: number
+}
+
+export interface ScoreRecalculateResult {
+  taskId: number
+  targetType: number
+  targetId: number | null
+  semesterId: number
+  status: number
+  statusLabel: string
+  createdAt: string | null
+  message: string | null
+}
+
+export interface ScoreRecalculationTask {
+  id: number
+  targetType: number
+  targetId: number | null
+  semesterId: number
+  status: number
+  statusLabel: string
+  progress: number
+  totalCount: number
+  successCount: number
+  failCount: number
+  startedAt: string | null
+  completedAt: string | null
+  errorMessage: string | null
+  message: string | null
+  failures: { userId: number; message: string }[] | null
+}
+
+/* ===================== 导出模板（/admin/export-templates）===================== */
+
+export interface ExportTemplateItem {
+  id: number
+  schoolId: number | null
+  templateName: string
+  templateCode: string
+  exportType: string
+  exportTypeLabel: string
+  scopeType: number | null
+  scopeTypeLabel: string | null
+  templateMode: number | null
+  engineType: string | null
+  paperSize: string | null
+  orientation: number | null
+  orientationLabel: string | null
+  version: number
+  isDefault: number
+  status: number
+  statusLabel: string
+  previewImage: string | null
+  createdBy: number | null
+  createdByName: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface ExportTemplatePayload {
+  templateName: string
+  templateCode: string
+  exportType: string
+  scopeType?: number
+  templateMode?: number
+  paperSize?: string
+  orientation?: number
+}
+
+/* ===================== 审批流程（/admin/approval-flows）===================== */
+
+export interface ApprovalFlowItem {
+  id: number
+  schoolId: number | null
+  flowName: string
+  applicableType: string
+  applicableSubType: string | null
+  version: number
+  isDefault: number
+  status: number
+  createdAt: string | null
+}
+
+export interface ApprovalFlowPayload {
+  flowName: string
+  applicableType: string
+  applicableSubType?: string
+  isDefault?: number
+  status?: number
 }
 
 /* ===================== 指标 ===================== */
@@ -240,6 +394,17 @@ export interface AdminIndicatorTree {
   versionName: string
   effectiveAt: string
   indicators: IndicatorNode[]
+}
+
+export interface IndicatorPayload {
+  parentId?: number
+  indicatorCode: string
+  indicatorName: string
+  weight: number
+  description?: string
+  scoringRule?: unknown
+  dimensionCode?: string
+  sort?: number
 }
 
 export interface CommonIndicatorNode {

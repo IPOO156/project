@@ -1,29 +1,38 @@
 import type {
+  AbilityDimensionItem,
+  AbilityDimensionPayload,
   AdminIndicatorTree,
-  Announcement,
-  AnnouncementPublishPayload,
+  ApprovalFlowItem,
+  ApprovalFlowPayload,
+  ArchiveExportPayload,
+  ArchiveExportResult,
   CaptchaResponse,
   CommonIndicatorTree,
+  CreateUserPayload,
   CurrentUser,
   DictItem,
-  FormTemplate,
-  FormTemplatePayload,
+  ExportJobItem,
+  ExportTemplateItem,
+  ExportTemplatePayload,
+  IndicatorPayload,
   LoginPayload,
   LoginResponse,
   MessageCategory,
   MessageItem,
   MessageListResult,
   MessageSetting,
-  NavigationItem,
   PageResult,
-  PermissionItem,
-  RolePermission,
-  RolePermissionUpdatePayload,
+  ScopeConfigItem,
+  ScoreRecalculatePayload,
+  ScoreRecalculateResult,
+  ScoreRecalculationTask,
   SemesterItem,
   SystemLogItem,
   SystemLogQuery,
-  UserRoleUpdatePayload,
-  UserScope,
+  UpdateUserPayload,
+  UserDetail,
+  UserListItem,
+  UserListQuery,
 } from '@/shared/types/teacher'
 /**
  * 教师端/管理端 API 层
@@ -58,85 +67,173 @@ export function getSystemLogs(params: SystemLogQuery): Promise<PageResult<System
   return request.get('/admin/logs/system', { params })
 }
 
-/* ===================== 管理权限 ===================== */
+/* ===================== 用户管理（/admin/users）===================== */
 
-export function listPermissions(): Promise<PermissionItem[]> {
-  return request.get('/admin/permissions/list')
+export function listUsers(params: UserListQuery): Promise<PageResult<UserListItem>> {
+  return request.get('/admin/users', { params })
 }
 
-export function getRolePermissions(roleId: number): Promise<RolePermission> {
-  return request.get(`/admin/permissions/roles/${roleId}`)
+export function getUserDetail(userId: number): Promise<UserDetail> {
+  return request.get(`/admin/users/${userId}`)
 }
 
-export function updateRolePermissions(payload: RolePermissionUpdatePayload): Promise<void> {
-  return request.put('/admin/permissions/roles', payload)
+export function createUser(payload: CreateUserPayload): Promise<{ userId: number }> {
+  return request.post('/admin/users', payload)
 }
 
-export function getUserRoles(userId: number): Promise<number[]> {
-  return request.get(`/admin/permissions/users/${userId}/roles`)
+export function updateUser(userId: number, payload: UpdateUserPayload): Promise<void> {
+  return request.put(`/admin/users/${userId}`, payload)
 }
 
-export function updateUserRoles(payload: UserRoleUpdatePayload): Promise<void> {
-  return request.put('/admin/permissions/users/roles', payload)
+export function updateUserStatus(userId: number, status: number): Promise<void> {
+  return request.put(`/admin/users/${userId}/status`, { status })
 }
 
-export function getUserScopes(userId: number): Promise<UserScope[]> {
-  return request.get(`/admin/permissions/users/${userId}/scopes`)
+export function resetUserPassword(userId: number, newPassword: string): Promise<void> {
+  return request.put(`/admin/users/${userId}/password/reset`, { newPassword })
 }
 
-/* ===================== 导航菜单（读取）===================== */
-
-export function getNavigation(): Promise<NavigationItem[]> {
-  return request.get('/admin/navigation')
+export function updateUserRoles(userId: number, roleIds: number[]): Promise<void> {
+  return request.put(`/admin/users/${userId}/roles`, { roleIds })
 }
 
-/* ===================== 表单模板 ===================== */
-
-export function listFormTemplates(schoolId?: number): Promise<FormTemplate[]> {
-  return request.get('/admin/form-templates', { params: { schoolId } })
+export function updateUserScopes(userId: number, scopes: ScopeConfigItem[]): Promise<void> {
+  return request.put(`/admin/users/${userId}/scopes`, { scopes })
 }
 
-export function getFormTemplate(id: number): Promise<FormTemplate> {
-  return request.get(`/admin/form-templates/${id}`)
+/* ===================== 数据导出（/admin/exports）===================== */
+
+export function submitArchiveExport(payload: ArchiveExportPayload): Promise<ArchiveExportResult> {
+  return request.post('/admin/exports/archives', payload)
 }
 
-export function createFormTemplate(payload: FormTemplatePayload): Promise<FormTemplate> {
-  return request.post('/admin/form-templates', payload)
+export function getExportJob(jobId: number): Promise<ExportJobItem> {
+  return request.get(`/admin/exports/${jobId}`)
 }
 
-export function updateFormTemplate(
+/* ===================== 能力维度（/admin/ability-dimensions）===================== */
+
+export function listAbilityDimensions(): Promise<AbilityDimensionItem[]> {
+  return request.get('/admin/ability-dimensions')
+}
+
+export function createAbilityDimension(
+  payload: AbilityDimensionPayload,
+): Promise<AbilityDimensionItem> {
+  return request.post('/admin/ability-dimensions', payload)
+}
+
+export function updateAbilityDimension(
   id: number,
-  payload: Partial<FormTemplate>,
-): Promise<FormTemplate> {
-  return request.put(`/admin/form-templates/${id}`, payload)
+  payload: Partial<AbilityDimensionPayload> & { status?: number },
+): Promise<AbilityDimensionItem> {
+  return request.put(`/admin/ability-dimensions/${id}`, payload)
 }
 
-export function publishFormTemplate(id: number): Promise<FormTemplate> {
-  return request.post(`/admin/form-templates/${id}/publish`)
+export function deleteAbilityDimension(id: number): Promise<void> {
+  return request.delete(`/admin/ability-dimensions/${id}`)
 }
 
-/* ===================== 公告 ===================== */
+/* ===================== 评分重算（/admin/scores）===================== */
 
-export function listAnnouncements(schoolId?: number): Promise<Announcement[]> {
-  return request.get('/admin/announcements', { params: { schoolId } })
+export function triggerScoreRecalculate(
+  payload: ScoreRecalculatePayload,
+): Promise<ScoreRecalculateResult> {
+  return request.post('/admin/scores/recalculate', payload)
 }
 
-export function publishAnnouncement(payload: AnnouncementPublishPayload): Promise<Announcement> {
-  return request.post('/admin/announcements', payload)
+export function getRecalculationTask(taskId: number): Promise<ScoreRecalculationTask> {
+  return request.get(`/admin/scores/recalculation-tasks/${taskId}`)
 }
 
-export function deleteAnnouncement(id: number): Promise<void> {
-  return request.delete(`/admin/announcements/${id}`)
+/* ===================== 导出模板（/admin/export-templates）===================== */
+
+export function listExportTemplates(params: {
+  exportType?: string
+  status?: number
+  page?: number
+  per_page?: number
+}): Promise<PageResult<ExportTemplateItem>> {
+  return request.get('/admin/export-templates', { params })
+}
+
+export function createExportTemplate(payload: ExportTemplatePayload): Promise<{ id: number }> {
+  return request.post('/admin/export-templates', payload)
+}
+
+export function updateExportTemplate(
+  id: number,
+  payload: Partial<ExportTemplatePayload>,
+): Promise<void> {
+  return request.put(`/admin/export-templates/${id}`, payload)
+}
+
+export function deleteExportTemplate(id: number): Promise<void> {
+  return request.delete(`/admin/export-templates/${id}`)
+}
+
+export function setDefaultExportTemplate(id: number): Promise<void> {
+  return request.put(`/admin/export-templates/${id}/default`)
+}
+
+export function updateExportTemplateStatus(id: number, status: number): Promise<void> {
+  return request.patch(`/admin/export-templates/${id}/status`, { status })
+}
+
+/* ===================== 审批流程（/admin/approval-flows）===================== */
+
+export function listApprovalFlows(params: {
+  applicableType?: string
+  status?: number
+  page?: number
+  per_page?: number
+}): Promise<PageResult<ApprovalFlowItem>> {
+  return request.get('/admin/approval-flows', { params })
+}
+
+export function createApprovalFlow(payload: ApprovalFlowPayload): Promise<{ id: number }> {
+  return request.post('/admin/approval-flows', payload)
+}
+
+export function updateApprovalFlow(
+  id: number,
+  payload: Partial<ApprovalFlowPayload>,
+): Promise<void> {
+  return request.put(`/admin/approval-flows/${id}`, payload)
+}
+
+export function deleteApprovalFlow(id: number): Promise<void> {
+  return request.delete(`/admin/approval-flows/${id}`)
 }
 
 /* ===================== 指标（成绩/亮点维度）===================== */
 
 export function getAdminIndicatorTree(params: {
-  schoolId: number
   semesterId?: number
   status?: number
+  draft?: boolean
 }): Promise<AdminIndicatorTree> {
   return request.get('/admin/indicators/tree', { params })
+}
+
+export function createIndicator(payload: IndicatorPayload): Promise<{ id: number }> {
+  return request.post('/admin/indicators', payload)
+}
+
+export function updateIndicator(id: number, payload: Partial<IndicatorPayload>): Promise<void> {
+  return request.put(`/admin/indicators/${id}`, payload)
+}
+
+export function deleteIndicator(id: number): Promise<void> {
+  return request.delete(`/admin/indicators/${id}`)
+}
+
+export function updateIndicatorStatus(id: number, status: number): Promise<void> {
+  return request.patch(`/admin/indicators/${id}/status`, { status })
+}
+
+export function publishIndicators(): Promise<void> {
+  return request.post('/admin/indicators/publish')
 }
 
 /* ===================== 通用下拉 ===================== */
