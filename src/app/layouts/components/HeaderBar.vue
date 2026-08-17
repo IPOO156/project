@@ -124,7 +124,7 @@ function switchToStudent() {
           <el-dropdown-menu>
             <template v-if="isTeacher">
               <el-dropdown-item @click="router.push('/teacher/dashboard')">
-                <LayoutDashboard :size="14" /> 教师首页
+                <LayoutDashboard :size="14" /> 首页
               </el-dropdown-item>
               <el-dropdown-item divided @click="switchToStudent">
                 <SwitchCamera :size="14" /> 切换学生端

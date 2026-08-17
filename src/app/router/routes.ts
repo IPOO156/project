@@ -208,6 +208,22 @@ router.beforeEach((to, _from, next) => {
     return
   }
 
+  // 教师端不允许访问学生端首页，重定向回教师首页
+  if (to.path === '/dashboard') {
+    const userCache = localStorage.getItem('user_info_cache')
+    if (userCache) {
+      try {
+        const info = JSON.parse(userCache)
+        if (info.loginType === 'teacher') {
+          next({ path: '/teacher/dashboard' })
+          return
+        }
+      } catch {
+        // 解析失败按学生端处理
+      }
+    }
+  }
+
   // 教师端路由需 teacher 登录类型 + 模块权限校验
   if (to.meta?.teacher) {
     const userCache = localStorage.getItem('user_info_cache')

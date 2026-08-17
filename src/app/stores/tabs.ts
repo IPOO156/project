@@ -59,8 +59,17 @@ function readStorage(router?: Router): NavTab[] {
     if (!Array.isArray(parsed)) {
       return []
     }
+    // 教师端不显示学生端首页标签（清除历史残留）
+    let isTeacher = false
+    try {
+      const userCache = localStorage.getItem('user_info_cache')
+      isTeacher = userCache ? JSON.parse(userCache).loginType === 'teacher' : false
+    } catch {
+      isTeacher = false
+    }
+    const source = isTeacher ? parsed.filter((t) => t.path !== '/dashboard') : parsed
     return dedupeTabs(
-      parsed.map((t) => {
+      source.map((t) => {
         const storedAffix = Boolean(t.affix)
         // 实时反查真实 affix：旧版本产生的脏数据会被自动修正
         let realAffix = storedAffix

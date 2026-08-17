@@ -9,7 +9,7 @@
  *  - 键盘：← / → 在 tab 间切换，Home/End 跳首尾，Enter 激活
  *  - 移动端：tab 自适应截断（超长省略）
  *
- * ui-ux-design 规范：
+ * ui-ux-pro-max 规范：
  *  - role="tablist" / role="tab" / aria-selected
  *  - 移动端触控目标 ≥ 44×44px
  *  - 用 transform 做 active 指示条动画（合成层）
@@ -330,7 +330,7 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     gap: 6px;
     padding: 0 10px 0 12px;
     border: 1px solid rgba(148, 163, 184, 0.16);
-    border-radius: 10px 10px 0 0;
+    border-radius: 8px;
     background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(241, 245, 249, 0.82));
     position: relative;
     // 为关闭按钮绝对定位提供锚点
@@ -341,20 +341,6 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
       box-shadow $duration-fast $ease-standard,
       transform $duration-fast $ease-standard,
       color $duration-fast $ease-standard;
-
-    &::after {
-      content: '';
-      position: absolute;
-      left: 12px;
-      right: 12px;
-      bottom: 0;
-      height: 2px;
-      background: var(--el-color-primary);
-      border-radius: 2px 2px 0 0;
-      transform: scaleX(0);
-      transform-origin: center;
-      transition: transform $duration-fast $ease-standard;
-    }
   }
 
   &__icon {
@@ -373,13 +359,10 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
 
   &__item.is-active .nav-tabs__surface {
     background: linear-gradient(180deg, rgba(255, 255, 255, 1), rgba(248, 250, 252, 0.98));
-    border-color: rgba(96, 165, 250, 0.32);
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    border-color: var(--el-color-primary-light-7);
+    box-shadow: 0 2px 8px rgba(30, 58, 95, 0.1);
     color: var(--el-color-primary);
-
-    &::after {
-      transform: scaleX(1);
-    }
+    font-weight: 500;
   }
 
   &__title {

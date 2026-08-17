@@ -9,7 +9,7 @@ const teacherRoutes: RouteRecordRaw[] = [
     path: 'dashboard',
     name: 'TeacherDashboard',
     component: () => import('@/features/teacher/dashboard/TeacherDashboard.vue'),
-    meta: { title: '教师首页', affix: true, teacher: true },
+    meta: { title: '首页', affix: true, teacher: true },
   },
   {
     path: 'archive-view',
@@ -40,6 +40,36 @@ const teacherRoutes: RouteRecordRaw[] = [
     name: 'TeacherLogView',
     component: () => import('@/features/teacher/log-view/LogView.vue'),
     meta: { title: '日志查看', teacher: true, permission: 'log-view' },
+  },
+  {
+    path: 'ability-dimension',
+    name: 'TeacherAbilityDimension',
+    component: () => import('@/features/teacher/ability-dimension/AbilityDimension.vue'),
+    meta: { title: '能力维度', teacher: true, permission: 'ability-dimension' },
+  },
+  {
+    path: 'score-recalculate',
+    name: 'TeacherScoreRecalculate',
+    component: () => import('@/features/teacher/score-recalculate/ScoreRecalculate.vue'),
+    meta: { title: '评分重算', teacher: true, permission: 'score-recalculate' },
+  },
+  {
+    path: 'export-template',
+    name: 'TeacherExportTemplate',
+    component: () => import('@/features/teacher/export-template/ExportTemplate.vue'),
+    meta: { title: '导出模板', teacher: true, permission: 'export-template' },
+  },
+  {
+    path: 'indicator',
+    name: 'TeacherIndicator',
+    component: () => import('@/features/teacher/indicator/Indicator.vue'),
+    meta: { title: '指标配置', teacher: true, permission: 'indicator' },
+  },
+  {
+    path: 'approval-flow',
+    name: 'TeacherApprovalFlow',
+    component: () => import('@/features/teacher/approval-flow/ApprovalFlow.vue'),
+    meta: { title: '审批流程', teacher: true, permission: 'approval-flow' },
   },
   {
     path: 'role-selection',

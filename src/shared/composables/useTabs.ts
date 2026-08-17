@@ -1,9 +1,8 @@
 import type { Component } from 'vue'
 import type { RouteLocationMatched, RouteLocationNormalized } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { MAX_TABS, useTabsStore } from '@/app/stores/tabs'
+import { useTabsStore } from '@/app/stores/tabs'
 
 import { findTeacherMenuItemByPath } from '@/shared/config/teacherModuleRegistry'
 import { findMenuItemByPath } from '@/shared/constants/menu'
@@ -27,10 +26,6 @@ import { findMenuItemByPath } from '@/shared/constants/menu'
 export function useTabs() {
   const router = useRouter()
   const tabsStore = useTabsStore()
-
-  // 防止标签上限警告在极短时间内重复弹出
-  let lastWarningAt = 0
-  const WARNING_DEBOUNCE_MS = 300
 
   /**
    * 严格判定 affix：仅当 meta.affix 严格等于 true 时才锁定。
@@ -91,18 +86,6 @@ export function useTabs() {
     if (!result.ok) {
       // 所有 tab 都是固定的，关闭失败（理论上不会发生）
       return
-    }
-    // 自动淘汰最早非固定标签时，给出明确提示
-    if (result.evicted) {
-      const now = Date.now()
-      if (now - lastWarningAt > WARNING_DEBOUNCE_MS) {
-        lastWarningAt = now
-        ElMessage({
-          type: 'warning',
-          message: `标签已达上限 ${MAX_TABS} 个，已自动关闭最早打开的「${result.evicted.title}」，并打开当前「${title}」`,
-          duration: 3500,
-        })
-      }
     }
     tabsStore.setActive(tabPath)
   }

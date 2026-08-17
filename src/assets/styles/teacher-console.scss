@@ -1,21 +1,21 @@
 @use './variables.scss' as *;
 
 // =============================================================================
-// 教师端（管理员）控制台视觉层 —— 庄重严谨版
+// 教师端（管理员）控制台视觉层 —— 浅色深海蓝科技感
 //
 // 全部规则限定在 `#app .layout--teacher` 作用域，仅管理员端生效。
 //
-// 设计取向：
-//   庄重感 + 严谨感 —— 像正式档案 / 政务系统：
-//   - 主色：深海墨蓝 #1e3a5f（覆盖 Element Plus 默认亮蓝，去塑料感）
-//   - 辅色：沉稳金 #a98a5f（眉标/指示条/强调，克制使用）
-//   - 纸感浅底 + 发丝分割线 + 克制的阴影
-//   - 页头标题用衬线（Georgia），传递正式、可信的质感
-//   明/暗两套主题变量，随 html[data-theme] 自动切换。
+// 设计取向（与登录页 light 模式视觉语言一致）：
+//   深海蓝 + 琥珀金 —— 科技感与庄重并存：
+//   - 主色：深海蓝 #1e3a5f（覆盖 Element Plus 默认亮蓝，去塑料感）
+//   - 辅色：琥珀金 #d4a574（眉标/指示条/强调，克制使用）
+//   - 冷调浅蓝底 + 发丝分割线 + 柔和双层阴影（Soft UI Evolution 质感）
+//   - 页头标题用无衬线加粗，传递清晰、可信的质感
+//   教师端固定浅色：无论全局主题明暗，始终渲染为浅色深海蓝。
 // =============================================================================
 
 #app .layout--teacher {
-  /* ── 主题变量（日间：庄重墨蓝 + 沉稳金） ── */
+  /* ── 主题变量（浅色：深海蓝 + 琥珀金） ── */
   --el-color-primary: #1e3a5f;
   --el-color-primary-light-3: #3f5372;
   --el-color-primary-light-5: #6f7f97;
@@ -24,48 +24,51 @@
   --el-color-primary-light-9: #e9edf3;
   --el-color-primary-dark-2: #162c49;
 
-  --mc-accent: #a98a5f;
-  --mc-accent-soft: rgba(169, 138, 95, 0.14);
+  --mc-accent: #d4a574;
+  --mc-accent-soft: rgba(212, 165, 116, 0.14);
   --mc-btn-press: #12243c;
 
   /* ============================================================
-     教师端固定日间（强制暖纸）：无论全局主题明暗，
-     教师控制台始终渲染成暖纸白天；学生端不受影响。
+     教师端固定浅色（冷调浅蓝）：无论全局主题明暗，
+     教师控制台始终渲染成浅色深海蓝；学生端不受影响。
      ============================================================ */
-  --el-bg-color-page: #f6f4ee;
-  --el-bg-color: #fdfcfa;
-  --el-bg-color-overlay: #fdfcfa;
+  --el-bg-color-page: #eef2f8;
+  --el-bg-color: #fbfdff;
+  --el-bg-color-overlay: #ffffff;
   --el-text-color-primary: #1e293b;
   --el-text-color-regular: #334155;
   --el-text-color-secondary: #5a6b7f;
   --el-text-color-placeholder: #94a3b8;
-  --el-border-color: #e6e1d6;
-  --el-border-color-light: #ece8de;
-  --el-border-color-lighter: #f2efe7;
-  --el-fill-color: #f0ece2;
-  --el-fill-color-light: #f6f3ea;
+  --el-border-color: #e2e8f0;
+  --el-border-color-light: #e9eef5;
+  --el-border-color-lighter: #f1f5f9;
+  --el-fill-color: #eef2f8;
+  --el-fill-color-light: #f5f8fc;
 
-  // 内容区：暖纸底 + 极细噪点颗粒，破除数码平板的生硬
+  // 内容区：冷调浅蓝底 + 极淡径向高光，呼应登录页浅蓝氛围（去暖纸噪点颗粒）
   .layout__content {
     background-color: var(--el-bg-color-page);
-    background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+    background-image:
+      radial-gradient(circle at 12% -8%, rgba(59, 130, 246, 0.05), transparent 42%),
+      radial-gradient(circle at 88% 108%, rgba(212, 165, 116, 0.05), transparent 40%);
   }
 
-  // 侧边栏：比卡片略暖的"档案纸"面板
+  // 侧边栏：冷调浅蓝白面板，比内容区略亮
   .sidebar {
-    background-color: #faf8f2;
+    background-color: #f6f9fd;
   }
 
-  // 卡片：柔和暖影 + 顶部一丝纸面受光
+  // 卡片：柔和双层阴影 + 顶部一丝冷调受光（Soft UI Evolution 质感）
   .mc-card,
   .el-card {
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.7),
-      0 1px 2px rgba(120, 100, 60, 0.06);
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 1px 2px rgba(30, 58, 95, 0.05),
+      0 6px 16px -8px rgba(30, 58, 95, 0.08);
   }
 
   /* ============================================================
-     一、按钮 —— 扁平墨蓝，去渐变、去高光、去塑料感
+     一、按钮 —— 深海蓝微渐变 + 细腻投影（去塑料感、留层次）
      ============================================================ */
   .el-button {
     border-radius: 6px;
@@ -77,23 +80,47 @@
       box-shadow 0.2s $ease-standard,
       transform 0.2s $ease-standard;
 
-    // 主按钮：纯墨蓝平底，无 gloss
+    // 主按钮：深海蓝 → 稍亮的微妙渐变 + 顶部一线受光 + 细腻投影
     &--primary {
       background-color: var(--el-color-primary);
-      border-color: var(--el-color-primary);
-      box-shadow: 0 1px 2px rgba(30, 58, 95, 0.14);
+      background-image: linear-gradient(180deg, #26486e 0%, var(--el-color-primary) 100%);
+      border-color: var(--el-color-primary-dark-2);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 1px 2px rgba(30, 58, 95, 0.2),
+        0 4px 10px -4px rgba(30, 58, 95, 0.28);
 
       &:hover,
       &:focus {
-        background-color: var(--el-color-primary-dark-2);
+        background-image: linear-gradient(180deg, #2d5379 0%, var(--el-color-primary-dark-2) 100%);
         border-color: var(--el-color-primary-dark-2);
       }
 
       &:active {
-        background-color: var(--mc-btn-press);
+        background-image: linear-gradient(
+          180deg,
+          var(--el-color-primary) 0%,
+          var(--mc-btn-press) 100%
+        );
         border-color: var(--mc-btn-press);
         transform: translateY(1px);
-        box-shadow: none;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
+      }
+    }
+
+    // text 按钮：无背景（覆盖 --primary 的实心背景）
+    &.is-text {
+      background-color: transparent;
+      background-image: none;
+    }
+
+    // primary text 按钮：文字用稍亮的蓝，避免深海蓝过深看不清
+    &--primary.is-text {
+      color: var(--el-color-primary-light-3);
+
+      &:hover,
+      &:focus {
+        background-color: var(--el-color-primary-light-9);
       }
     }
   }
@@ -106,9 +133,11 @@
     border-color: var(--el-border-color-light);
     transition:
       box-shadow 0.25s $ease-standard,
-      border-color 0.25s $ease-standard;
+      border-color 0.25s $ease-standard,
+      transform 0.25s $ease-standard;
 
     &:hover {
+      transform: translateY(-2px);
       box-shadow: $shadow-base;
       border-color: rgba($color-accent, 0.35);
     }
@@ -119,7 +148,7 @@
     padding: 15px 20px;
     border-bottom: 1px solid var(--el-border-color-lighter);
 
-    // 左侧「墨蓝→沉稳金」档案丝带，庄重的身份线
+    // 左侧深海蓝指示条，简洁科技感
     &::before {
       content: '';
       position: absolute;
@@ -128,7 +157,7 @@
       bottom: 13px;
       width: 3px;
       border-radius: 0 3px 3px 0;
-      background: linear-gradient(180deg, var(--el-color-primary), var(--mc-accent, $color-accent));
+      background: var(--el-color-primary);
     }
   }
 
@@ -143,9 +172,11 @@
     border-color: var(--el-border-color-light);
     transition:
       box-shadow 0.25s $ease-standard,
-      border-color 0.25s $ease-standard;
+      border-color 0.25s $ease-standard,
+      transform 0.25s $ease-standard;
 
     &:hover {
+      transform: translateY(-2px);
       box-shadow: $shadow-base;
       border-color: rgba($color-accent, 0.4);
     }
@@ -189,7 +220,7 @@
   }
 
   /* ============================================================
-     四、侧边栏 —— 正式浅色 + 衬线标题 + 沉稳金激活
+     四、侧边栏 —— 正式浅色 + 无衬线标题 + 琥珀金激活
      （去深海蓝工作台，回归庄重）
      ============================================================ */
   .sidebar {
@@ -197,10 +228,9 @@
     border-right: 1px solid var(--el-border-color-lighter);
 
     .sidebar__logo-text {
-      font-family: $font-family-title;
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 600;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.01em;
     }
 
     .el-menu-item,
@@ -219,17 +249,17 @@
       font-weight: 600;
 
       &::after {
-        background: var(--mc-accent, $color-accent);
+        background: var(--el-color-primary);
         box-shadow: none;
       }
     }
   }
 
-  /* ── 标签栏：纯哑光（上一轮已去毛玻璃，保留） ── */
+  /* ── 标签栏：全圆角胶囊，去底部指示条（浅色深海蓝科技感） ── */
   .nav-tabs__surface {
     background: var(--el-bg-color) !important;
     border-color: var(--el-border-color-light) !important;
-    border-radius: 6px 6px 0 0;
+    border-radius: 8px !important;
     box-shadow: none !important;
   }
   .nav-tabs__item:hover .nav-tabs__surface {
@@ -237,10 +267,11 @@
     border-color: var(--el-color-primary-light-7) !important;
   }
   .nav-tabs__item.is-active .nav-tabs__surface {
-    background: var(--el-bg-color) !important;
-    border-color: var(--el-color-primary) !important;
+    background: var(--el-color-primary-light-9) !important;
+    border-color: var(--el-color-primary-light-7) !important;
     color: var(--el-color-primary) !important;
-    box-shadow: 0 1px 0 var(--el-bg-color) !important;
+    box-shadow: 0 2px 8px rgba(30, 58, 95, 0.08) !important;
+    font-weight: 500;
   }
 
   /* ============================================================
@@ -258,59 +289,37 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: $spacing-lg;
-    padding-bottom: $spacing-lg;
-    border-bottom: 1px solid var(--el-border-color-lighter);
+    padding-bottom: $spacing-xl;
 
     &__left {
       min-width: 0;
     }
 
+    // 眉标（eyebrow）不再需要，隐藏以简化页头
     &__eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0 0 8px;
-      font-size: $font-size-xs;
-      font-weight: 600;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--mc-accent, $color-accent);
-
-      &::before {
-        content: '';
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: currentColor;
-        box-shadow: 0 0 0 3px var(--mc-accent-soft, rgba($color-accent, 0.14));
-      }
+      display: none;
     }
 
     &__title {
       margin: 0;
-      font-family: $font-family-title;
-      font-size: 21px;
-      line-height: 1.35;
-      font-weight: 600;
-      letter-spacing: 0.01em;
-      color: var(--el-text-color-primary);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-
-      &::after {
-        content: '';
-        width: 30px;
-        height: 2px;
-        border-radius: 2px;
-        background: var(--mc-accent, $color-accent);
-        opacity: 0.75;
-      }
+      font-size: 26px;
+      line-height: 1.25;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(
+        120deg,
+        var(--el-color-primary) 0%,
+        var(--el-color-primary-light-3) 100%
+      );
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
     }
 
     &__desc {
-      margin: 8px 0 0;
-      font-size: 13px;
+      margin: 10px 0 0;
+      font-size: 14px;
       line-height: 1.7;
       color: var(--el-text-color-secondary);
       max-width: 640px;
@@ -370,9 +379,11 @@
     overflow: hidden;
     transition:
       box-shadow 0.25s $ease-standard,
-      border-color 0.25s $ease-standard;
+      border-color 0.25s $ease-standard,
+      transform 0.25s $ease-standard;
 
     &:hover {
+      transform: translateY(-2px);
       border-color: rgba($color-accent, 0.3);
       box-shadow: 0 1px 3px rgba($color-primary, 0.06);
     }
@@ -400,11 +411,7 @@
         width: 3px;
         height: 14px;
         border-radius: 0 3px 3px 0;
-        background: linear-gradient(
-          180deg,
-          var(--el-color-primary),
-          var(--mc-accent, $color-accent)
-        );
+        background: var(--el-color-primary);
       }
     }
 
@@ -462,9 +469,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--mc-accent, $color-accent);
-      background: var(--mc-accent-soft, rgba($color-accent, 0.14));
-      border: 1px solid rgba($color-accent, 0.22);
+      color: var(--el-color-primary);
+      background: var(--el-color-primary-light-9);
+      border: 1px solid var(--el-color-primary-light-7);
     }
 
     &__title {
@@ -481,14 +488,14 @@
     }
   }
 
-  /* ── 键盘可达性：沉稳金焦点环 ── */
+  /* ── 键盘可达性：琥珀金焦点环 ── */
   .el-button,
   .el-input__wrapper,
   .el-select__wrapper,
   .el-radio-button__inner,
   .el-checkbox-button__inner {
     &:focus-visible {
-      outline: 2px solid rgba($color-accent, 0.55);
+      outline: 2px solid var(--el-color-primary-light-7);
       outline-offset: 2px;
     }
   }
