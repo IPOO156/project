@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import type { TableInstance } from 'element-plus'
 /**
  * Indicator - 指标配置
- * 对接后端 /admin/indicators（树 + 增删改 + 启停 + 发布）。
+ * 对接后端 /admin/indicators（树 + 增删改 + 启停 + 发布 + 批量状态）、
+ * /admin/indicators/rule-versions（规则版本列表与快照修补）。
  */
 import type { AdminIndicatorTree, IndicatorNode, IndicatorPayload } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, RefreshCw, Rocket } from 'lucide-vue-next'
+import { Check, History, Plus, RefreshCw, Rocket, X } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 
 import {
@@ -14,8 +16,10 @@ import {
   getAdminIndicatorTree,
   publishIndicators,
   updateIndicator,
+  updateIndicatorsStatusBatch,
   updateIndicatorStatus,
 } from '@/shared/api/teacher'
+import IndicatorVersionsDrawer from './components/IndicatorVersionsDrawer.vue'
 
 const loading = ref(false)
 const tree = ref<AdminIndicatorTree | null>(null)
@@ -134,6 +138,33 @@ async function handlePublish() {
   }
 }
 
+// ── 批量启用/禁用（/admin/indicators/status）──
+const tableRef = ref<TableInstance | null>(null)
+const selectedIndicators = ref<IndicatorNode[]>([])
+
+function handleSelectionChange(rows: IndicatorNode[]) {
+  selectedIndicators.value = rows
+}
+
+async function handleBatchStatus(next: number) {
+  const ids = selectedIndicators.value.map((r) => r.id)
+  if (!ids.length) {
+    ElMessage.warning('请先勾选要操作的指标')
+    return
+  }
+  try {
+    const res = await updateIndicatorsStatusBatch({ indicatorIds: ids, status: next })
+    ElMessage.success(`已${next === 1 ? '启用' : '禁用'} ${res.affectedCount ?? ids.length} 项指标`)
+    tableRef.value?.clearSelection()
+    void load()
+  } catch {
+    /* 拦截器已提示 */
+  }
+}
+
+// ── 规则版本列表（/admin/indicators/rule-versions）──
+const versionsDrawerVisible = ref(false)
+
 onMounted(() => void load())
 </script>
 
@@ -142,12 +173,29 @@ onMounted(() => void load())
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">指标配置</h2>
-        <p class="mc-page-head__desc">
-          管理三级评价指标体系（权重、计分规则、版本发布）。数据来自后端 /admin/indicators。
-        </p>
+        <p class="mc-page-head__desc">管理三级评价指标体系（权重、计分规则、版本发布）。</p>
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="load">刷新</el-button>
+        <el-button :icon="History" @click="versionsDrawerVisible = true">版本</el-button>
+        <el-button
+          type="success"
+          plain
+          :icon="Check"
+          :disabled="!selectedIndicators.length"
+          @click="handleBatchStatus(1)"
+        >
+          批量启用
+        </el-button>
+        <el-button
+          type="danger"
+          plain
+          :icon="X"
+          :disabled="!selectedIndicators.length"
+          @click="handleBatchStatus(0)"
+        >
+          批量禁用
+        </el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate()">新增一级指标</el-button>
         <el-button type="success" :icon="Rocket" @click="handlePublish">发布</el-button>
       </div>
@@ -156,13 +204,16 @@ onMounted(() => void load())
     <div class="mc-card">
       <div class="mc-card__body">
         <el-table
+          ref="tableRef"
           v-loading="loading"
           :data="tree?.indicators ?? []"
           row-key="id"
           :tree-props="{ children: 'children' }"
           default-expand-all
           style="width: 100%"
+          @selection-change="handleSelectionChange"
         >
+          <el-table-column type="selection" width="48" reserve-selection />
           <el-table-column prop="indicatorName" label="指标名称" min-width="220" />
           <el-table-column prop="indicatorCode" label="编码" width="140" />
           <el-table-column prop="level" label="层级" width="70" align="center" />
@@ -241,5 +292,7 @@ onMounted(() => void load())
         <el-button type="primary" @click="handleSave">保存</el-button>
       </template>
     </el-dialog>
+
+    <IndicatorVersionsDrawer v-model:visible="versionsDrawerVisible" />
   </div>
 </template>

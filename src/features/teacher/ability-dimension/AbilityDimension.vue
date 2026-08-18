@@ -127,9 +127,7 @@ onMounted(() => void load())
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">能力维度</h2>
-        <p class="mc-page-head__desc">
-          配置学生评价的能力维度，供指标体系引用。数据来自后端 /admin/ability-dimensions。
-        </p>
+        <p class="mc-page-head__desc">配置学生评价的能力维度，供指标体系引用。</p>
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="load">刷新</el-button>

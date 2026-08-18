@@ -172,9 +172,7 @@ onMounted(() => void load())
       <div class="mc-page-head__left">
         <p class="mc-page-head__eyebrow">管理权限 · Roles</p>
         <h2 class="mc-page-head__title">教师职位调整</h2>
-        <p class="mc-page-head__desc">
-          将教师职位调整为管理员、审核员（辅导员）或课任教师。数据来自后端 /admin/users。
-        </p>
+        <p class="mc-page-head__desc">将教师职位调整为管理员、审核员（辅导员）或课任教师。</p>
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="handleReset">刷新</el-button>

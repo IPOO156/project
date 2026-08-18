@@ -171,9 +171,7 @@ onMounted(() => void load())
       <div class="mc-page-head__left">
         <p class="mc-page-head__eyebrow">账号管理 · Students</p>
         <h2 class="mc-page-head__title">学生账号管理</h2>
-        <p class="mc-page-head__desc">
-          查看学生账号，重置密码与启停账号。数据来自后端 /admin/users。
-        </p>
+        <p class="mc-page-head__desc">查看学生账号，重置密码与启停账号。</p>
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="handleReset">刷新</el-button>
