@@ -6,7 +6,12 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useThemeStore, useUserStore } from '@/app/stores/stores'
 import { login } from '@/shared/api/auth'
-import { getCaptcha, teacherLogin } from '@/shared/api/teacher'
+import {
+  confirmPasswordReset,
+  getCaptcha,
+  requestPasswordReset,
+  teacherLogin,
+} from '@/shared/api/teacher'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { useThemeRipple } from '@/shared/composables/useThemeRipple'
 import LoginBackground from './components/LoginBackground.vue'
@@ -19,9 +24,12 @@ const themeStore = useThemeStore()
 const { toggleThemeWithRipple } = useThemeRipple()
 const { refresh: refreshTeacherMe } = useTeacherMe()
 
-// ── 后端角色 → 前端教师角色映射（后端 role code：admin=超级管理员 / teacher / counselor=辅导员≈审核员）──
+// ── 后端角色 → 前端教师角色映射 ──
+// 后端 role code：super_admin=超级管理员 / admin=管理员 / counselor=辅导员≈审核员 / teacher=课任教师
+// 超级管理员同时持有 admin + super_admin 双角色，故先判断 super_admin。
 function mapBackendRole(roles: string[]): TeacherRole {
-  if (roles.includes('admin')) return 'super_admin'
+  if (roles.includes('super_admin')) return 'super_admin'
+  if (roles.includes('admin')) return 'admin'
   if (roles.includes('counselor')) return 'reviewer'
   return 'teacher'
 }
@@ -169,6 +177,7 @@ async function handleLogin() {
         rememberMe: loginForm.remember,
       })
       userStore.setToken(res.accessToken)
+      localStorage.setItem('refresh_token', res.refreshToken ?? '')
       userStore.setUserInfo(toUserInfo(res.user))
       // 拉取完整身份（roles / permissions / scopes），供教师端授权范围过滤
       refreshTeacherMe()
@@ -201,6 +210,75 @@ async function handleLogin() {
     } finally {
       loading.value = false
     }
+  }
+}
+
+/* ===================== 忘记密码（POST /auth/password/reset + confirm）===================== */
+const forgotDialogVisible = ref(false)
+const forgotSending = ref(false)
+const forgotSubmitting = ref(false)
+const forgotStep = ref<1 | 2>(1)
+const forgotForm = reactive({
+  email: '',
+  verificationCode: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+
+function openForgotDialog() {
+  forgotStep.value = 1
+  forgotForm.email = ''
+  forgotForm.verificationCode = ''
+  forgotForm.newPassword = ''
+  forgotForm.confirmPassword = ''
+  forgotDialogVisible.value = true
+}
+
+async function handleSendResetEmail() {
+  if (!forgotForm.email.trim()) {
+    ElMessage.warning('请输入注册邮箱')
+    return
+  }
+  forgotSending.value = true
+  try {
+    await requestPasswordReset({ email: forgotForm.email.trim() })
+    forgotStep.value = 2
+    ElMessage.success('验证码已发送至邮箱，请查收')
+  } catch {
+    /* 拦截器已提示 */
+  } finally {
+    forgotSending.value = false
+  }
+}
+
+async function handleConfirmReset() {
+  const { email, verificationCode, newPassword, confirmPassword } = forgotForm
+  if (!verificationCode.trim()) {
+    ElMessage.warning('请输入邮箱收到的验证码')
+    return
+  }
+  if (newPassword.length < 6) {
+    ElMessage.warning('新密码长度至少 6 位')
+    return
+  }
+  if (newPassword !== confirmPassword) {
+    ElMessage.warning('两次输入的新密码不一致')
+    return
+  }
+  forgotSubmitting.value = true
+  try {
+    await confirmPasswordReset({
+      verificationCode: verificationCode.trim(),
+      email: email.trim(),
+      newPassword,
+      confirmPassword,
+    })
+    ElMessage.success('密码已重置，请使用新密码登录')
+    forgotDialogVisible.value = false
+  } catch {
+    /* 拦截器已提示 */
+  } finally {
+    forgotSubmitting.value = false
   }
 }
 
@@ -368,7 +446,9 @@ onUnmounted(() => {
               </el-form-item>
               <div class="login__options">
                 <el-checkbox v-model="loginForm.remember">记住密码</el-checkbox>
-                <button type="button" class="login__link">忘记密码？</button>
+                <button type="button" class="login__link" @click="openForgotDialog">
+                  忘记密码？
+                </button>
               </div>
               <el-button
                 type="primary"
@@ -392,6 +472,50 @@ onUnmounted(() => {
         </div>
       </Transition>
     </section>
+
+    <el-dialog v-model="forgotDialogVisible" title="忘记密码" width="420px" append-to-body>
+      <el-form v-if="forgotStep === 1" label-width="80px" @submit.prevent>
+        <el-form-item label="邮箱" required>
+          <el-input v-model="forgotForm.email" placeholder="请输入注册邮箱" />
+        </el-form-item>
+        <p class="login__hint">验证码将发送到该邮箱，请确认邮箱可正常接收</p>
+      </el-form>
+      <el-form v-else label-width="90px" @submit.prevent>
+        <el-form-item label="验证码" required>
+          <el-input v-model="forgotForm.verificationCode" placeholder="邮箱收到的 6 位验证码" />
+        </el-form-item>
+        <el-form-item label="新密码" required>
+          <el-input
+            v-model="forgotForm.newPassword"
+            type="password"
+            show-password
+            placeholder="6-32 位新密码"
+          />
+        </el-form-item>
+        <el-form-item label="确认密码" required>
+          <el-input
+            v-model="forgotForm.confirmPassword"
+            type="password"
+            show-password
+            placeholder="再次输入新密码"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="forgotDialogVisible = false">取消</el-button>
+        <el-button
+          v-if="forgotStep === 1"
+          type="primary"
+          :loading="forgotSending"
+          @click="handleSendResetEmail"
+        >
+          发送验证码
+        </el-button>
+        <el-button v-else type="primary" :loading="forgotSubmitting" @click="handleConfirmReset">
+          重置密码
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

@@ -123,6 +123,26 @@
         background-color: var(--el-color-primary-light-9);
       }
     }
+
+    // plain 按钮：线框浅底。--primary 的深蓝渐变会错误叠加到浅底上，
+    // 还原为浅底，悬停/按下再恢复渐变（与 is-text 同理）
+    &--primary.is-plain {
+      background-image: none;
+      box-shadow: none;
+
+      &:hover,
+      &:focus {
+        background-image: linear-gradient(180deg, #26486e 0%, var(--el-color-primary) 100%);
+      }
+
+      &:active {
+        background-image: linear-gradient(
+          180deg,
+          var(--el-color-primary) 0%,
+          var(--mc-btn-press) 100%
+        );
+      }
+    }
   }
 
   /* ============================================================

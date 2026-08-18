@@ -72,6 +72,12 @@ const teacherRoutes: RouteRecordRaw[] = [
     meta: { title: '审批流程', teacher: true, permission: 'approval-flow' },
   },
   {
+    path: 'system-management',
+    name: 'TeacherSystemManagement',
+    component: () => import('@/features/teacher/system-management/SystemManagement.vue'),
+    meta: { title: '系统管理', teacher: true, permission: 'system-management' },
+  },
+  {
     path: 'role-selection',
     redirect: '/teacher/role-selection/adjust',
     children: [

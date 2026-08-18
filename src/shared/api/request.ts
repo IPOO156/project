@@ -23,6 +23,48 @@ request.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
+// ── 401 令牌刷新：并发去重，单飞（singleton）──
+let refreshPromise: Promise<string | null> | null = null
+
+function tryRefreshToken(): Promise<string | null> {
+  const refreshToken = localStorage.getItem('refresh_token')
+  if (!refreshToken) return Promise.resolve(null)
+  if (!refreshPromise) {
+    refreshPromise = request
+      .post('/auth/refresh', { refreshToken })
+      .then((data) => {
+        // 响应拦截器已解包 res.data，静态类型仍为 AxiosResponse，按真实形状取值
+        const tokenResult = data as unknown as {
+          accessToken?: string
+          refreshToken?: string | null
+        }
+        const accessToken = tokenResult.accessToken
+        if (accessToken) {
+          localStorage.setItem('token', accessToken)
+          if (tokenResult.refreshToken)
+            localStorage.setItem('refresh_token', tokenResult.refreshToken)
+          return accessToken
+        }
+        return null
+      })
+      .catch(() => {
+        localStorage.removeItem('token')
+        localStorage.removeItem('refresh_token')
+        return null
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
+function forceLogout() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('refresh_token')
+  window.location.href = '/login'
+}
+
 // 响应拦截器
 request.interceptors.response.use(
   (response) => {
@@ -35,10 +77,25 @@ request.interceptors.response.use(
   },
   (error) => {
     if (error.response) {
-      switch (error.response.status) {
+      const status = error.response.status
+      const url: string | undefined = error.config?.url
+      // 401：优先用 refreshToken 换新令牌并原样重试一次；刷新失败才回登录页
+      if (status === 401 && !url?.includes('/auth/login') && !url?.includes('/auth/refresh')) {
+        return tryRefreshToken().then((token) => {
+          if (!token) {
+            forceLogout()
+            return Promise.reject(error)
+          }
+          error.config.headers = {
+            ...error.config.headers,
+            Authorization: `Bearer ${token}`,
+          }
+          return request(error.config)
+        })
+      }
+      switch (status) {
         case 401:
-          localStorage.removeItem('token')
-          window.location.href = '/login'
+          forceLogout()
           break
         case 403:
           ElMessage.error('没有权限执行此操作')

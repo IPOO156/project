@@ -10,7 +10,6 @@ interface Props {
   data: SystemLogItem[]
 }
 defineProps<Props>()
-const emit = defineEmits<{ (e: 'view', row: SystemLogItem): void }>()
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.isSuperAdmin || userStore.isAdmin)
 
@@ -76,26 +75,5 @@ function moduleLabel(module: string | null): string {
     <el-table-column label="操作时间" width="160" sortable>
       <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
     </el-table-column>
-    <el-table-column label="数据快照" width="100" align="center">
-      <template #default="{ row }">
-        <el-button
-          v-if="row.beforeData || row.afterData"
-          text
-          type="primary"
-          size="small"
-          @click="emit('view', row as SystemLogItem)"
-        >
-          查看
-        </el-button>
-        <span v-else class="no-data">-</span>
-      </template>
-    </el-table-column>
   </el-table>
 </template>
-
-<style scoped lang="scss">
-.no-data {
-  color: var(--el-text-color-placeholder);
-  font-size: 12px;
-}
-</style>

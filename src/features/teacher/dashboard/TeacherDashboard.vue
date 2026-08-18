@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { DashboardStatistics, SemesterItem } from '@/shared/types/teacher'
 /**
  * TeacherDashboard - 教师端首页仪表盘
  *
@@ -19,10 +20,15 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores/stores'
-import { getSystemLogs, listMessages } from '@/shared/api/teacher'
+import {
+  getSemesters,
+  getStatisticsDashboard,
+  getSystemLogs,
+  listMessages,
+} from '@/shared/api/teacher'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { TEACHER_ROLE_LABELS } from '@/shared/types/types'
 
@@ -82,6 +88,38 @@ async function loadStats() {
     recentTotal.value = null
   }
 }
+
+// ── 学校档案数据概览（管理员，/admin/statistics/dashboard）──
+const semesters = ref<SemesterItem[]>([])
+const loadingSemesters = ref(false)
+const dashSemesterId = ref<number | undefined>(undefined)
+const dashboardLoading = ref(false)
+const dashboardData = ref<DashboardStatistics | null>(null)
+
+async function loadSemesters() {
+  loadingSemesters.value = true
+  try {
+    semesters.value = await getSemesters()
+  } catch {
+    semesters.value = []
+  } finally {
+    loadingSemesters.value = false
+  }
+}
+
+async function loadDashboard() {
+  if (!isAdmin.value) return
+  dashboardLoading.value = true
+  try {
+    dashboardData.value = await getStatisticsDashboard({ semesterId: dashSemesterId.value })
+  } catch {
+    dashboardData.value = null
+  } finally {
+    dashboardLoading.value = false
+  }
+}
+
+watch(dashSemesterId, () => void loadDashboard())
 
 const statsCards = computed(() => [
   {
@@ -196,6 +234,8 @@ async function loadRecent() {
 onMounted(() => {
   void loadStats()
   void loadRecent()
+  void loadSemesters()
+  if (isAdmin.value) void loadDashboard()
 })
 </script>
 
@@ -238,6 +278,75 @@ onMounted(() => {
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 学校档案数据概览（管理员） -->
+    <el-card v-if="isAdmin" class="teacher-dashboard__section dash-overview">
+      <template #header>
+        <span class="section-title">学校档案数据概览</span>
+        <div class="dash-overview__tools">
+          <el-select
+            v-model="dashSemesterId"
+            clearable
+            placeholder="当前学期"
+            size="small"
+            style="width: 160px"
+            :loading="loadingSemesters"
+          >
+            <el-option v-for="s in semesters" :key="s.value" :label="s.label" :value="s.value" />
+          </el-select>
+          <el-button size="small" :loading="dashboardLoading" @click="loadDashboard"
+            >刷新</el-button
+          >
+        </div>
+      </template>
+      <div v-loading="dashboardLoading">
+        <template v-if="dashboardData">
+          <div class="dash-overview__kpis">
+            <div class="dash-overview__kpi">
+              <span class="dash-overview__label">学生数</span>
+              <span class="dash-overview__value mc-num">{{
+                dashboardData.studentCount ?? '—'
+              }}</span>
+            </div>
+            <div class="dash-overview__kpi">
+              <span class="dash-overview__label">档案数</span>
+              <span class="dash-overview__value mc-num">{{
+                dashboardData.archiveCount ?? '—'
+              }}</span>
+            </div>
+            <div class="dash-overview__kpi">
+              <span class="dash-overview__label">获奖数</span>
+              <span class="dash-overview__value mc-num">{{ dashboardData.awardCount ?? '—' }}</span>
+            </div>
+            <div class="dash-overview__kpi">
+              <span class="dash-overview__label">平均绩点</span>
+              <span class="dash-overview__value mc-num">{{ dashboardData.avgGpa ?? '—' }}</span>
+            </div>
+            <div class="dash-overview__kpi">
+              <span class="dash-overview__label">数据完整度</span>
+              <el-progress
+                :percentage="Math.round(dashboardData.dataCompleteness ?? 0)"
+                :stroke-width="8"
+                class="dash-overview__completeness"
+              />
+            </div>
+          </div>
+          <div v-if="dashboardData.dimensionAvgScores?.length" class="dash-overview__dims">
+            <span class="dash-overview__dim-label">画像维度得分</span>
+            <el-tag
+              v-for="d in dashboardData.dimensionAvgScores"
+              :key="d.dimensionCode"
+              size="small"
+              effect="plain"
+              class="dash-overview__dim"
+            >
+              {{ d.dimensionName }} {{ d.avgScore ?? '-' }}
+            </el-tag>
+          </div>
+        </template>
+        <el-empty v-else-if="!dashboardLoading" description="暂无统计数据" :image-size="72" />
+      </div>
+    </el-card>
 
     <!-- 主体区域 -->
     <el-row :gutter="16" class="teacher-dashboard__main">
@@ -432,6 +541,57 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
   color: var(--el-text-color-primary);
+}
+
+.dash-overview {
+  &__tools {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-sm;
+  }
+
+  &__kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: $spacing-lg;
+  }
+
+  &__kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__label {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+  }
+
+  &__value {
+    font-size: $font-size-3xl;
+    font-weight: 700;
+    color: var(--el-text-color-primary);
+  }
+
+  &__completeness {
+    width: 160px;
+    margin-top: 8px;
+  }
+
+  &__dims {
+    margin-top: $spacing-lg;
+    padding-top: $spacing-md;
+    border-top: 1px solid var(--el-border-color-light);
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+  }
+
+  &__dim-label {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+  }
 }
 
 .quick-link-grid {
