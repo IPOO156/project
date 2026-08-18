@@ -2,33 +2,83 @@ import type {
   AbilityDimensionItem,
   AbilityDimensionPayload,
   AdminIndicatorTree,
+  ApprovalFlowDetail,
   ApprovalFlowItem,
+  ApprovalFlowMapping,
+  ApprovalFlowMappingPayload,
   ApprovalFlowPayload,
+  ApprovalFlowStep,
+  ArchiveAdminDetail,
+  ArchiveAdminListItem,
+  ArchiveAdminQuery,
   ArchiveExportPayload,
   ArchiveExportResult,
+  ArchiveOverviewResult,
   CaptchaResponse,
   CommonIndicatorTree,
   CreateUserPayload,
   CurrentUser,
+  DashboardStatistics,
   DictItem,
+  DictItemCreatePayload,
+  DictItemListResult,
+  DictItemUpdatePayload,
+  DictTypeItem,
   ExportJobItem,
+  ExportLogItem,
+  ExportLogQuery,
+  ExportTemplateDetail,
   ExportTemplateItem,
   ExportTemplatePayload,
+  ExportTemplatePreviewResult,
+  FilePreviewResult,
+  FileUploadResult,
+  GradeImportConfigItem,
+  GradeImportConfigPayload,
+  GradeImportDetail,
+  GradeImportListItem,
+  GradeImportPayload,
+  GradeImportQuery,
+  GradeImportResult,
+  HeatmapStatistics,
   IndicatorPayload,
+  IndicatorRuleVersionItem,
+  IndicatorSnapshotPatchPayload,
+  IndicatorStatusBatchPayload,
+  IndicatorStatusChangeResult,
+  LoginLogItem,
+  LoginLogQuery,
   LoginPayload,
   LoginResponse,
+  MessageBatchIdsPayload,
   MessageCategory,
   MessageItem,
   MessageListResult,
+  MessageReadAllResult,
   MessageSetting,
+  MessageSettingUpdatePayload,
+  OrgOverviewStatistics,
   PageResult,
+  PasswordResetConfirmPayload,
+  PasswordResetPayload,
+  PermissionListItem,
+  ResearchExportPayload,
+  RoleListItem,
+  RolePermissionsResult,
+  RoleSavePayload,
   ScopeConfigItem,
   ScoreRecalculatePayload,
   ScoreRecalculateResult,
   ScoreRecalculationTask,
+  SemesterImportPayload,
+  SemesterImportResult,
   SemesterItem,
+  SemesterListItem,
+  SemesterSavePayload,
+  StatisticsQuery,
   SystemLogItem,
   SystemLogQuery,
+  TokenRefreshResult,
   UpdateUserPayload,
   UserDetail,
   UserListItem,
@@ -61,10 +111,30 @@ export function teacherLogout(): Promise<void> {
   return request.post('/auth/logout')
 }
 
+export function requestPasswordReset(payload: PasswordResetPayload): Promise<void> {
+  return request.post('/auth/password/reset', payload)
+}
+
+export function confirmPasswordReset(payload: PasswordResetConfirmPayload): Promise<void> {
+  return request.post('/auth/password/reset/confirm', payload)
+}
+
+export function refreshAccessToken(refreshToken: string): Promise<TokenRefreshResult> {
+  return request.post('/auth/refresh', { refreshToken })
+}
+
 /* ===================== 系统日志（管理员）===================== */
 
 export function getSystemLogs(params: SystemLogQuery): Promise<PageResult<SystemLogItem>> {
   return request.get('/admin/logs/system', { params })
+}
+
+export function getLoginLogs(params: LoginLogQuery): Promise<PageResult<LoginLogItem>> {
+  return request.get('/admin/logs/login', { params })
+}
+
+export function getExportLogs(params: ExportLogQuery): Promise<PageResult<ExportLogItem>> {
+  return request.get('/admin/logs/exports', { params })
 }
 
 /* ===================== 用户管理（/admin/users）===================== */
@@ -299,6 +369,361 @@ export function deleteMessage(id: number): Promise<void> {
 
 export function getMessageSettings(): Promise<MessageSetting[]> {
   return request.get('/messages/settings')
+}
+
+export function updateMessageSettings(payload: MessageSettingUpdatePayload): Promise<void> {
+  return request.put('/messages/settings', payload)
+}
+
+export function batchReadMessages(payload: MessageBatchIdsPayload): Promise<MessageReadAllResult> {
+  return request.put('/messages/batch-read', payload)
+}
+
+export function batchDeleteMessages(
+  payload: MessageBatchIdsPayload,
+): Promise<MessageReadAllResult> {
+  return request.delete('/messages/batch', { data: payload })
+}
+
+/* ===================== 文件上传（/common/upload）===================== */
+
+export function uploadFile(file: File, type: string, module: string): Promise<FileUploadResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('type', type)
+  formData.append('module', module)
+  return request.post('/common/upload', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+/* ===================== 文件管理（/common/files）===================== */
+
+export function getFilePreview(fileId: number): Promise<FilePreviewResult> {
+  return request.get(`/common/files/${fileId}/preview`)
+}
+
+export function deleteFile(fileId: number): Promise<void> {
+  return request.delete(`/common/files/${fileId}`)
+}
+
+/** 下载文件（后端 302 重定向到 OSS 签名 URL，绕过统一拦截器以 blob 接收） */
+export async function downloadFile(fileId: number, fileName = '下载文件'): Promise<void> {
+  const { default: axios } = await import('axios')
+  const res = await axios.get(`/api/v1/common/files/${fileId}/download`, {
+    responseType: 'blob',
+    headers: { Authorization: `Bearer ${localStorage.getItem('token') ?? ''}` },
+  })
+  const blob = new Blob([res.data])
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+/* ===================== 成绩导入（/admin/grades）===================== */
+
+export function submitGradeImport(payload: GradeImportPayload): Promise<GradeImportResult> {
+  return request.post('/admin/grades/import', payload)
+}
+
+export function listGradeImports(
+  params: GradeImportQuery,
+): Promise<PageResult<GradeImportListItem>> {
+  return request.get('/admin/grades/imports', { params })
+}
+
+export function getGradeImportDetail(importId: number): Promise<GradeImportDetail> {
+  return request.get(`/admin/grades/imports/${importId}`)
+}
+
+/** 下载成绩导入模板（后端返回 xlsx 二进制，绕过统一拦截器） */
+export async function downloadGradeImportTemplate(): Promise<void> {
+  const { default: axios } = await import('axios')
+  const res = await axios.get('/api/v1/admin/grades/import-template', {
+    responseType: 'blob',
+    headers: { Authorization: `Bearer ${localStorage.getItem('token') ?? ''}` },
+  })
+  const blob = new Blob([res.data])
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = '成绩导入模板.xlsx'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+/* ===================== 成绩导入配置（/admin/grade-import-configs）===================== */
+
+export function getGradeImportConfig(): Promise<GradeImportConfigItem> {
+  return request.get('/admin/grade-import-configs')
+}
+
+export function createGradeImportConfig(
+  payload: GradeImportConfigPayload,
+): Promise<GradeImportConfigItem> {
+  return request.post('/admin/grade-import-configs', payload)
+}
+
+export function updateGradeImportConfig(
+  id: number,
+  payload: Partial<GradeImportConfigPayload>,
+): Promise<GradeImportConfigItem> {
+  return request.put(`/admin/grade-import-configs/${id}`, payload)
+}
+
+export function deleteGradeImportConfig(id: number): Promise<void> {
+  return request.delete(`/admin/grade-import-configs/${id}`)
+}
+
+export function updateGradeImportConfigStatus(id: number, status: number): Promise<void> {
+  return request.patch(`/admin/grade-import-configs/${id}/status`, { status })
+}
+
+/* ===================== 审批流程步骤/映射（/admin/approval-flows）===================== */
+
+export function getApprovalFlowDetail(flowId: number): Promise<ApprovalFlowDetail> {
+  return request.get(`/admin/approval-flows/${flowId}`)
+}
+
+export function listApprovalFlowSteps(flowId: number): Promise<ApprovalFlowStep[]> {
+  return request.get(`/admin/approval-flows/${flowId}/steps`)
+}
+
+export function saveApprovalFlowSteps(
+  flowId: number,
+  steps: ApprovalFlowStep[],
+): Promise<{ flowId: number; steps: ApprovalFlowStep[] }> {
+  return request.put(`/admin/approval-flows/${flowId}/steps`, { steps })
+}
+
+export function listApprovalFlowMappings(params: {
+  businessType?: string
+  businessSubType?: string
+  page?: number
+  per_page?: number
+}): Promise<PageResult<ApprovalFlowMapping>> {
+  return request.get('/admin/approval-flow-mappings', { params })
+}
+
+export function upsertApprovalFlowMapping(
+  payload: ApprovalFlowMappingPayload,
+): Promise<ApprovalFlowMapping> {
+  return request.post('/admin/approval-flow-mappings', payload)
+}
+
+export function deleteApprovalFlowMapping(mappingId: number): Promise<void> {
+  return request.delete(`/admin/approval-flow-mappings/${mappingId}`)
+}
+
+/* ===================== 档案管理（/admin/archives）===================== */
+
+export function listArchives(params: ArchiveAdminQuery): Promise<PageResult<ArchiveAdminListItem>> {
+  return request.get('/admin/archives', { params })
+}
+
+export function getArchiveDetail(archiveId: number): Promise<ArchiveAdminDetail> {
+  return request.get(`/admin/archives/${archiveId}`)
+}
+
+export function getArchiveOverview(params: {
+  semesterId?: number
+  orgType?: number
+  orgId?: number
+  grade?: string
+}): Promise<ArchiveOverviewResult> {
+  return request.get('/admin/archives/overview', { params })
+}
+
+/* ===================== 统计看板（/admin/statistics）===================== */
+
+export function getStatisticsDashboard(
+  params: Pick<StatisticsQuery, 'semesterId' | 'grade'>,
+): Promise<DashboardStatistics> {
+  return request.get('/admin/statistics/dashboard', { params })
+}
+
+export function getStatisticsOverview(params: StatisticsQuery): Promise<OrgOverviewStatistics> {
+  return request.get('/admin/statistics/overview', { params })
+}
+
+export function getStatisticsHeatmap(params: StatisticsQuery): Promise<HeatmapStatistics> {
+  return request.get('/admin/statistics/heatmap', { params })
+}
+
+/* ===================== 指标规则版本/批量状态（/admin/indicators）===================== */
+
+export function updateIndicatorsStatusBatch(
+  payload: IndicatorStatusBatchPayload,
+): Promise<IndicatorStatusChangeResult> {
+  return request.patch('/admin/indicators/status', payload)
+}
+
+export function listIndicatorRuleVersions(params: {
+  semesterId?: number
+  page?: number
+  per_page?: number
+}): Promise<PageResult<IndicatorRuleVersionItem>> {
+  return request.get('/admin/indicators/rule-versions', { params })
+}
+
+export function patchIndicatorRuleVersionSnapshot(
+  versionId: number,
+  payload: IndicatorSnapshotPatchPayload,
+): Promise<void> {
+  return request.patch(`/admin/indicators/rule-versions/${versionId}/snapshot`, payload)
+}
+
+/* ===================== 导出模板详情/预览图（/admin/export-templates）===================== */
+
+export function getExportTemplateDetail(templateId: number): Promise<ExportTemplateDetail> {
+  return request.get(`/admin/export-templates/${templateId}`)
+}
+
+export function uploadExportTemplatePreview(
+  templateId: number,
+  file: File,
+): Promise<ExportTemplatePreviewResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post(`/admin/export-templates/${templateId}/preview-image`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+/* ===================== 研究数据导出（/admin/exports/research）===================== */
+
+export function submitResearchExport(payload: ResearchExportPayload): Promise<{
+  jobId: number
+  status: number
+  statusLabel: string
+  estimatedSeconds: number | null
+}> {
+  return request.post('/admin/exports/research', payload)
+}
+
+/* ===================== 字典管理（/admin/dict）===================== */
+
+export function listDictTypes(params: {
+  keyword?: string
+  status?: number
+  page?: number
+  per_page?: number
+}): Promise<PageResult<DictTypeItem>> {
+  return request.get('/admin/dict/types', { params })
+}
+
+export function listDictItems(params: {
+  dictType?: string
+  status?: number
+  page?: number
+  per_page?: number
+}): Promise<DictItemListResult> {
+  return request.get('/admin/dict/items', { params })
+}
+
+export function createDictItem(payload: DictItemCreatePayload): Promise<{ id: number }> {
+  return request.post('/admin/dict/items', payload)
+}
+
+export function updateDictItem(itemId: number, payload: DictItemUpdatePayload): Promise<void> {
+  return request.put(`/admin/dict/items/${itemId}`, payload)
+}
+
+export function deleteDictItem(itemId: number): Promise<void> {
+  return request.delete(`/admin/dict/items/${itemId}`)
+}
+
+/* ===================== 角色管理（/admin/roles）===================== */
+
+export function listRoles(params: {
+  status?: number
+  page?: number
+  per_page?: number
+}): Promise<PageResult<RoleListItem>> {
+  return request.get('/admin/roles', { params })
+}
+
+export function createRole(payload: RoleSavePayload): Promise<{ roleId: number }> {
+  return request.post('/admin/roles', payload)
+}
+
+export function updateRole(roleId: number, payload: RoleSavePayload): Promise<void> {
+  return request.put(`/admin/roles/${roleId}`, payload)
+}
+
+export function deleteRole(roleId: number): Promise<void> {
+  return request.delete(`/admin/roles/${roleId}`)
+}
+
+export function getRolePermissions(roleId: number): Promise<RolePermissionsResult> {
+  return request.get(`/admin/roles/${roleId}/permissions`)
+}
+
+export function assignRolePermissions(roleId: number, permissionIds: number[]): Promise<void> {
+  return request.put(`/admin/roles/${roleId}/permissions`, { permissionIds })
+}
+
+export function listPermissions(params: {
+  module?: string
+  status?: number
+}): Promise<PermissionListItem[]> {
+  return request.get('/admin/permissions', { params })
+}
+
+/* ===================== 学期管理（/admin/semesters）===================== */
+
+export function listSemesters(params: {
+  schoolId?: number
+  status?: number
+  page?: number
+  per_page?: number
+}): Promise<PageResult<SemesterListItem>> {
+  return request.get('/admin/semesters', { params })
+}
+
+export function createSemester(payload: SemesterSavePayload): Promise<{ semesterId: number }> {
+  return request.post('/admin/semesters', payload)
+}
+
+export function updateSemester(semesterId: number, payload: SemesterSavePayload): Promise<void> {
+  return request.put(`/admin/semesters/${semesterId}`, payload)
+}
+
+export function setCurrentSemester(semesterId: number): Promise<void> {
+  return request.put(`/admin/semesters/${semesterId}/set-current`)
+}
+
+export function updateSemesterStatus(semesterId: number, status: number): Promise<void> {
+  return request.put(`/admin/semesters/${semesterId}/status`, { status })
+}
+
+export function importSemesters(payload: SemesterImportPayload): Promise<SemesterImportResult> {
+  return request.post('/admin/semesters/import', payload)
+}
+
+/** 下载学期导入模板（后端返回 xlsx 二进制，绕过统一拦截器） */
+export async function downloadSemesterImportTemplate(): Promise<void> {
+  const { default: axios } = await import('axios')
+  const res = await axios.get('/api/v1/admin/semesters/import-template', {
+    responseType: 'blob',
+    headers: { Authorization: `Bearer ${localStorage.getItem('token') ?? ''}` },
+  })
+  const blob = new Blob([res.data])
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = '学期导入模板.xlsx'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 // 供部分页面类型标注复用，避免零散 any

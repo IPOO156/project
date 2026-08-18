@@ -202,3 +202,9 @@ export const LOG_MODULES: Record<string, string> = {
   system: '系统',
   export: '导出',
 }
+
+// 通用启用/禁用状态（管理端字典项/角色/学期启停使用，对应后端 status：1 启用 / 0 禁用）
+export const COMMON_STATUS: Record<number, { label: string; tag: 'success' | 'danger' }> = {
+  1: { label: '启用', tag: 'success' },
+  0: { label: '禁用', tag: 'danger' },
+}
