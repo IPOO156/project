@@ -1,11 +1,11 @@
 <script setup lang="ts">
 /**
  * ExportTemplate - 导出模板管理
- * 对接后端 /admin/export-templates（列表/创建/更新/删除/设置默认/启停）。
+ * 对接后端 /admin/export-templates（列表/创建/更新/删除/设置默认/启停/详情/预览图）。
  */
 import type { ExportTemplateItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, RefreshCw } from 'lucide-vue-next'
+import { Eye, Plus, RefreshCw } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 
 import {
@@ -16,6 +16,7 @@ import {
   updateExportTemplate,
   updateExportTemplateStatus,
 } from '@/shared/api/teacher'
+import ExportTemplateDetailDrawer from './components/ExportTemplateDetailDrawer.vue'
 
 const loading = ref(false)
 const list = ref<ExportTemplateItem[]>([])
@@ -162,6 +163,19 @@ async function handleToggleStatus(row: ExportTemplateItem) {
   }
 }
 
+// ── 模板详情（/admin/export-templates/{id} + 预览图上传）──
+const detailDrawerVisible = ref(false)
+const detailTemplateId = ref(0)
+const detailTemplateName = ref('')
+const detailPreviewImage = ref<string | null>(null)
+
+function openDetail(row: ExportTemplateItem) {
+  detailTemplateId.value = row.id
+  detailTemplateName.value = row.templateName
+  detailPreviewImage.value = row.previewImage
+  detailDrawerVisible.value = true
+}
+
 onMounted(() => void load())
 </script>
 
@@ -170,9 +184,7 @@ onMounted(() => void load())
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">导出模板</h2>
-        <p class="mc-page-head__desc">
-          管理档案导出、职业规划、简历等 PDF 导出模板。数据来自后端 /admin/export-templates。
-        </p>
+        <p class="mc-page-head__desc">管理档案导出、职业规划、简历等 PDF 导出模板。</p>
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="load">刷新</el-button>
@@ -183,66 +195,87 @@ onMounted(() => void load())
     <div class="mc-card">
       <div class="mc-card__body">
         <el-table v-loading="loading" :data="list" stripe style="width: 100%">
-          <el-table-column prop="templateName" label="模板名称" width="160" />
-          <el-table-column prop="templateCode" label="模板编码" width="150" />
-          <el-table-column label="导出类型" width="110">
+          <el-table-column
+            prop="templateName"
+            label="模板名称"
+            min-width="130"
+            show-overflow-tooltip
+          />
+          <el-table-column
+            prop="templateCode"
+            label="模板编码"
+            min-width="140"
+            show-overflow-tooltip
+          />
+          <el-table-column label="导出类型" min-width="80" show-overflow-tooltip>
             <template #default="{ row }">{{ row.exportTypeLabel ?? row.exportType }}</template>
           </el-table-column>
-          <el-table-column prop="version" label="版本" width="70" align="center" />
-          <el-table-column label="默认" width="70" align="center">
+          <el-table-column prop="version" label="版本" width="60" align="center" />
+          <el-table-column label="默认" width="60" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.isDefault === 1" type="success" size="small">默认</el-tag>
               <span v-else>-</span>
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="80">
+          <el-table-column label="状态" width="70">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
                 {{ row.statusLabel }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createdByName" label="创建人" width="100">
+          <el-table-column prop="createdByName" label="创建人" min-width="60" show-overflow-tooltip>
             <template #default="{ row }">{{ row.createdByName ?? '-' }}</template>
           </el-table-column>
-          <el-table-column prop="updatedAt" label="更新时间" width="170">
+          <el-table-column prop="updatedAt" label="更新时间" min-width="120" show-overflow-tooltip>
             <template #default="{ row }">{{ row.updatedAt ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="220" align="center">
+          <el-table-column label="操作" min-width="270" align="center">
             <template #default="{ row }">
-              <el-button
-                text
-                type="primary"
-                size="small"
-                @click="openEdit(row as ExportTemplateItem)"
-              >
-                编辑
-              </el-button>
-              <el-button
-                v-if="row.isDefault !== 1"
-                text
-                type="primary"
-                size="small"
-                @click="handleSetDefault(row as ExportTemplateItem)"
-              >
-                设默认
-              </el-button>
-              <el-button
-                text
-                :type="row.status === 1 ? 'danger' : 'success'"
-                size="small"
-                @click="handleToggleStatus(row as ExportTemplateItem)"
-              >
-                {{ row.status === 1 ? '禁用' : '启用' }}
-              </el-button>
-              <el-button
-                text
-                type="danger"
-                size="small"
-                @click="handleDelete(row as ExportTemplateItem)"
-              >
-                删除
-              </el-button>
+              <div class="export-template__actions">
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  :icon="Eye"
+                  @click="openDetail(row as ExportTemplateItem)"
+                >
+                  详情
+                </el-button>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openEdit(row as ExportTemplateItem)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  v-if="row.isDefault !== 1"
+                  text
+                  type="primary"
+                  size="small"
+                  @click="handleSetDefault(row as ExportTemplateItem)"
+                >
+                  设默认
+                </el-button>
+                <el-button
+                  text
+                  :type="row.status === 1 ? 'danger' : 'success'"
+                  size="small"
+                  @click="handleToggleStatus(row as ExportTemplateItem)"
+                >
+                  {{ row.status === 1 ? '禁用' : '启用' }}
+                </el-button>
+                <el-button
+                  text
+                  type="danger"
+                  size="small"
+                  @click="handleDelete(row as ExportTemplateItem)"
+                >
+                  删除
+                </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
@@ -299,11 +332,32 @@ onMounted(() => void load())
         <el-button type="primary" @click="handleSave">保存</el-button>
       </template>
     </el-dialog>
+
+    <ExportTemplateDetailDrawer
+      v-model:visible="detailDrawerVisible"
+      :template-id="detailTemplateId"
+      :template-name="detailTemplateName"
+      :initial-preview-image="detailPreviewImage"
+    />
   </div>
 </template>
 
 <style scoped lang="scss">
 .export-template {
+  &__actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+
+    // 去掉相邻按钮默认 12px 间距，保证操作按钮一排排布
+    :deep(.el-button + .el-button) {
+      margin-left: 0;
+    }
+  }
+
   &__pagination {
     margin-top: $spacing-lg;
     display: flex;
