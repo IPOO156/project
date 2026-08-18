@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
   changePassword as apiChangePassword,
+  logout as apiLogout,
   updateUserInfo as apiUpdateUserInfo,
   uploadAvatar as apiUpload,
 } from '@/shared/api/user'
@@ -109,13 +110,16 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function updateAvatar(avatarUrl: string | undefined) {
+    let effective = avatarUrl
     if (avatarUrl) {
-      await apiUpload(avatarUrl)
+      // 真实接口上传成功后返回 OSS 签名 URL，优先使用后端地址
+      const uploaded = await apiUpload(avatarUrl).catch(() => undefined)
+      effective = uploaded ?? avatarUrl
     }
-    cachedAvatar.value = avatarUrl
-    writeAvatarCache(avatarUrl)
+    cachedAvatar.value = effective
+    writeAvatarCache(effective)
     if (userInfo.value) {
-      userInfo.value = { ...userInfo.value, avatar: avatarUrl }
+      userInfo.value = { ...userInfo.value, avatar: effective }
     }
   }
 
@@ -155,7 +159,10 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null
     cachedAvatar.value = undefined
     localStorage.removeItem('token')
+    localStorage.removeItem('refresh_token')
     localStorage.removeItem(AVATAR_CACHE_KEY)
+    // 通知后端使令牌失效（fire-and-forget，本地登出不依赖其成功）
+    apiLogout().catch(() => {})
     // 登出时清理已访问 tab（防止跨账号污染）
     // tabsStore 必须延迟获取：避免 user store 初始化时 tabs store 未注册
     try {
