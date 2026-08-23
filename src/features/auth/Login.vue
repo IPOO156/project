@@ -13,6 +13,7 @@ import {
 } from '@/shared/api/teacher'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { useThemeRipple } from '@/shared/composables/useThemeRipple'
+import { setRefreshToken } from '@/shared/utils/token'
 import { validatePasswordStrength } from '@/shared/utils/validatePassword'
 import LoginBackground from './components/LoginBackground.vue'
 import LoginHero from './components/LoginHero.vue'
@@ -178,8 +179,9 @@ async function handleLogin() {
       captchaCode: loginForm.captcha,
       rememberMe: loginForm.remember,
     })
-    userStore.setToken(res.accessToken)
-    localStorage.setItem('refresh_token', res.refreshToken ?? '')
+    // token 存储遵循「记住我」：默认仅当前会话（sessionStorage），勾选记住我才持久化
+    userStore.setToken(res.accessToken, loginForm.remember)
+    setRefreshToken(res.refreshToken ?? '', loginForm.remember)
 
     if (loginType.value === 'admin') {
       userStore.setUserInfo(toUserInfo(res.user))

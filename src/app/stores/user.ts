@@ -6,6 +6,7 @@ import { uploadAvatar as apiUpload } from '@/shared/api/common'
 import { updateProfileContact } from '@/shared/api/student'
 import { logout as apiLogout } from '@/shared/api/user'
 import { ROLE_PERMISSIONS } from '@/shared/types/types'
+import { clearAuth, getToken, setToken as persistToken } from '@/shared/utils/token'
 import { useTabsStore } from './tabs'
 
 const AVATAR_CACHE_KEY = 'user_avatar_cache'
@@ -44,7 +45,7 @@ function writeAvatarCache(avatar: string | undefined) {
 
 export const useUserStore = defineStore('user', () => {
   // state
-  const token = ref(localStorage.getItem('token') || '')
+  const token = ref(getToken())
   const userInfo = ref<UserInfo | null>(loadUserInfoCache())
 
   // 头像本地缓存（接口未就绪前使用 Base64 本地存储）
@@ -98,9 +99,10 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // actions
-  function setToken(val: string) {
+  /** 写入令牌；remember=true 持久化到 localStorage，否则仅存 sessionStorage（关闭浏览器失效） */
+  function setToken(val: string, remember = false) {
     token.value = val
-    localStorage.setItem('token', val)
+    persistToken(val, remember)
   }
 
   function setUserInfo(info: UserInfo) {
@@ -182,8 +184,7 @@ export const useUserStore = defineStore('user', () => {
     token.value = ''
     userInfo.value = null
     cachedAvatar.value = undefined
-    localStorage.removeItem('token')
-    localStorage.removeItem('refresh_token')
+    clearAuth()
     localStorage.removeItem(AVATAR_CACHE_KEY)
     // 通知后端使令牌失效（fire-and-forget，本地登出不依赖其成功）
     apiLogout().catch(() => {})

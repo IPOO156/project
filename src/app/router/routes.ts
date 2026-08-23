@@ -1,6 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
 import { ROLE_PERMISSIONS } from '@/shared/types/types'
+import { getToken } from '@/shared/utils/token'
 import teacherRoutes from './teacher-routes'
 
 const routes: RouteRecordRaw[] = [
@@ -196,7 +197,7 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('token')
+  const token = getToken()
 
   if (to.name !== 'Login' && !token) {
     next({ name: 'Login' })

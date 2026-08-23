@@ -2,8 +2,9 @@ import ElementPlus from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
-import App from './App.vue'
+import { initAuthState } from '@/shared/utils/token'
 
+import App from './App.vue'
 import router from './app/router/routes'
 import { initTabsRouter } from './app/stores/tabs'
 import 'element-plus/dist/index.css'
@@ -19,6 +20,10 @@ import './shared/utils/echarts-setup'
 if (typeof document !== 'undefined') {
   document.documentElement.setAttribute('data-allow-motion', 'true')
 }
+
+// 清理历史遗留的 localStorage 令牌（无「记住我」标记），避免未登录直接进入系统。
+// 必须在 router 安装前执行，确保首个导航守卫读到的是清理后的令牌状态。
+initAuthState()
 
 const app = createApp(App)
 
