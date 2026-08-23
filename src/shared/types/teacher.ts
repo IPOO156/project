@@ -34,6 +34,8 @@ export interface CaptchaResponse {
 export interface LoginPayload {
   userNo: string
   password: string
+  // 字段名 captchaKey：已通过 curl 实测后端（POST /auth/login）读取的是 captchaKey，
+  // 传 key 会被视为缺失并返回「验证码标识不能为空」。key 是验证码接口的返回字段，不是登录请求字段。
   captchaKey: string
   captchaCode: string
   rememberMe?: boolean

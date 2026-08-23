@@ -3,9 +3,15 @@ import type { Ref } from 'vue'
  * useFormRecords - 表单提交记录管理
  *
  * 统一管理各申报/报名类型的提交记录，支持 add/edit/remove/view。
- * 每个类型有独立的 Mock 数据集，提交后自动添加到记录列表。
+ * 列表数据源为 GET /activities（6.1 动态记录），按 archiveType 过滤出当前类型；
+ * 接口异常时保持空列表（不填充假数据），提交成功后由调用方触发 loadRecords 刷新真实记录。
  */
 import { ref } from 'vue'
+import { getActivities } from '@/shared/api/activities'
+import { ARCHIVE_TYPE_ALIASES, deriveRecordTitle, STATUS_MAP } from '@/shared/api/submission'
+
+/** 本地草稿记录的统一 id（草稿仅本地持久化，无后端草稿接口） */
+export const DRAFT_LOCAL_ID = 'draft-local'
 
 /** 通用提交记录（无状态，学生自主管理） */
 export interface FormRecord {
@@ -15,26 +21,8 @@ export interface FormRecord {
   title: string
   submitDate: string
   semester: string
+  status?: string
   [key: string]: any
-}
-
-/** 各类型的 Mock 标题映射 */
-const MOCK_TITLES: Record<string, string[]> = {
-  competition: ['全国大学生数学建模竞赛', 'ACM 程序设计竞赛', '蓝桥杯大赛'],
-  innovation: ['校园文创项目', '智能硬件创业计划'],
-  research: ['基于深度学习的图像识别研究', '区块链技术在档案管理中的应用'],
-  scholarship: ['国家奖学金申请', '校级一等奖学金'],
-  certificate: ['CET-6 证书登记', '计算机二级证书'],
-  internship: ['字节跳动前端开发实习', '腾讯云运维实习'],
-  organization: ['校学生会组织部', 'ACM 社团'],
-  training: ['Vue3 企业级开发实训', '云计算架构实训'],
-  socialPractice: ['暑期三下乡社会实践', '社区志愿服务'],
-  bookReport: ['《深入理解计算机系统》读书心得', '《算法导论》读书笔记'],
-  competitionStar: ['全国大学生数学建模竞赛', 'ACM 程序设计竞赛'],
-  innovationStar: ['智创未来科技有限公司', '校园文创项目'],
-  scientificProject: ['省自然基金科研项目', '校级创新实验项目'],
-  softwareCopyright: ['档案管理软件 V1.0', '数据分析工具软件'],
-  paper: ['基于 Vue3 的前端架构研究', '深度学习在档案分类中的应用'],
 }
 
 const semesters = ['2023-2024-1', '2023-2024-2', '2024-2025-1', '2024-2025-2']
@@ -45,116 +33,6 @@ function genId(): string {
 
 function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
-}
-
-function randDate(): string {
-  const m = 1 + Math.floor(Math.random() * 12)
-  const d = 1 + Math.floor(Math.random() * 28)
-  return `2026-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-}
-
-/** 各类型的额外 Mock 字段 */
-const MOCK_EXTRA: Record<string, Record<string, string>> = {
-  competition: {
-    competitionName: '全国大学生数学建模竞赛',
-    competitionType: 'national',
-    awardLevel: 'first',
-    awardDate: '2025-09',
-  },
-  innovation: {
-    companyName: '校园文创项目',
-    industryType: 'media',
-    companyType: '创业计划',
-    teamRole: '负责人',
-    registerDate: '2025-03',
-  },
-  research: {
-    projectName: '基于深度学习的图像识别研究',
-    projectLevel: 'national',
-    researchType: '基础研究',
-    teamRole: '参与人',
-    projectDate: '2025-01',
-  },
-  scholarship: {
-    awardName: '国家奖学金',
-    scholarshipLevel: 'national',
-    scholarshipGrade: 'first',
-    acquireDate: '2025-09',
-  },
-  certificate: { certName: 'CET-6 证书', certType: 'language', certDate: '2025-06' },
-  internship: {
-    company: '字节跳动',
-    position: '前端开发实习生',
-    location: '北京',
-    startDate: '2025-03',
-    endDate: '2025-08',
-  },
-  organization: {
-    department: '校学生会',
-    position: '部长',
-    organizationLevel: 'school',
-    startDate: '2024-09',
-    endDate: '2025-06',
-  },
-  training: {
-    projectName: 'Vue3 企业级开发实训',
-    projectContent: '基于 Vue3 + TypeScript 开发',
-    startDate: '2025-03',
-    endDate: '2025-06',
-  },
-  socialPractice: {
-    activityName: '暑期三下乡社会实践',
-    location: '湖南湘西',
-    organization: '校团委',
-    startDate: '2025-07',
-    endDate: '2025-08',
-    volunteerHours: '120',
-  },
-  bookReport: { bookName: '深入理解计算机系统', bookDate: '2025-06' },
-  competitionStar: {
-    competitionName: '全国大学生数学建模竞赛',
-    competitionDate: '2025-09',
-    competitionLevel: 'national',
-    awardLevel: 'first',
-  },
-  innovationStar: {
-    companyName: '智创未来科技有限公司',
-    industryType: 'it',
-    ranking: '1/2',
-    registerDate: '2025-06',
-  },
-  scientificProject: {
-    projectName: '省自然基金科研项目',
-    projectLevel: 'provincial',
-    ranking: '1/5',
-    projectDate: '2025-01',
-  },
-  softwareCopyright: {
-    softName: '档案管理软件 V1.0',
-    issuer: '国家版权局',
-    ranking: '1/3',
-    approveDate: '2025-12',
-  },
-  paper: {
-    paperName: '基于 Vue3 的前端架构研究',
-    journalName: '计算机工程与应用',
-    ranking: '1/3',
-    publishDate: '2025-08',
-  },
-}
-
-function generateMockRecords(type: string, typeLabel: string): FormRecord[] {
-  const titles = MOCK_TITLES[type] || ['默认记录']
-  const extra = MOCK_EXTRA[type] || {}
-  return titles.map((title, i) => ({
-    id: `mock-${type}-${i}`,
-    type,
-    typeLabel,
-    title,
-    submitDate: randDate(),
-    semester: pick(semesters),
-    ...Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, i > 0 ? `${v}(${i + 1})` : v])),
-  }))
 }
 
 /** 各类型的中文名称 */
@@ -176,13 +54,78 @@ const TYPE_LABELS: Record<string, string> = {
   paper: '发表论文',
 }
 
+/** 判断本地草稿是否含有效内容（学期/空附件不算） */
+function isNonEmptyDraft(data: Record<string, unknown>): boolean {
+  return Object.entries(data).some(([k, v]) => {
+    if (k === 'semester' || k === 'proofMaterials') return false
+    if (v === undefined || v === null || v === '') return false
+    if (Array.isArray(v) && v.length === 0) return false
+    return true
+  })
+}
+
 /**
  * 管理指定类型的提交记录
- * @param type 类型 key
+ * @param type 类型 key（与后端 /activities 的 archiveType 一致）
+ * @param draftStorageKey 本地草稿 localStorage key（'form_draft_'+draftKey）；后端无草稿接口，
+ *        草稿仅本地持久化，列表将本地草稿与真实记录合并展示，保证刷新后草稿仍可见
  */
-export function useFormRecords(type: string) {
+export function useFormRecords(type: string, draftStorageKey?: string) {
   const label = TYPE_LABELS[type] || type
-  const records: Ref<FormRecord[]> = ref(generateMockRecords(type, label))
+  const records: Ref<FormRecord[]> = ref([])
+
+  /** 读取当前类型本地草稿并构造成一条草稿记录（字段一并带上，便于编辑回填） */
+  function readLocalDraft(): FormRecord | null {
+    if (!draftStorageKey) return null
+    try {
+      const raw = localStorage.getItem(draftStorageKey)
+      if (!raw) return null
+      const data = JSON.parse(raw)
+      if (!isNonEmptyDraft(data)) return null
+      return {
+        id: DRAFT_LOCAL_ID,
+        type,
+        typeLabel: label,
+        title: deriveRecordTitle(data) || `${label}草稿`,
+        submitDate: '',
+        semester: (data as any).semester || '',
+        status: 'draft',
+        ...data,
+      }
+    } catch {
+      return null
+    }
+  }
+
+  /** 从 GET /activities（6.1）拉取该类型真实申报记录 + 合并本地草稿；拉取失败保持已有列表，不填充假数据 */
+  async function loadRecords(): Promise<void> {
+    try {
+      const res = await getActivities({ page: 1, per_page: 200 })
+      const list = res?.list ?? []
+      // archive_type 与 type key 可能不一致（如学科竞赛为 academic_competition），按别名兼容匹配。
+      // 后端实际字段为下划线（archive_type/submit_time/semester_name），驼峰仅为兼容别名。
+      const aliases = ARCHIVE_TYPE_ALIASES[type] ?? []
+      const accepted = new Set([type, ...aliases])
+      const real = list
+        .filter((a) => accepted.has(a.archive_type ?? a.archiveType ?? ''))
+        .map((a) => ({
+          ...a,
+          id: String(a.id),
+          type,
+          typeLabel: a.archive_type_label ?? a.archiveTypeLabel ?? label,
+          title: a.title || a.content || '',
+          submitDate: ((a.submit_time ?? a.submitTime) || '').slice(0, 10),
+          semester: a.semester_name ?? a.semesterName ?? '',
+          status: STATUS_MAP[a.status] ?? 'pending',
+        }))
+      const draft = readLocalDraft()
+      records.value = draft ? [draft, ...real] : real
+    } catch {
+      // 拉取失败保持已有列表，避免提交成功瞬间网络抖动导致记录"消失"
+    }
+  }
+
+  loadRecords()
 
   function addRecord(title: string, extra: Record<string, any> = {}) {
     records.value.unshift({
@@ -213,6 +156,7 @@ export function useFormRecords(type: string) {
 
   return {
     records,
+    loadRecords,
     addRecord,
     updateRecord,
     removeRecord,

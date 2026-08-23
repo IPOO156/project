@@ -1,16 +1,24 @@
 import type { TeacherRole, UserInfo } from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import {
-  changePassword as apiChangePassword,
-  logout as apiLogout,
-  updateUserInfo as apiUpdateUserInfo,
-  uploadAvatar as apiUpload,
-} from '@/shared/api/user'
+import { changePassword as apiChangePassword } from '@/shared/api/auth'
+import { uploadAvatar as apiUpload } from '@/shared/api/common'
+import { updateProfileContact } from '@/shared/api/student'
+import { logout as apiLogout } from '@/shared/api/user'
 import { ROLE_PERMISSIONS } from '@/shared/types/types'
 import { useTabsStore } from './tabs'
 
 const AVATAR_CACHE_KEY = 'user_avatar_cache'
+
+/** 将 base64 data URL 转为 File 对象（头像上传用） */
+function dataUrlToFile(dataUrl: string): File {
+  const [meta, data] = dataUrl.split(',')
+  const mime = meta.match(/data:(.*?);/)?.[1] || 'image/png'
+  const bin = atob(data)
+  const arr = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
+  return new File([arr], `avatar-${Date.now()}.png`, { type: mime })
+}
 
 function readAvatarCache(): string | undefined {
   if (typeof window === 'undefined') return undefined
@@ -112,9 +120,17 @@ export const useUserStore = defineStore('user', () => {
   async function updateAvatar(avatarUrl: string | undefined) {
     let effective = avatarUrl
     if (avatarUrl) {
-      // 真实接口上传成功后返回 OSS 签名 URL，优先使用后端地址
-      const uploaded = await apiUpload(avatarUrl).catch(() => undefined)
-      effective = uploaded ?? avatarUrl
+      try {
+        // 本地选择的 base64 头像需先转 File 上传，成功后使用后端返回的 OSS 签名 URL
+        if (avatarUrl.startsWith('data:')) {
+          const res = await apiUpload(dataUrlToFile(avatarUrl))
+          effective = res.avatarUrl || avatarUrl
+        } else {
+          effective = avatarUrl
+        }
+      } catch {
+        /* 上传失败保留本地缓存 */
+      }
     }
     cachedAvatar.value = effective
     writeAvatarCache(effective)
@@ -127,8 +143,11 @@ export const useUserStore = defineStore('user', () => {
     const base = userInfo.value ?? ({ id: '', username: '' } as UserInfo)
     const updated = { ...base, ...partial }
     userInfo.value = updated
-    // 同步到后端
-    apiUpdateUserInfo(partial).catch(() => {})
+    // 同步到后端（仅联系信息字段，对接 PUT /profile/contact）
+    updateProfileContact({
+      email: partial.email || undefined,
+      phone: partial.phone || undefined,
+    }).catch(() => {})
     // 持久化到 localStorage
     try {
       localStorage.setItem('user_info_cache', JSON.stringify(userInfo.value))
@@ -141,7 +160,12 @@ export const useUserStore = defineStore('user', () => {
     oldPassword: string
     newPassword: string
   }): Promise<void> {
-    await apiChangePassword(payload)
+    // 对接 PUT /auth/password（confirmPassword 与 newPassword 一致）
+    await apiChangePassword({
+      oldPassword: payload.oldPassword,
+      newPassword: payload.newPassword,
+      confirmPassword: payload.newPassword,
+    })
   }
 
   function loadUserInfoCache(): UserInfo | null {

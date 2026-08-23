@@ -12,6 +12,7 @@ import { useRouter } from 'vue-router'
 import {
   useActivityStore,
   useArchiveStore,
+  useHomeStore,
   useSubmissionStore,
   useThemeStore,
 } from '@/app/stores/stores'
@@ -25,6 +26,7 @@ use([CanvasRenderer, RadarComponent, RadarChart, TooltipComponent, LegendCompone
 const router = useRouter()
 const activityStore = useActivityStore()
 const archiveStore = useArchiveStore()
+const homeStore = useHomeStore()
 const submissionStore = useSubmissionStore()
 const themeStore = useThemeStore()
 const { visibleEntries, recordClick, refreshPool, updateOrder, toggleHidden } = useQuickEntries()
@@ -41,34 +43,52 @@ const overallGpa = computed(() => {
   return (weighted / totalCredits).toFixed(2)
 })
 
-// 统计卡片：申报数据来自 submissionStore，均绩来自 archiveStore
+// 统计卡片：优先使用 /home/dashboard 数据，缺失时回退本地 store
 const statsCards = computed(() => {
+  const home = homeStore.data
   const records = submissionStore.records
   return [
     {
       label: '申报总数',
-      value: records.length,
+      value: home?.applicationTotal ?? records.length,
       icon: FileText,
       color: themeStore.isDark ? '#60a5fa' : '#2d5a87',
     },
     {
       label: '已通过',
-      value: records.filter((r) => r.status === 'approved').length,
+      value: home?.approvedCount ?? records.filter((r) => r.status === 'approved').length,
       icon: Award,
       color: '#10b981',
     },
     {
       label: '待审批',
-      value: records.filter((r) => r.status === 'submitted').length,
+      value: home?.pendingCount ?? records.filter((r) => r.status === 'pending').length,
       icon: Clock,
       color: '#d4a574',
     },
-    { label: '学期均绩', value: overallGpa.value, icon: TrendingUp, color: '#d4a574' },
+    {
+      label: '学期均绩',
+      value: home?.currentGpa ?? overallGpa.value,
+      icon: TrendingUp,
+      color: '#d4a574',
+    },
   ]
 })
 
-// 多维度画像：直接读取 store 的 ProfileDimension（{ label, current, target, previous }）
-const profileDimensions = computed(() => archiveStore.dimensions)
+// 多维度画像：优先使用 /home/dashboard radarChart，缺失时回退 archiveStore
+const profileDimensions = computed(() => {
+  const home = homeStore.data
+  if (home?.radarChart?.dimensions && home.radarChart.dimensions.length > 0) {
+    const { dimensions, current, target, previous } = home.radarChart
+    return dimensions.map((d: any, i: number) => ({
+      label: d.name,
+      current: current[i] ?? 0,
+      target: target[i] ?? 0,
+      previous: previous[i] ?? 0,
+    }))
+  }
+  return archiveStore.dimensions
+})
 
 const hasProfileDimensions = computed(() => profileDimensions.value.length > 0)
 
@@ -232,6 +252,7 @@ function onUpdateOrder(orderedIds: string[]) {
 }
 
 onMounted(() => {
+  homeStore.fetchDashboard()
   activityStore.fetchActivities()
   // 档案与申报数据：若已缓存则不重复拉取
   if (archiveStore.dimensions.length === 0) archiveStore.fetchArchive()

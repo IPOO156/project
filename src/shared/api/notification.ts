@@ -1,133 +1,222 @@
 import type { Notification, NotificationFilters } from '@/shared/types/types'
+import request from './request'
 
 /**
  * 获取通知列表
- * 后端就绪后替换为：return request.get<PaginatedData<Notification>>('/notifications', { params })
+ * 对接后端 GET /messages（5.1），接口异常时回退 Mock。
  */
 export function getNotifications(filters?: NotificationFilters): Promise<Notification[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const all: Notification[] = [
-        {
-          id: '1',
-          title: '奖学金申报已通过',
-          content: '您的国家奖学金申请已通过审核，请查看详情。',
-          category: 'review',
-          status: 'unread',
-          isRead: false,
-          createdAt: '2026-07-04 09:30',
-          link: '/approval/pending',
-        },
-        {
-          id: '2',
-          title: '系统维护通知',
-          content: '系统将于本周日凌晨 02:00-04:00 进行例行维护。',
-          category: 'announcement',
-          status: 'unread',
-          isRead: false,
-          createdAt: '2026-07-03 18:00',
-        },
-        {
-          id: '3',
-          title: '学科竞赛申报提醒',
-          content: '数学建模竞赛报名即将截止，请及时提交材料。',
-          category: 'ai-feedback',
-          status: 'read',
-          isRead: true,
-          createdAt: '2026-07-02 14:20',
-          link: '/applications?tab=competition',
-        },
-        {
-          id: '4',
-          title: '导师私信',
-          content: '请尽快完善个人档案中的科研经历部分。',
-          category: 'plan-comment',
-          status: 'unread',
-          isRead: false,
-          createdAt: '2026-07-01 11:15',
-          sender: '张老师',
-        },
-        {
-          id: '5',
-          title: '社会实践材料被驳回',
-          content: '驳回原因：缺少活动照片佐证材料，请补充后重新提交。',
-          category: 'review',
-          status: 'read',
-          isRead: true,
-          createdAt: '2026-06-28 16:45',
-          link: '/applications?tab=social-practice',
-        },
-        {
-          id: '6',
-          title: '新功能上线',
-          content: '消息中心已上线，支持通知分类与已读管理。',
-          category: 'announcement',
-          status: 'read',
-          isRead: true,
-          createdAt: '2026-06-25 10:00',
-        },
-        {
-          id: '7',
-          title: '竞赛之星报名开始',
-          content: '本年度竞赛之星评选已启动，欢迎符合条件的学生报名。',
-          category: 'ai-feedback',
-          status: 'unread',
-          isRead: false,
-          createdAt: '2026-06-22 09:00',
-          link: '/awards/competition-star',
-        },
-        {
-          id: '8',
-          title: '审批进度提醒',
-          content: '您的实习经历申报已进入辅导员审批阶段。',
-          category: 'review',
-          status: 'unread',
-          isRead: false,
-          createdAt: '2026-06-20 13:30',
-        },
-      ]
-      let result = [...all]
-      if (filters) {
-        if (filters.keyword) {
-          const kw = filters.keyword.toLowerCase()
-          result = result.filter(
-            (n) => n.title.toLowerCase().includes(kw) || n.content.toLowerCase().includes(kw),
-          )
-        }
-        if (filters.category) result = result.filter((n) => n.category === filters.category)
-        if (filters.status) result = result.filter((n) => n.status === filters.status)
-      }
-      resolve(result.sort((a, b) => b.createdAt.localeCompare(a.createdAt)))
-    }, 300)
-  })
+  const params: Record<string, any> = {
+    page: 1,
+    per_page: 50,
+  }
+  if (filters?.category) params.category = filters.category
+  if (filters?.status === 'read') params.isRead = 1
+  if (filters?.status === 'unread') params.isRead = 0
+  if (filters?.archived === true) params.isArchived = 1
+  if (filters?.keyword) params.keyword = filters.keyword
+
+  return request
+    .get('/messages', { params })
+    .then((res: any) => (res?.list ?? []).map((m: any) => mapMessage(m)))
+    .catch(() => Promise.resolve(mockMessages()))
 }
 
-/**
- * 标记通知已读
- * 后端就绪后替换为：return request.put(`/notifications/${id}/read`)
- */
-export function markAsRead(_id: string): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(), 200)
-  })
+function mapMessage(m: any): Notification {
+  return {
+    id: String(m.id),
+    category: m.category,
+    categoryLabel: m.categoryLabel || m.category,
+    title: m.title,
+    content: m.content,
+    senderType: m.senderType,
+    senderTypeLabel: m.senderTypeLabel,
+    senderName: m.senderName ?? null,
+    isRead: m.isRead ?? 0,
+    readAt: m.readAt ?? null,
+    isImportant: m.isImportant ?? 0,
+    isArchived: m.isArchived ?? 0,
+    archivedAt: m.archivedAt ?? null,
+    deadline: m.deadline ?? null,
+    jumpUrl: m.jumpUrl ?? null,
+    sendChannel: m.sendChannel,
+    relatedType: m.relatedType ?? null,
+    relatedId: m.relatedId ?? null,
+    createdAt: m.createdAt,
+    isReadFlag: (m.isRead ?? 0) === 1,
+  }
 }
 
-/**
- * 全部标记已读
- * 后端就绪后替换为：return request.put('/notifications/read-all')
- */
-export function markAllAsRead(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(), 200)
-  })
+function mockMessages(): Notification[] {
+  const base = {
+    senderType: 1,
+    senderTypeLabel: '系统',
+    senderName: null,
+    readAt: null,
+    isImportant: 0,
+    isArchived: 0,
+    archivedAt: null,
+    sendChannel: 'push',
+    relatedType: null,
+    relatedId: null,
+  }
+  return [
+    {
+      id: '1',
+      ...base,
+      category: 'audit_remind',
+      categoryLabel: '审批提醒',
+      title: '学科竞赛申报已通过',
+      content: '您的「全国大学生数学建模竞赛」申报已通过审核。',
+      isRead: 0,
+      deadline: '2026-08-01',
+      jumpUrl: '/applications?tab=competition',
+      createdAt: '2026-07-20T09:30:00+08:00',
+      isReadFlag: false,
+    },
+    {
+      id: '2',
+      ...base,
+      category: 'audit_remind',
+      categoryLabel: '审批提醒',
+      title: '社会实践材料被驳回',
+      content: '您的「暑期三下乡社会实践」材料被驳回，原因：佐证材料不充分。',
+      isRead: 0,
+      deadline: null,
+      jumpUrl: '/applications?tab=social-practice',
+      createdAt: '2026-07-19T14:20:00+08:00',
+      isReadFlag: false,
+    },
+    {
+      id: '3',
+      ...base,
+      category: 'dynamic_remind',
+      categoryLabel: '动态提醒',
+      title: 'AI 成长分析报告已生成',
+      content: '基于您的档案数据，AI 已生成最新成长分析报告。',
+      isRead: 1,
+      deadline: null,
+      jumpUrl: '/ai-chat',
+      createdAt: '2026-07-19T08:00:00+08:00',
+      isReadFlag: true,
+    },
+    {
+      id: '4',
+      ...base,
+      category: 'system_notice',
+      categoryLabel: '系统通知',
+      title: '系统维护通知',
+      content: '系统将于本周日凌晨 02:00-04:00 进行例行维护。',
+      isRead: 0,
+      isImportant: 1,
+      deadline: '2026-07-28',
+      jumpUrl: null,
+      createdAt: '2026-07-20T18:00:00+08:00',
+      isReadFlag: false,
+    },
+    {
+      id: '5',
+      ...base,
+      category: 'private_message',
+      categoryLabel: '私信',
+      title: '职业规划反馈-张老师',
+      content: '您的成长规划已收到张老师评语。',
+      isRead: 1,
+      deadline: null,
+      jumpUrl: '/profile/career-plan',
+      createdAt: '2026-07-18T11:20:00+08:00',
+      isReadFlag: true,
+    },
+  ]
 }
 
-/**
- * 删除通知
- * 后端就绪后替换为：return request.delete(`/notifications/${id}`)
- */
-export function deleteNotification(_id: string): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(), 200)
-  })
+/** 单个点击已读（PUT /messages/{messageId}/read） */
+export function markAsRead(messageId: string): Promise<void> {
+  return request
+    .put(`/messages/${messageId}/read`)
+    .then(() => undefined)
+    .catch(() => undefined)
+}
+
+/** 全部一键已读（PUT /messages/read-all） */
+export function markAllAsRead(): Promise<{ markedCount: number }> {
+  return request
+    .put('/messages/read-all')
+    .then((res: any) => ({ markedCount: res?.markedCount ?? 0 }))
+    .catch(() => ({ markedCount: 0 }))
+}
+
+/** 选择多个已读（PUT /messages/batch-read） */
+export function batchReadMessages(messageIds: string[]): Promise<{ markedCount: number }> {
+  return request
+    .put('/messages/batch-read', { messageIds: messageIds.map(Number) })
+    .then((res: any) => ({ markedCount: res?.markedCount ?? 0 }))
+    .catch(() => ({ markedCount: 0 }))
+}
+
+/** 归档消息（PUT /messages/{messageId}/archive） */
+export function archiveMessage(
+  messageId: string,
+): Promise<{ messageId: string; isArchived: number; archivedAt: string }> {
+  return request
+    .put(`/messages/${messageId}/archive`)
+    .then((res: any) => ({
+      messageId: String(res?.messageId ?? messageId),
+      isArchived: res?.isArchived ?? 1,
+      archivedAt: res?.archivedAt ?? '',
+    }))
+    .catch(() => ({ messageId, isArchived: 1, archivedAt: '' }))
+}
+
+/** 取消归档消息（PUT /messages/{messageId}/unarchive） */
+export function unarchiveMessage(messageId: string): Promise<void> {
+  return request
+    .put(`/messages/${messageId}/unarchive`)
+    .then(() => undefined)
+    .catch(() => undefined)
+}
+
+/** 删除单条消息（DELETE /messages/{messageId}） */
+export function deleteNotification(messageId: string): Promise<void> {
+  return request
+    .delete(`/messages/${messageId}`)
+    .then(() => undefined)
+    .catch(() => undefined)
+}
+
+/** 选择多个删除（DELETE /messages/batch） */
+export function batchDeleteMessages(messageIds: string[]): Promise<{ deletedCount: number }> {
+  return request
+    .delete('/messages/batch', { data: { messageIds: messageIds.map(Number) } })
+    .then((res: any) => ({ deletedCount: res?.deletedCount ?? 0 }))
+    .catch(() => ({ deletedCount: 0 }))
+}
+
+/** 获取消息通知设置（GET /messages/settings） */
+export function getMessageSettings(): Promise<
+  Array<{
+    category: string
+    categoryLabel: string
+    emailEnabled: number
+    smsEnabled: number
+    pushEnabled: number
+  }>
+> {
+  return request
+    .get('/messages/settings')
+    .then((res: any) => (Array.isArray(res) ? res : []))
+    .catch(() => [])
+}
+
+/** 更新/新增消息通知设置（PUT /messages/settings） */
+export function updateMessageSettings(payload: {
+  category: string
+  emailEnabled: number
+  smsEnabled: number
+  pushEnabled: number
+}): Promise<void> {
+  return request
+    .put('/messages/settings', payload)
+    .then(() => undefined)
+    .catch(() => undefined)
 }

@@ -12,7 +12,7 @@ const themeStore = useThemeStore()
 
 const totalCount = computed(() => submissionStore.filteredRecords.length)
 const pendingCount = computed(
-  () => submissionStore.filteredRecords.filter((r) => r.status === 'submitted').length,
+  () => submissionStore.filteredRecords.filter((r) => r.status === 'pending').length,
 )
 const approvedCount = computed(
   () => submissionStore.filteredRecords.filter((r) => r.status === 'approved').length,
@@ -73,7 +73,7 @@ const pieOption = computed(() => {
 
 const barOption = computed(() => {
   const statusMap = APPLICATION_STATUS as Record<string, { label: string }>
-  const statusList = ['draft', 'submitted', 'approved', 'rejected']
+  const statusList = ['draft', 'pending', 'approved', 'rejected']
   const data = statusList.map((s) => ({
     name: statusMap[s]?.label ?? s,
     value: submissionStore.filteredRecords.filter((r) => r.status === s).length,

@@ -19,6 +19,10 @@ import {
 import { matchKnowledge } from '@/features/ai-chat/data/knowledgeBase'
 import { richToPlain } from '@/features/ai-chat/utils/richText'
 
+/* ===================== 后端 AI 接口（/ai/*，与文档九一致） ===================== */
+
+import request from './request'
+
 export interface SendMessageResult {
   message: {
     id: string
@@ -224,4 +228,113 @@ export function submitFeedback(
       resolve()
     }, 200)
   })
+}
+
+/** 创建对话会话（POST /ai/conversations） */
+export function createAIConversation(payload?: {
+  title?: string
+  context?: Record<string, any>
+}): Promise<{
+  conversationId: number
+  title: string
+  status: number
+  createdAt: string
+}> {
+  return request.post('/ai/conversations', payload ?? {})
+}
+
+/** 获取对话会话列表（GET /ai/conversations） */
+export function getAIConversations(params?: { page?: number; per_page?: number }): Promise<{
+  total: number
+  list: Array<{
+    id: number
+    title: string
+    status: number
+    statusLabel: string
+    lastMessageTime?: string
+    createdAt: string
+  }>
+  pagination: { page: number; per_page: number; total: number; total_pages: number }
+}> {
+  return request.get('/ai/conversations', { params })
+}
+
+/** 获取对话消息列表（GET /ai/conversations/{conversationId}/messages） */
+export function getAIConversationMessages(conversationId: number): Promise<{
+  conversationId: number
+  title: string
+  messages: Array<{
+    id: number
+    role: 'user' | 'assistant'
+    content: string
+    modelName?: string
+    tokenUsage?: number
+    generationTimeMs?: number
+    createdAt: string
+  }>
+}> {
+  return request.get(`/ai/conversations/${conversationId}/messages`)
+}
+
+/** 发送消息（POST /ai/conversations/{conversationId}/messages） */
+export function sendAIMessage(
+  conversationId: number,
+  content: string,
+): Promise<{
+  messageId: number
+  role: 'assistant'
+  content: string
+  modelName?: string
+  tokenUsage?: number
+  generationTimeMs?: number
+  createdAt: string
+  suggestedActions?: Array<{ label: string; jumpUrl: string; actionType: string }>
+}> {
+  return request.post(`/ai/conversations/${conversationId}/messages`, { content })
+}
+
+/** 重新生成 AI 消息（POST /ai/conversations/{conversationId}/messages/{messageId}/regenerate） */
+export function regenerateAIMessage(
+  conversationId: number,
+  messageId: number,
+): Promise<{
+  messageId: number
+  role: 'assistant'
+  content: string
+  modelName?: string
+  modelVersion?: string
+  tokenUsage?: number
+  generationTimeMs?: number
+  callStatus: number
+  isRetry: boolean
+  createdAt: string
+}> {
+  return request.post(`/ai/conversations/${conversationId}/messages/${messageId}/regenerate`)
+}
+
+/** 获取 AI 辅助建议（GET /ai/suggestions） */
+export function getAISuggestions(params: {
+  sourceType: 'archive' | 'career_plan' | 'weakness_analysis'
+  sourceId: number
+}): Promise<{
+  list: Array<{
+    suggestionId: number
+    content: string
+    sourceArchives?: Array<{ archiveId: number; title: string }>
+    aiGenerated: boolean
+    aiWarning?: string
+    teacherAction?: number
+    teacherActionLabel?: string
+    createdAt: string
+  }>
+}> {
+  return request.get('/ai/suggestions', { params })
+}
+
+/** 删除对话会话（DELETE /ai/conversations/{conversationId}） */
+export function deleteAIConversation(conversationId: number): Promise<void> {
+  return request
+    .delete(`/ai/conversations/${conversationId}`)
+    .then(() => undefined)
+    .catch(() => undefined)
 }

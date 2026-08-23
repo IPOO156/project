@@ -5,7 +5,6 @@ import { Lock, Moon, Shield, Sun, User } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useThemeStore, useUserStore } from '@/app/stores/stores'
-import { login } from '@/shared/api/auth'
 import {
   confirmPasswordReset,
   getCaptcha,
@@ -14,6 +13,7 @@ import {
 } from '@/shared/api/teacher'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { useThemeRipple } from '@/shared/composables/useThemeRipple'
+import { validatePasswordStrength } from '@/shared/utils/validatePassword'
 import LoginBackground from './components/LoginBackground.vue'
 import LoginHero from './components/LoginHero.vue'
 import LoginParticles from './components/LoginParticles.vue'
@@ -63,19 +63,54 @@ function toUserInfo(user: {
   }
 }
 
-// ── 管理员登录：后端验证码 ──
+function toStudentUserInfo(user: {
+  userId: number
+  userNo: string
+  name: string
+  email: string | null
+  phone?: string | null
+  schoolName: string | null
+  roles: string[]
+  avatar: string | null
+}): UserInfo {
+  return {
+    id: String(user.userId),
+    username: user.userNo,
+    realName: user.name,
+    avatar: user.avatar ?? undefined,
+    studentId: user.userNo,
+    grade: '',
+    major: '',
+    className: '',
+    email: user.email ?? '',
+    phone: user.phone ?? '',
+    college: user.schoolName ?? '',
+    department: '',
+    loginType: 'student',
+  }
+}
+
+// ── 登录：后端验证码（学生端与管理员端共用 /auth/captcha）──
 const isAdminLogin = computed(() => loginType.value === 'admin')
 const backendCaptcha = ref<{ key: string; image: string } | null>(null)
+const captchaFailed = ref(false)
 let captchaKey = ''
 
 async function loadBackendCaptcha() {
+  captchaFailed.value = false
   try {
     const res = await getCaptcha()
-    backendCaptcha.value = res
-    captchaKey = res.key
-    loginForm.captcha = ''
+    if (res?.key && res?.image) {
+      backendCaptcha.value = res
+      captchaKey = res.key
+      loginForm.captcha = ''
+    } else {
+      backendCaptcha.value = null
+      captchaFailed.value = true
+    }
   } catch {
     backendCaptcha.value = null
+    captchaFailed.value = true
   }
 }
 
@@ -84,7 +119,6 @@ const loading = ref(false)
 const loginSuccess = ref(false)
 const loginType = ref<'student' | 'admin'>('student')
 const capsLockOn = ref(false)
-const captchaCode = ref('')
 const captchaRefreshKey = ref(0)
 const mouseX = ref(0)
 const mouseY = ref(0)
@@ -100,31 +134,8 @@ function onParticleMouseMove(pos: { x: number; y: number }) {
 }
 
 /* ===================== 验证码 ===================== */
-function generateCaptcha() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  let code = ''
-  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)]
-  captchaCode.value = code
-  captchaRefreshKey.value++
-}
-function getCaptchaChars() {
-  return captchaCode.value.split('')
-}
-function getCaptchaCharStyle(idx: number) {
-  const colors = themeStore.isDark
-    ? ['#9cd2ff', '#f3c87b', '#a7f3d0', '#fca5a5']
-    : ['#1d4ed8', '#0891b2', '#b45309', '#7c3aed']
-  return {
-    color: colors[idx % colors.length],
-    transform: `rotate(${(Math.random() - 0.5) * 30}deg) translateY(${(Math.random() - 0.5) * 3}px)`,
-  }
-}
 function refreshCaptcha() {
-  if (isAdminLogin.value) {
-    void loadBackendCaptcha()
-  } else {
-    generateCaptcha()
-  }
+  void loadBackendCaptcha()
 }
 function handleThemeToggle(e: MouseEvent) {
   toggleThemeWithRipple(e, () => refreshCaptcha())
@@ -134,11 +145,7 @@ function handleThemeToggle(e: MouseEvent) {
 function switchLoginType(type: 'student' | 'admin') {
   if (loginType.value !== type) {
     loginType.value = type
-    if (type === 'admin') {
-      void loadBackendCaptcha()
-    } else {
-      generateCaptcha()
-    }
+    void loadBackendCaptcha()
   }
 }
 function checkCapsLock(event: KeyboardEvent) {
@@ -158,26 +165,23 @@ async function handleLogin() {
     ElMessage.warning('请输入验证码')
     return
   }
-  if (!isAdminLogin.value && loginForm.captcha.toUpperCase() !== captchaCode.value) {
-    ElMessage.warning('验证码错误，请重新输入')
-    refreshCaptcha()
-    loginForm.captcha = ''
-    return
-  }
   loading.value = true
 
-  if (loginType.value === 'admin') {
-    // ── 管理员登录：对接后端 /auth/login（含后端验证码）──
-    try {
-      const res = await teacherLogin({
-        userNo: loginForm.username,
-        password: loginForm.password,
-        captchaKey,
-        captchaCode: loginForm.captcha,
-        rememberMe: loginForm.remember,
-      })
-      userStore.setToken(res.accessToken)
-      localStorage.setItem('refresh_token', res.refreshToken ?? '')
+  // ── 登录：学生端与管理员端统一对接后端 POST /auth/login（含后端验证码）──
+  try {
+    const res = await teacherLogin({
+      userNo: loginForm.username,
+      password: loginForm.password,
+      // captchaKey：curl 实测后端 POST /auth/login 读取的是 captchaKey（不是 key），
+      // captchaKey 的值来自验证码接口返回的 key
+      captchaKey,
+      captchaCode: loginForm.captcha,
+      rememberMe: loginForm.remember,
+    })
+    userStore.setToken(res.accessToken)
+    localStorage.setItem('refresh_token', res.refreshToken ?? '')
+
+    if (loginType.value === 'admin') {
       userStore.setUserInfo(toUserInfo(res.user))
       // 拉取完整身份（roles / permissions / scopes），供教师端授权范围过滤
       refreshTeacherMe()
@@ -185,31 +189,17 @@ async function handleLogin() {
           if (me) userStore.setUserInfo(toUserInfo(me))
         })
         .catch(() => null)
-      loading.value = false
-      loginSuccess.value = true
       themeStore.applyTimeBasedTheme()
       setTimeout(() => router.push('/teacher/dashboard'), 300)
-    } catch {
-      loading.value = false
-      refreshCaptcha()
-    }
-  } else {
-    // ── 学生端 API 登录 ──
-    try {
-      const { token, userInfo } = await login({
-        username: loginForm.username,
-        password: loginForm.password,
-        loginType: loginType.value,
-      })
-      userStore.setToken(token)
-      userStore.setUserInfo({ ...userInfo, loginType: 'student' })
-      loginSuccess.value = true
+    } else {
+      userStore.setUserInfo(toStudentUserInfo(res.user))
       setTimeout(() => router.push('/dashboard'), 600)
-    } catch {
-      ElMessage.error('登录失败，请稍后重试')
-    } finally {
-      loading.value = false
     }
+    loading.value = false
+    loginSuccess.value = true
+  } catch {
+    loading.value = false
+    refreshCaptcha()
   }
 }
 
@@ -257,8 +247,9 @@ async function handleConfirmReset() {
     ElMessage.warning('请输入邮箱收到的验证码')
     return
   }
-  if (newPassword.length < 6) {
-    ElMessage.warning('新密码长度至少 6 位')
+  const strength = validatePasswordStrength(newPassword)
+  if (!strength.valid) {
+    ElMessage.warning(strength.message)
     return
   }
   if (newPassword !== confirmPassword) {
@@ -283,7 +274,7 @@ async function handleConfirmReset() {
 }
 
 onMounted(() => {
-  nextTick(() => generateCaptcha())
+  nextTick(() => void loadBackendCaptcha())
   setTimeout(() => {
     isEntered.value = true
     showCard.value = true
@@ -357,7 +348,7 @@ onUnmounted(() => {
                 :class="{ 'is-admin': loginType === 'admin' }"
               ></span>
             </div>
-            <el-form class="login__form" :model="loginForm" @keyup.enter="handleLogin">
+            <el-form class="login__form" :model="loginForm" @submit.prevent="handleLogin">
               <el-form-item>
                 <div
                   class="login__input-group"
@@ -420,26 +411,20 @@ onUnmounted(() => {
                   <button
                     :key="captchaRefreshKey"
                     type="button"
-                    class="login__captcha-box"
-                    :class="{ 'login__captcha-box--img': isAdminLogin }"
+                    class="login__captcha-box login__captcha-box--img"
                     title="点击刷新验证码"
                     @click="refreshCaptcha"
                   >
                     <img
-                      v-if="isAdminLogin && backendCaptcha"
+                      v-if="backendCaptcha"
                       :src="backendCaptcha.image"
                       alt="验证码"
                       class="login__captcha-img"
                     />
-                    <template v-else-if="!isAdminLogin">
-                      <span
-                        v-for="(ch, i) in getCaptchaChars()"
-                        :key="i"
-                        class="login__captcha-char"
-                        :style="getCaptchaCharStyle(i)"
-                        >{{ ch }}</span
-                      >
-                    </template>
+                    <span v-else-if="captchaFailed" class="login__captcha-loading"
+                      >加载失败，点击重试</span
+                    >
+                    <span v-else class="login__captcha-loading">加载中…</span>
                   </button>
                 </div>
                 <p class="login__hint">看不清？点击右侧验证码图片刷新</p>
@@ -489,7 +474,7 @@ onUnmounted(() => {
             v-model="forgotForm.newPassword"
             type="password"
             show-password
-            placeholder="6-32 位新密码"
+            placeholder="6-32 位，含大小写字母、数字与特殊字符"
           />
         </el-form-item>
         <el-form-item label="确认密码" required>
@@ -893,7 +878,10 @@ onUnmounted(() => {
   }
   &__captcha-box {
     flex-shrink: 0;
-    width: 120px;
+    // 140px：--img 变体 padding 4px 后内容区为 132×46，≥ 验证码自然尺寸（后端返回 130×48 PNG）。
+    // 这样即便 object-fit 在个别浏览器/陈旧缓存下未生效，整张图也能以自然宽度完整放入，
+    // 从机制上杜绝"第 4 位被右侧 overflow 裁掉"的可能。
+    width: 140px;
     height: 54px;
     border-radius: 18px;
     background: var(--login-captcha-bg);
@@ -917,10 +905,25 @@ onUnmounted(() => {
     }
   }
   &__captcha-img {
+    // block + max 约束兜底：确保 img 永远不超过内容区尺寸，避免被盒子 overflow:hidden 横向裁切
+    display: block;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    max-width: 100%;
+    max-height: 100%;
+    // min-width/min-height:0：img 是 flex 子项，默认 min-width:auto 不允许收缩到固有宽度以下，
+    // 验证码图固有宽度大于容器时会把元素撑宽，溢出被 overflow:hidden 裁掉右侧（第四位只剩一半）。
+    min-width: 0;
+    min-height: 0;
+    // contain：完整显示整张验证码，避免 cover 等比放大裁切字符
+    object-fit: contain;
     border-radius: 14px;
+  }
+  &__captcha-loading {
+    font-size: 12px;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--login-text-faint);
   }
   &__captcha-char {
     display: inline-block;

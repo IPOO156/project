@@ -52,12 +52,12 @@ export const APPLICATION_STATUS = {
   withdrawn: { label: '已撤销', color: 'info' },
 } as const
 
-// 通知分类（消息中心使用）
+// 通知分类（user_messages.category，与后端字典一致）
 export const NOTIFICATION_CATEGORY = {
-  review: { label: '档案审核通知', color: 'warning' },
-  'ai-feedback': { label: 'AI 成长反馈', color: 'success' },
-  'plan-comment': { label: '成长规划教师评语', color: 'primary' },
-  announcement: { label: '系统公告', color: 'info' },
+  system_notice: { label: '系统通知', color: 'info' },
+  audit_remind: { label: '审批提醒', color: 'warning' },
+  dynamic_remind: { label: '动态提醒', color: 'success' },
+  private_message: { label: '私信', color: 'primary' },
 } as const
 
 // 通知状态
@@ -98,6 +98,13 @@ export const PROJECT_LEVELS = [
   { label: '省部级', value: 'provincial' },
   { label: '校级', value: 'school' },
   { label: '院级', value: 'college' },
+] as const
+
+// 研究类型（后端 /applications/research 的 projectType 枚举码，中文会返回 10003 格式错误）
+export const RESEARCH_TYPES = [
+  { label: '基础研究', value: 'basic' },
+  { label: '应用研究', value: 'applied' },
+  { label: '试验发展', value: 'development' },
 ] as const
 
 // 证书类型

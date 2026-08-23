@@ -3,6 +3,7 @@ import type { Ref } from 'vue'
  * 奖项审核 - 之星报名 Mock 数据
  */
 import { ref } from 'vue'
+import { getAwardsOverview } from '@/shared/api/awards'
 
 /** 之星报名记录（含各类型特有字段） */
 export interface StarRecord {
@@ -180,7 +181,51 @@ export const SCIENTIFIC_SUB_TYPES = ['scientificProject', 'softwareCopyright', '
 
 /** 获取之星报名的 Mock 数据 */
 export function useStarMockData(): Ref<StarRecord[]> {
-  return ref(generateStarData())
+  const data = ref(generateStarData())
+
+  // 优先对接 GET /awards/overview（8.1 奖项总览统计），接口异常时回退 Mock
+  getAwardsOverview()
+    .then((overview) => {
+      if (overview?.recentActivities && overview.recentActivities.length > 0) {
+        const starTypes = [
+          'competition_star',
+          'innovation_star',
+          'research_project',
+          'software_copyright',
+          'published_paper',
+        ]
+        const starMap: Record<string, string> = {
+          competition_star: 'competitionStar',
+          innovation_star: 'innovationStar',
+          research_project: 'scientificProject',
+          software_copyright: 'softwareCopyright',
+          published_paper: 'paper',
+        }
+        data.value = overview.recentActivities
+          .filter((r: any) => starTypes.includes(r.type))
+          .map((r: any) => ({
+            id: String(r.id),
+            type: starMap[r.type] || r.type,
+            typeLabel: r.typeLabel || '',
+            title: r.title,
+            submitDate: r.submitTime || '',
+            semester: '',
+            status:
+              r.status === 1
+                ? 'pending'
+                : r.status === 2
+                  ? 'approved'
+                  : r.status === 3
+                    ? 'rejected'
+                    : 'draft',
+            sourcePath: '',
+            applicant: r.applicant || '',
+          }))
+      }
+    })
+    .catch(() => null)
+
+  return data
 }
 
 /** 按类型筛选之星报名数据 */

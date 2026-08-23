@@ -2,6 +2,7 @@
 import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
 import { useUserStore } from '@/app/stores/stores'
+import { validatePasswordStrength } from '@/shared/utils/validatePassword'
 
 const userStore = useUserStore()
 
@@ -22,8 +23,9 @@ async function handleSubmit() {
     ElMessage.error('两次密码输入不一致')
     return
   }
-  if (passwordForm.newPassword.length < 6) {
-    ElMessage.warning('新密码长度不能少于6位')
+  const strength = validatePasswordStrength(passwordForm.newPassword)
+  if (!strength.valid) {
+    ElMessage.warning(strength.message)
     return
   }
 
@@ -38,7 +40,7 @@ async function handleSubmit() {
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
   } catch {
-    ElMessage.error('密码修改失败，请重试')
+    // 错误提示已由请求拦截器统一弹出（如"原密码错误"），此处不再重复提示
   } finally {
     loading.value = false
   }
@@ -56,7 +58,7 @@ async function handleSubmit() {
         :model="passwordForm"
         label-width="100px"
         class="edit-password__form"
-        @keyup.enter="handleSubmit"
+        @submit.prevent="handleSubmit"
       >
         <el-form-item label="原密码" required>
           <el-input
@@ -71,7 +73,7 @@ async function handleSubmit() {
           <el-input
             v-model="passwordForm.newPassword"
             type="password"
-            placeholder="请输入新密码（至少6位）"
+            placeholder="6-32 位，含大小写字母、数字与特殊字符"
             show-password
             class="form-input--password"
           />

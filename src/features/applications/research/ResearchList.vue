@@ -2,7 +2,7 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
-import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import { PROJECT_LEVELS, RESEARCH_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import DuplicateCheckDialog from '@/shared/ui/DuplicateCheckDialog.vue'
@@ -16,6 +16,7 @@ function emptyForm() {
     researchType: '',
     teamRole: '',
     projectDate: '',
+    endDate: '',
     semester: '',
     proofMaterials: [] as string[],
   }
@@ -29,6 +30,7 @@ function handleEditClick(row: any) {
   page.form.researchType = row.researchType || ''
   page.form.teamRole = row.teamRole || ''
   page.form.projectDate = row.projectDate || ''
+  page.form.endDate = row.endDate || ''
   page.form.semester = row.semester || ''
   page.handleEditClick(row)
 }
@@ -85,16 +87,33 @@ onMounted(() => {
           ><el-input v-model="page.form.projectName" placeholder="请输入项目名称"
         /></el-form-item>
         <el-form-item label="项目级别" required
-          ><el-input v-model="page.form.projectLevel" placeholder="请输入项目级别"
-        /></el-form-item>
+          ><el-select v-model="page.form.projectLevel" placeholder="请选择" class="form-select">
+            <el-option
+              v-for="l in PROJECT_LEVELS"
+              :key="l.value"
+              :label="l.label"
+              :value="l.value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="研究类型" required
-          ><el-input v-model="page.form.researchType" placeholder="请输入研究类型"
-        /></el-form-item>
+          ><el-select v-model="page.form.researchType" placeholder="请选择" class="form-select">
+            <el-option
+              v-for="t in RESEARCH_TYPES"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="团队角色" required
           ><el-input v-model="page.form.teamRole" placeholder="请输入团队角色"
         /></el-form-item>
-        <el-form-item label="项目时间" required
+        <el-form-item label="开始时间" required
           ><el-date-picker v-model="page.form.projectDate" type="month" placeholder="选择年月"
+        /></el-form-item>
+        <el-form-item label="结束时间" required
+          ><el-date-picker v-model="page.form.endDate" type="date" placeholder="选择日期"
         /></el-form-item>
         <el-form-item label="学期" required>
           <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
