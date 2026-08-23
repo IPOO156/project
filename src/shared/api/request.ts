@@ -1,5 +1,11 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import {
+  clearAuth,
+  getRefreshToken,
+  getToken,
+  writeTokenPreservingSource,
+} from '@/shared/utils/token'
 
 const request = axios.create({
   // 后端全局 context-path 为 /api/v1（见后端 application.yml），接口文档基础 URL 亦为 /api/v1。
@@ -14,7 +20,7 @@ const request = axios.create({
 // 请求拦截器
 request.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -27,7 +33,7 @@ request.interceptors.request.use(
 let refreshPromise: Promise<string | null> | null = null
 
 function tryRefreshToken(): Promise<string | null> {
-  const refreshToken = localStorage.getItem('refresh_token')
+  const refreshToken = getRefreshToken()
   if (!refreshToken) return Promise.resolve(null)
   if (!refreshPromise) {
     refreshPromise = request
@@ -40,16 +46,14 @@ function tryRefreshToken(): Promise<string | null> {
         }
         const accessToken = tokenResult.accessToken
         if (accessToken) {
-          localStorage.setItem('token', accessToken)
-          if (tokenResult.refreshToken)
-            localStorage.setItem('refresh_token', tokenResult.refreshToken)
+          // 回写新令牌时沿用旧 token 所在存储，避免把「记住我」降级为会话级
+          writeTokenPreservingSource(accessToken, tokenResult.refreshToken)
           return accessToken
         }
         return null
       })
       .catch(() => {
-        localStorage.removeItem('token')
-        localStorage.removeItem('refresh_token')
+        clearAuth()
         return null
       })
       .finally(() => {
@@ -60,8 +64,7 @@ function tryRefreshToken(): Promise<string | null> {
 }
 
 function forceLogout() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('refresh_token')
+  clearAuth()
   window.location.href = '/login'
 }
 

@@ -91,6 +91,7 @@ import type {
  * 后端尚未实现的教师端接口（/teacher/** 等）不在此处定义，
  * 相关模块页面以「契约层 + 优雅空状态」方式呈现，待后端就绪后补齐。
  */
+import { getToken } from '@/shared/utils/token'
 import request from './request'
 
 /* ===================== 认证 ===================== */
@@ -412,7 +413,7 @@ export async function downloadFile(fileId: number, fileName = '下载文件'): P
   const { default: axios } = await import('axios')
   const res = await axios.get(`/api/v1/common/files/${fileId}/download`, {
     responseType: 'blob',
-    headers: { Authorization: `Bearer ${localStorage.getItem('token') ?? ''}` },
+    headers: { Authorization: `Bearer ${getToken()}` },
   })
   const blob = new Blob([res.data])
   const url = URL.createObjectURL(blob)
@@ -446,7 +447,7 @@ export async function downloadGradeImportTemplate(): Promise<void> {
   const { default: axios } = await import('axios')
   const res = await axios.get('/api/v1/admin/grades/import-template', {
     responseType: 'blob',
-    headers: { Authorization: `Bearer ${localStorage.getItem('token') ?? ''}` },
+    headers: { Authorization: `Bearer ${getToken()}` },
   })
   const blob = new Blob([res.data])
   const url = URL.createObjectURL(blob)
@@ -713,7 +714,7 @@ export async function downloadSemesterImportTemplate(): Promise<void> {
   const { default: axios } = await import('axios')
   const res = await axios.get('/api/v1/admin/semesters/import-template', {
     responseType: 'blob',
-    headers: { Authorization: `Bearer ${localStorage.getItem('token') ?? ''}` },
+    headers: { Authorization: `Bearer ${getToken()}` },
   })
   const blob = new Blob([res.data])
   const url = URL.createObjectURL(blob)
