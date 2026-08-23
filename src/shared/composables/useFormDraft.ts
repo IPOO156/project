@@ -17,15 +17,24 @@ function isNonEmpty(data: Record<string, unknown>): boolean {
 export function useFormDraft<T extends Record<string, unknown>>(
   key: string,
   form: T,
-  options?: { afterRestore?: () => void; enableBackend?: boolean; enableLeaveGuard?: boolean },
+  options?: {
+    afterRestore?: () => void
+    enableBackend?: boolean
+    enableLeaveGuard?: boolean
+    /** 挂载时是否自动把草稿回填进表单（默认 true）；申报页传 false：表单默认空白，草稿只通过下拉记录"编辑"回填 */
+    autoRestore?: boolean
+  },
 ) {
   const storageKey = DRAFT_PREFIX + key
   const enableBackend = options?.enableBackend !== false
   const enableLeaveGuard = options?.enableLeaveGuard !== false
+  const autoRestore = options?.autoRestore !== false
   let timer: ReturnType<typeof setTimeout> | undefined
   let hasDirtyData = false
 
   function saveLocal() {
+    // 空表单不写 localStorage：保存草稿后清空表单会触发深 watcher，不能因此抹掉已存草稿
+    if (!isNonEmpty(form)) return
     try {
       localStorage.setItem(storageKey, JSON.stringify(form))
     } catch {
@@ -99,7 +108,7 @@ export function useFormDraft<T extends Record<string, unknown>>(
   }
 
   onMounted(() => {
-    restoreDraft()
+    if (autoRestore) restoreDraft()
   })
   watch(
     () => form,

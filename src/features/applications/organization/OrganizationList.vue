@@ -2,7 +2,7 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
-import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import { ORGANIZATION_LEVELS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import DuplicateCheckDialog from '@/shared/ui/DuplicateCheckDialog.vue'
@@ -82,8 +82,19 @@ onMounted(() => {
     <template #form>
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="组织级别" required
-          ><el-input v-model="page.form.organizationLevel" placeholder="请输入组织级别"
-        /></el-form-item>
+          ><el-select
+            v-model="page.form.organizationLevel"
+            placeholder="请选择"
+            class="form-select"
+          >
+            <el-option
+              v-for="l in ORGANIZATION_LEVELS"
+              :key="l.value"
+              :label="l.label"
+              :value="l.value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="部门" required
           ><el-input v-model="page.form.department" placeholder="请输入部门"
         /></el-form-item>

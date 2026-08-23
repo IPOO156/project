@@ -65,6 +65,12 @@ function forceLogout() {
   window.location.href = '/login'
 }
 
+// 业务 401：登录/修改密码等接口返回 401 表示"凭据有误"而非"令牌过期"，
+// 此时只提示错误信息，禁止触发令牌刷新与强制登出（否则原密码错误会误登出用户）。
+function isBusiness401(url = '') {
+  return url.includes('/auth/login') || url.includes('/auth/password')
+}
+
 // 响应拦截器
 request.interceptors.response.use(
   (response) => {
@@ -79,8 +85,9 @@ request.interceptors.response.use(
     if (error.response) {
       const status = error.response.status
       const url: string | undefined = error.config?.url
-      // 401：优先用 refreshToken 换新令牌并原样重试一次；刷新失败才回登录页
-      if (status === 401 && !url?.includes('/auth/login') && !url?.includes('/auth/refresh')) {
+      // 401：优先用 refreshToken 换新令牌并原样重试一次；刷新失败才回登录页。
+      // 业务 401（登录/修改密码等凭据有误）不在此列，见 isBusiness401。
+      if (status === 401 && !isBusiness401(url)) {
         return tryRefreshToken().then((token) => {
           if (!token) {
             forceLogout()
@@ -95,7 +102,16 @@ request.interceptors.response.use(
       }
       switch (status) {
         case 401:
-          forceLogout()
+          // 登录请求（/auth/login）返回 401 表示账号/密码/验证码有误：
+          // 只提示错误并交由登录页刷新验证码，禁止强制登出跳转导致整页刷新
+          if (url?.includes('/auth/login')) {
+            ElMessage.error(error.response.data?.message || '用户名、密码或验证码错误')
+          } else if (url?.includes('/auth/password')) {
+            // 修改密码/忘记密码返回 401 表示原密码或验证码有误：仅提示，不登出
+            ElMessage.error(error.response.data?.message || '原密码错误或修改失败')
+          } else {
+            forceLogout()
+          }
           break
         case 403:
           ElMessage.error('没有权限执行此操作')

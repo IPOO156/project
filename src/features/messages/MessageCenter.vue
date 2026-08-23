@@ -190,17 +190,8 @@ function markAsRead(id: string) {
   notificationStore.markAsRead(id)
 }
 
-function deleteItem(id: string) {
-  ElMessageBox.confirm('确定删除该通知吗？', '删除确认', {
-    confirmButtonText: '删除',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      notificationStore.deleteNotification(id)
-      ElMessage.success('已删除')
-    })
-    .catch(() => {})
+function archiveItem(id: string) {
+  notificationStore.archiveNotification(id)
 }
 
 function markAllAsRead() {
@@ -354,7 +345,7 @@ onMounted(() => {
         :batch-mode="batchMode"
         :checked="selectedIds.includes(item.id)"
         @read="markAsRead"
-        @delete="deleteItem"
+        @archive="archiveItem"
         @toggle-select="toggleSelect"
       />
 

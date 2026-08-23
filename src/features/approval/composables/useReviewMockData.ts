@@ -3,6 +3,7 @@ import type { Ref } from 'vue'
  * 申报审核 - 申报类型 Mock 数据
  */
 import { ref } from 'vue'
+import { getActivities } from '@/shared/api/activity'
 
 /** 通用申报记录基数字段 */
 export interface ReviewRecordBase {
@@ -394,7 +395,8 @@ export function useReviewMockData(type: string): Ref<ReviewRecord[]> {
 }
 
 /**
- * 获取 10 个申报类型合并后的全部 Mock 数据
+ * 获取 10 个申报类型合并后的全部数据
+ * 优先对接 GET /activities（6.1 动态记录），接口异常时回退 Mock。
  */
 export function useAllReviewMockData(): Ref<ReviewRecord[]> {
   const data = ref<ReviewRecord[]>([])
@@ -402,5 +404,35 @@ export function useAllReviewMockData(): Ref<ReviewRecord[]> {
     const records = mockGenerators[type]()
     data.value.push(...records)
   }
+
+  getActivities({ keyword: undefined })
+    .then((activities: any) => {
+      if (activities && activities.length > 0) {
+        data.value = activities.map((a) => ({
+          id: a.id,
+          type: a.type,
+          typeLabel: a.typeLabel || '',
+          title: a.text || a.title || '',
+          submitDate: a.time,
+          semester: a.semester || '',
+          status: mapStatus(a.status),
+          proofMaterials: [],
+        }))
+      }
+    })
+    .catch(() => null)
+
   return data
+}
+
+function mapStatus(status: string): string {
+  const map: Record<string, string> = {
+    draft: 'draft',
+    submitted: 'pending',
+    pending: 'pending',
+    approved: 'approved',
+    rejected: 'rejected',
+    withdrawn: 'withdrawn',
+  }
+  return map[status] || status
 }

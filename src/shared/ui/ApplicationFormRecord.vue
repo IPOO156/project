@@ -1,9 +1,15 @@
 <script setup lang="ts" generic="T">
+import type { ApplicationType } from '@/shared/types/types'
+import { ref } from 'vue'
+import { getApplicationVersions } from '@/shared/api/applications'
+import { getAwardVersions } from '@/shared/api/awards'
+import { activityCategoryOf } from '@/shared/api/submission'
 import { useDict } from '@/shared/composables/composables'
 import { APPLICATION_STATUS } from '@/shared/constants/dict'
 import RejectionBanner from './RejectionBanner.vue'
 import StatusTag from './StatusTag.vue'
 import StudentInfoBar from './StudentInfoBar.vue'
+import VersionHistoryDrawer from './VersionHistoryDrawer.vue'
 
 interface Props {
   alertTitle: string
@@ -71,6 +77,44 @@ function canRequestCorrection(s: string) {
 }
 function canViewScore(s: string) {
   return s === 'pending' || s === 'approved' || s === 'withdrawn'
+}
+
+interface VersionItem {
+  version: number
+  title: string
+  status: number
+  statusLabel: string
+  rejectedReason?: string
+  createdAt: string
+}
+
+const versionsVisible = ref(false)
+const versionsLoading = ref(false)
+const versionsData = ref<{ currentVersion: number; versions: VersionItem[] }>({
+  currentVersion: 0,
+  versions: [],
+})
+
+/** 版本历史入口仅对真实记录开放（本地草稿 draft-local / 临时 rec- 无后端版本记录） */
+function canViewVersions(row: any): boolean {
+  const id = row?.id
+  return id !== undefined && id !== null && /^\d+$/.test(String(id))
+}
+async function openVersions(row: any) {
+  const id = Number(row.id)
+  if (!id) return
+  versionsVisible.value = true
+  versionsLoading.value = true
+  versionsData.value = { currentVersion: 0, versions: [] }
+  try {
+    const category = activityCategoryOf(row.type as ApplicationType)
+    versionsData.value =
+      category === 'award' ? await getAwardVersions(id) : await getApplicationVersions(id)
+  } catch {
+    // 版本历史拉取失败：接口 30001 返回 HTTP 404，已由 request 拦截器静默，此处展示空态
+  } finally {
+    versionsLoading.value = false
+  }
 }
 </script>
 
@@ -180,7 +224,7 @@ function canViewScore(s: string) {
           ><template #default="{ row }"
             ><StatusTag :status="getRecordStatus(row)" size="small" /></template
         ></el-table-column>
-        <el-table-column label="操作" width="260" fixed="right" align="center">
+        <el-table-column label="操作" width="320" fixed="right" align="center">
           <template #default="{ row }">
             <el-button size="small" type="primary" link @click="emit('view', row as T)"
               >查看</el-button
@@ -225,10 +269,25 @@ function canViewScore(s: string) {
               @click="emit('score', row as T)"
               >计分影响</el-button
             >
+            <el-button
+              v-if="canViewVersions(row)"
+              size="small"
+              type="info"
+              link
+              @click="openVersions(row as T)"
+              >版本</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
     </el-card>
+
+    <VersionHistoryDrawer
+      v-model:visible="versionsVisible"
+      :loading="versionsLoading"
+      :current-version="versionsData.currentVersion"
+      :versions="versionsData.versions"
+    />
   </div>
 </template>
 

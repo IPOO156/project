@@ -1,7 +1,12 @@
 import type { SubmissionFilters, SubmissionRecord } from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getSubmissionRecords, pushNotification, withdrawSubmission } from '@/shared/api/submission'
+import {
+  activityCategoryOf,
+  getSubmissionRecords,
+  pushNotification,
+  withdrawSubmission,
+} from '@/shared/api/submission'
 
 export const useSubmissionStore = defineStore('submission', () => {
   const records = ref<SubmissionRecord[]>([])
@@ -19,12 +24,13 @@ export const useSubmissionStore = defineStore('submission', () => {
   }
 
   async function withdrawRecord(id: string): Promise<void> {
-    await withdrawSubmission(id)
+    const rec = getRecordById(id)
+    await withdrawSubmission(id, rec ? activityCategoryOf(rec.type) : 'archive')
     updateLocalStatus(id, 'withdrawn')
     await pushNotification({
       title: '申报已撤销',
       content: '您的申报已成功撤销。',
-      category: 'review',
+      category: 'audit_remind',
     })
   }
 

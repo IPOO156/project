@@ -15,11 +15,12 @@ import {
   getInterests,
   getTimelineEvents,
 } from '@/shared/api/archive'
+import { getGrowthTimeline, getProfileInfo } from '@/shared/api/student'
 
 /**
  * 档案信息流转 Store
  * 集中管理个人档案数据（画像、兴趣、成绩、奖项、时间线）
- * 数据来源：archiveApi（后端就绪后只需改 API 层）
+ * 优先对接后端 /profile/info 与 /profile/growth-timeline，接口异常时回退本地 Mock。
  */
 export const useArchiveStore = defineStore('archive', () => {
   const interests = ref<Interest[]>([])
@@ -29,27 +30,124 @@ export const useArchiveStore = defineStore('archive', () => {
   const timelineEvents = ref<TimelineNode[]>([])
   const loading = ref(false)
 
+  /** 从后端 /profile/info 拉取画像数据（失败回退 Mock） */
   async function fetchArchive(): Promise<void> {
     loading.value = true
     try {
-      const [interestData, gradeData, awardData, dimensionData, timelineData] = await Promise.all([
-        getInterests(),
-        getGrades(),
-        getAwards(),
-        getDimensions(),
-        getTimelineEvents(),
-      ])
-      interests.value = interestData
-      grades.value = gradeData
-      awards.value = awardData
-      dimensions.value = dimensionData
-      timelineEvents.value = timelineData
+      const profile = await getProfileInfo()
+      applyProfileInfo(profile)
+    } catch {
+      await fetchArchiveMock()
     } finally {
       loading.value = false
     }
   }
 
-  // ── 从已通过的提交记录同步档案数据 ──
+  function applyProfileInfo(profile: any) {
+    // 维度画像
+    if (Array.isArray(profile.dimensionProfile)) {
+      dimensions.value = profile.dimensionProfile.map((d: any) => ({
+        label: d.dimensionName,
+        current: d.score,
+        target: d.targetScore,
+        previous: d.score - parseTrend(d.trend),
+      }))
+    }
+    // 兴趣标签
+    if (Array.isArray(profile.interests)) {
+      interests.value = profile.interests.map((i: any) => ({
+        id: String(i.id),
+        category: i.tagName,
+        content: i.detailContent || '',
+        level: String(i.proficiencyLevel),
+      }))
+    }
+    // 学期成绩 → Grade
+    if (Array.isArray(profile.semesterGrades)) {
+      grades.value = profile.semesterGrades.flatMap((s: any) =>
+        Array.from({ length: s.courseCount ?? 0 }, (_, i) => ({
+          id: `${s.semesterId}-${i}`,
+          semester: s.semesterName || s.semester,
+          courseName: `${s.semesterName || '学期'} 课程${i + 1}`,
+          score: s.averageScore,
+          gpa: s.gpa,
+          credits: s.totalCredit / Math.max(s.courseCount ?? 1, 1),
+        })),
+      )
+    }
+    // 个人奖项
+    if (Array.isArray(profile.personalAwards)) {
+      awards.value = profile.personalAwards.map((a: any, i: number) => ({
+        id: `award-${i}`,
+        name: a.category,
+        level: a.maxLevel,
+        type: 'other',
+        date: a.latestTime,
+      }))
+    }
+  }
+
+  function parseTrend(trend: string | undefined): number {
+    const v = Number(String(trend ?? '0').replace(/[^0-9-]/g, ''))
+    return Number.isFinite(v) ? v : 0
+  }
+
+  /** 从后端 /profile/growth-timeline 拉取时间线（失败回退 Mock） */
+  async function fetchTimeline(): Promise<void> {
+    try {
+      const data = await getGrowthTimeline()
+      if (data.timeline && data.timeline.length > 0) {
+        timelineEvents.value = data.timeline.map((e: any) => ({
+          id: String(e.id),
+          semester: e.semesterName || '',
+          type: mapEventType(e.eventType),
+          title: e.eventName,
+          description: e.content || '',
+          date: e.eventAt,
+          recordId: e.sourceId ? String(e.sourceId) : undefined,
+        }))
+        return
+      }
+    } catch {
+      /* 回退 Mock */
+    }
+    try {
+      timelineEvents.value = await getTimelineEvents()
+    } catch {
+      timelineEvents.value = []
+    }
+  }
+
+  function mapEventType(type: number | undefined): TimelineNode['type'] {
+    const map: Record<number, TimelineNode['type']> = {
+      1: 'award',
+      2: 'grade',
+      3: 'practice',
+      4: 'other',
+      5: 'other',
+      6: 'other',
+    }
+    return map[type ?? 0] || 'other'
+  }
+
+  async function fetchArchiveMock() {
+    try {
+      const [interestData, gradeData, awardData, dimensionData] = await Promise.all([
+        getInterests(),
+        getGrades(),
+        getAwards(),
+        getDimensions(),
+      ])
+      interests.value = interestData
+      grades.value = gradeData
+      awards.value = awardData
+      dimensions.value = dimensionData
+    } catch {
+      /* 全部失败静默 */
+    }
+  }
+
+  /** 从已通过的提交记录同步档案数据 */
   function syncFromSubmissions(
     records: { type: string; title: string; submitDate: string; status: string }[],
   ) {
@@ -124,6 +222,7 @@ export const useArchiveStore = defineStore('archive', () => {
     timelineEvents,
     loading,
     fetchArchive,
+    fetchTimeline,
     syncFromSubmissions,
     createInterest,
     editInterest,

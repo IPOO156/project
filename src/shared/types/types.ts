@@ -215,7 +215,7 @@ export interface StarRecord {
 export interface ApplicationBase {
   id: string
   semester: Semester
-  status: 'draft' | 'submitted' | 'approved' | 'rejected'
+  status: 'draft' | 'pending' | 'rejected' | 'approved' | 'withdrawn'
   submitDate: string
   proofMaterials: string[]
   remark?: string
@@ -372,7 +372,7 @@ export interface SubmissionRecord {
   title: string
   submitDate: string
   semester: string
-  status: 'draft' | 'submitted' | 'approved' | 'rejected'
+  status: 'draft' | 'pending' | 'rejected' | 'approved' | 'withdrawn'
   sourcePath: string
 }
 
@@ -427,7 +427,7 @@ export interface Activity {
   type: 'draft' | 'submitted' | 'approved' | 'rejected'
   text: string
   time: string
-  status: 'draft' | 'submitted' | 'approved' | 'rejected'
+  status: 'draft' | 'pending' | 'rejected' | 'approved' | 'withdrawn'
 }
 
 export interface ActivityFilters {
@@ -437,24 +437,40 @@ export interface ActivityFilters {
 
 // === 消息中心 ===
 
-export type NotificationCategory = 'review' | 'ai-feedback' | 'plan-comment' | 'announcement'
+/** 消息分类（user_messages.category，与后端字典一致） */
+export type NotificationCategory =
+  'system_notice' | 'audit_remind' | 'dynamic_remind' | 'private_message'
 
 export type NotificationStatus = 'read' | 'unread'
 
+/** 消息记录（user_messages 表，字段与后端 /messages 响应一致） */
 export interface Notification {
   id: string
+  category: NotificationCategory
+  categoryLabel: string
   title: string
   content: string
-  category: NotificationCategory
-  status: NotificationStatus
-  isRead: boolean
+  senderType?: number
+  senderTypeLabel?: string
+  senderName?: string | null
+  isRead: number
+  readAt?: string | null
+  isImportant?: number
+  isArchived?: number
+  archivedAt?: string | null
+  deadline?: string | null
+  jumpUrl?: string | null
+  sendChannel?: string
+  relatedType?: string | null
+  relatedId?: number | null
   createdAt: string
-  link?: string
-  sender?: string
+  /** 派生：是否已读（isRead === 1） */
+  isReadFlag: boolean
 }
 
 export interface NotificationFilters {
   category?: NotificationCategory
   status?: NotificationStatus
   keyword?: string
+  archived?: boolean
 }

@@ -3,31 +3,32 @@ import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
+  archiveMessage as apiArchive,
   deleteNotification as apiDelete,
   markAllAsRead as apiMarkAll,
   markAsRead as apiMarkOne,
+  unarchiveMessage as apiUnarchive,
   getNotifications,
 } from '@/shared/api/notification'
 
 /**
  * 消息通知 Store
- * 数据来源：notificationApi（后端就绪后只需改 API 层）
+ * 字段与后端 user_messages 表一致（isRead/isArchived 为 0/1，jumpUrl 为跳转链接）
  */
 export const useNotificationStore = defineStore('notification', () => {
   const notifications = ref<Notification[]>([])
   const filteredNotifications = ref<Notification[]>([])
   const loading = ref(false)
 
-  const unreadCount = computed(() => notifications.value.filter((n) => !n.isRead).length)
+  const unreadCount = computed(
+    () => notifications.value.filter((n) => n.isRead !== 1 && n.isArchived !== 1).length,
+  )
+  const archivedCount = computed(() => notifications.value.filter((n) => n.isArchived === 1).length)
 
   async function fetchNotifications(filters?: NotificationFilters): Promise<void> {
     loading.value = true
     try {
-      // 全量数据（用于未读计数/消息总数），首次加载后缓存
-      if (notifications.value.length === 0) {
-        notifications.value = await getNotifications()
-      }
-      // 筛选数据
+      if (notifications.value.length === 0) notifications.value = await getNotifications()
       filteredNotifications.value = filters ? await getNotifications(filters) : notifications.value
     } finally {
       loading.value = false
@@ -36,47 +37,85 @@ export const useNotificationStore = defineStore('notification', () => {
 
   async function markAsRead(id: string): Promise<void> {
     const target = notifications.value.find((n) => n.id === id)
-    if (!target || target.isRead) return
+    if (!target || target.isRead === 1) return
 
     await apiMarkOne(id)
-    target.isRead = true
-    target.status = 'read'
-    // 同步筛选列表中的对应项（筛选后可能是不同对象引用）
+    target.isRead = 1
+    target.readAt = new Date().toISOString()
     const filtered = filteredNotifications.value.find((n) => n.id === id)
     if (filtered && filtered !== target) {
-      filtered.isRead = true
-      filtered.status = 'read'
+      filtered.isRead = 1
+      filtered.readAt = target.readAt
     }
-    ElMessage.success('已标为已读')
   }
 
   async function markAllAsRead(): Promise<void> {
+    const unreadItems = notifications.value.filter((n) => n.isRead !== 1 && n.isArchived !== 1)
+    if (unreadItems.length === 0) return
+
     await apiMarkAll()
+    const now = new Date().toISOString()
     notifications.value.forEach((n) => {
-      n.isRead = true
-      n.status = 'read'
+      if (n.isArchived !== 1) {
+        n.isRead = 1
+        n.readAt = now
+      }
     })
     filteredNotifications.value.forEach((n) => {
-      n.isRead = true
-      n.status = 'read'
+      if (n.isArchived !== 1) {
+        n.isRead = 1
+        n.readAt = now
+      }
     })
-    ElMessage.success('全部已读')
+    ElMessage.success(`已将 ${unreadItems.length} 条消息标为已读`)
   }
 
-  const processedIds = ref<Set<string>>(new Set())
+  /** 归档消息（isImportant=1 的重要消息需二次确认） */
+  async function archiveNotification(id: string): Promise<void> {
+    const target = notifications.value.find((n) => n.id === id)
+    if (!target) return
+
+    await apiArchive(id)
+    target.isArchived = 1
+    target.archivedAt = new Date().toISOString()
+    const filtered = filteredNotifications.value.find((n) => n.id === id)
+    if (filtered && filtered !== target) {
+      filtered.isArchived = 1
+      filtered.archivedAt = target.archivedAt
+    }
+    ElMessage.success('已归档')
+  }
+
+  /** 取消归档 */
+  async function unarchiveNotification(id: string): Promise<void> {
+    const target = notifications.value.find((n) => n.id === id)
+    if (!target) return
+
+    await apiUnarchive(id)
+    target.isArchived = 0
+    target.archivedAt = null
+    const filtered = filteredNotifications.value.find((n) => n.id === id)
+    if (filtered && filtered !== target) {
+      filtered.isArchived = 0
+      filtered.archivedAt = null
+    }
+  }
 
   async function deleteNotification(id: string): Promise<void> {
     await apiDelete(id)
     notifications.value = notifications.value.filter((n) => n.id !== id)
     filteredNotifications.value = filteredNotifications.value.filter((n) => n.id !== id)
-    ElMessage.success('通知已删除')
+    ElMessage.success('已删除')
   }
+
+  const processedIds = ref<Set<string>>(new Set())
 
   function addNotification(notification: {
     title: string
     content: string
     category: Notification['category']
-    link?: string
+    jumpUrl?: string
+    isImportant?: number
   }) {
     const dedupKey = `${notification.category}|${notification.title}`
     if (processedIds.value.has(dedupKey)) return
@@ -84,13 +123,16 @@ export const useNotificationStore = defineStore('notification', () => {
 
     const newNotification: Notification = {
       id: `notif-${Date.now()}`,
+      category: notification.category,
+      categoryLabel: notification.category,
       title: notification.title,
       content: notification.content,
-      category: notification.category,
-      status: 'unread',
-      isRead: false,
-      createdAt: new Date().toLocaleString('zh-CN'),
-      link: notification.link,
+      isRead: 0,
+      isArchived: 0,
+      isImportant: notification.isImportant ?? 0,
+      jumpUrl: notification.jumpUrl,
+      createdAt: new Date().toISOString(),
+      isReadFlag: false,
     }
     notifications.value.unshift(newNotification)
     filteredNotifications.value.unshift(newNotification)
@@ -101,9 +143,12 @@ export const useNotificationStore = defineStore('notification', () => {
     filteredNotifications,
     loading,
     unreadCount,
+    archivedCount,
     fetchNotifications,
     markAsRead,
     markAllAsRead,
+    archiveNotification,
+    unarchiveNotification,
     deleteNotification,
     addNotification,
   }

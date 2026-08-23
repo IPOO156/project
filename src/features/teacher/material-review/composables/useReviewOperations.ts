@@ -63,14 +63,14 @@ export function useReviewOperations() {
       await pushNotification({
         title: `${typeLabel(item)}已通过`,
         content: `您的${typeLabel(item)}已通过审核。`,
-        category: 'review',
-        link: '/approval/pending',
+        category: 'audit_remind',
+        jumpUrl: '/approval/pending',
       })
       notificationStore.addNotification({
         title: `${typeLabel(item)}已通过`,
         content: `您的${typeLabel(item)}已通过审核。`,
-        category: 'review',
-        link: '/approval/pending',
+        category: 'audit_remind',
+        jumpUrl: '/approval/pending',
       })
       ElMessage.success('已通过审批')
       return true
@@ -98,14 +98,14 @@ export function useReviewOperations() {
       await pushNotification({
         title: `${typeLabel(item)}已被驳回`,
         content: `您的${typeLabel(item)}已被驳回，原因：${reviewComment.value}`,
-        category: 'review',
-        link: '/applications',
+        category: 'audit_remind',
+        jumpUrl: '/applications',
       })
       notificationStore.addNotification({
         title: `${typeLabel(item)}已被驳回`,
         content: `您的${typeLabel(item)}已被驳回，原因：${reviewComment.value}`,
-        category: 'review',
-        link: '/applications',
+        category: 'audit_remind',
+        jumpUrl: '/applications',
       })
       ElMessage.success('已驳回')
       reviewComment.value = ''
@@ -139,8 +139,8 @@ export function useReviewOperations() {
       await pushNotification({
         title: `${typeLabel(item)}已通过`,
         content: `您的${typeLabel(item)}已通过审核。`,
-        category: 'review',
-        link: '/approval/pending',
+        category: 'audit_remind',
+        jumpUrl: '/approval/pending',
       })
     }
     if (count > 0) ElMessage.success(`已批量通过 ${count} 条材料`)
@@ -175,8 +175,8 @@ export function useReviewOperations() {
       await pushNotification({
         title: `${typeLabel(item)}已被驳回`,
         content: `您的${typeLabel(item)}已被驳回，原因：${reason}`,
-        category: 'review',
-        link: '/applications',
+        category: 'audit_remind',
+        jumpUrl: '/applications',
       })
     }
     if (count > 0) ElMessage.success(`已批量驳回 ${count} 条材料`)

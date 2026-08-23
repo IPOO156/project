@@ -5,7 +5,7 @@
  * 配合 ScoreIndicatorDialog 使用。
  */
 import { ref } from 'vue'
-import { getScoreIndicators } from '@/shared/api/submission'
+import { getProfileScores } from '@/shared/api/student'
 
 /** 评分指标项 */
 export interface IndicatorItem {
@@ -22,14 +22,20 @@ export function useScoreIndicator() {
   const indicatorLoading = ref(false)
   const indicatorTitle = ref('')
 
-  /** 打开评分指标弹窗 */
-  async function openIndicator(type: string, title: string) {
+  /** 打开评分指标弹窗（对接 GET /profile/scores，4.1.2） */
+  async function openIndicator(_type: string, title: string) {
     indicatorTitle.value = title
     indicatorLoading.value = true
     indicatorVisible.value = true
     try {
-      const data = await getScoreIndicators(type)
-      indicators.value = data
+      const data = await getProfileScores()
+      indicators.value = (data?.list ?? []).map((d: any) => ({
+        label: d.dimensionName,
+        score: d.score,
+        maxScore: d.targetScore || 100,
+        weight: d.targetScore ? d.score / d.targetScore : 0,
+        remark: `当前 ${d.score} / 目标 ${d.targetScore}，差距 ${d.gap}${d.unit || '分'}`,
+      }))
     } catch {
       indicators.value = []
     } finally {

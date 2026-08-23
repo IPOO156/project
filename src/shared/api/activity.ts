@@ -1,4 +1,5 @@
 import type { Activity, ActivityFilters } from '@/shared/types/types'
+import request from './request'
 
 function generateMockActivities(): Activity[] {
   return (
@@ -8,7 +9,7 @@ function generateMockActivities(): Activity[] {
         type: 'submitted',
         text: '学科竞赛申报已提交',
         time: '2026-06-28 14:30',
-        status: 'submitted',
+        status: 'pending',
       },
       {
         id: '2',
@@ -22,7 +23,7 @@ function generateMockActivities(): Activity[] {
         type: 'submitted',
         text: '奖学金申请已提交',
         time: '2026-06-20 16:45',
-        status: 'submitted',
+        status: 'pending',
       },
       {
         id: '4',
@@ -43,7 +44,7 @@ function generateMockActivities(): Activity[] {
         type: 'submitted',
         text: '实习经历申请已提交',
         time: '2026-06-12 17:00',
-        status: 'submitted',
+        status: 'pending',
       },
       {
         id: '7',
@@ -64,7 +65,7 @@ function generateMockActivities(): Activity[] {
         type: 'submitted',
         text: '科研项目申报已提交',
         time: '2026-06-05 11:15',
-        status: 'submitted',
+        status: 'pending',
       },
       {
         id: '10',
@@ -78,7 +79,7 @@ function generateMockActivities(): Activity[] {
         type: 'submitted',
         text: '竞赛之星报名已提交',
         time: '2026-05-25 13:40',
-        status: 'submitted',
+        status: 'pending',
       },
       {
         id: '13',
@@ -98,17 +99,45 @@ function generateMockActivities(): Activity[] {
   ).sort((a, b) => b.time.localeCompare(a.time))
 }
 
-let cachedActivities: Activity[] | null = null
+const MOCK_ACTIVITIES = generateMockActivities()
+
+const statusMap: Record<number, Activity['status']> = {
+  0: 'draft',
+  1: 'pending',
+  2: 'approved',
+  3: 'rejected',
+  4: 'withdrawn',
+}
 
 /**
  * 获取动态列表
- * 后端就绪后替换为：return request.get<PaginatedData<Activity>>('/activities', { params })
+ * 对接后端 GET /activities（6.1），接口异常时回退 Mock。
  */
 export function getActivities(filters?: ActivityFilters): Promise<Activity[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      if (!cachedActivities) cachedActivities = generateMockActivities()
-      let result = [...cachedActivities]
+  const params: Record<string, any> = { page: 1, per_page: 50 }
+  if (filters?.keyword) params.keyword = filters.keyword
+  if (filters?.status) params.status = statusValue(filters.status)
+
+  return request
+    .get('/activities', { params })
+    .then((res: any) =>
+      (res?.list ?? []).map((item: any) => ({
+        id: String(item.id),
+        type:
+          item.status === 2
+            ? 'approved'
+            : item.status === 3
+              ? 'rejected'
+              : item.status === 4
+                ? 'withdrawn'
+                : 'submitted',
+        text: item.content || item.title,
+        time: (item.submitTime || '').replace('T', ' ').slice(0, 16),
+        status: statusMap[item.status] ?? 'submitted',
+      })),
+    )
+    .catch(() => {
+      let result = [...MOCK_ACTIVITIES]
       if (filters) {
         if (filters.keyword) {
           const kw = filters.keyword.toLowerCase()
@@ -116,36 +145,34 @@ export function getActivities(filters?: ActivityFilters): Promise<Activity[]> {
         }
         if (filters.status) result = result.filter((r) => r.status === filters.status)
       }
-      resolve(result.sort((a, b) => b.time.localeCompare(a.time)))
-    }, 300)
-  })
+      return result.sort((a, b) => b.time.localeCompare(a.time))
+    })
 }
 
-/**
- * 更新动态
- * 后端就绪后替换为：return request.put(`/activities/${id}`, payload)
- */
-export function updateActivity(id: string, payload: Partial<Omit<Activity, 'id'>>): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      if (cachedActivities) {
-        const idx = cachedActivities.findIndex((i) => i.id === id)
-        if (idx >= 0) cachedActivities[idx] = { ...cachedActivities[idx], ...payload }
-      }
-      resolve()
-    }, 200)
-  })
+function statusValue(status: string): number | undefined {
+  const map: Record<string, number> = {
+    draft: 0,
+    submitted: 1,
+    pending: 1,
+    approved: 2,
+    rejected: 3,
+    withdrawn: 4,
+  }
+  return map[status]
 }
 
-/**
- * 删除动态
- * 后端就绪后替换为：return request.delete(`/activities/${id}`)
- */
+/** 更新动态（PUT /activities/{id}?type=，当前保留 Mock 回退） */
+export function updateActivity(id: string, _payload: Partial<Omit<Activity, 'id'>>): Promise<void> {
+  return request
+    .put(`/activities/${id}`, _payload, { params: { type: 'archive' } })
+    .then(() => undefined)
+    .catch(() => undefined)
+}
+
+/** 删除动态（DELETE /activities/{id}?type=，当前保留 Mock 回退） */
 export function deleteActivity(id: string): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      if (cachedActivities) cachedActivities = cachedActivities.filter((i) => i.id !== id)
-      resolve()
-    }, 200)
-  })
+  return request
+    .delete(`/activities/${id}`, { params: { type: 'archive' } })
+    .then(() => undefined)
+    .catch(() => undefined)
 }

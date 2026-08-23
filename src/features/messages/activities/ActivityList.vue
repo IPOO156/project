@@ -365,7 +365,7 @@ onMounted(() => {
                 查看
               </el-button>
               <el-button
-                v-if="(row as SubmissionRecord).status === 'submitted'"
+                v-if="(row as SubmissionRecord).status === 'pending'"
                 type="warning"
                 link
                 size="small"

@@ -2,17 +2,20 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { reactive, ref, toRaw } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/app/stores/stores'
+import { getActivityDetail, withdrawActivity } from '@/shared/api/activities'
+import { duplicateCheck } from '@/shared/api/applications'
+import { awardDuplicateCheck } from '@/shared/api/awards'
+import { getProfileInfo } from '@/shared/api/student'
 import {
-  checkDuplicate,
-  getEnrollmentInfo,
+  activityCategoryOf,
+  deriveRecordTitle,
   pushNotification,
   submitApplication,
-  withdrawSubmission,
 } from '@/shared/api/submission'
 import { useCorrection } from './useCorrection'
 import { useFormDraft } from './useFormDraft'
 import { useFormEdit } from './useFormEdit'
-import { useFormRecords } from './useFormRecords'
+import { DRAFT_LOCAL_ID, useFormRecords } from './useFormRecords'
 import { useScoreIndicator } from './useScoreIndicator'
 
 export function useApplicationPage(
@@ -27,8 +30,21 @@ export function useApplicationPage(
 
   const form = reactive(emptyForm())
   const submitting = ref(false)
-  const { clearDraft, saveNow } = useFormDraft(effectiveDraftKey, form)
-  const { records, addRecord, updateRecord, removeRecord } = useFormRecords(type)
+  // autoRestore=false：申报表单默认空白，不自动回填草稿；修改草稿走下拉记录"编辑"回填
+  const { clearDraft, saveNow } = useFormDraft(effectiveDraftKey, form, { autoRestore: false })
+  const {
+    records,
+    loadRecords,
+    addRecord,
+    updateRecord,
+    removeRecord: _removeRecord,
+  } = useFormRecords(type, `form_draft_${effectiveDraftKey}`)
+
+  /** 删除记录：本地草稿一并清空 localStorage（草稿仅本地持久化，无后端删除接口） */
+  function removeRecord(id: string) {
+    if (id === DRAFT_LOCAL_ID) clearDraft()
+    _removeRecord(id)
+  }
   const {
     editingId,
     detailVisible,
@@ -60,7 +76,14 @@ export function useApplicationPage(
   const enrollmentInfo = ref<any>(undefined)
   async function loadEnrollmentInfo() {
     try {
-      enrollmentInfo.value = await getEnrollmentInfo()
+      const profile = await getProfileInfo()
+      enrollmentInfo.value = {
+        grade: profile.academicInfo?.grade ?? '',
+        className: profile.academicInfo?.className ?? '',
+        major: profile.academicInfo?.major ?? '',
+        studentId: profile.academicInfo?.studentNo ?? '',
+        college: profile.academicInfo?.collegeName ?? '',
+      }
     } catch {
       /* ignore */
     }
@@ -71,11 +94,45 @@ export function useApplicationPage(
   let pendingSubmitData: Record<string, any> | null = null
   async function checkDuplicateBeforeSubmit(data: Record<string, any>): Promise<boolean> {
     try {
-      const r = await checkDuplicate({ type, title: data.title || '' })
-      if (r.duplicate) {
-        duplicateItems.value = r.existing
-          ? [{ type, typeLabel, title: r.existing.title, timeRange: r.existing.submitDate }]
-          : []
+      const title =
+        data.title ||
+        data.competitionName ||
+        data.projectName ||
+        data.activityName ||
+        data.bookName ||
+        data.awardName ||
+        data.certName ||
+        ''
+      // 奖项报名走 8.1.2 POST /awards/duplicate-check；档案申报走 POST /applications/duplicate-check
+      const r: any =
+        activityCategoryOf(type as any) === 'award'
+          ? await awardDuplicateCheck({
+              awardType: type,
+              certificateNo: data.certNumber,
+              title,
+              participatedTime:
+                data.competitionDate ||
+                data.approveDate ||
+                data.publishDate ||
+                data.registerDate ||
+                undefined,
+            })
+          : await duplicateCheck({
+              archiveType: type,
+              certificateNo: data.certNumber,
+              title,
+              obtainedTime: data.awardDate || data.acquireDate || data.certDate || undefined,
+            })
+      // 奖项(8.x)返回 isDuplicate/duplicateRecords；档案(7.0.1)实测返回 hasDuplicate/similarItems，统一归一化读取
+      const isDuplicateResult = r?.isDuplicate ?? r?.hasDuplicate
+      const duplicateList = r?.duplicateRecords ?? r?.similarItems ?? []
+      if (isDuplicateResult) {
+        duplicateItems.value = duplicateList.map((d: any) => ({
+          type,
+          typeLabel,
+          title: d.title,
+          timeRange: `${d.statusLabel || ''}`,
+        }))
         duplicateVisible.value = true
         pendingSubmitData = data
         return false
@@ -131,14 +188,7 @@ export function useApplicationPage(
         validityPeriod: extendedForm.validityPeriod || undefined,
       }
       await submitApplication({ type, typeLabel, ...submitData })
-      const title =
-        (submitData as any).competitionName ||
-        (submitData as any).projectName ||
-        (submitData as any).companyName ||
-        (submitData as any).bookName ||
-        (submitData as any).certName ||
-        (submitData as any).activityName ||
-        `${typeLabel}申报`
+      const title = deriveRecordTitle(submitData) || `${typeLabel}申报`
       if (editingId.value) {
         updateRecord(editingId.value, { title, ...submitData, status: 'pending' })
         editingId.value = null
@@ -146,20 +196,23 @@ export function useApplicationPage(
         addRecord(title, { ...submitData, status: 'pending' })
       }
       await clearDraft()
+      await loadRecords() // 提交成功后刷新真实列表，新记录以真实 id/状态展示
       await pushNotification({
         title: `${typeLabel}申报已提交`,
         content: `您的${typeLabel}「${title}」已成功提交。`,
-        category: 'review',
-        link: '/approval/pending',
+        category: 'audit_remind',
+        jumpUrl: '/approval/pending',
       })
       notificationStore.addNotification({
         title: `${typeLabel}申报已提交`,
         content: `您的${typeLabel}「${title}」已成功提交。`,
-        category: 'review',
-        link: '/approval/pending',
+        category: 'audit_remind',
+        jumpUrl: '/approval/pending',
       })
       ElMessage.success('申报提交成功')
       resetForm()
+      // 清空表单后再次清草稿：防深 watcher（800ms 防抖）在 clearDraft 与 resetForm 之间把旧内容重写回 localStorage
+      await clearDraft()
     } catch {
       ElMessage.error('提交失败')
     } finally {
@@ -172,37 +225,22 @@ export function useApplicationPage(
     if (ok) await doSubmit(toRaw(form))
   }
 
-  function handleSaveDraft() {
-    const submitData = {
-      ...toRaw(form),
-      role: extendedForm.role || undefined,
-      certNumber: extendedForm.certNumber || undefined,
-      issuingAuthority: extendedForm.issuingAuthority || undefined,
-      acquisitionDate: extendedForm.acquisitionDate || undefined,
-      validityPeriod: extendedForm.validityPeriod || undefined,
-    }
-    const title =
-      (submitData as any).competitionName ||
-      (submitData as any).projectName ||
-      (submitData as any).companyName ||
-      (submitData as any).bookName ||
-      (submitData as any).certName ||
-      (submitData as any).activityName ||
-      `${typeLabel}草稿`
-    if (editingId.value) {
-      updateRecord(editingId.value, { title, ...submitData, status: 'draft' })
-    } else {
-      addRecord(title, { ...submitData, status: 'draft' })
-    }
+  async function handleSaveDraft() {
+    // 后端无草稿增删改接口（仅 POST 支持 isDraft=1，且无删除/更新端点），草稿统一本地持久化：
+    // saveNow 写入 localStorage，随后 loadRecords 把本地草稿合并进列表，保证刷新后草稿仍可见。
+    // 保存后表单转空白待填写态：修改草稿需在下拉记录里点"编辑"回填，正常情况表单保持空白。
     saveNow()
-    ElMessage.success('草稿已保存')
     currentStatus.value = 'draft'
+    await loadRecords()
+    resetForm()
+    cancelEdit()
+    ElMessage.success('草稿已保存')
   }
 
   async function handleWithdraw(row: any) {
     try {
       await ElMessageBox.confirm('确定撤回？', '撤回确认', { type: 'warning' })
-      await withdrawSubmission(row.id)
+      await withdrawActivity(Number(row.id), activityCategoryOf(type as any))
       updateRecord(row.id, { status: 'withdrawn' })
       ElMessage.success('已撤回')
     } catch {
@@ -210,7 +248,16 @@ export function useApplicationPage(
     }
   }
 
-  function handleEditClick(row: any) {
+  async function handleEditClick(row: any) {
+    // 后端真实记录（非本地临时 rec- / draft-local 记录）：拉取 6.2 详情补齐表单字段（列表仅含摘要字段）
+    if (row.id && row.id !== DRAFT_LOCAL_ID && !String(row.id).startsWith('rec-')) {
+      try {
+        const detail = await getActivityDetail(Number(row.id), activityCategoryOf(type as any))
+        if (detail) row = { ...row, ...detail }
+      } catch {
+        /* 详情拉取失败时沿用 row 摘要字段 */
+      }
+    }
     Object.keys(emptyForm()).forEach((key) => {
       if (key in row) (form as any)[key] = row[key] ?? ''
     })
