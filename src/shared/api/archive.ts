@@ -1,30 +1,10 @@
-import type { Award, Grade, Interest, ProfileDimension, TimelineNode } from '@/shared/types/types'
+import type { Award, Grade, ProfileDimension, TimelineNode } from '@/shared/types/types'
+import request from './request'
 
 let idCounter = 100
 
 function nextId(): string {
   return String(++idCounter)
-}
-
-/**
- * 获取兴趣列表
- * 后端就绪后替换为：return request.get<Interest[]>('/archive/interests')
- */
-export function getInterests(): Promise<Interest[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        {
-          id: '1',
-          category: '编程开发',
-          content: 'Web 前端开发、人工智能应用',
-          level: 'proficient',
-        },
-        { id: '2', category: '语言能力', content: '英语（CET-6）、日语（N3）', level: 'good' },
-        { id: '3', category: '运动爱好', content: '篮球、跑步', level: 'general' },
-      ])
-    }, 300)
-  })
 }
 
 /**
@@ -44,24 +24,6 @@ export function addTimelineEvent(data: Omit<TimelineNode, 'id'>): Promise<Timeli
  * 后端就绪后替换为：return request.delete(`/archive/timeline/${id}`)
  */
 export function deleteTimelineEvent(_id: string): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(), 200)
-  })
-}
-
-export function addInterest(data: Omit<Interest, 'id'>): Promise<Interest> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve({ ...data, id: nextId() }), 200)
-  })
-}
-
-export function updateInterest(id: string, data: Partial<Interest>): Promise<Interest> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve({ ...data, id } as Interest), 200)
-  })
-}
-
-export function deleteInterest(_id: string): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(() => resolve(), 200)
   })
@@ -169,20 +131,10 @@ export function deleteAward(_id: string): Promise<void> {
 
 /**
  * 获取多维度画像
- * 后端就绪后替换为：return request.get<ProfileDimension[]>('/archive/dimensions')
+ * 对接后端 GET /archive/dimensions（见 docs/api.md 3.4）
  */
 export function getDimensions(): Promise<ProfileDimension[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { label: '学业成绩', current: 88, target: 92, previous: 81 },
-        { label: '竞赛实践', current: 75, target: 90, previous: 68 },
-        { label: '科研创新', current: 60, target: 82, previous: 52 },
-        { label: '社会工作', current: 85, target: 88, previous: 78 },
-        { label: '综合素质', current: 80, target: 90, previous: 72 },
-      ])
-    }, 300)
-  })
+  return request.get('/archive/dimensions')
 }
 
 /**

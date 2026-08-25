@@ -7,7 +7,6 @@
 import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
 import { correctApplication } from '@/shared/api/applications'
-import { pushNotification } from '@/shared/api/submission'
 
 /** 纠错表单 */
 export interface CorrectionForm {
@@ -69,12 +68,6 @@ export function useCorrection() {
       await correctApplication(Number(correctionRecord.value?.id), {
         correctionReason: correctionForm.reason,
         correctedData: correctionForm.changedFields,
-      })
-      await pushNotification({
-        title: '更正申请已提交',
-        content: '您的更正申请已提交，等待审核。',
-        category: 'audit_remind',
-        jumpUrl: '/approval/pending',
       })
       ElMessage.success('修改申请已提交')
       closeCorrection()

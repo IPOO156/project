@@ -319,6 +319,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     margin: 0;
     white-space: pre-wrap;
   }
+  &__offline {
+    display: inline-block;
+    margin-bottom: 4px;
+    padding: 1px 8px;
+    border-radius: 100px;
+    background: color-mix(in srgb, var(--mc-accent) 14%, transparent);
+    color: var(--mc-accent);
+    font-size: 11px;
+    font-weight: 600;
+  }
   &__time {
     display: block;
     margin-top: 4px;

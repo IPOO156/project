@@ -1,10 +1,5 @@
 import type { ActivityListItem, ActivityType } from './activities'
-import type {
-  ApplicationType,
-  Notification as MessageNotification,
-  SubmissionFilters,
-  SubmissionRecord,
-} from '@/shared/types/types'
+import type { ApplicationType, SubmissionFilters, SubmissionRecord } from '@/shared/types/types'
 import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 // 6.1 动态记录/6.5 撤销：申报记录数据源从 /submissions 迁移到 /activities（后端对学生端仅实现 /activities 系列）
 import { getActivities, withdrawActivity } from './activities'
@@ -488,10 +483,14 @@ function appendCommonFields(payload: Record<string, any>, data: Record<string, a
   if (data.certNumber) payload.certificateNo = String(data.certNumber)
   if (data.issuingAuthority) payload.issuingUnit = String(data.issuingAuthority)
   if (data.validityPeriod) payload.validUntil = toDateString(data.validityPeriod)
+  // 取得时间（扩展字段 acquisitionDate）→ 契约字段 obtainedTime；类型已映射 obtainedTime 时不覆盖
+  if (data.acquisitionDate && payload.obtainedTime === undefined) {
+    payload.obtainedTime = toDateString(data.acquisitionDate)
+  }
 }
 
 /** 构建契约 payload：字段重命名 + 日期归一化 + 学期解析 + 通用字段 */
-async function buildContractPayload(
+export async function buildContractPayload(
   type: string,
   data: Record<string, any>,
 ): Promise<Record<string, any>> {
@@ -602,102 +601,26 @@ export async function submitApplication(data: Record<string, any>): Promise<Subm
 }
 
 /**
- * 提交纠错申请
- * 后端就绪后替换为：return request.post('/submissions/correction', data)
+ * 首次保存草稿：调用对应申报/奖项的 POST submit 接口（isDraft=1）创建 status=0 草稿记录，
+ * 返回后端生成的 archiveId（档案）或 applicationId（奖项）。
+ * 依据 7.0 / 8.1.1：autosave 路径中的记录 id 必须已存在，首次需先通过 submit 接口建草稿再回填 id。
+ * 8.3 科研之星为主记录 + 子项目多步流程（无单端点草稿创建）、未配置契约的类型均返回 undefined，由调用方回落本地持久化。
  */
-export function submitCorrection(_u_data: {
-  recordId: string
-  reason: string
-  changedFields: Record<string, { old: any; new: any }>
-}): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(), 300)
-  })
+export async function createDraft(
+  type: string,
+  data: Record<string, any>,
+): Promise<number | undefined> {
+  if (RESEARCH_STAR_TYPES.includes(type as ApplicationType)) return undefined
+  const contract = APPLICATION_CONTRACTS[type]
+  if (!contract) return undefined
+  const payload = await buildContractPayload(type, { ...data, isDraft: 1 })
+  const res: any = await request.post(contract.endpoint, payload)
+  const id = res?.archiveId ?? res?.applicationId
+  return id == null ? undefined : Number(id)
 }
 
-/**
- * 推送通知（本地通知创建，消息记录由后端 user_messages 表维护）
- */
-export function pushNotification(_u_data: {
-  title: string
-  content: string
-  category: MessageNotification['category']
-  jumpUrl?: string
-  isImportant?: number
-}): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(), 200)
-  })
-}
-
-/**
- * 获取评分指标
- * 后端就绪后替换为：return request.get(`/score-indicators/${type}`)
- */
-export function getScoreIndicators(
-  _u_type: string,
-): Promise<{ label: string; score: number; maxScore: number; weight: number; remark?: string }[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { label: '材料完整性', score: 85, maxScore: 100, weight: 0.3, remark: '材料齐全' },
-        { label: '学术价值', score: 78, maxScore: 100, weight: 0.4, remark: '良好' },
-        { label: '创新性', score: 90, maxScore: 100, weight: 0.3, remark: '优秀' },
-      ])
-    }, 300)
-  })
-}
-
-/**
- * 检查重复申报
- * 后端就绪后替换为：return request.post('/submissions/check-duplicate', data)
- */
-export function checkDuplicate(data: {
-  type: string
-  title?: string
-}): Promise<{ duplicate: boolean; existing?: SubmissionRecord }> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const duplicate = Math.random() < 0.3 // 30% 概率模拟重复
-      resolve({
-        duplicate,
-        existing: duplicate
-          ? {
-              id: 'existing-1',
-              type: data.type as ApplicationType,
-              typeLabel: APPLICATION_TYPE_MAP[data.type] ?? data.type,
-              title: data.title ?? '已有申报',
-              submitDate: '2026-06-15',
-              semester: '2025-2026-2',
-              status: 'pending',
-              sourcePath: '',
-            }
-          : undefined,
-      })
-    }, 300)
-  })
-}
-
-export function getEnrollmentInfo(): Promise<Record<string, string>> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        grade: '2022级',
-        className: '计算机科学1班',
-        major: '计算机科学与技术',
-        studentId: '20220101001',
-        college: '信息工程学院',
-      })
-    }, 200)
-  })
-}
-
-export function saveDraft(_u_type: string, _data: Record<string, any>): Promise<void> {
-  return new Promise((resolve) => setTimeout(() => resolve(), 200))
-}
-export function loadDraft(_u_type: string): Promise<Record<string, any> | null> {
-  return new Promise((resolve) => setTimeout(() => resolve(null), 200))
-}
-export function deleteDraft(_type: string): Promise<void> {
-  return new Promise((resolve) => setTimeout(() => resolve(), 200))
-}
+// 草稿自动保存已迁至真实接口（见 createDraft 与 useFormDraft.saveToBackend）：
+//  - 7.0  PUT /applications/{archiveId}/autosave  → autosaveApplication
+//  - 8.1.1 PUT /awards/{applicationId}/autosave  → autosaveAward
+//  - 首次建草稿：对应 submit 接口 POST {isDraft:1} 取回 archiveId/applicationId（createDraft）
+// 文档无草稿列表/删除接口，本地 localStorage 兜底仍在 useFormDraft 内完成，原 saveDraft/loadDraft/deleteDraft 桩已移除。

@@ -8,8 +8,8 @@ import { awardDuplicateCheck } from '@/shared/api/awards'
 import { getProfileInfo } from '@/shared/api/student'
 import {
   activityCategoryOf,
+  ARCHIVE_TYPE_ALIASES,
   deriveRecordTitle,
-  pushNotification,
   submitApplication,
 } from '@/shared/api/submission'
 import { useCorrection } from './useCorrection'
@@ -31,7 +31,10 @@ export function useApplicationPage(
   const form = reactive(emptyForm())
   const submitting = ref(false)
   // autoRestore=false：申报表单默认空白，不自动回填草稿；修改草稿走下拉记录"编辑"回填
-  const { clearDraft, saveNow } = useFormDraft(effectiveDraftKey, form, { autoRestore: false })
+  const { clearDraft, saveNow, setRecordId } = useFormDraft(effectiveDraftKey, form, {
+    autoRestore: false,
+    type,
+  })
   const {
     records,
     loadRecords,
@@ -89,20 +92,9 @@ export function useApplicationPage(
     }
   }
 
-  const duplicateVisible = ref(false)
-  const duplicateItems = ref<any[]>([])
-  let pendingSubmitData: Record<string, any> | null = null
   async function checkDuplicateBeforeSubmit(data: Record<string, any>): Promise<boolean> {
     try {
-      const title =
-        data.title ||
-        data.competitionName ||
-        data.projectName ||
-        data.activityName ||
-        data.bookName ||
-        data.awardName ||
-        data.certName ||
-        ''
+      const title = deriveRecordTitle(data)
       // 奖项报名走 8.1.2 POST /awards/duplicate-check；档案申报走 POST /applications/duplicate-check
       const r: any =
         activityCategoryOf(type as any) === 'award'
@@ -118,40 +110,30 @@ export function useApplicationPage(
                 undefined,
             })
           : await duplicateCheck({
-              archiveType: type,
+              archiveType: ARCHIVE_TYPE_ALIASES[type]?.[0] ?? type,
               certificateNo: data.certNumber,
               title,
-              obtainedTime: data.awardDate || data.acquireDate || data.certDate || undefined,
+              obtainedTime: data.acquisitionDate,
             })
-      // 奖项(8.x)返回 isDuplicate/duplicateRecords；档案(7.0.1)实测返回 hasDuplicate/similarItems，统一归一化读取
-      const isDuplicateResult = r?.isDuplicate ?? r?.hasDuplicate
-      const duplicateList = r?.duplicateRecords ?? r?.similarItems ?? []
-      if (isDuplicateResult) {
-        duplicateItems.value = duplicateList.map((d: any) => ({
-          type,
-          typeLabel,
-          title: d.title,
-          timeRange: `${d.statusLabel || ''}`,
-        }))
-        duplicateVisible.value = true
-        pendingSubmitData = data
+      // 奖项(8.x)返回 isDuplicate/duplicateRecords；档案(7.0.1)实测返回 hasDuplicate/similarItems/suggestion，统一归一化读取
+      const hasDuplicate = r?.isDuplicate ?? r?.hasDuplicate
+      const duplicateList = (r?.duplicateRecords ?? r?.similarItems ?? []) as any[]
+      if (hasDuplicate) {
+        const items = duplicateList
+          .map((d) => `${d.title}${d.similarity != null ? `（相似度 ${d.similarity}%）` : ''}`)
+          .join('<br/>')
+        const suggestion = r?.suggestion ? `<br/>建议：${r.suggestion}` : ''
+        ElMessageBox.alert((items || '检测到可能重复的申报记录') + suggestion, '检测到重复申报', {
+          dangerouslyUseHTMLString: true,
+          confirmButtonText: '知道了',
+          type: 'warning',
+        }).catch(() => {})
         return false
       }
       return true
     } catch {
       return true
     }
-  }
-  function confirmDuplicateSubmit() {
-    duplicateVisible.value = false
-    if (pendingSubmitData) {
-      doSubmit(pendingSubmitData)
-      pendingSubmitData = null
-    }
-  }
-  function cancelDuplicateSubmit() {
-    duplicateVisible.value = false
-    pendingSubmitData = null
   }
 
   const {
@@ -175,6 +157,8 @@ export function useApplicationPage(
   } = useScoreIndicator()
 
   const currentStatus = ref('')
+  // 被退回原因：编辑/查看退回记录时回填，传给 ApplicationFormRecord 的 rejection-reason 属性
+  const rejectionReason = ref('')
 
   async function doSubmit(data: Record<string, any>) {
     submitting.value = true
@@ -197,12 +181,6 @@ export function useApplicationPage(
       }
       await clearDraft()
       await loadRecords() // 提交成功后刷新真实列表，新记录以真实 id/状态展示
-      await pushNotification({
-        title: `${typeLabel}申报已提交`,
-        content: `您的${typeLabel}「${title}」已成功提交。`,
-        category: 'audit_remind',
-        jumpUrl: '/approval/pending',
-      })
       notificationStore.addNotification({
         title: `${typeLabel}申报已提交`,
         content: `您的${typeLabel}「${title}」已成功提交。`,
@@ -221,7 +199,10 @@ export function useApplicationPage(
   }
 
   async function handleSubmit() {
-    const ok = await checkDuplicateBeforeSubmit({ ...toRaw(form) })
+    const ok = await checkDuplicateBeforeSubmit({
+      ...toRaw(form),
+      acquisitionDate: extendedForm.acquisitionDate || undefined,
+    })
     if (ok) await doSubmit(toRaw(form))
   }
 
@@ -250,7 +231,11 @@ export function useApplicationPage(
 
   async function handleEditClick(row: any) {
     // 后端真实记录（非本地临时 rec- / draft-local 记录）：拉取 6.2 详情补齐表单字段（列表仅含摘要字段）
-    if (row.id && row.id !== DRAFT_LOCAL_ID && !String(row.id).startsWith('rec-')) {
+    const isBackendRecord =
+      row.id && row.id !== DRAFT_LOCAL_ID && !String(row.id).startsWith('rec-')
+    // 真实记录回填其 id，后续自动保存走 autosave；本地草稿/临时记录无服务端 id，首次保存走 isDraft=1 建草稿
+    setRecordId(isBackendRecord ? Number(row.id) : null)
+    if (isBackendRecord) {
       try {
         const detail = await getActivityDetail(Number(row.id), activityCategoryOf(type as any))
         if (detail) row = { ...row, ...detail }
@@ -267,6 +252,7 @@ export function useApplicationPage(
     extendedForm.acquisitionDate = row.acquisitionDate || ''
     extendedForm.validityPeriod = row.validityPeriod || ''
     currentStatus.value = row.status || 'draft'
+    rejectionReason.value = row.rejectedReason || ''
     startEdit(row)
   }
 
@@ -278,6 +264,8 @@ export function useApplicationPage(
     Object.assign(form, emptyForm())
     resetExtendedForm()
     currentStatus.value = ''
+    rejectionReason.value = ''
+    setRecordId(null)
   }
   function handleViewScore(row: any) {
     openIndicator(type, row.title || '')
@@ -286,6 +274,7 @@ export function useApplicationPage(
     openCorrection(row)
   }
   function viewRecord(row: any) {
+    rejectionReason.value = row.rejectedReason || ''
     _viewRecord(row)
   }
   function init() {
@@ -301,12 +290,9 @@ export function useApplicationPage(
     detailVisible,
     detailRecord,
     currentStatus,
+    rejectionReason,
     enrollmentInfo,
     extendedForm,
-    duplicateVisible,
-    duplicateItems,
-    confirmDuplicateSubmit,
-    cancelDuplicateSubmit,
     correctionVisible,
     correctionSubmitting,
     correctionData,

@@ -166,12 +166,13 @@ export const TIMELINE_EVENT_TYPES = {
   other: { label: '其他', color: '#909399', iconKey: 'Star' },
 } as const
 
-// 个人兴趣掌握程度
-export const INTEREST_LEVEL = {
-  proficient: { label: '熟练', color: 'success' },
-  good: { label: '良好', color: 'warning' },
-  general: { label: '一般', color: 'info' },
-} as const
+// 个人兴趣掌握程度（proficiencyLevel：1=入门 2=一般 3=熟练 4=精通，见接口文档 §4.11）
+export const INTEREST_LEVEL: Record<string, { label: string; color?: string }> = {
+  '1': { label: '入门', color: 'info' },
+  '2': { label: '一般', color: 'warning' },
+  '3': { label: '熟练', color: 'primary' },
+  '4': { label: '精通', color: 'success' },
+}
 
 // 最近动态类型
 export const ACTIVITY_STATUS = {

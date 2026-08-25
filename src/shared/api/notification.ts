@@ -215,8 +215,5 @@ export function updateMessageSettings(payload: {
   smsEnabled: number
   pushEnabled: number
 }): Promise<void> {
-  return request
-    .put('/messages/settings', payload)
-    .then(() => undefined)
-    .catch(() => undefined)
+  return request.put('/messages/settings', payload).then(() => undefined)
 }

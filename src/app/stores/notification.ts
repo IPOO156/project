@@ -1,9 +1,10 @@
 import type { Notification, NotificationFilters } from '@/shared/types/types'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
   archiveMessage as apiArchive,
+  batchReadMessages as apiBatchRead,
   deleteNotification as apiDelete,
   markAllAsRead as apiMarkAll,
   markAsRead as apiMarkOne,
@@ -75,6 +76,18 @@ export const useNotificationStore = defineStore('notification', () => {
     const target = notifications.value.find((n) => n.id === id)
     if (!target) return
 
+    if (target.isImportant === 1) {
+      try {
+        await ElMessageBox.confirm(
+          '这是一条重要消息，归档后仍可在「已归档」视图中查看。确定归档吗？',
+          '归档确认',
+          { confirmButtonText: '归档', cancelButtonText: '取消', type: 'warning' },
+        )
+      } catch {
+        return
+      }
+    }
+
     await apiArchive(id)
     target.isArchived = 1
     target.archivedAt = new Date().toISOString()
@@ -84,6 +97,56 @@ export const useNotificationStore = defineStore('notification', () => {
       filtered.archivedAt = target.archivedAt
     }
     ElMessage.success('已归档')
+  }
+
+  /** 批量归档（所选含重要消息时统一二次确认） */
+  async function archiveNotifications(ids: string[]): Promise<void> {
+    if (ids.length === 0) return
+    const targets = notifications.value.filter((n) => ids.includes(n.id))
+    if (targets.some((n) => n.isImportant === 1)) {
+      try {
+        await ElMessageBox.confirm(
+          `所选消息中包含重要消息，归档后仍可在「已归档」视图中查看。确定归档这 ${ids.length} 条消息吗？`,
+          '批量归档确认',
+          { confirmButtonText: '归档', cancelButtonText: '取消', type: 'warning' },
+        )
+      } catch {
+        return
+      }
+    }
+    await Promise.all(ids.map((id) => apiArchive(id)))
+    const now = new Date().toISOString()
+    const idSet = new Set(ids)
+    const patch = (list: Notification[]) => {
+      list.forEach((n) => {
+        if (idSet.has(n.id)) {
+          n.isArchived = 1
+          n.archivedAt = now
+        }
+      })
+    }
+    patch(notifications.value)
+    patch(filteredNotifications.value)
+    ElMessage.success(`已归档 ${ids.length} 条消息`)
+  }
+
+  /** 将指定 id 集合标为已读（PUT /messages/batch-read） */
+  async function markMultipleAsRead(ids: string[]): Promise<void> {
+    if (ids.length === 0) return
+    await apiBatchRead(ids)
+    const now = new Date().toISOString()
+    const idSet = new Set(ids)
+    const patch = (list: Notification[]) => {
+      list.forEach((n) => {
+        if (idSet.has(n.id)) {
+          n.isRead = 1
+          n.readAt = now
+        }
+      })
+    }
+    patch(notifications.value)
+    patch(filteredNotifications.value)
+    ElMessage.success(`已将 ${ids.length} 条消息标为已读`)
   }
 
   /** 取消归档 */
@@ -147,7 +210,9 @@ export const useNotificationStore = defineStore('notification', () => {
     fetchNotifications,
     markAsRead,
     markAllAsRead,
+    markMultipleAsRead,
     archiveNotification,
+    archiveNotifications,
     unarchiveNotification,
     deleteNotification,
     addNotification,

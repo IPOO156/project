@@ -81,6 +81,9 @@ function getTypeColor(tag: string): string {
         <component :is="getTypeIcon(experience.tags[0])" :size="12" />
       </div>
       <span class="card-season-badge">{{ getSemesterDisplayLabel(experience.semester) }}</span>
+      <span v-if="experience.statusLabel" class="card-status-label">{{
+        experience.statusLabel
+      }}</span>
       <span class="card-year-inline">{{ experience.date }}</span>
     </div>
     <h3 class="card-title">{{ experience.title }}</h3>
@@ -265,6 +268,18 @@ function getTypeColor(tag: string): string {
   padding: 0.25rem 0.7rem;
   border-radius: 100px;
   background: rgba(var(--gt-bark-rgb, 61 43 31), 0.02);
+  flex-shrink: 0;
+}
+
+.card-status-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 2px;
+  color: #3a7a4f;
+  border: 1px solid rgba(58, 122, 79, 0.35);
+  padding: 0.25rem 0.7rem;
+  border-radius: 100px;
+  background: rgba(58, 122, 79, 0.08);
   flex-shrink: 0;
 }
 

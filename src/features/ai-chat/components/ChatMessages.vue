@@ -7,13 +7,15 @@ import type { ChatMessage } from '../types'
  * - loading 时显示 thinking 指示器（AI Thinking... + 脉冲图标）
  * - 自动滚动到底部（messages 变化 + loading 出现时）
  */
-import { Sparkles } from 'lucide-vue-next'
+import { RotateCcw, Sparkles } from 'lucide-vue-next'
 import { nextTick, ref, watch } from 'vue'
 import MessageBubble from './MessageBubble.vue'
 
 const props = defineProps<{
   messages: ChatMessage[]
   loading: boolean
+  /** 最近一次 AI 请求是否失败（用于展示"重新生成"按钮） */
+  error: boolean
   /** 是否显示思考动画（设置项） */
   showThinking: boolean
   /** 是否显示消息反馈（设置项） */
@@ -25,6 +27,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   feedback: [msgId: string, type: 'useful' | 'useless']
   copy: [msgId: string]
+  retry: []
 }>()
 
 const scrollRef = ref<HTMLElement | null>(null)
@@ -63,6 +66,14 @@ watch(() => props.showThinking, scrollToBottom)
         @copy="emit('copy', msg.id)"
       />
 
+      <!-- AI 失败重试入口 -->
+      <div v-if="props.error && !props.loading" class="cm__retry">
+        <button class="cm__retry-btn" type="button" @click="emit('retry')">
+          <RotateCcw :size="13" />
+          <span>重新生成</span>
+        </button>
+      </div>
+
       <Transition name="think">
         <div v-if="props.loading && props.showThinking" class="cm__thinking">
           <div class="cm__thinking-avatar">
@@ -97,6 +108,30 @@ watch(() => props.showThinking, scrollToBottom)
     display: flex;
     gap: $spacing-sm;
     align-items: flex-start;
+  }
+
+  &__retry {
+    display: flex;
+    justify-content: center;
+  }
+
+  &__retry-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-xs $spacing-md;
+    border-radius: $radius-xl;
+    border: 1px solid var(--el-border-color);
+    background: var(--el-bg-color);
+    color: var(--mc-primary);
+    font-size: $font-size-sm;
+    cursor: pointer;
+    transition: all $duration-fast $ease-standard;
+
+    &:hover {
+      border-color: var(--mc-primary);
+      background: color-mix(in srgb, var(--mc-primary) 6%, transparent);
+    }
   }
 
   &__thinking-avatar {

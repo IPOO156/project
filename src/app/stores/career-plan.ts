@@ -1,3 +1,4 @@
+import type { SubmitCareerPlanPayload } from '@/shared/api/career-plan'
 import type { CareerAnalysis, CareerPlanRecord } from '@/shared/types/types'
 import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
@@ -28,7 +29,7 @@ export const useCareerPlanStore = defineStore('career-plan', () => {
     }
   }
 
-  async function submitPlan(data: Pick<CareerPlanRecord, 'semester' | 'title'>): Promise<void> {
+  async function submitPlan(data: SubmitCareerPlanPayload): Promise<void> {
     const item = await submitCareerPlan(data)
     plans.value.unshift(item)
     ElMessage.success('规划材料提交成功')

@@ -24,6 +24,8 @@ export interface ChatMessage {
   richContent?: RichContent
   /** 消息反馈（可选） */
   feedback?: MessageFeedback
+  /** 是否离线模式回复（后端不可用时本地模拟，标注“离线模式”） */
+  offline?: boolean
 }
 
 /** 富文本高亮片段（splitHighlight 产出的切分单元） */
@@ -36,6 +38,8 @@ export interface HighlightSegment {
 export interface RichContent {
   /** 标题问候语（可选） */
   greeting?: string
+  /** 依据材料 chips（职业规划分析等场景展示引用的档案材料，可选） */
+  materials?: string[]
   /** 内容块序列 */
   blocks: RichBlock[]
 }
@@ -94,29 +98,63 @@ export interface CardBlock {
 
 export type CardIcon = 'info' | 'shield' | 'clock' | 'success'
 
-/** 历史对话 */
+/** 历史对话（后端会话列表项，GET /ai/conversations） */
 export interface Conversation {
-  id: string
-  /** 对话标题（取首条用户消息前 14 字） */
+  id: number
+  /** 会话标题 */
   title: string
-  /** 对话消息列表（深拷贝快照） */
-  messages: ChatMessage[]
+  /** 状态枚举（1=正常） */
+  status: number
+  /** 状态文案 */
+  statusLabel: string
+  /** 最后消息时间（可选） */
+  lastMessageTime?: string
   /** 创建时间 */
-  createTime: string
+  createdAt: string
 }
 
-/** 对话列表摘要（轻量，不含 message 列表） */
-export interface ConversationSummary {
-  id: string
-  title: string
-  createTime: string
-  messageCount: number
+/** 后端 AI 消息（GET /ai/conversations/{id}/messages 列表项） */
+export interface AIConversationMessage {
+  id: number
+  role: 'user' | 'assistant'
+  content: string
+  modelName?: string
+  tokenUsage?: number
+  generationTimeMs?: number
+  createdAt: string
 }
 
-/** 发送消息响应（POST /ai/chat） */
-export interface SendMessageResult {
-  message: ChatMessage
-  conversationId: string
+/** 建议操作（后端运行时组装，如跳转个人档案） */
+export interface AISuggestedAction {
+  label: string
+  jumpUrl: string
+  actionType: string
+}
+
+/** 发送消息响应（POST /ai/conversations/{id}/messages） */
+export interface AISendMessageResult {
+  messageId: number
+  role: 'assistant'
+  content: string
+  modelName?: string
+  tokenUsage?: number
+  generationTimeMs?: number
+  createdAt: string
+  suggestedActions?: AISuggestedAction[]
+}
+
+/** 重新生成响应（POST /ai/conversations/{id}/messages/{messageId}/regenerate） */
+export interface AIRegenerateResult {
+  messageId: number
+  role: 'assistant'
+  content: string
+  modelName?: string
+  modelVersion?: string
+  tokenUsage?: number
+  generationTimeMs?: number
+  callStatus: number
+  isRetry: boolean
+  createdAt: string
 }
 
 /** 知识库条目 */

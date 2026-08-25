@@ -1,4 +1,5 @@
 import type { CareerPlanRecord } from '@/shared/types/types'
+import { getSemesters } from './common'
 import request from './request'
 
 let idCounter = 10
@@ -12,16 +13,25 @@ const MOCK_PLANS: CareerPlanRecord[] = [
     semester: '2023-2024-1',
     title: '大二学年成长规划',
     submitDate: '2025-09-15',
-    status: 'submitted',
+    status: 'pending',
   },
   {
     id: '2',
     semester: '2022-2023-2',
     title: '大一学年总结与规划',
     submitDate: '2025-03-10',
-    status: 'submitted',
+    status: 'pending',
   },
 ]
+
+/** 职业规划审批状态（career_plans.status 0-4）→ 前端状态 */
+const CAREER_PLAN_STATUS_MAP: Record<number, CareerPlanRecord['status']> = {
+  0: 'draft',
+  1: 'pending',
+  2: 'approved',
+  3: 'rejected',
+  4: 'withdrawn',
+}
 
 /**
  * 获取职业规划列表
@@ -36,34 +46,68 @@ export function getCareerPlans(): Promise<CareerPlanRecord[]> {
         semester: p.semesterName || '',
         title: p.title,
         submitDate: (p.submittedAt || '').slice(0, 10),
-        status: p.status === 0 ? 'draft' : 'submitted',
+        status: CAREER_PLAN_STATUS_MAP[p.status] ?? 'draft',
+        progressRate: p.progressRate,
+        statusLabel: p.statusLabel,
       })),
     )
     .catch(() => Promise.resolve([...MOCK_PLANS]))
 }
 
+/** 提交职业规划的载荷（字段与 POST /profile/career-plans 一致，以表单数据为准） */
+export interface SubmitCareerPlanPayload {
+  /** 学期（业务 name，如 "2023-2024-1"；提交时经 getSemesters() 映射为数字 semesterId） */
+  semester: string
+  title: string
+  content?: string
+  requirement?: string
+  goals?: any[]
+  evidenceFileIds?: number[]
+}
+
 /**
  * 提交职业规划
  * 对接后端 POST /profile/career-plans，接口异常时回退 Mock。
+ * semester 为业务学期 name，提交前经 getSemesters() 映射为数字 semesterId，禁止 Number() 强制转换。
  */
-export function submitCareerPlan(
-  data: Pick<CareerPlanRecord, 'semester' | 'title'>,
-): Promise<CareerPlanRecord> {
-  const buildRecord = (id: string): CareerPlanRecord => ({
+export function submitCareerPlan(data: SubmitCareerPlanPayload): Promise<CareerPlanRecord> {
+  const buildRecord = (id: string, res?: any): CareerPlanRecord => ({
     id,
     semester: data.semester,
     title: data.title,
-    submitDate: new Date().toISOString().slice(0, 10),
-    status: 'submitted',
+    submitDate: (res?.submittedAt || new Date().toISOString()).slice(0, 10),
+    status: 'pending',
+    progressRate: res?.progressRate,
+    statusLabel: res?.statusLabel ?? '待审批',
   })
-  return request
-    .post('/profile/career-plans', {
-      semesterId: Number(data.semester) || 1,
-      title: data.title,
-      isDraft: 0,
-    } as any)
-    .then((res: any) => buildRecord(String(res.planId ?? nextId())))
-    .catch(() => Promise.resolve(buildRecord(nextId())))
+
+  return getSemesters()
+    .then((semesters) => {
+      const matched = semesters.find((s) => s.name === data.semester)
+      if (!matched) {
+        throw new Error(`未找到学期「${data.semester}」，无法提交`)
+      }
+      return matched.value
+    })
+    .then((semesterId) =>
+      request
+        .post('/profile/career-plans', {
+          semesterId,
+          title: data.title,
+          content: data.content,
+          requirement: data.requirement,
+          goals: data.goals,
+          evidenceFileIds: data.evidenceFileIds,
+          isDraft: 0,
+        } as any)
+        .then((res: any) => buildRecord(String(res.planId ?? nextId()), res)),
+    )
+    .catch((err: any) => {
+      if (err instanceof Error && err.message.includes('未找到学期')) {
+        return Promise.reject(err)
+      }
+      return Promise.resolve(buildRecord(nextId()))
+    })
 }
 
 /** 保存职业规划草稿（对接 POST /profile/career-plans，isDraft=1） */
@@ -170,6 +214,25 @@ export function addCareerMilestone(
   },
 ): Promise<{ milestoneId: number }> {
   return request.post(`/profile/career-plans/${planId}/actions/${actionId}/milestones`, payload)
+}
+
+/** 更新里程碑（PUT /profile/career-plans/{planId}/milestones/{milestoneId}） */
+export function updateCareerMilestone(
+  planId: number,
+  milestoneId: number,
+  payload: {
+    milestoneTitle: string
+    milestoneDate?: string
+    isAchieved?: 0 | 1
+    proofFileId?: number
+  },
+): Promise<{ milestoneId: number }> {
+  return request.put(`/profile/career-plans/${planId}/milestones/${milestoneId}`, payload)
+}
+
+/** 删除里程碑（DELETE /profile/career-plans/{planId}/milestones/{milestoneId}） */
+export function deleteCareerMilestone(planId: number, milestoneId: number): Promise<void> {
+  return request.delete(`/profile/career-plans/${planId}/milestones/${milestoneId}`)
 }
 
 /** 更新行动（PUT /profile/career-plans/{planId}/actions/{actionId}） */

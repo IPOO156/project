@@ -9,6 +9,7 @@ import GrowthQuote from './components/GrowthQuote.vue'
 import HeroRings from './components/HeroRings.vue'
 import ProgressDots from './components/ProgressDots.vue'
 import SummarySection from './components/SummarySection.vue'
+import TimelineListView from './components/TimelineListView.vue'
 import TimelineNode from './components/TimelineNode.vue'
 import { useGrowthTimeline } from './composables/useGrowthTimeline'
 import { findRingBySemester } from './timeline-constants'
@@ -46,6 +47,16 @@ const showDetail = ref(false)
 const reverseTrigger = ref(0)
 const selectedElectronPos = ref<{ x: number; y: number } | null>(null)
 const pendingDeleteId = ref<string | null>(null)
+
+type ViewMode = 'rings' | 'list'
+
+// 首屏按设备初始选择：小屏（<=768px）默认列表视图，桌面默认年轮视图；
+// 之后只响应用户手动切换，不再随窗口尺寸变化。
+const viewMode = ref<ViewMode>(window.innerWidth <= 768 ? 'list' : 'rings')
+
+function setViewMode(mode: ViewMode) {
+  viewMode.value = mode
+}
 
 function getHeroScale() {
   return window.innerWidth <= 768 ? 1.05 : HERO_SCALE
@@ -100,6 +111,12 @@ function handleNodeClick(id: string) {
   showDetail.value = true
 }
 
+function handleListViewSelect(id: string) {
+  selectExperience(id)
+  expandOrigin.value = { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+  showDetail.value = true
+}
+
 function handleCloseDetail() {
   showDetail.value = false
 }
@@ -149,74 +166,109 @@ function handleScrollToGrowth() {
 
 <template>
   <div class="growth-timeline-page">
-    <ProgressDots :experiences="experiences" />
+    <!-- 视图切换：年轮（现有） / 列表 -->
+    <div class="view-switcher" role="tablist" aria-label="成长时间轴视图切换">
+      <button
+        type="button"
+        class="view-switcher__btn"
+        :class="{ 'is-active': viewMode === 'rings' }"
+        role="tab"
+        :aria-selected="viewMode === 'rings'"
+        @click="setViewMode('rings')"
+      >
+        年轮
+      </button>
+      <button
+        type="button"
+        class="view-switcher__btn"
+        :class="{ 'is-active': viewMode === 'list' }"
+        role="tab"
+        :aria-selected="viewMode === 'list'"
+        @click="setViewMode('list')"
+      >
+        列表
+      </button>
+    </div>
 
-    <HeroRings
-      :experiences="experiences"
-      :selected-id="selectedId"
-      :paused="orbitPaused"
-      :reverse-trigger="reverseTrigger"
-      @select="handleElectronSelect"
-      @reverse-complete="handleReverseComplete"
-      @add="openForm"
-      @scroll-to-growth="handleScrollToGrowth"
-    />
+    <template v-if="viewMode === 'rings'">
+      <ProgressDots :experiences="experiences" />
 
-    <section id="growth" class="timeline-section">
-      <div class="section-break">
-        <div class="sb-line" />
-        <div class="sb-icon">
-          <svg viewBox="0 0 24 24">
-            <path
-              d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.61 2,11.61C5.5,8.5 10.5,7 17,8Z"
-            />
-          </svg>
-        </div>
-        <div class="sb-line" />
-      </div>
+      <HeroRings
+        :experiences="experiences"
+        :selected-id="selectedId"
+        :paused="orbitPaused"
+        :reverse-trigger="reverseTrigger"
+        @select="handleElectronSelect"
+        @reverse-complete="handleReverseComplete"
+        @add="openForm"
+        @scroll-to-growth="handleScrollToGrowth"
+      />
 
-      <div class="timeline-wrap">
-        <div class="vine-spine" />
-
-        <div class="timeline-intro">
-          <p>每一圈年轮，都有一段故事</p>
-          <div class="timeline-sync">
-            <button
-              type="button"
-              class="sync-btn"
-              :disabled="isSyncing"
-              @click.stop="syncFromSources"
-            >
-              <RefreshCw :size="14" :class="{ spinning: isSyncing }" />
-              <span>{{ isSyncing ? '同步中…' : '同步其他模块经历' }}</span>
-            </button>
-            <label class="sync-auto">
-              <input
-                type="checkbox"
-                :checked="autoSync"
-                @change="setAutoSync(($event.target as HTMLInputElement).checked)"
+      <section id="growth" class="timeline-section">
+        <div class="section-break">
+          <div class="sb-line" />
+          <div class="sb-icon">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.61 2,11.61C5.5,8.5 10.5,7 17,8Z"
               />
-              <span>自动同步</span>
-            </label>
+            </svg>
           </div>
+          <div class="sb-line" />
         </div>
 
-        <TimelineNode
-          v-for="(exp, index) in experiences"
-          :key="exp.id"
-          :experience="exp"
-          :index="index"
-          :is-odd="index % 2 === 0"
-          :is-selected="selectedId === exp.id"
-          @click="handleNodeClick"
-          @delete="handleDeleteExperience"
-        />
-      </div>
-    </section>
+        <div class="timeline-wrap">
+          <div class="vine-spine" />
 
-    <GrowthQuote />
-    <SummarySection :experiences="experiences" />
-    <GrowthFooter />
+          <div class="timeline-intro">
+            <p>每一圈年轮，都有一段故事</p>
+            <div class="timeline-sync">
+              <button
+                type="button"
+                class="sync-btn"
+                :disabled="isSyncing"
+                @click.stop="syncFromSources"
+              >
+                <RefreshCw :size="14" :class="{ spinning: isSyncing }" />
+                <span>{{ isSyncing ? '同步中…' : '同步其他模块经历' }}</span>
+              </button>
+              <label class="sync-auto">
+                <input
+                  type="checkbox"
+                  :checked="autoSync"
+                  @change="setAutoSync(($event.target as HTMLInputElement).checked)"
+                />
+                <span>自动同步</span>
+              </label>
+            </div>
+          </div>
+
+          <TimelineNode
+            v-for="(exp, index) in experiences"
+            :key="exp.id"
+            :experience="exp"
+            :index="index"
+            :is-odd="index % 2 === 0"
+            :is-selected="selectedId === exp.id"
+            @click="handleNodeClick"
+            @delete="handleDeleteExperience"
+          />
+        </div>
+      </section>
+
+      <GrowthQuote />
+      <SummarySection :experiences="experiences" />
+      <GrowthFooter />
+    </template>
+
+    <template v-else>
+      <TimelineListView
+        :experiences="experiences"
+        :selected-id="selectedId"
+        @select="handleListViewSelect"
+        @add="openForm"
+      />
+    </template>
 
     <ExperienceForm v-model:visible="formVisible" @submit="addExperience" />
     <ExperienceDetail
@@ -259,6 +311,47 @@ function handleScrollToGrowth() {
 .growth-timeline-page :deep(textarea),
 .growth-timeline-page :deep(.el-input__inner) {
   user-select: auto;
+}
+
+.view-switcher {
+  position: fixed;
+  top: calc(#{$header-height} + 16px);
+  right: 24px;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 100px;
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
+  background: rgba(var(--gt-card-rgb, 255 252 247), 0.8);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(var(--gt-shadow-rgb, 26 18 10), 0.08);
+}
+
+.view-switcher__btn {
+  padding: 7px 18px;
+  border: none;
+  border-radius: 100px;
+  background: transparent;
+  color: var(--text-mid, #6b5443);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.view-switcher__btn.is-active {
+  background: var(--gt-accent, #8b6340);
+  color: #fff;
+}
+
+[data-theme='dark'] .view-switcher {
+  background: rgba(var(--gt-card-rgb, 30 28 26), 0.85);
+  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.2);
 }
 
 .timeline-section {

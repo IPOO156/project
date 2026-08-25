@@ -6,6 +6,10 @@ export interface GrowthExperience {
   description: string
   tags: string[]
   skills: { name: string; growth: number }[]
+  /** 后端事件对应的档案记录 ID（sourceId），本地新增经历无此字段 */
+  recordId?: string
+  /** 审核状态文案（由后端返回，有则展示、无则不展示，不硬编码字典） */
+  statusLabel?: string
 }
 
 export interface SemesterRing {
@@ -114,4 +118,18 @@ export function getSemesterDisplayLabel(semester: string): string {
 
 export function getSemesterLabel(semester: string): string {
   return findRingBySemester(semester)?.label ?? semester
+}
+
+/** 成长时间轴事件类型标签（对齐学生端接口文档 §10.7，4/5/6 不再折叠为「其他」） */
+export const TIMELINE_EVENT_TYPE_LABELS: Record<number, string> = {
+  1: '奖项',
+  2: '成绩',
+  3: '实践',
+  4: '职业规划',
+  5: '短板改进',
+  6: '能力提升',
+}
+
+export function mapTimelineEventType(type: number | undefined): string {
+  return TIMELINE_EVENT_TYPE_LABELS[type ?? 0] ?? '其他'
 }

@@ -62,6 +62,8 @@ async function handleCopy() {
         <p v-else class="mb__text">{{ message.content }}</p>
       </div>
 
+      <div v-if="isAi" class="mb__disclaimer">AI 生成内容仅供参考</div>
+
       <div class="mb__footer">
         <span class="mb__time">{{ message.time }}</span>
 
@@ -157,6 +159,22 @@ async function handleCopy() {
   &__text {
     margin: 0;
     line-height: 1.7;
+  }
+
+  &__disclaimer {
+    font-size: $font-size-xs;
+    color: var(--el-text-color-placeholder);
+    line-height: 1.4;
+  }
+
+  &__offline {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 0 6px;
+    border-radius: 100px;
+    background: color-mix(in srgb, var(--mc-accent) 14%, transparent);
+    color: var(--mc-accent);
+    font-weight: 600;
   }
 
   &__footer {

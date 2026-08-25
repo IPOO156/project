@@ -4,7 +4,6 @@ import { ref } from 'vue'
 import {
   activityCategoryOf,
   getSubmissionRecords,
-  pushNotification,
   withdrawSubmission,
 } from '@/shared/api/submission'
 
@@ -27,11 +26,6 @@ export const useSubmissionStore = defineStore('submission', () => {
     const rec = getRecordById(id)
     await withdrawSubmission(id, rec ? activityCategoryOf(rec.type) : 'archive')
     updateLocalStatus(id, 'withdrawn')
-    await pushNotification({
-      title: '申报已撤销',
-      content: '您的申报已成功撤销。',
-      category: 'audit_remind',
-    })
   }
 
   function updateLocalStatus(id: string, newStatus: string) {

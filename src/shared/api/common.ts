@@ -1,3 +1,4 @@
+import type { AxiosProgressEvent } from 'axios'
 import request from './request'
 
 /* ===================== 文件通用接口 ===================== */
@@ -16,6 +17,8 @@ export function uploadFile(payload: {
   file: File
   type?: string
   module?: string
+  /** 上传进度回调（透传至 axios onUploadProgress，现有调用不受影响） */
+  onUploadProgress?: (event: AxiosProgressEvent) => void
 }): Promise<UploadResult> {
   const formData = new FormData()
   formData.append('file', payload.file)
@@ -23,6 +26,7 @@ export function uploadFile(payload: {
   formData.append('module', payload.module ?? 'archive')
   return request.post('/common/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
+    onUploadProgress: payload.onUploadProgress,
   })
 }
 

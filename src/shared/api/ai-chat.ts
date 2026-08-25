@@ -86,8 +86,8 @@ function simulateAIReply(userText: string): Promise<{ plain: string; rich: RichC
 
         if (analysis) {
           careerPlanStore.setAIAnalysis(analysis)
-          const { greeting, blocks } = analysisToRichBlocks(analysis)
-          const rich: RichContent = { greeting, blocks }
+          const { greeting, blocks, materials } = analysisToRichBlocks(analysis)
+          const rich: RichContent = { greeting, blocks, materials }
           resolve({ plain: richToPlain(rich), rich })
           return
         }
@@ -105,8 +105,8 @@ function simulateAIReply(userText: string): Promise<{ plain: string; rich: RichC
               )
               if (retry) {
                 careerPlanStore.setAIAnalysis(retry)
-                const { greeting, blocks } = analysisToRichBlocks(retry)
-                const rich: RichContent = { greeting, blocks }
+                const { greeting, blocks, materials } = analysisToRichBlocks(retry)
+                const rich: RichContent = { greeting, blocks, materials }
                 resolve({ plain: richToPlain(rich), rich })
               } else {
                 const plain = richToPlain(entry.rich)
@@ -211,7 +211,7 @@ export function deleteConversation(id: string): Promise<void> {
   })
 }
 
-/** 提交消息反馈 */
+/** 提交消息反馈（后端暂无反馈端点，保留本地行为，待后端反馈接口） */
 export function submitFeedback(
   messageId: string,
   feedback: 'useful' | 'useless',

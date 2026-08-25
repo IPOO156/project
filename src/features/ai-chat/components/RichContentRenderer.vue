@@ -43,6 +43,11 @@ function cardSegments(block: CardBlock) {
       {{ props.content.greeting }}
     </div>
 
+    <div v-if="props.content.materials?.length" class="rc__materials">
+      <span class="rc__materials-label">依据材料</span>
+      <span v-for="(m, i) in props.content.materials" :key="i" class="rc__chip">{{ m }}</span>
+    </div>
+
     <template v-for="(block, i) in props.content.blocks" :key="i">
       <!-- 段落 -->
       <p v-if="block.type === 'paragraph'" class="rc__p">
@@ -100,6 +105,28 @@ function cardSegments(block: CardBlock) {
     font-weight: 600;
     color: var(--mc-primary);
     margin-bottom: $spacing-xs;
+  }
+
+  &__materials {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $spacing-xs;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__materials-label {
+    font-size: $font-size-xs;
+    color: var(--el-text-color-secondary);
+  }
+
+  &__chip {
+    padding: 2px 8px;
+    border-radius: $radius-lg;
+    font-size: $font-size-xs;
+    color: var(--mc-primary);
+    background: color-mix(in srgb, var(--mc-primary) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--mc-primary) 24%, transparent);
   }
 
   &__p {

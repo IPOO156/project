@@ -4,18 +4,19 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import {
   addAward as apiAddAward,
-  addInterest as apiAddInterest,
   deleteAward as apiDeleteAward,
-  deleteInterest as apiDeleteInterest,
   updateAward as apiUpdateAward,
-  updateInterest as apiUpdateInterest,
   getAwards,
   getDimensions,
   getGrades,
-  getInterests,
   getTimelineEvents,
 } from '@/shared/api/archive'
-import { getGrowthTimeline, getProfileInfo } from '@/shared/api/student'
+import {
+  deleteInterest as apiDeleteInterest,
+  updateInterests as apiUpdateInterests,
+  getGrowthTimeline,
+  getProfileInfo,
+} from '@/shared/api/student'
 
 /**
  * 档案信息流转 Store
@@ -56,10 +57,11 @@ export const useArchiveStore = defineStore('archive', () => {
     // 兴趣标签
     if (Array.isArray(profile.interests)) {
       interests.value = profile.interests.map((i: any) => ({
-        id: String(i.id),
-        category: i.tagName,
-        content: i.detailContent || '',
-        level: String(i.proficiencyLevel),
+        id: i.id,
+        tagName: i.tagName,
+        proficiencyLevel: i.proficiencyLevel,
+        detailContent: i.detailContent || '',
+        isDetail: i.isDetail,
       }))
     }
     // 学期成绩 → Grade
@@ -130,15 +132,14 @@ export const useArchiveStore = defineStore('archive', () => {
     return map[type ?? 0] || 'other'
   }
 
+  // 兴趣标签已切到后端真实接口（/profile/info + PUT/DELETE /profile/interests），无独立 Mock 回填
   async function fetchArchiveMock() {
     try {
-      const [interestData, gradeData, awardData, dimensionData] = await Promise.all([
-        getInterests(),
+      const [gradeData, awardData, dimensionData] = await Promise.all([
         getGrades(),
         getAwards(),
         getDimensions(),
       ])
-      interests.value = interestData
       grades.value = gradeData
       awards.value = awardData
       dimensions.value = dimensionData
@@ -174,21 +175,69 @@ export const useArchiveStore = defineStore('archive', () => {
     if (newEvents.length > 0) timelineEvents.value = [...newEvents, ...timelineEvents.value]
   }
 
-  // ── 兴趣 CRUD ──
+  // ── 兴趣 CRUD（PUT /profile/interests 整组提交 + DELETE /profile/interests/{id}）──
+  interface InterestUpsert {
+    id?: number
+    tagName: string
+    proficiencyLevel: number
+    detailContent: string
+    isDetail: number
+  }
+
+  function toInterestUpsert(i: Interest): InterestUpsert {
+    return {
+      id: i.id,
+      tagName: i.tagName,
+      proficiencyLevel: i.proficiencyLevel,
+      detailContent: i.detailContent,
+      isDetail: i.isDetail ?? 1,
+    }
+  }
+
+  /** 写入成功后回读 /profile/info，保证 id、isDetail 等字段与后端一致 */
+  async function refreshInterests(): Promise<void> {
+    const profile = await getProfileInfo()
+    if (Array.isArray(profile.interests)) {
+      interests.value = profile.interests.map((i: any) => ({
+        id: i.id,
+        tagName: i.tagName,
+        proficiencyLevel: i.proficiencyLevel,
+        detailContent: i.detailContent || '',
+        isDetail: i.isDetail,
+      }))
+    }
+  }
+
   async function createInterest(data: Omit<Interest, 'id'>): Promise<void> {
-    const item = await apiAddInterest(data)
-    interests.value.push(item)
+    const payload: InterestUpsert[] = interests.value.map(toInterestUpsert)
+    payload.push({
+      tagName: data.tagName,
+      proficiencyLevel: data.proficiencyLevel,
+      detailContent: data.detailContent,
+      isDetail: data.isDetail ?? 1,
+    })
+    await apiUpdateInterests({ interests: payload })
+    await refreshInterests()
     ElMessage.success('兴趣已添加')
   }
 
-  async function editInterest(id: string, data: Partial<Interest>): Promise<void> {
-    const item = await apiUpdateInterest(id, data)
-    const idx = interests.value.findIndex((i) => i.id === id)
-    if (idx >= 0) interests.value[idx] = { ...interests.value[idx], ...item }
+  async function editInterest(id: number, data: Omit<Interest, 'id'>): Promise<void> {
+    const payload: InterestUpsert[] = interests.value.map((i) => {
+      const upsert = toInterestUpsert(i)
+      if (i.id !== id) return upsert
+      return {
+        ...upsert,
+        tagName: data.tagName,
+        proficiencyLevel: data.proficiencyLevel,
+        detailContent: data.detailContent,
+      }
+    })
+    await apiUpdateInterests({ interests: payload })
+    await refreshInterests()
     ElMessage.success('兴趣已更新')
   }
 
-  async function removeInterest(id: string): Promise<void> {
+  async function removeInterest(id: number): Promise<void> {
     await apiDeleteInterest(id)
     interests.value = interests.value.filter((i) => i.id !== id)
     ElMessage.success('兴趣已删除')

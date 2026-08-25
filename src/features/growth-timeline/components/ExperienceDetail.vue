@@ -113,6 +113,9 @@ function handleBackdropClick(event: MouseEvent) {
     <div v-if="experience" class="detail-content">
       <div class="detail-header">
         <span class="detail-semester">{{ semesterLabel }}</span>
+        <span v-if="experience.statusLabel" class="detail-status">{{
+          experience.statusLabel
+        }}</span>
         <span class="detail-date">{{ experience.date }}</span>
       </div>
 
@@ -227,6 +230,17 @@ function handleBackdropClick(event: MouseEvent) {
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
   padding: 6px 14px;
   border-radius: 100px;
+}
+
+.detail-status {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  color: #3a7a4f;
+  border: 1px solid rgba(58, 122, 79, 0.35);
+  padding: 6px 14px;
+  border-radius: 100px;
+  background: rgba(58, 122, 79, 0.08);
 }
 
 .detail-date {

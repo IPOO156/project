@@ -107,12 +107,13 @@ export interface UserInfo {
   loginType?: 'student' | 'teacher'
 }
 
-// 个人兴趣
+// 个人兴趣（字段对齐 PUT /profile/interests 与 GET /profile/info.interests）
 export interface Interest {
-  id: string
-  category: string
-  content: string
-  level: string
+  id: number
+  tagName: string
+  proficiencyLevel: number
+  detailContent: string
+  isDetail?: number
 }
 
 // 多维度画像（后端返回 current/target/previous，color 由前端按主题派生）
@@ -382,7 +383,11 @@ export interface CareerPlanRecord {
   semester: string
   title: string
   submitDate: string
-  status: 'draft' | 'submitted'
+  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'withdrawn'
+  /** 完成进度（后端 progressRate，0-100），后端未返回时无此字段 */
+  progressRate?: number
+  /** 后端返回的状态文案（statusLabel） */
+  statusLabel?: string
 }
 
 // AI 职业规划短板分析结果（AI 助手生成 → 写入 store → 职业规划页渲染）
@@ -408,6 +413,8 @@ export interface CareerAnalysis {
   summary: string
   /** 短板列表（按差距降序） */
   weaknesses: WeaknessItem[]
+  /** 本次分析引用的档案材料（如"多维度画像（5 项）"） */
+  materials?: string[]
   /** 生成时间 */
   generatedAt: string
 }

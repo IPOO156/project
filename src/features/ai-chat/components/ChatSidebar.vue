@@ -12,7 +12,7 @@ import { MessageSquare, Plus, Settings, Sparkles, Trash2 } from 'lucide-vue-next
 
 const props = defineProps<{
   conversations: Conversation[]
-  currentId: string | null
+  currentId: number | null
   userName: string
   userAvatar?: string
   userRole?: string
@@ -20,14 +20,25 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   newchat: []
-  switch: [id: string]
-  delete: [id: string]
+  switch: [id: number]
+  delete: [id: number]
   opensettings: []
 }>()
 
-function handleDelete(e: MouseEvent, id: string) {
+function handleDelete(e: MouseEvent, id: number) {
   e.stopPropagation()
   emit('delete', id)
+}
+
+/** 会话时间展示：优先最近消息时间，回退创建时间 */
+function formatConvTime(conv: Conversation): string {
+  const raw = conv.lastMessageTime || conv.createdAt
+  if (!raw) return ''
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return ''
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${d.getMonth() + 1}/${d.getDate()} ${hh}:${mm}`
 }
 </script>
 
@@ -69,7 +80,7 @@ function handleDelete(e: MouseEvent, id: string) {
           @click="emit('switch', conv.id)"
         >
           <span class="cs__item-title">{{ conv.title }}</span>
-          <span class="cs__item-time">{{ conv.createTime }}</span>
+          <span class="cs__item-time">{{ formatConvTime(conv) }}</span>
           <button class="cs__item-del" title="删除" @click="handleDelete($event, conv.id)">
             <Trash2 :size="13" />
           </button>
