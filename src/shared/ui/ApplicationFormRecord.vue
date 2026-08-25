@@ -1,8 +1,9 @@
 <script setup lang="ts" generic="T">
 import type { ApplicationType } from '@/shared/types/types'
-import { ref } from 'vue'
-import { getApplicationVersions } from '@/shared/api/applications'
-import { getAwardVersions } from '@/shared/api/awards'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { h, ref } from 'vue'
+import { getApplicationGuide, getApplicationVersions } from '@/shared/api/applications'
+import { getAwardGuide, getAwardVersions } from '@/shared/api/awards'
 import { activityCategoryOf } from '@/shared/api/submission'
 import { useDict } from '@/shared/composables/composables'
 import { APPLICATION_STATUS } from '@/shared/constants/dict'
@@ -116,6 +117,128 @@ async function openVersions(row: any) {
     versionsLoading.value = false
   }
 }
+
+/* ===================== 评选说明 ===================== */
+
+/** 档案类前端类型 → 评选说明接口类型（GET /applications/{type}/guide） */
+const ARCHIVE_GUIDE_TYPES: Record<string, string> = {
+  competition: 'competition',
+  scholarship: 'scholarship',
+  innovation: 'innovation',
+  research: 'research',
+  certificate: 'certificate',
+  internship: 'internship',
+  organization: 'organization',
+  training: 'training',
+  socialPractice: 'practice',
+  bookReport: 'book-review',
+}
+
+/** 奖项类前端类型 → 评选说明接口类型（GET /awards/{type}/guide） */
+const AWARD_GUIDE_TYPES: Record<string, string> = {
+  competitionStar: 'competition_star',
+  innovationStar: 'innovation_star',
+  scientificProject: 'research_star',
+  softwareCopyright: 'research_star',
+  paper: 'research_star',
+}
+
+interface GuideData {
+  type: string
+  typeLabel: string
+  title: string
+  content: string
+  requirements: Array<{ field: string; label: string; required: boolean; description: string }>
+  notes: string[]
+  updatedAt: string
+}
+
+/** 前端类型 → 评选说明接口真实类型（按 archive/award 区分），未知类型返回 null */
+function resolveGuideType(rowType: any): { category: 'archive' | 'award'; type: string } | null {
+  // activityCategoryOf 返回 ActivityType（含 career_plan），本组件仅申报/奖项记录，非 award 一律归 archive
+  const category: 'archive' | 'award' =
+    activityCategoryOf(rowType as ApplicationType) === 'award' ? 'award' : 'archive'
+  const type = (category === 'award' ? AWARD_GUIDE_TYPES : ARCHIVE_GUIDE_TYPES)[rowType]
+  return type ? { category, type } : null
+}
+
+function canViewGuide(row: any): boolean {
+  return resolveGuideType(row?.type) !== null
+}
+
+function formatUpdatedAt(value?: string): string {
+  if (!value) return ''
+  return value.length >= 10 ? value.slice(0, 10) : value
+}
+
+/** 用 h() 渲染评选说明 VNode（message 渲染于 message box 内，样式见文末非 scoped 样式块） */
+function buildGuideVNode(data: GuideData) {
+  return h('div', { class: 'message-guide' }, [
+    h('div', { class: 'message-guide__title' }, [
+      data.title || data.typeLabel || '评选说明',
+      data.typeLabel ? h('span', { class: 'message-guide__type' }, data.typeLabel) : null,
+    ]),
+    data.content ? h('p', { class: 'message-guide__content' }, data.content) : null,
+    data.requirements?.length
+      ? h('div', { class: 'message-guide__section' }, [
+          h('div', { class: 'message-guide__section-title' }, '申报要求'),
+          h('table', { class: 'message-guide__table' }, [
+            h('thead', null, [
+              h('tr', null, [
+                h('th', null, '材料项'),
+                h('th', null, '填写说明'),
+                h('th', { class: 'message-guide__center' }, '是否必填'),
+              ]),
+            ]),
+            h(
+              'tbody',
+              null,
+              data.requirements.map((r) =>
+                h('tr', { key: r.field }, [
+                  h('td', null, r.label || r.field),
+                  h('td', null, r.description || ''),
+                  h('td', { class: 'message-guide__center' }, r.required ? '必填' : '选填'),
+                ]),
+              ),
+            ),
+          ]),
+        ])
+      : null,
+    data.notes?.length
+      ? h('div', { class: 'message-guide__section' }, [
+          h('div', { class: 'message-guide__section-title' }, '注意事项'),
+          h(
+            'ul',
+            { class: 'message-guide__notes' },
+            data.notes.map((n) => h('li', { key: n }, n)),
+          ),
+        ])
+      : null,
+    data.updatedAt
+      ? h(
+          'div',
+          { class: 'message-guide__updated' },
+          `更新时间：${formatUpdatedAt(data.updatedAt)}`,
+        )
+      : null,
+  ])
+}
+
+async function openGuide(row: any) {
+  const target = resolveGuideType(row?.type)
+  if (!target) return
+  try {
+    const data =
+      target.category === 'award'
+        ? await getAwardGuide(target.type)
+        : await getApplicationGuide(target.type)
+    ElMessageBox.alert(buildGuideVNode(data), '评选说明', {
+      confirmButtonText: '知道了',
+    }).catch(() => {})
+  } catch {
+    ElMessage.error('评选说明加载失败，请稍后重试')
+  }
+}
 </script>
 
 <template>
@@ -224,7 +347,7 @@ async function openVersions(row: any) {
           ><template #default="{ row }"
             ><StatusTag :status="getRecordStatus(row)" size="small" /></template
         ></el-table-column>
-        <el-table-column label="操作" width="320" fixed="right" align="center">
+        <el-table-column label="操作" width="360" fixed="right" align="center">
           <template #default="{ row }">
             <el-button size="small" type="primary" link @click="emit('view', row as T)"
               >查看</el-button
@@ -276,6 +399,14 @@ async function openVersions(row: any) {
               link
               @click="openVersions(row as T)"
               >版本</el-button
+            >
+            <el-button
+              v-if="canViewGuide(row)"
+              size="small"
+              type="info"
+              link
+              @click="openGuide(row as T)"
+              >评选说明</el-button
             >
           </template>
         </el-table-column>
@@ -361,6 +492,92 @@ async function openVersions(row: any) {
   .form-card :deep(.el-form) .el-date-editor,
   .form-card :deep(.el-form) .el-textarea {
     width: 100%;
+  }
+}
+</style>
+
+<style lang="scss">
+/* 评选说明弹窗：VNode 由 h() 生成并渲染于 body（message box 内），scoped 样式不会命中，故用非 scoped 且加前缀隔离 */
+.message-guide {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--el-text-color-primary);
+  text-align: left;
+
+  &__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    margin-bottom: 8px;
+  }
+
+  &__type {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 20px;
+    padding: 0 8px;
+    border-radius: 4px;
+    color: var(--el-color-primary);
+    background: var(--el-color-primary-light-9);
+  }
+
+  &__content {
+    margin: 0 0 12px;
+    color: var(--el-text-color-regular);
+  }
+
+  &__section {
+    margin-top: 10px;
+  }
+
+  &__section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    margin-bottom: 6px;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: 6px 8px;
+      border: 1px solid var(--el-border-color-lighter);
+      font-size: 12px;
+      text-align: left;
+    }
+
+    th {
+      font-weight: 600;
+      background: var(--el-fill-color-light);
+    }
+  }
+
+  &__center {
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  &__notes {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--el-text-color-regular);
+
+    li {
+      margin: 2px 0;
+    }
+  }
+
+  &__updated {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+    text-align: right;
   }
 }
 </style>

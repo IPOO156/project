@@ -21,6 +21,8 @@ export function useScoreIndicator() {
   const indicatorVisible = ref(false)
   const indicatorLoading = ref(false)
   const indicatorTitle = ref('')
+  // 本次画像分数计算的计算说明 ID（GET /profile/scores 响应中的 calculationId）
+  const indicatorCalculationId = ref<number | null>(null)
 
   /** 打开评分指标弹窗（对接 GET /profile/scores，4.1.2） */
   async function openIndicator(_type: string, title: string) {
@@ -29,6 +31,7 @@ export function useScoreIndicator() {
     indicatorVisible.value = true
     try {
       const data = await getProfileScores()
+      indicatorCalculationId.value = data?.calculationId ?? null
       indicators.value = (data?.list ?? []).map((d: any) => ({
         label: d.dimensionName,
         score: d.score,
@@ -38,6 +41,7 @@ export function useScoreIndicator() {
       }))
     } catch {
       indicators.value = []
+      indicatorCalculationId.value = null
     } finally {
       indicatorLoading.value = false
     }
@@ -48,6 +52,7 @@ export function useScoreIndicator() {
     indicatorVisible.value = false
     indicators.value = []
     indicatorTitle.value = ''
+    indicatorCalculationId.value = null
   }
 
   return {
@@ -55,6 +60,7 @@ export function useScoreIndicator() {
     indicatorVisible,
     indicatorLoading,
     indicatorTitle,
+    indicatorCalculationId,
     openIndicator,
     closeIndicator,
   }
