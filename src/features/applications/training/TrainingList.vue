@@ -5,7 +5,6 @@ import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
-import DuplicateCheckDialog from '@/shared/ui/DuplicateCheckDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
@@ -59,6 +58,7 @@ onMounted(() => {
     :submitting="page.submitting"
     :is-editing="page.isEditing"
     :status="page.currentStatus"
+    :rejection-reason="page.rejectionReason"
     :enrollment-info="page.enrollmentInfo"
     :show-extended-fields="true"
     :extended-form="page.extendedForm"
@@ -117,17 +117,6 @@ onMounted(() => {
     </template>
   </ApplicationFormRecord>
 
-  <DuplicateCheckDialog
-    :visible="page.duplicateVisible"
-    :duplicates="page.duplicateItems"
-    @confirm="page.confirmDuplicateSubmit"
-    @cancel="page.cancelDuplicateSubmit"
-    @update:visible="
-      (v) => {
-        if (!v) page.cancelDuplicateSubmit()
-      }
-    "
-  />
   <CorrectionDialog
     :visible="page.correctionVisible"
     :submitting="page.correctionSubmitting"
