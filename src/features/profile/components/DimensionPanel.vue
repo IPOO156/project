@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { TrendingUp } from 'lucide-vue-next'
 import { computed } from 'vue'
+import { useScoreIndicator } from '@/shared/composables/useScoreIndicator'
+import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 const props = defineProps<{
   dimensions: Array<{
@@ -15,6 +17,20 @@ const avgScore = computed(() => {
   const total = props.dimensions.reduce((s, d) => s + d.score, 0)
   return Math.round(total / props.dimensions.length)
 })
+
+const {
+  indicators,
+  indicatorVisible,
+  indicatorLoading,
+  indicatorTitle,
+  indicatorCalculationId,
+  openIndicator,
+  closeIndicator,
+} = useScoreIndicator()
+
+function openCalcDetail(label: string) {
+  openIndicator(label, `${label} · 计算说明`)
+}
 </script>
 
 <template>
@@ -32,7 +48,14 @@ const avgScore = computed(() => {
       <div v-for="dim in dimensions" :key="dim.label" class="dimension-item">
         <div class="dimension-item__head">
           <span class="dimension-item__label">{{ dim.label }}</span>
-          <span class="dimension-item__score" :style="{ color: dim.color }">{{ dim.score }}分</span>
+          <div class="dimension-item__aside">
+            <span class="dimension-item__score" :style="{ color: dim.color }"
+              >{{ dim.score }}分</span
+            >
+            <el-button link type="primary" size="small" @click="openCalcDetail(dim.label)">
+              查看计算说明
+            </el-button>
+          </div>
         </div>
         <el-progress
           :percentage="dim.score"
@@ -43,6 +66,15 @@ const avgScore = computed(() => {
         />
       </div>
     </div>
+
+    <ScoreIndicatorDialog
+      :visible="indicatorVisible"
+      :title="indicatorTitle"
+      :indicators="indicators"
+      :loading="indicatorLoading"
+      :calculation-id="indicatorCalculationId"
+      @close="closeIndicator"
+    />
   </el-card>
 </template>
 
@@ -91,6 +123,12 @@ const avgScore = computed(() => {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 4px;
+  }
+
+  &__aside {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   &__label {

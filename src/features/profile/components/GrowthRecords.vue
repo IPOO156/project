@@ -86,6 +86,7 @@ onBeforeUnmount(() => {
       <div class="growth-item__dot" :style="{ background: typeColors[evt.type] || '#94a3b8' }" />
       <div class="growth-item__body">
         <div class="growth-item__header">
+          <!-- TODO(待后端)：成长记录审核状态字段未定义，待后端补充 status 后在此渲染 <StatusTag :status="evt.status" /> -->
           <span class="growth-item__type" :style="{ color: typeColors[evt.type] || '#94a3b8' }">
             {{ typeLabels[evt.type] || evt.type }}
           </span>

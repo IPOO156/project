@@ -19,6 +19,7 @@ import {
 import ExportTemplateDetailDrawer from './components/ExportTemplateDetailDrawer.vue'
 
 const loading = ref(false)
+const saving = ref(false)
 const list = ref<ExportTemplateItem[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -94,6 +95,8 @@ async function handleSave() {
     ElMessage.warning('请填写模板名称和编码')
     return
   }
+  if (saving.value) return
+  saving.value = true
   try {
     if (isEdit.value && editingId.value != null) {
       await updateExportTemplate(editingId.value, {
@@ -121,6 +124,8 @@ async function handleSave() {
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    saving.value = false
   }
 }
 
@@ -329,7 +334,7 @@ onMounted(() => void load())
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
       </template>
     </el-dialog>
 

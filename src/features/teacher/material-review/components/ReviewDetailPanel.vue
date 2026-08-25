@@ -37,6 +37,11 @@ function isImage(name: string) {
   return /\.(?:jpg|jpeg|png|gif|webp)$/i.test(name)
 }
 
+function recordTitle(record: any): string {
+  if (!record) return '审核详情'
+  return `${record.title || record.name} - ${record.typeLabel ?? record.type}`
+}
+
 function getFieldLabel(key: string): string {
   const labels: Record<string, string> = {
     competitionName: '竞赛名称',
@@ -97,7 +102,7 @@ function getFieldLabel(key: string): string {
 <template>
   <el-dialog
     :model-value="visible"
-    :title="record ? `${record.name} - ${record.typeLabel ?? record.type}` : '审核详情'"
+    :title="recordTitle(record)"
     width="700px"
     top="5vh"
     :close-on-click-modal="false"
@@ -109,11 +114,23 @@ function getFieldLabel(key: string): string {
         <div class="review-panel__form">
           <div class="review-panel__section-title">申报信息</div>
           <el-descriptions :column="2" border size="small">
-            <el-descriptions-item label="姓名">{{ record.name }}</el-descriptions-item>
-            <el-descriptions-item label="学号">{{ record.studentId }}</el-descriptions-item>
-            <el-descriptions-item label="班级">{{ record.className }}</el-descriptions-item>
+            <el-descriptions-item label="标题">{{
+              record.title || record.name
+            }}</el-descriptions-item>
             <el-descriptions-item label="申报类型">{{
               record.typeLabel ?? record.type
+            }}</el-descriptions-item>
+            <el-descriptions-item v-if="record.name" label="姓名">{{
+              record.name
+            }}</el-descriptions-item>
+            <el-descriptions-item v-if="record.studentId" label="学号">{{
+              record.studentId
+            }}</el-descriptions-item>
+            <el-descriptions-item v-if="record.className" label="班级">{{
+              record.className
+            }}</el-descriptions-item>
+            <el-descriptions-item v-if="record.semester" label="学期">{{
+              record.semester
             }}</el-descriptions-item>
             <el-descriptions-item label="提交时间">{{ record.submitDate }}</el-descriptions-item>
           </el-descriptions>

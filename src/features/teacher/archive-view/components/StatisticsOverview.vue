@@ -65,6 +65,17 @@ const parentOrgText = computed(() =>
 )
 const hasRows = computed(() => statsRows.value.length > 0)
 
+/** 看板标题旁的统计对象/统计时间说明：契约无统计时间字段，按当前筛选动态标注 */
+const scopeText = computed(() => {
+  const parts: string[] = [dimension.value]
+  if (filters.semesterId != null) {
+    const semester = semesterOptions.value.find((s) => s.value === filters.semesterId)
+    if (semester) parts.push(semester.label)
+  }
+  if (filters.grade) parts.push(filters.grade)
+  return parts.filter(Boolean).join(' · ')
+})
+
 type SumKey = 'studentCount' | 'archiveCount' | 'awardCount' | 'practiceCount'
 type AvgKey = 'avgGpa' | 'avgScore'
 
@@ -164,6 +175,7 @@ onMounted(async () => {
       <div class="mc-card__head">
         <span class="mc-card__title">统计看板</span>
         <span class="statistics-overview__head-meta">
+          <span class="statistics-overview__scope">统计对象：{{ scopeText }}</span>
           <span v-if="parentOrgText" class="statistics-overview__parent">{{ parentOrgText }}</span>
           <el-tag v-if="cacheHit" type="success" size="small" effect="plain">缓存</el-tag>
           <el-button
@@ -340,6 +352,10 @@ onMounted(async () => {
     }
   }
   &__parent {
+    font-size: $font-size-sm;
+    color: var(--el-text-color-secondary);
+  }
+  &__scope {
     font-size: $font-size-sm;
     color: var(--el-text-color-secondary);
   }

@@ -34,10 +34,13 @@ const userStore = useUserStore()
 const {
   messages,
   loading,
+  error,
+  retry,
   sendMessage,
   clearMessages,
   conversations,
   currentConversationId,
+  loadConversations,
   createConversation,
   switchConversation,
   deleteConversation,
@@ -72,6 +75,11 @@ function handleQuickAsk(question: string) {
   quickVisible.value = false
 }
 
+/** AI 回复失败后重新生成 */
+function handleRetry() {
+  void retry()
+}
+
 /** 清空对话 → 弹确认 */
 function handleClear() {
   showClearModal.value = true
@@ -91,14 +99,14 @@ function handleNewChat() {
 }
 
 /** 切换历史对话 */
-function handleSwitch(id: string) {
-  switchConversation(id)
+function handleSwitch(id: number) {
+  void switchConversation(id)
   quickVisible.value = false
 }
 
 /** 删除历史对话 */
-function handleDelete(id: string) {
-  deleteConversation(id)
+function handleDelete(id: number) {
+  void deleteConversation(id)
 }
 
 /** 导出当前对话 */
@@ -137,7 +145,10 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', onKeydown)
+  loadConversations()
+})
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
@@ -167,11 +178,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       <ChatMessages
         :messages="messages"
         :loading="loading"
+        :error="error"
         :show-thinking="settings.thinking"
         :show-feedback="settings.feedback"
         :user-name="userName"
         @feedback="handleFeedback"
         @copy="handleCopy"
+        @retry="handleRetry"
       />
 
       <QuickQuestions

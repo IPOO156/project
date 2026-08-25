@@ -126,6 +126,8 @@ const mouseY = ref(0)
 const focusUsername = ref(false)
 const focusPassword = ref(false)
 const focusCaptcha = ref(false)
+const usernameInputRef = ref<{ input: HTMLInputElement } | null>(null)
+const passwordInputRef = ref<{ input: HTMLInputElement } | null>(null)
 const isEntered = ref(false)
 const showCard = ref(false)
 
@@ -277,6 +279,16 @@ async function handleConfirmReset() {
 
 onMounted(() => {
   nextTick(() => void loadBackendCaptcha())
+  // 浏览器自动填充（记住密码）会在 mounted 之后异步写入原生 input 的 value，
+  // 此时 Vue 的 v-model 未同步，导致 loginForm 为空但 DOM 已显示文字，
+  // 浮动标签 .has-value 判断失真，与实际填入内容重叠。
+  // 延迟读取原生 input DOM 值并回写 loginForm，保证状态一致。
+  setTimeout(() => {
+    const u = usernameInputRef.value?.input?.value
+    const p = passwordInputRef.value?.input?.value
+    if (u && !loginForm.username) loginForm.username = u
+    if (p && !loginForm.password) loginForm.password = p
+  }, 200)
   setTimeout(() => {
     isEntered.value = true
     showCard.value = true
@@ -360,6 +372,7 @@ onUnmounted(() => {
                     loginType === 'student' ? '学号 / 用户名' : '管理员账号'
                   }}</label>
                   <el-input
+                    ref="usernameInputRef"
                     v-model="loginForm.username"
                     placeholder=" "
                     :prefix-icon="User"
@@ -377,6 +390,7 @@ onUnmounted(() => {
                 >
                   <label class="login__floating-label">密码</label>
                   <el-input
+                    ref="passwordInputRef"
                     v-model="loginForm.password"
                     type="password"
                     placeholder=" "
@@ -780,30 +794,33 @@ onUnmounted(() => {
     padding: 0;
     font-weight: 500;
     letter-spacing: 0.01em;
+    opacity: 1;
     transition:
       all 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-      color 0.3s ease;
+      color 0.3s ease,
+      opacity 0.2s ease;
   }
-  .login__input-group.is-focus &__floating-label,
-  .login__input-group.has-value &__floating-label {
-    top: 0;
+  .login__input-group.is-focus &__floating-label {
+    top: -6px;
     left: 38px;
     font-size: 12px;
     color: var(--login-accent);
-    background: var(--login-panel-bg);
+    background: transparent;
     transform: translateY(-50%);
-    padding: 0 6px;
+    padding: 0;
+    opacity: 1;
   }
-  .login--dark .login__input-group.is-focus &__floating-label,
-  .login--dark .login__input-group.has-value &__floating-label {
+  .login__input-group.has-value:not(.is-focus) &__floating-label {
+    opacity: 0;
+  }
+  .login--dark .login__input-group.is-focus &__floating-label {
     color: #8bb8ff;
-    background: var(--login-panel-bg);
+    background: transparent;
     text-shadow: 0 0 20px rgba(139, 184, 255, 0.3);
   }
-  .login--light .login__input-group.is-focus &__floating-label,
-  .login--light .login__input-group.has-value &__floating-label {
+  .login--light .login__input-group.is-focus &__floating-label {
     color: #2563eb;
-    background: #ffffff;
+    background: transparent;
   }
 
   &__form {

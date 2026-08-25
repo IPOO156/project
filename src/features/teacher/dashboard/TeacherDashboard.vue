@@ -283,6 +283,9 @@ onMounted(() => {
     <el-card v-if="isAdmin" class="teacher-dashboard__section dash-overview">
       <template #header>
         <span class="section-title">学校档案数据概览</span>
+        <span v-if="dashboardData?.semesterName" class="dash-overview__scope">
+          统计时间：{{ dashboardData.semesterName }}
+        </span>
         <div class="dash-overview__tools">
           <el-select
             v-model="dashSemesterId"
@@ -544,6 +547,12 @@ onMounted(() => {
 }
 
 .dash-overview {
+  &__scope {
+    margin-left: $spacing-sm;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
+  }
+
   &__tools {
     display: inline-flex;
     align-items: center;

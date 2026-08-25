@@ -55,7 +55,7 @@ export function analyzeCareer(
     target: d.target,
     gap,
     weakness: describeWeakness(d, gap, awards, grades),
-    suggestion: suggestImprovement(d, awards, grades),
+    suggestion: suggestImprovement(awards, grades),
   }))
 
   const weakCount = weaknesses.length
@@ -65,15 +65,23 @@ export function analyzeCareer(
       ? `共分析 ${dimensions.length} 个维度，各维度均接近目标，整体发展均衡。建议持续保持并追求突破。`
       : `共分析 ${dimensions.length} 个维度，其中 ${weakCount} 个维度距目标差距较大（>10分）。已提交职业规划 ${plans.length} 份，建议优先突破「${topDim}」维度。`
 
+  // 本次分析实际引用的档案材料（供界面以"依据材料"chips 展示）
+  const materials: string[] = []
+  if (dimensions.length > 0) materials.push(`多维度画像（${dimensions.length} 项）`)
+  if (grades.length > 0) materials.push(`课程成绩（${grades.length} 门）`)
+  if (awards.length > 0) materials.push(`获奖记录（${awards.length} 项）`)
+  if (plans.length > 0) materials.push(`职业规划（${plans.length} 份）`)
+
   return {
     greeting: '职业规划短板分析 🎯',
     summary,
     weaknesses,
+    materials,
     generatedAt: new Date().toLocaleString('zh-CN'),
   }
 }
 
-// ── 短板描述：基于真实数据生成个性化文本 ──
+// ── 短板描述：基于真实数据动态生成个性化文本 ──
 
 function describeWeakness(
   d: ProfileDimension,
@@ -82,67 +90,53 @@ function describeWeakness(
   grades: Grade[],
 ): string {
   const base = `${d.current} 分（目标 ${d.target}，差 ${gap} 分）`
+  const facts: string[] = []
 
-  switch (d.label) {
-    case '学业成绩': {
-      const lowCourses = grades.filter((g) => g.score < 80)
-      const avg = grades.length
-        ? Math.round(grades.reduce((s, g) => s + g.score, 0) / grades.length)
-        : 0
-      return `${base}，平均成绩 ${avg} 分${lowCourses.length ? `，${lowCourses.length} 门课程低于 80 分（${lowCourses.map((g) => g.courseName).join('、')}）` : ''}`
-    }
-    case '竞赛实践': {
-      const comps = awards.filter((a) => a.type === 'competition')
-      const high = comps.filter((a) => HIGH_LEVELS.includes(a.level))
-      return comps.length === 0
-        ? `${base}，暂无竞赛奖项记录`
-        : `${base}，共 ${comps.length} 个竞赛奖项${high.length ? `（其中国家/省级 ${high.length} 个）` : '，缺乏高级别赛事经历'}`
-    }
-    case '科研创新': {
-      const research = awards.filter((a) => ['research', 'innovation'].includes(a.type))
-      return `${base}，科研类成果 ${research.length} 项，论文/专利产出不足`
-    }
-    case '社会工作': {
-      return `${base}，社会实践与志愿服务记录偏少`
-    }
-    case '综合素质': {
-      return `${base}，各维度发展不够均衡`
-    }
-    default: {
-      return base
+  if (grades.length > 0) {
+    const avg = Math.round(grades.reduce((s, g) => s + g.score, 0) / grades.length)
+    facts.push(`平均成绩 ${avg} 分`)
+    const low = grades.filter((g) => g.score < 80)
+    if (low.length > 0) {
+      facts.push(`${low.length} 门课程低于 80 分（${low.map((g) => g.courseName).join('、')}）`)
     }
   }
+
+  const competitions = awards.filter((a) => a.type === 'competition')
+  if (competitions.length === 0) {
+    facts.push('暂无竞赛奖项记录')
+  } else {
+    const high = competitions.filter((a) => HIGH_LEVELS.includes(a.level))
+    facts.push(
+      `共 ${competitions.length} 个竞赛奖项${high.length ? `（其中国家/省级 ${high.length} 个）` : ''}`,
+    )
+  }
+
+  const research = awards.filter((a) => a.type === 'research' || a.type === 'innovation')
+  facts.push(research.length > 0 ? `科研类成果 ${research.length} 项` : '暂无科研类成果')
+
+  return facts.length > 0 ? `${base}，${facts.join('，')}` : base
 }
 
-// ── 改进建议：基于真实数据生成可操作建议 ──
+// ── 改进建议：基于真实数据动态生成可操作建议 ──
 
-function suggestImprovement(d: ProfileDimension, awards: Award[], grades: Grade[]): string {
-  switch (d.label) {
-    case '学业成绩': {
-      const lowCourses = grades.filter((g) => g.score < 80)
-      return lowCourses.length
-        ? `重点复习「${lowCourses.map((g) => g.courseName).join('、')}」，争取提分至 80 分以上，稳步缩小差距`
-        : '保持当前学习节奏，向目标分稳步推进，可挑战高阶课程拉高绩点'
-    }
-    case '竞赛实践': {
-      const comps = awards.filter((a) => a.type === 'competition')
-      return comps.length === 0
-        ? '从校级竞赛起步积累经验，逐步挑战「挑战杯」「互联网+」等国家级赛事'
-        : '在现有基础上挑战更高级别赛事，组建稳定团队，争取国家级奖项突破'
-    }
-    case '科研创新': {
-      return '主动联系导师参与课题研究，尝试撰写综述或学术论文，积累科研产出'
-    }
-    case '社会工作': {
-      return '利用寒暑假参加支教、调研或企业实习，丰富社会实践经历'
-    }
-    case '综合素质': {
-      return '拓展兴趣爱好，提升表达与协作能力，参加社团活动或公开演讲'
-    }
-    default: {
-      return '持续投入以提升该维度能力'
-    }
+function suggestImprovement(awards: Award[], grades: Grade[]): string {
+  const tips: string[] = []
+
+  const low = grades.filter((g) => g.score < 80)
+  if (low.length > 0) {
+    tips.push(`重点复习「${low.map((g) => g.courseName).join('、')}」等薄弱课程，稳步缩小差距`)
   }
+
+  if (awards.filter((a) => a.type === 'competition').length === 0) {
+    tips.push('从校级竞赛起步积累实践经验，逐步挑战更高级别赛事')
+  }
+
+  if (awards.filter((a) => a.type === 'research' || a.type === 'innovation').length === 0) {
+    tips.push('主动联系导师参与课题研究，尝试撰写论文积累科研产出')
+  }
+
+  if (tips.length === 0) return '保持当前投入节奏，向目标分稳步推进'
+  return tips.slice(0, 2).join('；')
 }
 
 /**
@@ -151,10 +145,12 @@ function suggestImprovement(d: ProfileDimension, awards: Award[], grades: Grade[
  */
 export function analysisToRichBlocks(analysis: CareerAnalysis): {
   greeting: string
+  materials: string[]
   blocks: RichBlock[]
 } {
   return {
     greeting: analysis.greeting,
+    materials: analysis.materials ?? [],
     blocks: [
       { type: 'paragraph', text: analysis.summary },
       {

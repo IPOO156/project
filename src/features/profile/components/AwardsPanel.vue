@@ -66,6 +66,11 @@ async function saveAward() {
 }
 
 function deleteAward(id: string) {
+  // TODO(待后端)：奖项审核状态字段未在 Award 契约（types.ts / docs/api.md 3.3）及
+  // /profile/info 的 personalAwards 返回中定义，禁止在前端自行编造字段名。
+  // 待后端补充 status（如 submitted / approved / rejected）后：
+  // 1) 在列表 meta 区渲染 <StatusTag :status="a.status" /> 展示审核状态；
+  // 2) 已通过（approved）记录隐藏「删除」按钮：v-if="a.status !== 'approved'"。
   ElMessageBox.confirm('确定删除该奖项吗？', '删除确认', {
     confirmButtonText: '删除',
     cancelButtonText: '取消',
@@ -108,6 +113,7 @@ function deleteAward(id: string) {
           <el-button link type="primary" size="small" @click="openEditAward(a.id)">
             编辑
           </el-button>
+          <!-- TODO(待后端)：已通过(approved)记录隐藏删除按钮，待 status 字段补充后：v-if="a.status !== 'approved'" -->
           <el-button link type="danger" size="small" @click="deleteAward(a.id)"> 删除 </el-button>
         </div>
       </div>

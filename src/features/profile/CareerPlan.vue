@@ -8,27 +8,69 @@ import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import { useDict } from '@/shared/composables/composables'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import CareerPlanDetail from './components/CareerPlanDetail.vue'
+import CopyCareerPlanDialog from './components/CopyCareerPlanDialog.vue'
 import GrowthRecords from './components/GrowthRecords.vue'
 
 const archiveStore = useArchiveStore()
 const careerPlanStore = useCareerPlanStore()
 
-const planForm = reactive({ semester: '', title: '', content: '' })
+const planForm = reactive({
+  semester: '',
+  title: '',
+  content: '',
+  requirement: '',
+  goals: [] as any[],
+  evidenceFileIds: [] as number[],
+})
 const { clearDraft } = useFormDraft('career-plan', planForm)
 const _u_planFiles = ref<{ name: string; url: string }[]>([])
 const planRecords = computed(() => careerPlanStore.plans)
 const aiAnalysis = computed(() => careerPlanStore.aiAnalysis)
+
+/** 已填写的学期（去重，用于学期切换查看与进度统计） */
+const availableSemesters = computed(() => [
+  ...new Set(planRecords.value.map((p) => p.semester).filter((s) => s)),
+])
+const semesterFilter = ref('')
+const filteredRecords = computed(() =>
+  semesterFilter.value
+    ? planRecords.value.filter((p) => p.semester === semesterFilter.value)
+    : planRecords.value,
+)
+
+// TODO(待后端契约字段)：计划详情「教师反馈(teacherFeedback)、学生反思(reflection)」
+// 及「完成进度(目标/行动完成数)」尚未在 CareerPlanRecord 契约中定义，暂不展示；
+// 进度仅基于本地已有数据（已填学期数）计算。
+const filledSemesterCount = computed(() => availableSemesters.value.length)
+const totalSemesterCount = SEMESTER_OPTIONS.length
+const planProgressPercent = computed(() =>
+  totalSemesterCount === 0 ? 0 : Math.round((filledSemesterCount.value / totalSemesterCount) * 100),
+)
 const loading = ref(false)
 const _u_dialogVisible = ref(false)
 const aiDrawerVisible = ref(false)
 const aiDrawerKey = ref(0)
 const aiInitialQuestion = '请分析我的职业规划短板并给出改进建议'
 
+const detailVisible = ref(false)
+const detailPlanId = ref<number | null>(null)
+const copyDialogVisible = ref(false)
+
 const activeTab = ref<'plan' | 'growth'>('plan')
 
 function openAIDrawer() {
   aiDrawerKey.value++
   aiDrawerVisible.value = true
+}
+
+function openDetail(row: any) {
+  detailPlanId.value = Number(row.id)
+  detailVisible.value = true
+}
+
+function openCopyDialog() {
+  copyDialogVisible.value = true
 }
 
 const { getColor, getLabel } = useDict(APPLICATION_STATUS)
@@ -45,11 +87,21 @@ async function handleSubmit() {
   }
   loading.value = true
   try {
-    await careerPlanStore.submitPlan({ semester: planForm.semester, title: planForm.title })
+    await careerPlanStore.submitPlan({
+      semester: planForm.semester,
+      title: planForm.title,
+      content: planForm.content,
+      requirement: planForm.requirement,
+      goals: planForm.goals,
+      evidenceFileIds: planForm.evidenceFileIds,
+    })
     clearDraft()
     planForm.semester = ''
     planForm.title = ''
     planForm.content = ''
+    planForm.requirement = ''
+    planForm.goals = []
+    planForm.evidenceFileIds = []
     ElMessage.success('规划已提交')
   } catch {
     ElMessage.error('提交失败')
@@ -108,6 +160,14 @@ onMounted(() => {
                   placeholder="请描述你的规划目标与具体措施..."
                 />
               </el-form-item>
+              <el-form-item label="要求/目标">
+                <el-input
+                  v-model="planForm.requirement"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="如：GPA达到3.5以上，参与至少一项科研项目"
+                />
+              </el-form-item>
               <el-form-item>
                 <el-button type="primary" :loading="loading" @click="handleSubmit"
                   >提交规划</el-button
@@ -135,6 +195,12 @@ onMounted(() => {
               <p v-if="aiAnalysis.summary" class="ai-result__summary">
                 {{ aiAnalysis.summary }}
               </p>
+              <div v-if="aiAnalysis.materials?.length" class="ai-result__materials">
+                <span class="ai-result__materials-label">依据材料：</span>
+                <span v-for="(m, i) in aiAnalysis.materials" :key="i" class="ai-result__chip">
+                  {{ m }}
+                </span>
+              </div>
               <div v-if="aiAnalysis.weaknesses?.length" class="ai-result__list">
                 <div
                   v-for="(item, i) in aiAnalysis.weaknesses"
@@ -152,6 +218,9 @@ onMounted(() => {
                   <p class="ai-item__suggest"><strong>建议：</strong>{{ item.suggestion }}</p>
                 </div>
               </div>
+              <!-- TODO(待后端契约字段)：当前 AI 分析由前端本地生成，未携带 aiSuggestionId，
+                   无法调用 /profile/career-plans/ai-add 一键加入计划。待后端补充 aiSuggestionId 后，
+                   在此新增「采纳为计划」按钮并二次确认后提交。 -->
             </div>
             <div v-else class="ai-empty">
               <Sparkles :size="28" class="ai-empty__icon" />
@@ -160,12 +229,44 @@ onMounted(() => {
           </el-card>
         </div>
 
+        <!-- 计划完成进度（仅基于本地已有数据：已填学期数） -->
+        <el-card class="gd-card gd-card--progress">
+          <template #header><span class="card-title">计划完成进度</span></template>
+          <div class="plan-progress">
+            <div class="plan-progress__stat">
+              <span class="plan-progress__num">{{ filledSemesterCount }}</span>
+              <span class="plan-progress__total">/ {{ totalSemesterCount }} 个学期已制定规划</span>
+            </div>
+            <el-progress :percentage="planProgressPercent" :stroke-width="10" />
+            <p class="plan-progress__hint">
+              已提交规划 {{ planRecords.length }} 份，覆盖 {{ filledSemesterCount }} 个学期。
+            </p>
+          </div>
+        </el-card>
+
         <!-- 规划记录 -->
         <el-card class="gd-card gd-card--table">
-          <template #header><span class="card-title">规划记录</span></template>
+          <template #header>
+            <div class="card-space">
+              <span class="card-title">规划记录</span>
+              <div class="card-space__ops">
+                <el-button size="small" @click="openCopyDialog">复制上一学期计划</el-button>
+                <el-select
+                  v-model="semesterFilter"
+                  placeholder="全部学期"
+                  size="small"
+                  clearable
+                  class="semester-filter"
+                >
+                  <el-option label="全部学期" value="" />
+                  <el-option v-for="s in availableSemesters" :key="s" :label="s" :value="s" />
+                </el-select>
+              </div>
+            </div>
+          </template>
           <el-table
             v-loading="careerPlanStore.loading"
-            :data="planRecords"
+            :data="filteredRecords"
             stripe
             style="width: 100%"
             size="small"
@@ -173,19 +274,33 @@ onMounted(() => {
             <el-table-column prop="semester" label="学期" width="160" />
             <el-table-column prop="title" label="标题" min-width="200" />
             <el-table-column prop="submitDate" label="提交时间" width="120" />
+            <el-table-column label="进度" width="120">
+              <template #default="{ row }">
+                <el-progress
+                  v-if="row.progressRate != null"
+                  :percentage="row.progressRate"
+                  :stroke-width="8"
+                />
+              </template>
+            </el-table-column>
             <el-table-column label="状态" width="90">
               <template #default="{ row }"
                 ><el-tag :type="getStatusType(row.status)" size="small">{{
-                  getLabel(row.status)
+                  row.statusLabel || getLabel(row.status)
                 }}</el-tag></template
               >
             </el-table-column>
-            <el-table-column label="操作" width="80" align="center">
-              <template #default="{ row }"
-                ><el-button type="danger" link size="small" @click="handleRemove(row.id)"
+            <!-- TODO(待后端契约字段)：教师反馈(teacherFeedback)、学生反思(reflection) 尚未在
+                 CareerPlanRecord 契约中定义，待后端补充后在此新增两列展示 -->
+            <el-table-column label="操作" width="130" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="openDetail(row)"
+                  >详情</el-button
+                >
+                <el-button type="danger" link size="small" @click="handleRemove(row.id)"
                   >删除</el-button
-                ></template
-              >
+                >
+              </template>
             </el-table-column>
           </el-table>
         </el-card>
@@ -195,6 +310,19 @@ onMounted(() => {
           :visible="aiDrawerVisible"
           :initial-question="aiInitialQuestion"
           @close="aiDrawerVisible = false"
+        />
+
+        <CareerPlanDetail
+          :visible="detailVisible"
+          :plan-id="detailPlanId"
+          @close="detailVisible = false"
+          @refresh="careerPlanStore.fetchPlans()"
+        />
+
+        <CopyCareerPlanDialog
+          :visible="copyDialogVisible"
+          @close="copyDialogVisible = false"
+          @success="careerPlanStore.fetchPlans()"
         />
       </el-tab-pane>
 
@@ -283,6 +411,45 @@ onMounted(() => {
   justify-content: space-between;
 }
 
+.card-space__ops {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.semester-filter {
+  width: 180px;
+}
+
+.plan-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &__stat {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  &__num {
+    font-size: 28px;
+    font-weight: 700;
+    color: #d4a574;
+  }
+
+  &__total {
+    font-size: 14px;
+    color: #64748b;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+}
+
 .form-w {
   width: 100%;
   max-width: 400px;
@@ -340,6 +507,27 @@ onMounted(() => {
   font-size: 14px;
   color: #475569;
   line-height: 1.6;
+}
+
+.ai-result__materials {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-result__materials-label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.ai-result__chip {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #c2410c;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
 }
 
 .ai-result__list {

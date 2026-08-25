@@ -255,6 +255,12 @@ const legendGradient = computed(() => {
   return `linear-gradient(90deg, ${stops})`
 })
 
+/** 页头「学期」chip：契约无统计时间字段，按当前学期筛选标注（默认为全部学期） */
+const semesterChipText = computed(() => {
+  if (filters.semesterId == null) return '全部学期'
+  return semesters.value.find((s) => s.value === filters.semesterId)?.label ?? '全部学期'
+})
+
 onMounted(async () => {
   loadingSemesters.value = true
   try {
@@ -285,6 +291,10 @@ onMounted(async () => {
         <div class="heat-map__head-chip">
           <span class="heat-map__head-chip-label">行维度</span>
           <span class="heat-map__head-chip-value">{{ ORG_TYPE_LABEL[filters.orgType] }}</span>
+        </div>
+        <div class="heat-map__head-chip">
+          <span class="heat-map__head-chip-label">学期</span>
+          <span class="heat-map__head-chip-value">{{ semesterChipText }}</span>
         </div>
       </div>
     </header>

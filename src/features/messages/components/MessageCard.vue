@@ -116,11 +116,7 @@ function handleCardClick() {
           <MailOpen :size="16" />
         </button>
       </el-tooltip>
-      <el-tooltip
-        v-if="item.isImportant !== 1 && item.isArchived !== 1"
-        content="归档"
-        placement="top"
-      >
+      <el-tooltip v-if="item.isArchived !== 1" content="归档" placement="top">
         <button
           type="button"
           class="action-icon action-icon--archive"

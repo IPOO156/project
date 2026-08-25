@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import type { NotificationCategory, NotificationStatus } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Archive, Bell, CheckCheck, Filter, Mail, Search, X } from 'lucide-vue-next'
+import { Archive, Bell, CheckCheck, Filter, Mail, Search, Settings, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/app/stores/stores'
 import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import MessageCard from './components/MessageCard.vue'
+import MessageSettings from './components/MessageSettings.vue'
 
 /**
  * 消息中心通知页面
  * 采用蓝白配色的自定义卡片风格，与系统页面布局一致。
- * 支持归档筛选、批量归档、批量已读、批量删除。
+ * 支持归档筛选、批量归档、批量已读；删除已改为归档，重要消息归档前二次确认。
  */
 
 const router = useRouter()
@@ -22,24 +23,6 @@ const keyword = ref('')
 const categoryFilter = ref<NotificationCategory | ''>('')
 const statusFilter = ref<NotificationStatus | ''>('')
 const archiveFilter = ref<'all' | 'active' | 'archived'>('active')
-
-// ─── 归档本地持久化 ───
-const archivedIds = ref<Set<string>>(
-  new Set(JSON.parse(localStorage.getItem('messageArchivedIds') || '[]')),
-)
-
-function persistArchivedIds() {
-  localStorage.setItem('messageArchivedIds', JSON.stringify([...archivedIds.value]))
-}
-
-function _u_toggleArchive(id: string) {
-  if (archivedIds.value.has(id)) {
-    archivedIds.value.delete(id)
-  } else {
-    archivedIds.value.add(id)
-  }
-  persistArchivedIds()
-}
 
 const pageNum = ref(1)
 const pageSize = ref(10)
@@ -58,32 +41,15 @@ function toggleSelect(id: string) {
 }
 
 function handleBatchRead() {
-  selectedIds.value.forEach((id) => notificationStore.markAsRead(id))
+  notificationStore.markMultipleAsRead(selectedIds.value)
   selectedIds.value = []
   batchMode.value = false
 }
 
 function handleBatchArchive() {
-  selectedIds.value.forEach((id) => archivedIds.value.add(id))
+  notificationStore.archiveNotifications(selectedIds.value)
   selectedIds.value = []
   batchMode.value = false
-  persistArchivedIds()
-  ElMessage.success('已归档')
-}
-
-function handleBatchDelete() {
-  ElMessageBox.confirm(`确定删除选中的 ${selectedIds.value.length} 条通知吗？`, '批量删除确认', {
-    confirmButtonText: '删除',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => {
-      selectedIds.value.forEach((id) => notificationStore.deleteNotification(id))
-      selectedIds.value = []
-      batchMode.value = false
-      ElMessage.success('已删除')
-    })
-    .catch(() => {})
 }
 
 function handleCancelBatchMode() {
@@ -140,17 +106,21 @@ const stats = computed(() => [
   },
   {
     label: '已归档',
-    value: archivedIds.value.size,
+    value: notificationStore.archivedCount,
     icon: Archive,
   },
 ])
 
 const filteredByArchive = computed(() => {
   const all = notificationStore.filteredNotifications
-  if (archiveFilter.value === 'active') return all.filter((n) => !archivedIds.value.has(n.id))
-  if (archiveFilter.value === 'archived') return all.filter((n) => archivedIds.value.has(n.id))
+  if (archiveFilter.value === 'active') return all.filter((n) => n.isArchived !== 1)
+  if (archiveFilter.value === 'archived') return all.filter((n) => n.isArchived === 1)
   return all
 })
+
+const filteredUnreadCount = computed(
+  () => filteredByArchive.value.filter((n) => n.isRead !== 1).length,
+)
 
 const paginatedList = computed(() => {
   const start = (pageNum.value - 1) * pageSize.value
@@ -195,12 +165,29 @@ function archiveItem(id: string) {
 }
 
 function markAllAsRead() {
-  if (notificationStore.unreadCount === 0) return
-  notificationStore.markAllAsRead()
+  // 一键已读只处理当前筛选结果中的未读消息，并二次确认
+  const unreadIds = filteredByArchive.value.filter((n) => n.isRead !== 1).map((n) => n.id)
+  if (unreadIds.length === 0) {
+    ElMessage.info('当前筛选结果中暂无未读消息')
+    return
+  }
+  ElMessageBox.confirm(
+    `将把当前筛选结果中的 ${unreadIds.length} 条未读消息全部标为已读，是否继续？`,
+    '一键已读确认',
+    { confirmButtonText: '全部已读', cancelButtonText: '取消', type: 'warning' },
+  )
+    .then(() => notificationStore.markMultipleAsRead(unreadIds))
+    .catch(() => {})
 }
 
 function navigateToActivities() {
   router.push('/messages/activities')
+}
+
+const settingsVisible = ref(false)
+
+function openSettings() {
+  settingsVisible.value = true
 }
 
 onMounted(() => {
@@ -230,12 +217,11 @@ onMounted(() => {
           </div>
           <span class="message-header__stat-label">{{ stat.label }}</span>
         </div>
-        <el-button
-          type="primary"
-          :disabled="notificationStore.unreadCount === 0"
-          @click="markAllAsRead"
-        >
+        <el-button type="primary" :disabled="filteredUnreadCount === 0" @click="markAllAsRead">
           <CheckCheck :size="16" style="margin-right: 4px" />一键已读
+        </el-button>
+        <el-button class="message-header__settings-btn" @click="openSettings">
+          <Settings :size="16" />消息设置
         </el-button>
       </div>
     </header>
@@ -316,14 +302,6 @@ onMounted(() => {
           <el-button size="small" :disabled="selectedIds.length === 0" @click="handleBatchArchive">
             <Archive :size="14" style="margin-right: 4px" />批量归档
           </el-button>
-          <el-button
-            size="small"
-            type="danger"
-            :disabled="selectedIds.length === 0"
-            @click="handleBatchDelete"
-          >
-            批量删除
-          </el-button>
         </template>
       </div>
 
@@ -368,6 +346,8 @@ onMounted(() => {
         class="mc-empty"
       />
     </div>
+
+    <MessageSettings v-model:visible="settingsVisible" />
   </PageContainer>
 </template>
 
@@ -465,6 +445,12 @@ onMounted(() => {
 
   &__read-all {
     align-self: stretch;
+  }
+
+  &__settings-btn {
+    :deep(svg) {
+      margin-right: 4px;
+    }
   }
 }
 

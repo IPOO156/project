@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import type { ResumeSectionKey } from './composables/useResumeExport'
 import type { Award, Grade, Interest, ProfileDimension, UserInfo } from '@/shared/types/types'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useDict } from '@/shared/composables/composables'
+import { INTEREST_LEVEL } from '@/shared/constants/dict'
 
 interface ResumeData {
   userInfo: Partial<UserInfo>
@@ -86,12 +89,33 @@ const certificates = computed(() => {
   return props.data.submissions.filter((s) => s.type === 'certificate')
 })
 
+const { getLabel } = useDict(INTEREST_LEVEL)
+
 const skillInterests = computed(() => {
   return props.data.interests.map((i) => ({
-    label: i.category,
-    desc: i.content,
-    level: i.level === 'proficient' ? '精通' : i.level === 'good' ? '良好' : '一般',
+    label: i.tagName,
+    desc: i.detailContent,
+    level: getLabel(i.proficiencyLevel),
   }))
+})
+
+// ── 导出模块开关与生成时间 ──
+const activeSections = ref<ResumeSectionKey[] | null>(null)
+const generatedAt = ref('')
+
+function showSection(key: ResumeSectionKey): boolean {
+  return activeSections.value === null || activeSections.value.includes(key)
+}
+
+defineExpose({
+  applyExportOptions(sections: ResumeSectionKey[], at: string) {
+    activeSections.value = [...sections]
+    generatedAt.value = at
+  },
+  resetExportOptions() {
+    activeSections.value = null
+    generatedAt.value = ''
+  },
 })
 </script>
 
@@ -184,7 +208,7 @@ const skillInterests = computed(() => {
     <!-- ─── 主体 ─── -->
     <main class="resume-body">
       <!-- 教育背景 -->
-      <section class="resume-section">
+      <section v-if="showSection('education')" class="resume-section">
         <h2 class="sec-title">教育背景</h2>
         <div class="sec-body">
           <div class="edu-row">
@@ -211,7 +235,7 @@ const skillInterests = computed(() => {
       </section>
 
       <!-- 获奖情况 -->
-      <section v-if="data.awards.length" class="resume-section">
+      <section v-if="showSection('awards') && data.awards.length" class="resume-section">
         <h2 class="sec-title">获奖情况</h2>
         <div class="sec-body">
           <div v-for="a in data.awards" :key="a.id" class="award-row">
@@ -225,7 +249,7 @@ const skillInterests = computed(() => {
       </section>
 
       <!-- 技能与兴趣 -->
-      <section v-if="skillInterests.length" class="resume-section">
+      <section v-if="showSection('skills') && skillInterests.length" class="resume-section">
         <h2 class="sec-title">技能与兴趣</h2>
         <div class="sec-body">
           <div class="skills-grid">
@@ -239,7 +263,7 @@ const skillInterests = computed(() => {
       </section>
 
       <!-- 实践经历 -->
-      <section v-if="allExperiences.length" class="resume-section">
+      <section v-if="showSection('practices') && allExperiences.length" class="resume-section">
         <h2 class="sec-title">实践经历</h2>
         <div class="sec-body">
           <div v-for="exp in allExperiences" :key="exp.title" class="exp-row">
@@ -253,7 +277,7 @@ const skillInterests = computed(() => {
       </section>
 
       <!-- 证书 -->
-      <section v-if="certificates.length" class="resume-section">
+      <section v-if="showSection('certificates') && certificates.length" class="resume-section">
         <h2 class="sec-title">证书</h2>
         <div class="sec-body">
           <div class="certs-row">
@@ -263,7 +287,10 @@ const skillInterests = computed(() => {
       </section>
 
       <!-- 自我评价 -->
-      <section v-if="props.data.dimensions.length" class="resume-section">
+      <section
+        v-if="showSection('selfEvaluation') && props.data.dimensions.length"
+        class="resume-section"
+      >
         <h2 class="sec-title">自我评价</h2>
         <div class="sec-body">
           <p class="eval-summary">
@@ -277,6 +304,10 @@ const skillInterests = computed(() => {
         </div>
       </section>
     </main>
+
+    <footer class="resume-footer">
+      <span v-if="generatedAt" class="resume-footer__text">生成时间：{{ generatedAt }}</span>
+    </footer>
   </div>
 </template>
 
@@ -591,5 +622,15 @@ const skillInterests = computed(() => {
   padding: 8px 12px;
   background: #f8fafc;
   border-radius: 4px;
+}
+
+/* ====== 页脚 ====== */
+.resume-footer {
+  padding: 12px 30px 20px;
+  text-align: right;
+}
+.resume-footer__text {
+  font-size: 8.5pt;
+  color: #94a3b8;
 }
 </style>

@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import type { TagProps } from 'element-plus'
 import type { UserInfo } from '@/shared/types/types'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, Edit2, GraduationCap, Heart, Info, Lightbulb, Plus } from 'lucide-vue-next'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Download, Edit2, GraduationCap, Info, Lightbulb, Plus } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import {
   useArchiveStore,
   useSubmissionStore,
   useThemeStore,
   useUserStore,
 } from '@/app/stores/stores'
-import { useDict } from '@/shared/composables/composables'
-import { INTEREST_LEVEL } from '@/shared/constants/dict'
+import { getDataCompleteness } from '@/shared/api/student'
 import AvatarUploader from './components/AvatarUploader.vue'
 import AwardsPanel from './components/AwardsPanel.vue'
 import DimensionPanel from './components/DimensionPanel.vue'
+import InterestPanel from './components/InterestPanel.vue'
+import { useArchiveExport } from './composables/useArchiveExport'
 import { useResumeExport } from './composables/useResumeExport'
 import ResumeTemplate from './ResumeTemplate.vue'
 
@@ -23,9 +23,21 @@ const userStore = useUserStore()
 const themeStore = useThemeStore()
 const submissionStore = useSubmissionStore()
 
+// ── 数据完整度（GET /profile/data-completeness，字段 overallRate，见 docs/api.md 4.1.4）──
+const completenessRate = ref<number | null>(null)
+async function loadCompleteness() {
+  try {
+    const data = await getDataCompleteness()
+    completenessRate.value = data.overallRate
+  } catch {
+    completenessRate.value = null
+  }
+}
+
 onMounted(() => {
   if (archiveStore.interests.length === 0) archiveStore.fetchArchive()
   if (submissionStore.records.length === 0) submissionStore.fetchRecords()
+  loadCompleteness()
 })
 
 const interests = computed(() => archiveStore.interests)
@@ -54,27 +66,15 @@ const gradeSummary = computed(() => {
     }))
 })
 
+const DIMENSION_COLORS_LIGHT = ['#4a7fb5', '#10b981', '#d4a574', '#8b5cf6', '#f59e0b']
+const DIMENSION_COLORS_DARK = ['#60a5fa', '#34d399', '#f0b87b', '#a78bfa', '#fbbf24']
+
 const dimensions = computed(() => {
-  const isDark = themeStore.isDark
-  const colorMap: Record<string, string> = isDark
-    ? {
-        学业成绩: '#60a5fa',
-        竞赛实践: '#34d399',
-        科研创新: '#f0b87b',
-        社会工作: '#a78bfa',
-        综合素质: '#fbbf24',
-      }
-    : {
-        学业成绩: '#4a7fb5',
-        竞赛实践: '#10b981',
-        科研创新: '#d4a574',
-        社会工作: '#8b5cf6',
-        综合素质: '#f59e0b',
-      }
-  return archiveStore.dimensions.map((d) => ({
+  const palette = themeStore.isDark ? DIMENSION_COLORS_DARK : DIMENSION_COLORS_LIGHT
+  return archiveStore.dimensions.map((d, index) => ({
     label: d.label,
     score: d.current,
-    color: colorMap[d.label] ?? '#94a3b8',
+    color: palette[index % palette.length],
   }))
 })
 
@@ -90,57 +90,13 @@ const dimAvg = computed(() => {
   return Math.round(dimensions.value.reduce((s, d) => s + d.score, 0) / dimensions.value.length)
 })
 
-// ── 兴趣管理 ──
-const interestDialogVisible = ref(false)
-const editingInterestId = ref<string | null>(null)
-const interestForm = reactive({ category: '', content: '', level: 'general' })
-
-function openAddInterest() {
-  editingInterestId.value = null
-  interestForm.category = ''
-  interestForm.content = ''
-  interestForm.level = 'general'
-  interestDialogVisible.value = true
-}
-function openEditInterest(id: string) {
-  editingInterestId.value = id
-  const item = interests.value.find((i) => i.id === id)
-  if (!item) return
-  interestForm.category = item.category
-  interestForm.content = item.content
-  interestForm.level = item.level
-  interestDialogVisible.value = true
-}
-async function saveInterest() {
-  if (!interestForm.category || !interestForm.content) {
-    ElMessage.warning('请填写完整信息')
-    return
-  }
-  try {
-    if (editingInterestId.value)
-      await archiveStore.editInterest(editingInterestId.value, { ...interestForm })
-    else await archiveStore.createInterest({ ...interestForm })
-    interestDialogVisible.value = false
-  } catch {
-    ElMessage.error('保存失败')
-  }
-}
-function deleteInterest(id: string) {
-  ElMessageBox.confirm('确定删除该兴趣吗？', '确认', { type: 'warning' })
-    .then(() => archiveStore.removeInterest(id))
-    .catch(() => {})
-}
-
 // ── 基本资料编辑 ──
+// 学籍字段（学号/年级/专业/班级/姓名）属学术身份信息，仅只读展示，不进入编辑表单；
+// 编辑表单仅保留可更新的联系方式（邮箱/手机号），提交时走 PUT /profile/contact。
 const isEditing = ref(false)
 const formData = ref<Partial<UserInfo>>({})
 function startEdit() {
   formData.value = {
-    realName: userStore.userInfo?.realName ?? userStore.userName,
-    studentId: userStore.userInfo?.studentId ?? userStore.studentId,
-    grade: userStore.userInfo?.grade ?? '',
-    major: userStore.userInfo?.major ?? '',
-    className: userStore.userInfo?.className ?? '',
     email: userStore.userInfo?.email ?? '',
     phone: userStore.userInfo?.phone ?? '',
   }
@@ -156,13 +112,6 @@ function cancelEdit() {
   formData.value = {}
 }
 
-const { getColor, getLabel } = useDict(INTEREST_LEVEL)
-const getInterestType = computed(
-  () =>
-    (level: string): TagProps['type'] =>
-      (getColor(level) as TagProps['type']) ?? 'info',
-)
-
 async function handleAvatarUpload(base64: string) {
   await userStore.updateAvatar(base64 || undefined)
   ElMessage.success(base64 ? '头像更新成功' : '头像已删除')
@@ -171,6 +120,9 @@ async function handleAvatarUpload(base64: string) {
 // ── 简历导出 ──
 const resumeRef = ref<InstanceType<typeof ResumeTemplate>>()
 const { exportResumePDF } = useResumeExport()
+
+// ── 档案导出 ──
+const { exportArchivePDF } = useArchiveExport()
 
 const resumeData = computed(() => ({
   userInfo: userStore.userInfo ?? {},
@@ -205,9 +157,24 @@ async function handleExportResume() {
         <h1 class="page-head__title">档案概览</h1>
         <p class="page-head__desc">查看个人综合档案信息</p>
       </div>
-      <el-button type="primary" @click="handleExportResume">
-        <Download :size="16" style="margin-right: 4px" />导出简历 PDF
-      </el-button>
+      <div class="page-head__actions">
+        <el-button type="primary" @click="exportArchivePDF">
+          <Download :size="16" style="margin-right: 4px" />导出档案
+        </el-button>
+        <el-button type="primary" @click="handleExportResume">
+          <Download :size="16" style="margin-right: 4px" />导出简历 PDF
+        </el-button>
+      </div>
+    </div>
+
+    <div v-if="completenessRate !== null" class="completeness-bar">
+      <span class="completeness-bar__label">档案数据完整度</span>
+      <el-progress
+        :percentage="completenessRate"
+        :stroke-width="8"
+        class="completeness-bar__progress"
+        text-inside
+      />
     </div>
 
     <div class="stat-grid">
@@ -313,26 +280,6 @@ async function handleExportResume() {
         <el-form v-else :model="formData" label-width="70px" class="profile-form">
           <el-row :gutter="12">
             <el-col :span="12"
-              ><el-form-item label="姓名"
-                ><el-input v-model="formData.realName" size="small" /></el-form-item
-            ></el-col>
-            <el-col :span="12"
-              ><el-form-item label="学号"
-                ><el-input v-model="formData.studentId" size="small" /></el-form-item
-            ></el-col>
-            <el-col :span="12"
-              ><el-form-item label="年级"
-                ><el-input v-model="formData.grade" size="small" /></el-form-item
-            ></el-col>
-            <el-col :span="12"
-              ><el-form-item label="专业"
-                ><el-input v-model="formData.major" size="small" /></el-form-item
-            ></el-col>
-            <el-col :span="12"
-              ><el-form-item label="班级"
-                ><el-input v-model="formData.className" size="small" /></el-form-item
-            ></el-col>
-            <el-col :span="12"
               ><el-form-item label="邮箱"
                 ><el-input v-model="formData.email" size="small" /></el-form-item
             ></el-col>
@@ -377,59 +324,7 @@ async function handleExportResume() {
       <AwardsPanel :awards="awards" />
     </div>
 
-    <el-card class="section-card" shadow="never">
-      <template #header
-        ><div class="section-head">
-          <span class="section-head__title"><Heart :size="15" /> 个人兴趣</span
-          ><el-button link type="primary" size="small" :icon="Plus" @click="openAddInterest"
-            >新增</el-button
-          >
-        </div></template
-      >
-      <div class="interest-grid">
-        <div v-for="item in interests" :key="item.id" class="interest-card">
-          <div class="interest-card__top">
-            <Lightbulb :size="13" /><span class="interest-card__cat">{{ item.category }}</span
-            ><el-tag :type="getInterestType(item.level)" size="small" effect="plain">{{
-              getLabel(item.level)
-            }}</el-tag>
-          </div>
-          <p class="interest-card__text">{{ item.content }}</p>
-          <div class="interest-card__acts">
-            <el-button link type="primary" size="small" @click="openEditInterest(item.id)"
-              >编辑</el-button
-            ><el-button link type="danger" size="small" @click="deleteInterest(item.id)"
-              >删除</el-button
-            >
-          </div>
-        </div>
-      </div>
-    </el-card>
-
-    <el-dialog
-      v-model="interestDialogVisible"
-      :title="editingInterestId ? '编辑兴趣' : '新增兴趣'"
-      width="480px"
-    >
-      <el-form :model="interestForm" label-width="80px">
-        <el-form-item label="兴趣类别" required
-          ><el-input v-model="interestForm.category" placeholder="请输入兴趣类别"
-        /></el-form-item>
-        <el-form-item label="具体内容" required
-          ><el-input v-model="interestForm.content" placeholder="请输入具体内容"
-        /></el-form-item>
-        <el-form-item label="掌握程度"
-          ><el-select v-model="interestForm.level"
-            ><el-option label="精通" value="proficient" /><el-option
-              label="良好"
-              value="good" /><el-option label="一般" value="general" /></el-select
-        ></el-form-item>
-      </el-form>
-      <template #footer
-        ><el-button @click="interestDialogVisible = false">取消</el-button
-        ><el-button type="primary" @click="saveInterest">保存</el-button></template
-      >
-    </el-dialog>
+    <InterestPanel :interests="interests" />
 
     <!-- 简历模板（隐藏于屏幕外，用于导出 PDF） -->
     <div class="resume-render-area">
@@ -464,6 +359,32 @@ async function handleExportResume() {
   font-size: 14px;
   color: #94a3b8;
   margin: 0;
+}
+.page-head__actions {
+  display: flex;
+  gap: 12px;
+}
+
+// 数据完整度提示条
+.completeness-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+
+  &__label {
+    font-size: 13px;
+    color: #475569;
+    white-space: nowrap;
+  }
+
+  &__progress {
+    flex: 1;
+    min-width: 200px;
+  }
 }
 
 // 统计卡片
@@ -623,54 +544,11 @@ async function handleExportResume() {
   color: #cbd5e1;
 }
 
-// 兴趣
-.interest-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-.interest-card {
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #f1f5f9;
-  background: #f8fafc;
-  transition: border-color 0.2s;
-  &:hover {
-    border-color: #e2e8f0;
-  }
-}
-.interest-card__top {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 4px;
-  color: #4a7fb5;
-}
-.interest-card__cat {
-  font-size: 14px;
-  font-weight: 600;
-  color: #1e293b;
-  flex: 1;
-}
-.interest-card__text {
-  margin: 0 0 6px;
-  font-size: 13px;
-  color: #64748b;
-  line-height: 1.4;
-}
-.interest-card__acts {
-  display: flex;
-  gap: 8px;
-}
-
 @media (max-width: 900px) {
   .stat-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   .row-2col {
-    grid-template-columns: 1fr;
-  }
-  .interest-grid {
     grid-template-columns: 1fr;
   }
 }

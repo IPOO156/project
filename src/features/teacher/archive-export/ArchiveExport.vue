@@ -52,13 +52,7 @@ const filters = reactive({
 })
 
 const scopeOptions = ['全校', '学院', '专业', '班级']
-
-const SCOPE_TYPE: Record<string, number> = {
-  全校: 1,
-  学院: 2,
-  专业: 3,
-  班级: 4,
-}
+const SCOPE_TYPE: Record<string, number> = { 全校: 1, 学院: 2, 专业: 3, 班级: 4 }
 
 interface ExportTask {
   jobId: number
@@ -68,6 +62,7 @@ interface ExportTask {
   statusLabel: string
   progress: number
   downloadUrl: string | null
+  expireAt?: string | null
   createdAt: string
 }
 
@@ -88,6 +83,7 @@ const semesters = ref<SemesterItem[]>([])
 const loadingSemesters = ref(false)
 const researchDialogVisible = ref(false)
 const submittingResearch = ref(false)
+const submittingArchive = ref(false)
 const researchForm = reactive({
   semesterId: undefined as number | undefined,
   scope: '全校',
@@ -95,6 +91,7 @@ const researchForm = reactive({
   majorId: undefined as number | undefined,
   classId: undefined as number | undefined,
   grade: '',
+  // TODO 字段级选择需后端扩展导出接口参数
   dataTypes: ['archives', 'scores'] as string[],
   isAnonymized: true,
   includeMetadata: true,
@@ -176,6 +173,8 @@ async function handleSubmitResearch() {
 }
 
 async function handleExport(fileType: 'pdf' | 'xlsx') {
+  if (submittingArchive.value) return
+  submittingArchive.value = true
   const scopeType = SCOPE_TYPE[filters.scope]
   const scopeId =
     filters.scope === '学院'
@@ -203,6 +202,8 @@ async function handleExport(fileType: 'pdf' | 'xlsx') {
     startPolling(res.jobId)
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    submittingArchive.value = false
   }
 }
 
@@ -217,6 +218,7 @@ function startPolling(jobId: number) {
       task.statusLabel = job.statusLabel
       task.progress = job.progress
       task.downloadUrl = job.downloadUrl
+      task.expireAt = job.expireAt
       // 完成或失败时停止轮询
       if (job.status === 2 || job.status === 3) {
         clearInterval(timer)
@@ -332,9 +334,15 @@ onUnmounted(() => {
         <span class="mc-card__title">导出操作</span>
       </div>
       <div class="mc-card__body archive-export__actions">
-        <el-button :icon="Download" @click="handleExport('pdf')">导出学生文件</el-button>
-        <el-button :icon="FileDown" @click="handleExport('xlsx')">一键导出基本信息</el-button>
-        <el-button :icon="FlaskConical" @click="openResearch">研究数据导出</el-button>
+        <el-button :icon="Download" :loading="submittingArchive" @click="handleExport('pdf')"
+          >导出学生文件</el-button
+        >
+        <el-button :icon="FileDown" :loading="submittingArchive" @click="handleExport('xlsx')"
+          >一键导出基本信息</el-button
+        >
+        <el-button v-if="isSuperAdmin" :icon="FlaskConical" @click="openResearch"
+          >研究数据导出</el-button
+        >
         <el-button
           :icon="Trash2"
           type="danger"
@@ -402,16 +410,18 @@ onUnmounted(() => {
             </template>
           </el-table-column>
           <el-table-column prop="createdAt" label="创建时间" width="170" />
-          <el-table-column label="下载" width="90" align="center">
+          <el-table-column label="下载" width="240" align="center">
             <template #default="{ row }">
-              <a
-                v-if="row.downloadUrl"
-                :href="row.downloadUrl"
-                target="_blank"
-                class="archive-export__download"
-              >
-                下载
-              </a>
+              <template v-if="row.downloadUrl">
+                <a :href="row.downloadUrl" target="_blank" class="archive-export__download">下载</a>
+                <p class="archive-export__expire-hint">
+                  {{
+                    row.expireAt
+                      ? `链接有时效，请尽快下载（有效期至 ${row.expireAt}）`
+                      : '链接有时效，请尽快下载'
+                  }}
+                </p>
+              </template>
               <span v-else class="archive-export__nodata">-</span>
             </template>
           </el-table-column>
@@ -573,6 +583,11 @@ onUnmounted(() => {
   &__nodata {
     color: var(--el-text-color-placeholder);
     font-size: 12px;
+  }
+  &__expire-hint {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
   }
   &__hint {
     margin-left: 8px;

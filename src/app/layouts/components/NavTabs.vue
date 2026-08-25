@@ -17,7 +17,7 @@
  *  - 不使用 Emoji 图标
  */
 import { X } from 'lucide-vue-next'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
 import { useTabsStore } from '@/app/stores/tabs'
 import { findMenuItemByPath } from '@/shared/constants/menu'
@@ -141,6 +141,10 @@ async function activate(path: string) {
 
 async function close(path: string, e: Event) {
   e.stopPropagation()
+  await closeTab(path)
+}
+
+async function closeTab(path: string) {
   const isClosingActive = path === activePath.value
   const fallback = tabsStore.removeTab(path)
   if (!isClosingActive || !fallback) {
@@ -155,6 +159,44 @@ async function close(path: string, e: Event) {
     console.error('[NavTabs] 关闭标签后跳转失败:', err)
   }
 }
+
+// ── 右键菜单：关闭当前 / 关闭其他 / 关闭全部 ──
+const contextMenu = ref({ visible: false, x: 0, y: 0, path: '', closable: false })
+const hasClosableTabs = computed(() => tabs.value.some((t) => t.closable))
+function showContextMenu(e: MouseEvent, path: string, closable: boolean) {
+  e.preventDefault()
+  contextMenu.value = { visible: true, x: e.clientX, y: e.clientY, path, closable }
+}
+function hideContextMenu() {
+  contextMenu.value = { visible: false, x: 0, y: 0, path: '', closable: false }
+}
+function onCloseCurrent() {
+  const { path, closable } = contextMenu.value
+  hideContextMenu()
+  if (path && closable) void closeTab(path)
+}
+function onCloseOthers() {
+  const { path } = contextMenu.value
+  hideContextMenu()
+  if (path) {
+    tabsStore.removeOtherTabs(path)
+    void activate(path)
+  }
+}
+function onCloseAll() {
+  hideContextMenu()
+  const fallback = tabsStore.removeAllTabs()
+  if (fallback) void activate(fallback)
+}
+
+onMounted(() => {
+  window.addEventListener('click', hideContextMenu)
+  window.addEventListener('scroll', hideContextMenu, true)
+})
+onUnmounted(() => {
+  window.removeEventListener('click', hideContextMenu)
+  window.removeEventListener('scroll', hideContextMenu, true)
+})
 
 function onKeydown(e: KeyboardEvent, path: string, index: number) {
   const total = tabs.value.length
@@ -213,6 +255,7 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
           :aria-selected="tab.path === activePath"
           :aria-label="`标签：${tab.title}${tab.path === activePath ? '（当前）' : ''}`"
           @click="activate(tab.path)"
+          @contextmenu="showContextMenu($event, tab.path, tab.closable)"
           @keydown="onKeydown($event, tab.path, index)"
           @dragstart="onDragStart(index)"
           @dragover="onDragOver($event, index)"
@@ -241,6 +284,43 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
         </div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="contextMenu.visible"
+        class="nav-tabs__menu"
+        :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
+        role="menu"
+        @contextmenu.prevent
+      >
+        <button
+          type="button"
+          class="nav-tabs__menu-item"
+          role="menuitem"
+          :disabled="!contextMenu.closable"
+          @click.stop="onCloseCurrent"
+        >
+          关闭当前
+        </button>
+        <button
+          type="button"
+          class="nav-tabs__menu-item"
+          role="menuitem"
+          @click.stop="onCloseOthers"
+        >
+          关闭其他
+        </button>
+        <button
+          type="button"
+          class="nav-tabs__menu-item"
+          role="menuitem"
+          :disabled="!hasClosableTabs"
+          @click.stop="onCloseAll"
+        >
+          关闭全部
+        </button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -427,6 +507,38 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
   &__item.is-drop-target .nav-tabs__surface {
     border-color: var(--el-color-primary);
     background: rgba(96, 165, 250, 0.08);
+  }
+
+  &__menu {
+    position: fixed;
+    z-index: $z-popover;
+    min-width: 112px;
+    padding: 4px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: $radius-base;
+    background: var(--el-bg-color-overlay);
+    box-shadow: $shadow-lg;
+  }
+  &__menu-item {
+    display: block;
+    width: 100%;
+    padding: 6px 12px;
+    border: 0;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: var(--el-text-color-primary);
+    font-size: $font-size-base;
+    line-height: 1.5;
+    text-align: left;
+    cursor: pointer;
+    &:hover:not(:disabled) {
+      background: var(--el-fill-color-light);
+      color: var(--el-color-primary);
+    }
+    &:disabled {
+      color: var(--el-text-color-disabled);
+      cursor: not-allowed;
+    }
   }
 }
 

@@ -1,13 +1,11 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ref } from 'vue'
 import { useNotificationStore } from '@/app/stores/stores'
-import { pushNotification } from '@/shared/api/submission'
 import { useRejectTemplates } from './useRejectTemplates'
 
 export function useReviewOperations() {
   const { comment, templates, applyTemplate, clearComment } = useRejectTemplates()
   const notificationStore = useNotificationStore()
-  const reviewComment = ref('')
   const processedIds = ref<Set<string | number>>(new Set())
   const isProcessing = ref(false)
   const currentIndex = ref(0)
@@ -46,11 +44,15 @@ export function useReviewOperations() {
       return false
     }
     try {
-      await ElMessageBox.confirm(`确认通过「${item.name}」的${typeLabel(item)}？`, '审批确认', {
-        confirmButtonText: '确定通过',
-        cancelButtonText: '取消',
-        type: 'success',
-      })
+      await ElMessageBox.confirm(
+        `确认通过「${item.name || item.title}」的${typeLabel(item)}？`,
+        '审批确认',
+        {
+          confirmButtonText: '确定通过',
+          cancelButtonText: '取消',
+          type: 'success',
+        },
+      )
     } catch {
       return false
     }
@@ -60,12 +62,6 @@ export function useReviewOperations() {
       const idx = list.findIndex((p) => p.id === item.id)
       if (idx > -1) list.splice(idx, 1)
       clampIndex(list.length)
-      await pushNotification({
-        title: `${typeLabel(item)}已通过`,
-        content: `您的${typeLabel(item)}已通过审核。`,
-        category: 'audit_remind',
-        jumpUrl: '/approval/pending',
-      })
       notificationStore.addNotification({
         title: `${typeLabel(item)}已通过`,
         content: `您的${typeLabel(item)}已通过审核。`,
@@ -85,8 +81,8 @@ export function useReviewOperations() {
       ElMessage.warning('已处理')
       return false
     }
-    if (!reviewComment.value.trim()) {
-      ElMessage.warning('请填写驳回原因')
+    if (!comment.value.trim()) {
+      ElMessage.warning('请填写退回原因')
       return false
     }
     isProcessing.value = true
@@ -95,20 +91,14 @@ export function useReviewOperations() {
       const idx = list.findIndex((p) => p.id === item.id)
       if (idx > -1) list.splice(idx, 1)
       clampIndex(list.length)
-      await pushNotification({
-        title: `${typeLabel(item)}已被驳回`,
-        content: `您的${typeLabel(item)}已被驳回，原因：${reviewComment.value}`,
-        category: 'audit_remind',
-        jumpUrl: '/applications',
-      })
       notificationStore.addNotification({
-        title: `${typeLabel(item)}已被驳回`,
-        content: `您的${typeLabel(item)}已被驳回，原因：${reviewComment.value}`,
+        title: `${typeLabel(item)}已被退回修改`,
+        content: `您的${typeLabel(item)}已被退回修改，原因：${comment.value}`,
         category: 'audit_remind',
         jumpUrl: '/applications',
       })
-      ElMessage.success('已驳回')
-      reviewComment.value = ''
+      ElMessage.success('已退回修改')
+      clearComment()
       return true
     } finally {
       isProcessing.value = false
@@ -136,12 +126,6 @@ export function useReviewOperations() {
       const idx = list.findIndex((p) => p.id === item.id)
       if (idx > -1) list.splice(idx, 1)
       count++
-      await pushNotification({
-        title: `${typeLabel(item)}已通过`,
-        content: `您的${typeLabel(item)}已通过审核。`,
-        category: 'audit_remind',
-        jumpUrl: '/approval/pending',
-      })
     }
     if (count > 0) ElMessage.success(`已批量通过 ${count} 条材料`)
     return count
@@ -153,11 +137,11 @@ export function useReviewOperations() {
       return 0
     }
     if (!reason.trim()) {
-      ElMessage.warning('请填写驳回原因')
+      ElMessage.warning('请填写退回原因')
       return 0
     }
     try {
-      await ElMessageBox.confirm(`确认批量驳回 ${items.length} 条材料？`, '批量驳回确认', {
+      await ElMessageBox.confirm(`确认批量退回修改 ${items.length} 条材料？`, '批量退回修改确认', {
         confirmButtonText: '确认',
         cancelButtonText: '取消',
         type: 'warning',
@@ -172,14 +156,8 @@ export function useReviewOperations() {
       const idx = list.findIndex((p) => p.id === item.id)
       if (idx > -1) list.splice(idx, 1)
       count++
-      await pushNotification({
-        title: `${typeLabel(item)}已被驳回`,
-        content: `您的${typeLabel(item)}已被驳回，原因：${reason}`,
-        category: 'audit_remind',
-        jumpUrl: '/applications',
-      })
     }
-    if (count > 0) ElMessage.success(`已批量驳回 ${count} 条材料`)
+    if (count > 0) ElMessage.success(`已批量退回修改 ${count} 条材料`)
     return count
   }
 
@@ -191,8 +169,7 @@ export function useReviewOperations() {
   }
 
   return {
-    reviewComment,
-    comment,
+    reviewComment: comment,
     templates,
     applyTemplate,
     clearComment,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Eye, FileText, X } from 'lucide-vue-next'
+import { Check, Eye, X } from 'lucide-vue-next'
 import { ref } from 'vue'
 import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import ReviewHistory from './ReviewHistory.vue'
@@ -8,7 +8,7 @@ import ReviewHistory from './ReviewHistory.vue'
  * ReviewList - 待审核材料列表（含批量操作栏）
  *
  * 从 CollegeReview 抽取，避免单文件超过 600 行限制（CLAUDE.md §2.5）。
- * 展示审核卡片 + 全选/批量通过/批量驳回。
+ * 展示审核卡片 + 全选/批量通过/批量退回修改。
  */
 interface Props {
   items: any[]
@@ -23,7 +23,6 @@ const emit = defineEmits<{
   (e: 'batchReject', reason: string): void
   (e: 'batchApprove'): void
   (e: 'viewDetail', item: any): void
-  (e: 'viewArchive', item: any): void
   (e: 'approve', item: any): void
   (e: 'reject', item: any): void
 }>()
@@ -33,6 +32,18 @@ const batchRejectReason = ref('')
 /** 申报类型显示名（统一走 APPLICATION_TYPE_MAP 集中字典） */
 function getTypeLabel(type: string): string {
   return APPLICATION_TYPE_MAP[type] ?? type
+}
+
+/** 卡片主标题：优先姓名，缺少姓名时回退申报标题 */
+function displayName(item: any): string {
+  return item.name || item.title || ''
+}
+
+/** 副信息行：班级 · 学号；两者皆缺时回退学期 */
+function metaText(item: any): string {
+  const parts = [item.className, item.studentId].filter(Boolean)
+  if (parts.length > 0) return parts.join(' · ')
+  return item.semester || ''
 }
 
 function getTypeColor(type: string): string {
@@ -90,7 +101,7 @@ function onBatchApprove() {
       <div class="batch-bar__right">
         <el-input
           v-model="batchRejectReason"
-          placeholder="批量驳回原因…"
+          placeholder="批量退回原因…"
           size="small"
           class="batch-reject-input"
         />
@@ -99,7 +110,7 @@ function onBatchApprove() {
           size="small"
           :disabled="selectedIds.size === 0 || !batchRejectReason.trim()"
           @click="onBatchReject"
-          >批量驳回</el-button
+          >批量退回修改</el-button
         >
         <el-button
           type="success"
@@ -129,11 +140,11 @@ function onBatchApprove() {
           <div class="review-card__top">
             <div class="review-card__student">
               <el-avatar :size="36" class="review-card__avatar">{{
-                item.name.charAt(0)
+                displayName(item).charAt(0)
               }}</el-avatar>
               <div>
-                <div class="review-card__name">{{ item.name }}</div>
-                <div class="review-card__meta">{{ item.className }} · {{ item.studentId }}</div>
+                <div class="review-card__name">{{ displayName(item) }}</div>
+                <div v-if="metaText(item)" class="review-card__meta">{{ metaText(item) }}</div>
               </div>
             </div>
             <el-tag
@@ -160,9 +171,6 @@ function onBatchApprove() {
               @click="emit('viewDetail', item)"
               >审核</el-button
             >
-            <el-button size="small" plain :icon="FileText" @click="emit('viewArchive', item)"
-              >档案</el-button
-            >
             <el-button
               v-if="isAdmin"
               type="success"
@@ -181,7 +189,7 @@ function onBatchApprove() {
               :icon="X"
               :loading="isProcessing"
               @click="emit('reject', item)"
-              >驳回</el-button
+              >退回修改</el-button
             >
           </div>
         </div>

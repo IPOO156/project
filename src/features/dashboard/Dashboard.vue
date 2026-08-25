@@ -16,6 +16,9 @@ import {
   useSubmissionStore,
   useThemeStore,
 } from '@/app/stores/stores'
+import { useScoreIndicator } from '@/shared/composables/composables'
+import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
+import StatusTag from '@/shared/ui/StatusTag.vue'
 import QuickEntries from './components/QuickEntries.vue'
 import QuickEntrySettings from './components/QuickEntrySettings.vue'
 import StatsOverview from './components/StatsOverview.vue'
@@ -32,6 +35,16 @@ const themeStore = useThemeStore()
 const { visibleEntries, recordClick, refreshPool, updateOrder, toggleHidden } = useQuickEntries()
 const showSettings = ref(false)
 
+const {
+  indicators: scoreIndicators,
+  indicatorVisible,
+  indicatorLoading,
+  indicatorTitle,
+  indicatorCalculationId,
+  openIndicator,
+  closeIndicator,
+} = useScoreIndicator()
+
 // ── 从 store 派生展示数据（数据由 API 层填充 store） ──
 
 // 学期均绩：所有课程按学分加权平均 GPA
@@ -43,34 +56,41 @@ const overallGpa = computed(() => {
   return (weighted / totalCredits).toFixed(2)
 })
 
-// 统计卡片：优先使用 /home/dashboard 数据，缺失时回退本地 store
+// 统计卡片：优先使用 /home/dashboard 数据，缺失时回退本地 store；本地也无数据则显示「--」
 const statsCards = computed(() => {
   const home = homeStore.data
   const records = submissionStore.records
+  const total = records.length > 0 ? records.length : '--'
+  const approved = records.length > 0 ? records.filter((r) => r.status === 'approved').length : '--'
+  const pending = records.length > 0 ? records.filter((r) => r.status === 'pending').length : '--'
   return [
     {
       label: '申报总数',
-      value: home?.applicationTotal ?? records.length,
+      value: home?.applicationTotal ?? total,
       icon: FileText,
       color: themeStore.isDark ? '#60a5fa' : '#2d5a87',
+      path: '/applications',
     },
     {
       label: '已通过',
-      value: home?.approvedCount ?? records.filter((r) => r.status === 'approved').length,
+      value: home?.approvedCount ?? approved,
       icon: Award,
       color: '#10b981',
+      path: '/approval/pending',
     },
     {
       label: '待审批',
-      value: home?.pendingCount ?? records.filter((r) => r.status === 'pending').length,
+      value: home?.pendingCount ?? pending,
       icon: Clock,
       color: '#d4a574',
+      path: '/approval/pending',
     },
     {
       label: '学期均绩',
-      value: home?.currentGpa ?? overallGpa.value,
+      value: home?.currentGpa ?? (archiveStore.grades.length > 0 ? overallGpa.value : '--'),
       icon: TrendingUp,
       color: '#d4a574',
+      path: '/profile/info',
     },
   ]
 })
@@ -92,15 +112,38 @@ const profileDimensions = computed(() => {
 
 const hasProfileDimensions = computed(() => profileDimensions.value.length > 0)
 
+const comparedSemesterMap = computed(() => {
+  const map = new Map<string, string>()
+  for (const ind of homeStore.data?.indicators ?? []) {
+    if (ind.dimensionName && ind.comparedSemesterName) {
+      map.set(ind.dimensionName, ind.comparedSemesterName)
+    }
+  }
+  return map
+})
+
+const indicatorMeta = computed(() => {
+  const first = homeStore.data?.indicators?.[0]
+  const rate = homeStore.data?.dataCompleteness?.rate
+  return {
+    ruleVersion: first?.ruleVersion == null ? '--' : `v${first.ruleVersion}`,
+    calculatedAt: first?.calculatedAt ?? '--',
+    completeness: rate == null ? '--' : `${Math.round(rate <= 1 ? rate * 100 : rate)}%`,
+  }
+})
+
 const profileSummary = computed(() => {
+  const comparedMap = comparedSemesterMap.value
   return profileDimensions.value.map((item) => {
     const deltaFromPrevious = item.current - item.previous
+    const comparedSemesterName = comparedMap.get(item.label)
     return {
       label: item.label,
       current: item.current,
       target: item.target,
       previous: item.previous,
       deltaFromPrevious,
+      deltaLabel: comparedSemesterName ? `较${comparedSemesterName}学期` : '较上阶段',
       gapToTarget: item.target - item.current,
       deltaClass: deltaFromPrevious >= 0 ? 'is-up' : 'is-down',
       deltaSign: deltaFromPrevious >= 0 ? '+' : '',
@@ -239,6 +282,10 @@ async function onEntryClick(entry: QuickEntry) {
   }
 }
 
+function onStatCardClick(path: string) {
+  void router.push(path)
+}
+
 function onQuickRefresh() {
   refreshPool()
 }
@@ -262,33 +309,53 @@ onMounted(() => {
 
 <template>
   <div class="dashboard">
-    <StatsOverview :cards="statsCards" />
+    <StatsOverview :cards="statsCards" @card-click="onStatCardClick" />
 
     <el-row :gutter="16" class="dashboard__main">
       <el-col :span="13" class="dashboard__col">
         <el-card class="dashboard__section dashboard__section--radar">
           <template #header>
-            <span class="section-title">多维度画像评估</span>
+            <div class="dashboard__section-header">
+              <span class="section-title">多维度画像评估</span>
+              <span class="indicator-meta">
+                规则版本 {{ indicatorMeta.ruleVersion }} · 计算时间
+                {{ indicatorMeta.calculatedAt }} · 数据完整度 {{ indicatorMeta.completeness }}
+                <el-button link type="primary" @click="onStatCardClick('/profile/info')"
+                  >查看档案概览</el-button
+                >
+              </span>
+            </div>
           </template>
           <div class="radar-panel">
-            <VChart
-              v-if="radarOption"
-              class="radar-panel__chart"
-              :option="radarOption"
-              autoresize
-            />
-            <div v-else class="radar-panel__chart radar-panel__chart--empty">
-              <el-empty description="暂无维度数据" :image-size="80" />
+            <div class="radar-panel__chart-wrap" @click="onStatCardClick('/profile/info')">
+              <VChart
+                v-if="radarOption"
+                class="radar-panel__chart"
+                :option="radarOption"
+                autoresize
+              />
+              <div v-else class="radar-panel__chart radar-panel__chart--empty">
+                <el-empty description="暂无维度数据" :image-size="80" />
+              </div>
             </div>
             <div v-if="profileSummary.length > 0" class="radar-panel__summary">
               <div v-for="item in profileSummary" :key="item.label" class="radar-metric">
                 <div class="radar-metric__title-row">
                   <span class="radar-metric__label">{{ item.label }}</span>
-                  <span class="radar-metric__score">{{ item.current }}分</span>
+                  <div class="radar-metric__score-group">
+                    <span class="radar-metric__score">{{ item.current }}分</span>
+                    <el-button
+                      class="radar-metric__link"
+                      link
+                      type="primary"
+                      @click="openIndicator(item.label, item.label)"
+                      >查看计算说明</el-button
+                    >
+                  </div>
                 </div>
                 <div class="radar-metric__meta">
                   <span class="radar-metric__delta" :class="item.deltaClass">
-                    较上阶段 {{ item.deltaSign }}{{ item.deltaFromPrevious }}
+                    {{ item.deltaLabel }} {{ item.deltaSign }}{{ item.deltaFromPrevious }}分
                   </span>
                   <span class="radar-metric__gap">距目标 {{ item.gapToTarget }}分</span>
                 </div>
@@ -321,7 +388,10 @@ onMounted(() => {
             <div v-for="act in recentActivities" :key="act.id" class="activity-item">
               <div class="activity-item__dot" :class="`activity-item__dot--${act.type}`" />
               <div class="activity-item__content">
-                <p class="activity-item__text">{{ act.text }}</p>
+                <div class="activity-item__title-row">
+                  <p class="activity-item__text">{{ act.text }}</p>
+                  <StatusTag :status="act.status" size="small" />
+                </div>
                 <span class="activity-item__time">{{ act.time }}</span>
               </div>
             </div>
@@ -335,6 +405,14 @@ onMounted(() => {
     </el-row>
 
     <QuickEntrySettings v-model:visible="showSettings" />
+    <ScoreIndicatorDialog
+      :visible="indicatorVisible"
+      :loading="indicatorLoading"
+      :title="indicatorTitle"
+      :indicators="scoreIndicators"
+      :calculation-id="indicatorCalculationId"
+      @close="closeIndicator"
+    />
   </div>
 </template>
 
@@ -396,11 +474,23 @@ onMounted(() => {
   color: var(--el-text-color-primary);
 }
 
+.indicator-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
 .radar-panel {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(240px, 1fr);
   gap: $spacing-lg;
   align-items: center;
+}
+
+.radar-panel__chart-wrap {
+  cursor: pointer;
 }
 
 .radar-panel__chart {
@@ -439,6 +529,16 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 700;
   color: var(--el-color-primary);
+}
+
+.radar-metric__score-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.radar-metric__link {
+  font-size: 12px;
 }
 
 .radar-metric__meta {
@@ -503,6 +603,13 @@ onMounted(() => {
       color: var(--el-text-color-primary);
       margin-bottom: 2px;
     }
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
   }
 
   &__time {

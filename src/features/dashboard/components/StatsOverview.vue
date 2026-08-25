@@ -7,14 +7,28 @@ defineProps<{
     value: string | number
     icon: Component
     color: string
+    path?: string
   }>
 }>()
+
+const emit = defineEmits<{
+  (e: 'cardClick', path: string): void
+}>()
+
+function handleCardClick(path?: string) {
+  if (path) emit('cardClick', path)
+}
 </script>
 
 <template>
   <el-row :gutter="16" class="stats-overview">
     <el-col v-for="card in cards" :key="card.label" :xs="12" :sm="6" :md="6" :span="6">
-      <el-card shadow="hover" class="stat-card">
+      <el-card
+        shadow="hover"
+        class="stat-card"
+        :class="{ 'stat-card--clickable': card.path }"
+        @click="handleCardClick(card.path)"
+      >
         <div class="stat-card__body">
           <div class="stat-card__info">
             <p class="stat-card__label">{{ card.label }}</p>
@@ -39,6 +53,10 @@ defineProps<{
 }
 
 .stat-card {
+  &--clickable {
+    cursor: pointer;
+  }
+
   &__body {
     display: flex;
     justify-content: space-between;
