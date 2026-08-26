@@ -1,73 +1,87 @@
 <script setup lang="ts">
 /**
- * AwardBoard - 奖项看板
+ * AwardBoard - 奖项看板（三个之星报名）
  *
- * 统计总览 + 柱状图 + 学期趋势 + 完整度网格。
+ * 统计总览 + 奖项类型分布 + 提交状态分布 + 学期趋势 + 参与度网格。
+ * 数据源：GET /awards/overview（真实聚合统计，字段与后端一致）。
  */
-import { Check, Medal, Plus, TrendingUp, X } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { Check, CircleCheck, Clock, Medal, Plus, TrendingUp, X } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { getAwardsOverview } from '@/shared/api/awards'
+import { APPLICATION_STATUS } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
-import BoardCharts from './components/BoardCharts.vue'
+import PieChart from './components/PieChart.vue'
 import TrendChart from './components/TrendChart.vue'
-import { useStarMockData } from './composables/useStarMockData'
 
 const router = useRouter()
-const allData = useStarMockData()
 
-const totalCount = computed(() => allData.value.length)
-const currentSemester = computed(() => {
-  const sorted = [...allData.value].sort((a, b) => b.submitDate?.localeCompare(a.submitDate) || 0)
-  return sorted[0]?.semester || '2024-2025-2'
-})
-const semesterCount = computed(
-  () => allData.value.filter((r) => r.semester === currentSemester.value).length,
-)
-
-const STAR_TYPE_LABELS: Record<string, string> = {
-  competitionStar: '竞赛之星',
-  scientificProject: '科研之星（项目）',
-  softwareCopyright: '科研之星（软著）',
-  paper: '科研之星（论文）',
-  innovationStar: '双创之星',
+/** GET /awards/overview 返回结构 */
+interface AwardsOverview {
+  totalSubmissions: number
+  pendingReview: number
+  approved: number
+  newThisSemester: number
+  typeDistribution: Record<string, number>
+  statusDistribution: Record<string, number>
+  semesterTrend: Array<{ semesterId: number; semesterName: string; count: number }>
 }
 
-const typeData = computed(() => {
-  const map = new Map<string, number>()
-  allData.value.forEach((r) => {
-    const label = STAR_TYPE_LABELS[r.type] || r.typeLabel || r.type
-    map.set(label, (map.get(label) || 0) + 1)
-  })
-  return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
+const overview = ref<AwardsOverview | null>(null)
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    overview.value = await getAwardsOverview()
+  } finally {
+    loading.value = false
+  }
 })
 
-const trendData = computed(() => {
-  const map = new Map<string, number>()
-  allData.value.forEach((r) => {
-    if (r.semester) map.set(r.semester, (map.get(r.semester) || 0) + 1)
-  })
-  return Array.from(map.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([semester, count]) => ({ semester, count }))
+const totalCount = computed(() => overview.value?.totalSubmissions ?? 0)
+const pendingCount = computed(() => overview.value?.pendingReview ?? 0)
+const approvedCount = computed(() => overview.value?.approved ?? 0)
+const newThisSemester = computed(() => overview.value?.newThisSemester ?? 0)
+
+/** 后端 typeDistribution key（下划线）→ 中文名 */
+const STAR_TYPE_LABELS: Record<string, string> = {
+  competition_star: '竞赛之星',
+  research_star: '科研之星',
+  innovation_star: '双创之星',
+}
+
+const typeData = computed(() =>
+  Object.entries(overview.value?.typeDistribution ?? {})
+    .map(([key, value]) => ({ name: STAR_TYPE_LABELS[key] ?? key, value }))
+    .filter((d) => d.value > 0),
+)
+
+const statusData = computed(() => {
+  const statusMap = APPLICATION_STATUS as Record<string, { label: string }>
+  return Object.entries(overview.value?.statusDistribution ?? {})
+    .map(([key, value]) => ({ name: statusMap[key]?.label ?? key, value }))
+    .filter((d) => d.value > 0)
 })
+
+const trendData = computed(() =>
+  (overview.value?.semesterTrend ?? [])
+    .map((t) => ({ semester: t.semesterName, count: t.count }))
+    .filter((t) => t.semester),
+)
 
 const STAR_TYPES_CONFIG = [
-  { key: 'competitionStar', label: '竞赛之星', path: '/awards/competition-star' },
-  { key: 'scientificStar', label: '科研之星', path: '/awards/scientific-star' },
-  { key: 'innovationStar', label: '双创之星', path: '/awards/innovation-star' },
+  { key: 'competition_star', label: '竞赛之星', path: '/awards/competition-star' },
+  { key: 'research_star', label: '科研之星', path: '/awards/scientific-star' },
+  { key: 'innovation_star', label: '双创之星', path: '/awards/innovation-star' },
 ]
-const SCIENTIFIC_SUB_TYPES = ['scientificProject', 'softwareCopyright', 'paper']
 
-const completenessList = computed(() => {
-  return STAR_TYPES_CONFIG.map((cfg) => {
-    let hasData = false
-    if (cfg.key === 'scientificStar')
-      hasData = allData.value.some((r) => SCIENTIFIC_SUB_TYPES.includes(r.type))
-    else hasData = allData.value.some((r) => r.type === cfg.key)
-    return { ...cfg, hasData }
-  })
-})
+const completenessList = computed(() =>
+  STAR_TYPES_CONFIG.map((cfg) => ({
+    ...cfg,
+    hasData: (overview.value?.typeDistribution?.[cfg.key] ?? 0) > 0,
+  })),
+)
 
 function goTo(path: string) {
   router.push(path)
@@ -79,7 +93,7 @@ function goTo(path: string) {
     <PageHeader title="奖项看板" subtitle="总览各之星报名情况，快速了解参与度" />
 
     <el-row :gutter="16" class="stats-row">
-      <el-col :span="12">
+      <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
           <div class="stat-card__body">
             <div class="stat-card__info">
@@ -90,22 +104,48 @@ function goTo(path: string) {
           </div>
         </el-card>
       </el-col>
-      <el-col :span="12">
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">待审核</p>
+              <p class="stat-card__value">{{ pendingCount }}</p>
+            </div>
+            <div class="stat-card__icon stat-card__icon--warning"><Clock :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">已通过</p>
+              <p class="stat-card__value">{{ approvedCount }}</p>
+            </div>
+            <div class="stat-card__icon stat-card__icon--success"><CircleCheck :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
           <div class="stat-card__body">
             <div class="stat-card__info">
               <p class="stat-card__label">本学期新增</p>
-              <p class="stat-card__value">{{ semesterCount }}</p>
+              <p class="stat-card__value">{{ newThisSemester }}</p>
             </div>
-            <div class="stat-card__icon"><TrendingUp :size="24" /></div>
+            <div class="stat-card__icon stat-card__icon--primary"><TrendingUp :size="24" /></div>
           </div>
         </el-card>
       </el-col>
     </el-row>
 
     <el-row :gutter="16">
-      <el-col :span="14"><BoardCharts :data="typeData" title="各类型报名数量" /></el-col>
-      <el-col :span="10"><TrendChart :data="trendData" title="各学期报名趋势" /></el-col>
+      <el-col :span="12"><PieChart :data="typeData" title="奖项类型分布" /></el-col>
+      <el-col :span="12"><PieChart :data="statusData" title="提交状态分布" /></el-col>
+    </el-row>
+
+    <el-row :gutter="16">
+      <el-col :span="24"><TrendChart :data="trendData" title="各学期报名趋势" /></el-col>
     </el-row>
 
     <el-card class="completeness-card">
@@ -178,6 +218,19 @@ function goTo(path: string) {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+
+    &--warning {
+      background: #e6a23c15;
+      color: #e6a23c;
+    }
+    &--success {
+      background: #67c23a15;
+      color: #67c23a;
+    }
+    &--primary {
+      background: #409eff15;
+      color: var(--el-color-primary);
+    }
   }
 }
 .completeness-card {

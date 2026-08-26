@@ -18,7 +18,14 @@ function emptyForm() {
   }
 }
 
-const page = reactive(useApplicationPage('bookReport', '图书心得', emptyForm, 'book-report'))
+const page = reactive(
+  useApplicationPage('bookReport', '图书心得', emptyForm, 'book-report', [
+    { key: 'bookName', label: '图书名称' },
+    { key: 'bookDate', label: '阅读时间' },
+    { key: 'review', label: '心得体会' },
+    { key: 'semester', label: '学期' },
+  ]),
+)
 
 function handleEditClick(row: any) {
   page.form.bookName = row.bookName || ''

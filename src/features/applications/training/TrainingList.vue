@@ -19,7 +19,15 @@ function emptyForm() {
   }
 }
 
-const page = reactive(useApplicationPage('training', '实训项目', emptyForm))
+const page = reactive(
+  useApplicationPage('training', '实训项目', emptyForm, undefined, [
+    { key: 'projectName', label: '项目名称' },
+    { key: 'projectContent', label: '项目内容' },
+    { key: 'startDate', label: '开始时间' },
+    { key: 'endDate', label: '结束时间' },
+    { key: 'semester', label: '学期' },
+  ]),
+)
 
 function handleEditClick(row: any) {
   page.form.projectName = row.projectName || ''

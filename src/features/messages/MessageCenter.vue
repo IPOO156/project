@@ -342,7 +342,9 @@ onMounted(() => {
 
       <el-empty
         v-else-if="!notificationStore.loading"
-        description="暂无通知消息"
+        :description="
+          notificationStore.loadError ? '消息加载失败，请检查网络后重试' : '暂无通知消息'
+        "
         class="mc-empty"
       />
     </div>

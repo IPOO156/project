@@ -9,11 +9,17 @@ import {
   useThemeStore,
   useUserStore,
 } from '@/app/stores/stores'
-import { getDataCompleteness } from '@/shared/api/student'
+import { getDict } from '@/shared/api/common'
+import {
+  getDataCompleteness,
+  updatePoliticalStatus,
+  updateStudentStatus,
+} from '@/shared/api/student'
 import AvatarUploader from './components/AvatarUploader.vue'
 import AwardsPanel from './components/AwardsPanel.vue'
 import DimensionPanel from './components/DimensionPanel.vue'
 import InterestPanel from './components/InterestPanel.vue'
+import SelfEvaluationPanel from './components/SelfEvaluationPanel.vue'
 import { useArchiveExport } from './composables/useArchiveExport'
 import { useResumeExport } from './composables/useResumeExport'
 import ResumeTemplate from './ResumeTemplate.vue'
@@ -35,13 +41,22 @@ async function loadCompleteness() {
 }
 
 onMounted(() => {
-  if (archiveStore.interests.length === 0) archiveStore.fetchArchive()
+  // 每次进入档案概览都刷新 /profile/info，保证学籍/联系/自我评价等展示与后端一致
+  archiveStore.fetchArchive()
   if (submissionStore.records.length === 0) submissionStore.fetchRecords()
   loadCompleteness()
 })
 
 const interests = computed(() => archiveStore.interests)
-const awards = computed(() => archiveStore.awards)
+/** 个人奖项：只读展示 /profile/info 的 personalAwards 类别汇总（方案一，后端无 CRUD，不做手动增删改） */
+const personalAwards = computed(() => archiveStore.profileData?.personalAwards ?? [])
+/** 获奖总数 = 各类别 totalCount 之和（后端按类别聚合，不再用列表行数） */
+const totalAwardCount = computed(() =>
+  personalAwards.value.reduce(
+    (sum: number, a: { totalCount?: number }) => sum + (a.totalCount ?? 0),
+    0,
+  ),
+)
 
 const gradeSummary = computed(() => {
   const map = new Map<
@@ -92,19 +107,61 @@ const dimAvg = computed(() => {
 
 // ── 基本资料编辑 ──
 // 学籍字段（学号/年级/专业/班级/姓名）属学术身份信息，仅只读展示，不进入编辑表单；
-// 编辑表单仅保留可更新的联系方式（邮箱/手机号），提交时走 PUT /profile/contact。
+// 编辑表单保留可更新的联系方式（邮箱/手机号 PUT /profile/contact）与
+// 政治面貌/学生状态（PUT /profile/political-status、/profile/student-status，见接口文档 4.1.5）。
 const isEditing = ref(false)
-const formData = ref<Partial<UserInfo>>({})
+const formData = ref<Partial<UserInfo> & { politicalStatus?: string; studentStatus?: string }>({})
+/** 学生状态字典编码，枚举值来自接口文档 4.1.5.1（禁止前端自行增改） */
+const STUDENT_STATUS_OPTIONS = [
+  { value: 'current', label: '在校生' },
+  { value: 'fresh_graduate', label: '应届毕业生' },
+  { value: 'graduated', label: '已毕业' },
+] as const
+const politicalOptions = ref<{ value: string; label: string }[]>([])
+/** /profile/info 中的学籍信息（政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
+const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})
+
+/** 政治面貌选项来自后端字典（GET /common/dict?dictType=political_status），不前端硬编码 */
+async function loadPoliticalOptions() {
+  try {
+    const list = await getDict('political_status')
+    politicalOptions.value = (list ?? []).map((d: any) => ({ value: d.value, label: d.label }))
+  } catch {
+    politicalOptions.value = []
+  }
+}
+
 function startEdit() {
+  const a = academicInfo.value
   formData.value = {
     email: userStore.userInfo?.email ?? '',
     phone: userStore.userInfo?.phone ?? '',
+    politicalStatus: a.politicalStatus ?? '',
+    studentStatus: a.studentStatus ?? '',
   }
   isEditing.value = true
+  loadPoliticalOptions()
 }
 async function saveEdit() {
-  await userStore.updateUserInfo(formData.value)
+  const a = academicInfo.value
+  await userStore.updateUserInfo({
+    email: formData.value.email,
+    phone: formData.value.phone,
+  })
+  // 政治面貌 / 学生状态仅在用户改动时提交
+  try {
+    if (formData.value.politicalStatus && formData.value.politicalStatus !== a.politicalStatus) {
+      await updatePoliticalStatus(formData.value.politicalStatus)
+    }
+    if (formData.value.studentStatus && formData.value.studentStatus !== a.studentStatus) {
+      await updateStudentStatus(formData.value.studentStatus)
+    }
+  } catch {
+    ElMessage.error('学籍信息保存失败')
+  }
   isEditing.value = false
+  // 重新拉取 /profile/info，保证展示标签与后端一致
+  await archiveStore.fetchArchive()
   ElMessage.success('已保存')
 }
 function cancelEdit() {
@@ -193,7 +250,7 @@ async function handleExportResume() {
         <div class="stat-card__inner">
           <div>
             <p class="stat-card__label">获奖总数</p>
-            <p class="stat-card__value">{{ awards.length }}</p>
+            <p class="stat-card__value">{{ totalAwardCount }}</p>
           </div>
           <div class="stat-card__icon" style="background: #fef3e2; color: #d4a574">
             <Plus :size="20" />
@@ -270,6 +327,12 @@ async function handleExportResume() {
           <el-descriptions-item label="班级">{{
             userStore.userInfo?.className || '-'
           }}</el-descriptions-item>
+          <el-descriptions-item label="政治面貌">{{
+            academicInfo.politicalStatusLabel || '-'
+          }}</el-descriptions-item>
+          <el-descriptions-item label="学生状态">{{
+            academicInfo.studentStatusLabel || '-'
+          }}</el-descriptions-item>
           <el-descriptions-item label="邮箱">{{
             userStore.userInfo?.email || '-'
           }}</el-descriptions-item>
@@ -286,6 +349,24 @@ async function handleExportResume() {
             <el-col :span="12"
               ><el-form-item label="手机号"
                 ><el-input v-model="formData.phone" size="small" /></el-form-item
+            ></el-col>
+            <el-col :span="12"
+              ><el-form-item label="政治面貌"
+                ><el-select v-model="formData.politicalStatus" size="small" class="form-w">
+                  <el-option
+                    v-for="o in politicalOptions"
+                    :key="o.value"
+                    :label="o.label"
+                    :value="o.value" /></el-select></el-form-item
+            ></el-col>
+            <el-col :span="12"
+              ><el-form-item label="学生状态"
+                ><el-select v-model="formData.studentStatus" size="small" class="form-w">
+                  <el-option
+                    v-for="o in STUDENT_STATUS_OPTIONS"
+                    :key="o.value"
+                    :label="o.label"
+                    :value="o.value" /></el-select></el-form-item
             ></el-col>
           </el-row>
         </el-form>
@@ -321,10 +402,12 @@ async function handleExportResume() {
           </div>
         </div>
       </el-card>
-      <AwardsPanel :awards="awards" />
+      <AwardsPanel :awards="personalAwards" />
     </div>
 
     <InterestPanel :interests="interests" />
+
+    <SelfEvaluationPanel />
 
     <!-- 简历模板（隐藏于屏幕外，用于导出 PDF） -->
     <div class="resume-render-area">
@@ -506,6 +589,9 @@ async function handleExportResume() {
 }
 .profile-form {
   margin-top: 8px;
+}
+.form-w {
+  width: 100%;
 }
 
 // 成绩

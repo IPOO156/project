@@ -145,11 +145,23 @@ export const useUserStore = defineStore('user', () => {
     const base = userInfo.value ?? ({ id: '', username: '' } as UserInfo)
     const updated = { ...base, ...partial }
     userInfo.value = updated
-    // 同步到后端（仅联系信息字段，对接 PUT /profile/contact）
-    updateProfileContact({
-      email: partial.email || undefined,
-      phone: partial.phone || undefined,
-    }).catch(() => {})
+    // 同步到后端（仅联系信息字段，对接 PUT /profile/contact），成功后用返回数据回填
+    try {
+      const res = await updateProfileContact({
+        email: partial.email || undefined,
+        phone: partial.phone || undefined,
+      })
+      if (res && userInfo.value) {
+        userInfo.value = {
+          ...userInfo.value,
+          email: res.email ?? userInfo.value.email,
+          phone: res.phone ?? userInfo.value.phone,
+          avatar: res.avatar ?? userInfo.value.avatar,
+        }
+      }
+    } catch {
+      /* 接口失败不阻塞本地保存 */
+    }
     // 持久化到 localStorage
     try {
       localStorage.setItem('user_info_cache', JSON.stringify(userInfo.value))

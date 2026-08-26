@@ -1,6 +1,5 @@
 import type { Component } from 'vue'
 import {
-  BarChart3,
   Bell,
   Clock,
   Compass,
@@ -135,13 +134,12 @@ export const registeredModules: AppModule[] = [
     icon: Star,
     order: 40,
     routePrefix: '/awards',
-    description: '奖项总览与各类奖项报名',
+    description: '三类之星奖项报名（总览见「我的申报 - 奖项看板」）',
     menuItems: [
       {
         label: '奖项报名',
         icon: Star,
         children: [
-          { label: '奖项总览', icon: BarChart3, path: '/awards' },
           { label: '竞赛之星报名', icon: Trophy, path: '/awards/competition-star' },
           { label: '科研之星报名', icon: GraduationCap, path: '/awards/scientific-star' },
           { label: '双创之星报名', icon: Lightbulb, path: '/awards/innovation-star' },

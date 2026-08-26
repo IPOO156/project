@@ -20,7 +20,16 @@ function emptyForm() {
   }
 }
 
-const page = reactive(useApplicationPage('organization', '组织履历', emptyForm))
+const page = reactive(
+  useApplicationPage('organization', '组织履历', emptyForm, undefined, [
+    { key: 'organizationLevel', label: '组织级别' },
+    { key: 'department', label: '部门' },
+    { key: 'position', label: '职务' },
+    { key: 'startDate', label: '开始时间' },
+    { key: 'endDate', label: '结束时间' },
+    { key: 'semester', label: '学期' },
+  ]),
+)
 
 function handleEditClick(row: any) {
   page.form.department = row.department || ''

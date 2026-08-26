@@ -20,7 +20,16 @@ function emptyForm() {
   }
 }
 
-const page = reactive(useApplicationPage('innovation', '创新创业', emptyForm))
+const page = reactive(
+  useApplicationPage('innovation', '创新创业', emptyForm, undefined, [
+    { key: 'companyName', label: '公司名称' },
+    { key: 'industryType', label: '行业类型' },
+    { key: 'companyType', label: '公司类型' },
+    { key: 'teamRole', label: '团队角色' },
+    { key: 'registerDate', label: '注册时间' },
+    { key: 'semester', label: '学期' },
+  ]),
+)
 
 function handleEditClick(row: any) {
   page.form.companyName = row.companyName || ''

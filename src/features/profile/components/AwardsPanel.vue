@@ -1,84 +1,15 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Award, Plus } from 'lucide-vue-next'
-import { reactive, ref } from 'vue'
-import { useArchiveStore } from '@/app/stores/stores'
+import { Award } from 'lucide-vue-next'
 
-const props = defineProps<{
-  awards: Array<{ id: string; name: string; level: string; prize?: string; date: string }>
+/**
+ * 个人奖项（只读展示）
+ * 数据源：GET /profile/info → personalAwards（后端按类别聚合 category/totalCount/maxLevel/latestTime，
+ * 由申报/奖项报名审核通过的记录汇总，见接口文档 4.1）。
+ * 方案一：后端无个人奖项 CRUD 接口，前端不提供手动新增/编辑/删除，避免「新增后刷新消失」的假象。
+ */
+defineProps<{
+  awards: Array<{ category: string; totalCount: number; maxLevel: string; latestTime: string }>
 }>()
-
-const archiveStore = useArchiveStore()
-
-const AWARD_LEVEL_LABELS: Record<string, string> = {
-  national: '国家级',
-  provincial: '省级',
-  school: '校级',
-  college: '院级',
-}
-
-const awardDialogVisible = ref(false)
-const editingAwardId = ref<string | null>(null)
-const awardForm = reactive({ name: '', level: '', prize: '', date: '' })
-
-function openAddAward() {
-  editingAwardId.value = null
-  awardForm.name = ''
-  awardForm.level = ''
-  awardForm.prize = ''
-  awardForm.date = ''
-  awardDialogVisible.value = true
-}
-
-function openEditAward(id: string) {
-  editingAwardId.value = id
-  const item = props.awards.find((a) => a.id === id)
-  if (!item) return
-  awardForm.name = item.name
-  awardForm.level = item.level
-  awardForm.prize = item.prize ?? ''
-  awardForm.date = item.date
-  awardDialogVisible.value = true
-}
-
-async function saveAward() {
-  if (!awardForm.name || !awardForm.level) {
-    ElMessage.warning('请填写完整信息')
-    return
-  }
-  try {
-    const payload = {
-      name: awardForm.name,
-      level: awardForm.level,
-      prize: awardForm.prize,
-      date: awardForm.date,
-      type: 'other',
-    }
-    if (editingAwardId.value) {
-      await archiveStore.editAward(editingAwardId.value, payload)
-    } else {
-      await archiveStore.createAward(payload)
-    }
-    awardDialogVisible.value = false
-  } catch {
-    ElMessage.error('保存失败，请重试')
-  }
-}
-
-function deleteAward(id: string) {
-  // TODO(待后端)：奖项审核状态字段未在 Award 契约（types.ts / docs/api.md 3.3）及
-  // /profile/info 的 personalAwards 返回中定义，禁止在前端自行编造字段名。
-  // 待后端补充 status（如 submitted / approved / rejected）后：
-  // 1) 在列表 meta 区渲染 <StatusTag :status="a.status" /> 展示审核状态；
-  // 2) 已通过（approved）记录隐藏「删除」按钮：v-if="a.status !== 'approved'"。
-  ElMessageBox.confirm('确定删除该奖项吗？', '删除确认', {
-    confirmButtonText: '删除',
-    cancelButtonText: '取消',
-    type: 'warning',
-  })
-    .then(() => archiveStore.removeAward(id))
-    .catch(() => {})
-}
 </script>
 
 <template>
@@ -89,74 +20,26 @@ function deleteAward(id: string) {
           <Award :size="16" />
           <span>个人奖项</span>
         </div>
-        <el-button link type="primary" size="small" :icon="Plus" @click="openAddAward">
-          新增
-        </el-button>
+        <span class="card-header__note">申报审核通过后自动汇总</span>
       </div>
     </template>
-    <div class="award-list">
-      <div v-for="a in awards" :key="a.id" class="award-item">
+    <div v-if="awards.length" class="award-list">
+      <div v-for="(a, i) in awards" :key="`${a.category}-${i}`" class="award-item">
         <div class="award-item__icon">
           <Award :size="18" />
         </div>
         <div class="award-item__body">
-          <div class="award-item__name">{{ a.name }}</div>
+          <div class="award-item__name">{{ a.category }}</div>
           <div class="award-item__meta">
-            <el-tag size="small" type="warning" effect="plain">{{
-              AWARD_LEVEL_LABELS[a.level] ?? a.level
-            }}</el-tag>
-            <span v-if="a.prize">{{ a.prize }}</span>
-            <span>{{ a.date }}</span>
+            <el-tag size="small" type="warning" effect="plain">{{ a.maxLevel }}</el-tag>
+            <span>共 {{ a.totalCount }} 项</span>
+            <span v-if="a.latestTime">最近 {{ a.latestTime }}</span>
           </div>
-        </div>
-        <div class="award-item__actions">
-          <el-button link type="primary" size="small" @click="openEditAward(a.id)">
-            编辑
-          </el-button>
-          <!-- TODO(待后端)：已通过(approved)记录隐藏删除按钮，待 status 字段补充后：v-if="a.status !== 'approved'" -->
-          <el-button link type="danger" size="small" @click="deleteAward(a.id)"> 删除 </el-button>
         </div>
       </div>
     </div>
+    <el-empty v-else :image-size="56" description="暂无奖项记录，通过申报审核后自动汇总" />
   </el-card>
-
-  <el-dialog
-    v-model="awardDialogVisible"
-    :title="editingAwardId ? '编辑奖项' : '新增奖项'"
-    width="480px"
-    :close-on-click-modal="false"
-  >
-    <el-form :model="awardForm" label-width="80px">
-      <el-form-item label="奖项名称" required>
-        <el-input v-model="awardForm.name" placeholder="请输入奖项名称" />
-      </el-form-item>
-      <el-form-item label="奖项级别" required>
-        <el-select v-model="awardForm.level" class="form-select" placeholder="请选择级别">
-          <el-option label="国家级" value="national" />
-          <el-option label="省级" value="provincial" />
-          <el-option label="校级" value="school" />
-          <el-option label="院级" value="college" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="获奖等级">
-        <el-input v-model="awardForm.prize" placeholder="如 一等奖、优秀干部" />
-      </el-form-item>
-      <el-form-item label="获奖时间">
-        <el-date-picker
-          v-model="awardForm.date"
-          type="month"
-          placeholder="选择月份"
-          format="YYYY-MM"
-          value-format="YYYY-MM"
-          class="form-select"
-        />
-      </el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="awardDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="saveAward">保存</el-button>
-    </template>
-  </el-dialog>
 </template>
 
 <style scoped lang="scss">
@@ -180,6 +63,12 @@ function deleteAward(id: string) {
     align-items: center;
     gap: 8px;
     color: var(--el-text-color-primary);
+  }
+
+  &__note {
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--el-text-color-secondary);
   }
 }
 
@@ -232,13 +121,6 @@ function deleteAward(id: string) {
     gap: 8px;
     font-size: 12px;
     color: var(--el-text-color-secondary);
-  }
-
-  &__actions {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex-shrink: 0;
   }
 }
 </style>

@@ -2,21 +2,14 @@ import type { Award, Grade, Interest, ProfileDimension, TimelineNode } from '@/s
 import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import {
-  addAward as apiAddAward,
-  deleteAward as apiDeleteAward,
-  updateAward as apiUpdateAward,
-  getAwards,
-  getDimensions,
-  getGrades,
-  getTimelineEvents,
-} from '@/shared/api/archive'
+import { getAwards, getDimensions, getGrades, getTimelineEvents } from '@/shared/api/archive'
 import {
   deleteInterest as apiDeleteInterest,
   updateInterests as apiUpdateInterests,
   getGrowthTimeline,
   getProfileInfo,
 } from '@/shared/api/student'
+import { useUserStore } from './user'
 
 /**
  * 档案信息流转 Store
@@ -29,6 +22,8 @@ export const useArchiveStore = defineStore('archive', () => {
   const awards = ref<Award[]>([])
   const dimensions = ref<ProfileDimension[]>([])
   const timelineEvents = ref<TimelineNode[]>([])
+  /** GET /profile/info 原始响应（学籍/联系/自我评价等字段供页面直接消费） */
+  const profileData = ref<any>(null)
   const loading = ref(false)
 
   /** 从后端 /profile/info 拉取画像数据（失败回退 Mock） */
@@ -44,14 +39,38 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
+  /** 学籍/联系信息同步到 userStore（档案概览页「基本资料」的展示来源） */
+  function syncAcademicToUser(profile: any) {
+    const a = profile?.academicInfo ?? {}
+    const c = profile?.contactInfo ?? {}
+    const userStore = useUserStore()
+    const base = userStore.userInfo
+    if (!base) return
+    userStore.setUserInfo({
+      ...base,
+      grade: a.grade ?? base.grade,
+      major: a.major ?? base.major,
+      className: a.className ?? base.className,
+      studentId: a.studentNo ?? base.studentId,
+      college: a.collegeName ?? base.college,
+      email: c.email ?? base.email,
+      phone: c.phone ?? base.phone,
+      avatar: c.avatar ?? base.avatar,
+    })
+  }
+
   function applyProfileInfo(profile: any) {
+    // 保留原始响应，供页面读取学籍/联系/自我评价等字段
+    profileData.value = profile
+    syncAcademicToUser(profile)
     // 维度画像
     if (Array.isArray(profile.dimensionProfile)) {
       dimensions.value = profile.dimensionProfile.map((d: any) => ({
         label: d.dimensionName,
         current: d.score,
         target: d.targetScore,
-        previous: d.score - parseTrend(d.trend),
+        // /profile/info 未返回上阶段分数，无环比数据时 previous 与 current 相同（前端不编造趋势）
+        previous: d.score,
       }))
     }
     // 兴趣标签
@@ -89,13 +108,7 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  function parseTrend(trend: string | undefined): number {
-    const v = Number(String(trend ?? '0').replace(/[^0-9-]/g, ''))
-    return Number.isFinite(v) ? v : 0
-  }
-
-  /** 从后端 /profile/growth-timeline 拉取时间线（失败回退 Mock） */
-  async function fetchTimeline(): Promise<void> {
+  /** 从后端 /profile/growth-timeline 拉取时间线（失败回退 Mock） */ async function fetchTimeline(): Promise<void> {
     try {
       const data = await getGrowthTimeline()
       if (data.timeline && data.timeline.length > 0) {
@@ -243,25 +256,9 @@ export const useArchiveStore = defineStore('archive', () => {
     ElMessage.success('兴趣已删除')
   }
 
-  // ── 奖项 CRUD ──
-  async function createAward(data: Omit<Award, 'id'>): Promise<void> {
-    const item = await apiAddAward(data)
-    awards.value.push(item)
-    ElMessage.success('奖项已添加')
-  }
-
-  async function editAward(id: string, data: Partial<Award>): Promise<void> {
-    const item = await apiUpdateAward(id, data)
-    const idx = awards.value.findIndex((a) => a.id === id)
-    if (idx >= 0) awards.value[idx] = { ...awards.value[idx], ...item }
-    ElMessage.success('奖项已更新')
-  }
-
-  async function removeAward(id: string): Promise<void> {
-    await apiDeleteAward(id)
-    awards.value = awards.value.filter((a) => a.id !== id)
-    ElMessage.success('奖项已删除')
-  }
+  // ── 个人奖项 ──
+  // 方案一（只读）：后端无个人奖项 CRUD 接口，奖项由申报/奖项报名审核通过后聚合进
+  // /profile/info.personalAwards（类别汇总）。面板只读展示，无新增/编辑/删除。
 
   return {
     interests,
@@ -269,6 +266,7 @@ export const useArchiveStore = defineStore('archive', () => {
     awards,
     dimensions,
     timelineEvents,
+    profileData,
     loading,
     fetchArchive,
     fetchTimeline,
@@ -276,8 +274,5 @@ export const useArchiveStore = defineStore('archive', () => {
     createInterest,
     editInterest,
     removeInterest,
-    createAward,
-    editAward,
-    removeAward,
   }
 })
