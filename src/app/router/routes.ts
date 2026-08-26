@@ -117,10 +117,9 @@ const routes: RouteRecordRaw[] = [
         path: 'awards',
         children: [
           {
+            // 奖项总览已并入「我的申报 - 奖项看板」，此处重定向避免悬空路由
             path: '',
-            name: 'AwardOverview',
-            component: () => import('@/features/awards/AwardOverview.vue'),
-            meta: { title: '奖项总览' },
+            redirect: '/approval/award-review',
           },
           {
             path: 'competition-star',

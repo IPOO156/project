@@ -1,35 +1,78 @@
 <script setup lang="ts">
 /**
- * DeclarationBoard - 申报看板
+ * DeclarationBoard - 申报看板（个人档案信息申报）
  *
- * 统计总览 + 柱状图 + 学期趋势 + 档案完整度网格。
+ * 统计总览 + 各类型申报数量 + 提交状态分布 + 学期趋势 + 档案完整度网格。
+ * 数据源：submissionStore.filteredRecords（GET /activities 真实数据），仅统计 10 个申报类型。
  */
-import { Check, FileText, Plus, TrendingUp, X } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { Check, CircleCheck, Clock, FileText, Plus, TrendingUp, X } from 'lucide-vue-next'
+import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useSubmissionStore } from '@/app/stores/stores'
+import { ARCHIVE_TYPE_ALIASES } from '@/shared/api/submission'
+import { APPLICATION_STATUS } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
 import BoardCharts from './components/BoardCharts.vue'
+import PieChart from './components/PieChart.vue'
 import { DECLARATION_TYPE_KEYS, DECLARATION_TYPE_LABELS } from './components/review-columns'
 import TrendChart from './components/TrendChart.vue'
-import { useAllReviewMockData } from './composables/useReviewMockData'
 
 const router = useRouter()
-const allData = useAllReviewMockData()
+const submissionStore = useSubmissionStore()
 
-const totalCount = computed(() => allData.value.length)
+/** 后端 archive_type 别名 → 前端 type key（如 academic_competition → competition），对齐 useFormRecords */
+const ALIAS_TO_TYPE: Record<string, string> = {}
+for (const [type, aliases] of Object.entries(ARCHIVE_TYPE_ALIASES)) {
+  ALIAS_TO_TYPE[type] = type
+  for (const alias of aliases) ALIAS_TO_TYPE[alias] = type
+}
+const DECLARATION_TYPE_SET = new Set<string>(DECLARATION_TYPE_KEYS)
+
+function normalizeType(type: string): string {
+  return ALIAS_TO_TYPE[type] ?? type
+}
+
+/** 仅统计 10 个申报类型的真实记录 */
+const declarationRecords = computed(() =>
+  submissionStore.filteredRecords.filter((r) => DECLARATION_TYPE_SET.has(normalizeType(r.type))),
+)
+
+const totalCount = computed(() => declarationRecords.value.length)
+const pendingCount = computed(
+  () => declarationRecords.value.filter((r) => r.status === 'pending').length,
+)
+const approvedCount = computed(
+  () => declarationRecords.value.filter((r) => r.status === 'approved').length,
+)
+
 const currentSemester = computed(() => {
-  const sorted = [...allData.value].sort((a, b) => b.submitDate?.localeCompare(a.submitDate) || 0)
+  const sorted = [...declarationRecords.value].sort((a, b) =>
+    b.submitDate.localeCompare(a.submitDate),
+  )
   return sorted[0]?.semester || '2024-2025-2'
 })
 const semesterCount = computed(
-  () => allData.value.filter((r) => r.semester === currentSemester.value).length,
+  () => declarationRecords.value.filter((r) => r.semester === currentSemester.value).length,
 )
 
 const typeData = computed(() => {
   const map = new Map<string, number>()
-  allData.value.forEach((r) => {
-    const label = DECLARATION_TYPE_LABELS[r.type] || r.typeLabel || r.type
+  declarationRecords.value.forEach((r) => {
+    const type = normalizeType(r.type)
+    const label = DECLARATION_TYPE_LABELS[type] || type
+    map.set(label, (map.get(label) || 0) + 1)
+  })
+  return Array.from(map.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+})
+
+const statusData = computed(() => {
+  const statusMap = APPLICATION_STATUS as Record<string, { label: string }>
+  const map = new Map<string, number>()
+  declarationRecords.value.forEach((r) => {
+    const label = statusMap[r.status]?.label ?? r.status
     map.set(label, (map.get(label) || 0) + 1)
   })
   return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
@@ -37,7 +80,7 @@ const typeData = computed(() => {
 
 const trendData = computed(() => {
   const map = new Map<string, number>()
-  allData.value.forEach((r) => {
+  declarationRecords.value.forEach((r) => {
     if (r.semester) map.set(r.semester, (map.get(r.semester) || 0) + 1)
   })
   return Array.from(map.entries())
@@ -48,7 +91,7 @@ const trendData = computed(() => {
 const completenessList = computed(() => {
   return DECLARATION_TYPE_KEYS.map((key) => {
     const label = DECLARATION_TYPE_LABELS[key] || key
-    const hasData = allData.value.some((r) => r.type === key)
+    const hasData = declarationRecords.value.some((r) => normalizeType(r.type) === key)
     const pathMap: Record<string, string> = {
       competition: '/applications?tab=competition',
       innovation: '/applications?tab=innovation',
@@ -65,6 +108,10 @@ const completenessList = computed(() => {
   })
 })
 
+onMounted(() => {
+  if (submissionStore.filteredRecords.length === 0) submissionStore.fetchRecords()
+})
+
 function goTo(path: string) {
   router.push(path)
 }
@@ -75,7 +122,7 @@ function goTo(path: string) {
     <PageHeader title="申报看板" subtitle="总览各类型申报情况，快速了解档案完整度" />
 
     <el-row :gutter="16" class="stats-row">
-      <el-col :span="12">
+      <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
           <div class="stat-card__body">
             <div class="stat-card__info">
@@ -86,14 +133,36 @@ function goTo(path: string) {
           </div>
         </el-card>
       </el-col>
-      <el-col :span="12">
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">待审核</p>
+              <p class="stat-card__value">{{ pendingCount }}</p>
+            </div>
+            <div class="stat-card__icon stat-card__icon--warning"><Clock :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">已通过</p>
+              <p class="stat-card__value">{{ approvedCount }}</p>
+            </div>
+            <div class="stat-card__icon stat-card__icon--success"><CircleCheck :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
           <div class="stat-card__body">
             <div class="stat-card__info">
               <p class="stat-card__label">本学期新增</p>
               <p class="stat-card__value">{{ semesterCount }}</p>
             </div>
-            <div class="stat-card__icon"><TrendingUp :size="24" /></div>
+            <div class="stat-card__icon stat-card__icon--primary"><TrendingUp :size="24" /></div>
           </div>
         </el-card>
       </el-col>
@@ -101,7 +170,11 @@ function goTo(path: string) {
 
     <el-row :gutter="16">
       <el-col :span="14"><BoardCharts :data="typeData" title="各类型申报数量" /></el-col>
-      <el-col :span="10"><TrendChart :data="trendData" title="各学期申报趋势" /></el-col>
+      <el-col :span="10"><PieChart :data="statusData" title="提交状态分布" /></el-col>
+    </el-row>
+
+    <el-row :gutter="16">
+      <el-col :span="24"><TrendChart :data="trendData" title="各学期申报趋势" /></el-col>
     </el-row>
 
     <el-card class="completeness-card">
@@ -174,6 +247,19 @@ function goTo(path: string) {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+
+    &--warning {
+      background: #e6a23c15;
+      color: #e6a23c;
+    }
+    &--success {
+      background: #67c23a15;
+      color: #67c23a;
+    }
+    &--primary {
+      background: #409eff15;
+      color: var(--el-color-primary);
+    }
   }
 }
 .completeness-card {

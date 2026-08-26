@@ -24,7 +24,16 @@ function emptyForm() {
   }
 }
 
-const page = reactive(useApplicationPage('paper', '论文申报', emptyForm, 'paper'))
+const page = reactive(
+  useApplicationPage('paper', '论文申报', emptyForm, 'paper', [
+    { key: 'journalName', label: '期刊名称' },
+    { key: 'paperName', label: '论文名称' },
+    { key: 'ranking', label: '排名/总人数' },
+    { key: 'publishDate', label: '发表时间' },
+    { key: 'semester', label: '学期' },
+    { key: 'proofMaterials', label: '证明材料' },
+  ]),
+)
 
 const disabledDate = computed(() => buildSemesterMonthDisabledDate(page.form.semester))
 

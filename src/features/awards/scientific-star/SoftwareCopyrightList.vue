@@ -25,7 +25,14 @@ function emptyForm() {
 }
 
 const page = reactive(
-  useApplicationPage('softwareCopyright', '软件著作权申报', emptyForm, 'software-copyright'),
+  useApplicationPage('softwareCopyright', '软件著作权申报', emptyForm, 'software-copyright', [
+    { key: 'softName', label: '软著名称' },
+    { key: 'issuer', label: '颁发单位' },
+    { key: 'ranking', label: '排名/总人数' },
+    { key: 'approveDate', label: '获批时间' },
+    { key: 'semester', label: '学期' },
+    { key: 'proofMaterials', label: '证明材料' },
+  ]),
 )
 
 const disabledDate = computed(() => buildSemesterMonthDisabledDate(page.form.semester))

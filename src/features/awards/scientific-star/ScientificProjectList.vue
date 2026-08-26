@@ -20,7 +20,13 @@ function emptyForm() {
 }
 
 const page = reactive(
-  useApplicationPage('scientificProject', '科研项目', emptyForm, 'scientific-project'),
+  useApplicationPage('scientificProject', '科研项目', emptyForm, 'scientific-project', [
+    { key: 'projectName', label: '项目名称' },
+    { key: 'projectLevel', label: '项目级别' },
+    { key: 'ranking', label: '排名/总人数' },
+    { key: 'startDate', label: '立项时间' },
+    { key: 'semester', label: '学期' },
+  ]),
 )
 
 function handleEditClick(row: any) {

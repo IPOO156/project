@@ -25,7 +25,13 @@ function emptyForm() {
 }
 
 const page = reactive(
-  useApplicationPage('innovationStar', '双创之星报名', emptyForm, 'innovation-star'),
+  useApplicationPage('innovationStar', '双创之星报名', emptyForm, 'innovation-star', [
+    { key: 'companyName', label: '公司名称' },
+    { key: 'semester', label: '学期' },
+    { key: 'industryType', label: '行业类型' },
+    { key: 'ranking', label: '申报人排名' },
+    { key: 'registerDate', label: '注册时间' },
+  ]),
 )
 
 const disabledDate = computed(() => buildSemesterMonthDisabledDate(page.form.semester))

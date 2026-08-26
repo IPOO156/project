@@ -23,6 +23,7 @@ export function useApplicationPage(
   typeLabel: string,
   emptyForm: () => Record<string, any>,
   draftKey?: string,
+  requiredFields: { key: string; label: string }[] = [],
 ) {
   const _u_router = useRouter()
   const notificationStore = useNotificationStore()
@@ -199,6 +200,16 @@ export function useApplicationPage(
   }
 
   async function handleSubmit() {
+    // 必填项校验：后端对应档案扩展表多为 NOT NULL 字段，空值会被 buildContractPayload 跳过，
+    // 直接 POST 会触发后端非空约束 → 409「数据校验失败」。这里在本地拦截并明确提示缺哪个字段。
+    const missing = requiredFields.filter((f) => {
+      const v = (form as any)[f.key]
+      return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)
+    })
+    if (missing.length > 0) {
+      ElMessage.warning(`请填写必填项：${missing.map((f) => f.label).join('、')}`)
+      return
+    }
     const ok = await checkDuplicateBeforeSubmit({
       ...toRaw(form),
       acquisitionDate: extendedForm.acquisitionDate || undefined,

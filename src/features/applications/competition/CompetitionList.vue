@@ -19,7 +19,22 @@ function emptyForm() {
   }
 }
 
-const page = reactive(useApplicationPage('competition', '学科竞赛', emptyForm))
+const page = reactive(
+  useApplicationPage(
+    'competition',
+    '学科竞赛',
+    emptyForm,
+    undefined,
+    // 必填项与模板 el-form-item required 一致；空值提交会被后端 NOT NULL 约束拦截成 409，需在本地校验
+    [
+      { key: 'competitionName', label: '竞赛名称' },
+      { key: 'competitionType', label: '竞赛类型' },
+      { key: 'awardLevel', label: '获奖等级' },
+      { key: 'awardDate', label: '获奖时间' },
+      { key: 'semester', label: '学期' },
+    ],
+  ),
+)
 
 function handleEditClick(row: any) {
   page.form.competitionName = row.competitionName || ''

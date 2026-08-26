@@ -21,7 +21,17 @@ function emptyForm() {
   }
 }
 
-const page = reactive(useApplicationPage('research', '学术研究', emptyForm))
+const page = reactive(
+  useApplicationPage('research', '学术研究', emptyForm, undefined, [
+    { key: 'projectName', label: '项目名称' },
+    { key: 'projectLevel', label: '项目级别' },
+    { key: 'researchType', label: '研究类型' },
+    { key: 'teamRole', label: '团队角色' },
+    { key: 'projectDate', label: '开始时间' },
+    { key: 'endDate', label: '结束时间' },
+    { key: 'semester', label: '学期' },
+  ]),
+)
 
 function handleEditClick(row: any) {
   page.form.projectName = row.projectName || ''

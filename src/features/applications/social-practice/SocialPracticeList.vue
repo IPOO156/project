@@ -22,7 +22,14 @@ function emptyForm() {
 }
 
 const page = reactive(
-  useApplicationPage('socialPractice', '社会实践', emptyForm, 'social-practice'),
+  useApplicationPage('socialPractice', '社会实践', emptyForm, 'social-practice', [
+    { key: 'activityName', label: '活动名称' },
+    { key: 'location', label: '活动地点' },
+    { key: 'organization', label: '组织单位' },
+    { key: 'startDate', label: '开始时间' },
+    { key: 'endDate', label: '结束时间' },
+    { key: 'semester', label: '学期' },
+  ]),
 )
 
 function handleEditClick(row: any) {

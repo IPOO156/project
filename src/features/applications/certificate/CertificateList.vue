@@ -18,7 +18,14 @@ function emptyForm() {
   }
 }
 
-const page = reactive(useApplicationPage('certificate', '荣誉证书', emptyForm))
+const page = reactive(
+  useApplicationPage('certificate', '荣誉证书', emptyForm, undefined, [
+    { key: 'certType', label: '证书类型' },
+    { key: 'certName', label: '证书名称' },
+    { key: 'certDate', label: '获得时间' },
+    { key: 'semester', label: '学期' },
+  ]),
+)
 
 function handleEditClick(row: any) {
   page.form.certName = row.certName || ''

@@ -19,7 +19,15 @@ function emptyForm() {
   }
 }
 
-const page = reactive(useApplicationPage('scholarship', '奖学金', emptyForm))
+const page = reactive(
+  useApplicationPage('scholarship', '奖学金', emptyForm, undefined, [
+    { key: 'awardName', label: '奖项名称' },
+    { key: 'scholarshipLevel', label: '奖学金级别' },
+    { key: 'scholarshipGrade', label: '获奖等级' },
+    { key: 'acquireDate', label: '获得时间' },
+    { key: 'semester', label: '学期' },
+  ]),
+)
 
 function handleEditClick(row: any) {
   page.form.awardName = row.awardName || ''

@@ -25,7 +25,14 @@ function emptyForm() {
 }
 
 const page = reactive(
-  useApplicationPage('competitionStar', '竞赛之星报名', emptyForm, 'competition-star'),
+  useApplicationPage('competitionStar', '竞赛之星报名', emptyForm, 'competition-star', [
+    { key: 'semester', label: '学期' },
+    { key: 'competitionName', label: '竞赛名称' },
+    { key: 'competitionDate', label: '参赛时间' },
+    { key: 'competitionLevel', label: '竞赛级别' },
+    { key: 'awardLevel', label: '获奖级别' },
+    { key: 'proofMaterials', label: '佐证材料' },
+  ]),
 )
 
 const disabledDate = computed(() => buildSemesterMonthDisabledDate(page.form.semester))

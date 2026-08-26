@@ -20,7 +20,16 @@ function emptyForm() {
   }
 }
 
-const page = reactive(useApplicationPage('internship', '实习经历', emptyForm))
+const page = reactive(
+  useApplicationPage('internship', '实习经历', emptyForm, undefined, [
+    { key: 'company', label: '实习公司' },
+    { key: 'location', label: '实习地点' },
+    { key: 'position', label: '实习岗位' },
+    { key: 'startDate', label: '开始时间' },
+    { key: 'endDate', label: '结束时间' },
+    { key: 'semester', label: '学期' },
+  ]),
+)
 
 function handleEditClick(row: any) {
   page.form.company = row.company || ''
