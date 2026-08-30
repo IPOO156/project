@@ -40,7 +40,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://111.228.56.207:8089',
+        target: 'http://ue5ae944.natappfree.cc',
         changeOrigin: true,
       },
     },
