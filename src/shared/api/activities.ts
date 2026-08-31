@@ -60,12 +60,12 @@ export function getActivities(params?: {
   return request.get('/activities', { params })
 }
 
-/** 获取动态详情（GET /activities/{activityId}?type=） */
+/** 获取动态详情（GET /activities/{type}/{activityId}） */
 export function getActivityDetail(activityId: number, type: ActivityType): Promise<any> {
-  return request.get(`/activities/${activityId}`, { params: { type } })
+  return request.get(`/activities/${type}/${activityId}`)
 }
 
-/** 编辑动态记录（PUT /activities/{activityId}?type=） */
+/** 编辑动态记录（PUT /activities/{type}/{activityId}） */
 export function updateActivity(
   activityId: number,
   type: ActivityType,
@@ -77,15 +77,15 @@ export function updateActivity(
   currentVersion: number
   submitCount: number
 }> {
-  return request.put(`/activities/${activityId}`, payload, { params: { type } })
+  return request.put(`/activities/${type}/${activityId}`, payload)
 }
 
-/** 删除动态记录（DELETE /activities/{activityId}?type=） */
+/** 删除动态记录（DELETE /activities/{type}/{activityId}） */
 export function deleteActivity(activityId: number, type: ActivityType): Promise<void> {
-  return request.delete(`/activities/${activityId}`, { params: { type } })
+  return request.delete(`/activities/${type}/${activityId}`)
 }
 
-/** 撤回申报（PUT /activities/{activityId}/withdraw?type=） */
+/** 撤回申报（PUT /activities/{type}/{activityId}/withdraw） */
 export function withdrawActivity(
   activityId: number,
   type: ActivityType,
@@ -93,5 +93,5 @@ export function withdrawActivity(
   status: number
   statusLabel: string
 }> {
-  return request.put(`/activities/${activityId}/withdraw`, null, { params: { type } })
+  return request.put(`/activities/${type}/${activityId}/withdraw`, null)
 }
