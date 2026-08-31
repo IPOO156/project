@@ -7,73 +7,6 @@ import { getActivities, withdrawActivity } from './activities'
 import { getSemesters } from './common'
 import request from './request'
 
-const MODULE_PATH_MAP: Record<string, string> = {
-  competition: '/applications/competition',
-  innovation: '/applications/innovation',
-  research: '/applications/research',
-  scholarship: '/applications/scholarship',
-  certificate: '/applications/certificate',
-  internship: '/applications/internship',
-  organization: '/applications/organization',
-  training: '/applications/training',
-  socialPractice: '/applications/social-practice',
-  bookReport: '/applications/book-report',
-  competitionStar: '/awards/competition-star',
-  innovationStar: '/awards/innovation-star',
-  scientificProject: '/awards/scientific-star',
-  softwareCopyright: '/awards/scientific-star',
-  paper: '/awards/scientific-star',
-}
-
-function generateMockRecords(): SubmissionRecord[] {
-  const types = Object.keys(APPLICATION_TYPE_MAP) as ApplicationType[]
-  const statuses: SubmissionRecord['status'][] = ['pending', 'approved', 'rejected', 'withdrawn']
-  const semesters = ['2022-2023-2', '2023-2024-1', '2023-2024-2', '2024-2025-1']
-  const mockTitles: Record<string, string[]> = {
-    competition: ['全国大学生数学建模竞赛', 'ACM 程序设计竞赛', '蓝桥杯大赛'],
-    innovation: ['校园文创项目', '智能硬件创业计划'],
-    research: ['基于深度学习的图像识别研究', '区块链技术在档案管理中的应用'],
-    scholarship: ['国家奖学金申请', '校级一等奖学金'],
-    certificate: ['CET-6 证书登记', '计算机二级证书'],
-    internship: ['字节跳动前端开发实习', '腾讯云运维实习'],
-    organization: ['校学生会组织部', 'ACM 社团'],
-    training: ['Vue3 企业级开发实训', '云计算架构实训'],
-    socialPractice: ['暑期三下乡社会实践', '社区志愿服务'],
-    bookReport: ['《深入理解计算机系统》读书心得', '《算法导论》读书笔记'],
-    competitionStar: ['竞赛之星报名-数学建模', '竞赛之星报名-ACM'],
-    innovationStar: ['双创之星报名-文创项目'],
-    scientificProject: ['省自然基金科研项目', '校级创新实验项目'],
-    softwareCopyright: ['档案管理软件 V1.0', '数据分析工具软件'],
-    paper: ['基于 Vue3 的前端架构研究', '深度学习在档案分类中的应用'],
-  }
-
-  const result: SubmissionRecord[] = []
-  let id = 1
-  for (const type of types) {
-    const titles = mockTitles[type] ?? ['默认申报']
-    const modulePath = MODULE_PATH_MAP[type] ?? '/dashboard'
-    for (const title of titles) {
-      const semester = semesters[id % semesters.length]
-      const status = statuses[id % statuses.length]
-      const day = 10 + (id % 20)
-      const month = 3 + (id % 9)
-      result.push({
-        id: String(id++),
-        type,
-        typeLabel: APPLICATION_TYPE_MAP[type] ?? type,
-        title,
-        submitDate: `2025-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-        semester,
-        status,
-        sourcePath: modulePath,
-      })
-    }
-  }
-  return result.sort((a, b) => b.submitDate.localeCompare(a.submitDate))
-}
-
-let cachedRecords: SubmissionRecord[] | null = null
-
 /** /activities status（number）→ 前端 status 映射（1=submitted 对应待审核 pending） */
 export const STATUS_MAP: Record<number, SubmissionRecord['status']> = {
   0: 'draft',
@@ -120,11 +53,49 @@ export function activityCategoryOf(applicationType: ApplicationType): ActivityTy
 }
 
 /**
+ * 申报/报名类型 → 来源页路由。
+ * archive 走 /applications?tab=，award 走 /awards/*；
+ * 传 editId 时携带编辑参数（?edit=<id>），目标页 useApplicationPage 读到后自动进入该记录的编辑态
+ *（消息中心「编辑」按钮跳转用，见 2026-08-31 修改记录）。
+ */
+export function sourcePathOf(type: ApplicationType, editId?: string): string {
+  const STAR_ROUTES: Record<string, string> = {
+    competitionStar: '/awards/competition-star',
+    innovationStar: '/awards/innovation-star',
+    scientificProject: '/awards/scientific-star',
+    softwareCopyright: '/awards/scientific-star',
+    paper: '/awards/scientific-star',
+  }
+  // 科研之星为「项目/软著/论文」三子 tab 共用 /awards/scientific-star，携带 sub 定位到对应子页签
+  const SCIENTIFIC_SUB_TABS: Record<string, string> = {
+    scientificProject: 'project',
+    softwareCopyright: 'copyright',
+    paper: 'paper',
+  }
+  const star = STAR_ROUTES[type]
+  if (star) {
+    const params: string[] = []
+    const sub = SCIENTIFIC_SUB_TABS[type]
+    if (sub) params.push(`sub=${sub}`)
+    if (editId) params.push(`edit=${editId}`)
+    return params.length > 0 ? `${star}?${params.join('&')}` : star
+  }
+  // /applications 的 tab key 为 kebab-case，与 ApplicationType 驼峰不一致的单独映射
+  const tabKey =
+    type === 'socialPractice' ? 'social-practice' : type === 'bookReport' ? 'book-report' : type
+  const base = `/applications?tab=${tabKey}`
+  return editId ? `${base}&edit=${editId}` : base
+}
+
+/**
  * ActivityListItem（6.1 动态记录）→ SubmissionRecord（提交记录）
  *  后端实际字段为下划线（archive_type/archive_type_label/submit_time/semester_name），驼峰为兼容别名。
  */
 function mapActivityToSubmission(item: ActivityListItem): SubmissionRecord {
-  const type = (item.archive_type ?? item.archiveType ?? '') as ApplicationType
+  const rawType = (item.archive_type ?? item.archiveType ?? '') as string
+  // 后端 archive_type 为下划线别名（academic_competition / competition_star…），归一化为前端 ApplicationType key，
+  // 否则奖项之星类记录 activityCategoryOf 会错误归类为 archive，删除/撤回接口 type 传错
+  const type = (ARCHIVE_TYPE_TO_KEY[rawType] ?? rawType) as ApplicationType
   return {
     id: String(item.id),
     type,
@@ -134,7 +105,12 @@ function mapActivityToSubmission(item: ActivityListItem): SubmissionRecord {
     submitDate: (item.submit_time ?? item.submitTime ?? '').slice(0, 10),
     semester: item.semester_name ?? item.semesterName ?? '',
     status: STATUS_MAP[item.status] ?? 'pending',
-    sourcePath: '',
+    // 来源页路由（查看按钮跳转）；编辑按钮由 sourcePathOf(type, id) 带 edit 参数跳转
+    sourcePath: sourcePathOf(type),
+    // 后端 6.1 返回 can_withdraw/can_edit/can_delete（实测下划线），驼峰为文档别名；操作按钮据此控制
+    canWithdraw: item.can_withdraw ?? item.canWithdraw,
+    canEdit: item.can_edit ?? item.canEdit,
+    canDelete: item.can_delete ?? item.canDelete,
   }
 }
 
@@ -156,19 +132,16 @@ function matchFilters(record: SubmissionRecord, filters?: SubmissionFilters): bo
 
 /**
  * 获取提交记录列表
- * 数据源：GET /activities（6.1 动态记录），映射为提交记录，筛选在前端完成；接口异常时回退 Mock。
+ * 数据源：GET /activities（6.1 动态记录），映射为提交记录，筛选在前端完成。
+ * 接口异常交由全局拦截器统一提示，Store 捕获后置错误态；此处不做 mock 兜底——伪造数据
+ * 会被用户当成真实申报记录，与消息中心 getNotifications 同规范（见 2026-08-26 记录）。
  */
 export async function getSubmissionRecords(
   filters?: SubmissionFilters,
 ): Promise<SubmissionRecord[]> {
-  try {
-    const res = await getActivities({ page: 1, per_page: 200 })
-    const all = (res?.list ?? []).map(mapActivityToSubmission)
-    return filters ? all.filter((r) => matchFilters(r, filters)) : all
-  } catch {
-    if (!cachedRecords) cachedRecords = generateMockRecords()
-    return filters ? cachedRecords.filter((r) => matchFilters(r, filters)) : [...cachedRecords]
-  }
+  const res = await getActivities({ page: 1, per_page: 200 })
+  const all = (res?.list ?? []).map(mapActivityToSubmission)
+  return filters ? all.filter((r) => matchFilters(r, filters)) : all
 }
 
 /**
@@ -395,6 +368,143 @@ export const ARCHIVE_TYPE_ALIASES: Record<string, string[]> = {
   scientificProject: ['research_project', 'scientific_project'],
   softwareCopyright: ['software_copyright'],
   paper: ['published_paper'],
+}
+
+/**
+ * ARCHIVE_TYPE_ALIASES 反向映射：后端 archive_type（下划线别名）→ 前端 ApplicationType key。
+ * mapActivityToSubmission 归一化 /activities 列表记录类型用（模块加载后初始化，函数调用时已就绪）。
+ */
+const ARCHIVE_TYPE_TO_KEY: Record<string, ApplicationType> = {}
+for (const [key, aliases] of Object.entries(ARCHIVE_TYPE_ALIASES)) {
+  for (const alias of aliases) ARCHIVE_TYPE_TO_KEY[alias] = key as ApplicationType
+}
+
+/* ===================== 详情逆向映射（GET /activities/{type}/{id} detail → 前端表单字段） ===================== */
+
+/**
+ * 后端活动详情 detail.detail（ActivityDetailResponse 内嵌 Map，ActivityService.buildArchiveDetail 生成）
+ * 各字段名 → 前端表单/扩展表单字段名。编辑回填（useApplicationPage.handleEditClick）据此把真实记录
+ * 的字段还原到表单；此前直接展开顶层导致所有业务字段落空 → 表单空白（2026-08-31 修复）。
+ * 注：后端详情对每个业务字段还附带 *Label 字段（如 competitionTypeLabel），此处不消费，天然跳过。
+ */
+export const DETAIL_TO_FORM_MAP: Record<string, Record<string, string>> = {
+  competition: {
+    competitionName: 'competitionName',
+    competitionType: 'competitionType',
+    awardLevel: 'awardLevel',
+    obtainTime: 'awardDate',
+    participantRole: 'role',
+  },
+  scholarship: {
+    scholarshipName: 'awardName',
+    scholarshipCategory: 'scholarshipLevel',
+    awardLevel: 'scholarshipGrade',
+    obtainTime: 'acquireDate',
+  },
+  certificate: {
+    certificateType: 'certType',
+    certificateName: 'certName',
+    certificateNo: 'certNumber',
+    issuingUnit: 'issuingAuthority',
+    validUntil: 'validityPeriod',
+    obtainTime: 'certDate',
+  },
+  innovation: {
+    companyName: 'companyName',
+    industryType: 'industryType',
+    projectType: 'companyType',
+    participantRole: 'teamRole',
+    registeredAt: 'registerDate',
+  },
+  research: {
+    projectName: 'projectName',
+    projectLevel: 'projectLevel',
+    projectType: 'researchType',
+    participantRole: 'teamRole',
+    startDate: 'projectDate',
+    endDate: 'endDate',
+  },
+  internship: {
+    companyName: 'company',
+    location: 'location',
+    position: 'position',
+    startDate: 'startDate',
+    endDate: 'endDate',
+  },
+  organization: {
+    orgLevel: 'organizationLevel',
+    department: 'department',
+    positionTitle: 'position',
+    startDate: 'startDate',
+    endDate: 'endDate',
+  },
+  training: {
+    projectName: 'projectName',
+    projectContent: 'projectContent',
+    startDate: 'startDate',
+    endDate: 'endDate',
+  },
+  socialPractice: {
+    activityName: 'activityName',
+    practiceLocation: 'location',
+    practiceUnit: 'organization',
+    participantRole: 'role',
+    startDate: 'startDate',
+    endDate: 'endDate',
+    volunteerHours: 'volunteerHours',
+  },
+  bookReport: {
+    bookName: 'bookName',
+    readMonth: 'bookDate',
+    reviewContent: 'review',
+  },
+}
+
+/**
+ * 奖项类详情（buildAwardDetail）仅返回通用字段（awardType/certificateNo/issuingUnit/validUntil/participantRole），
+ * 各奖项专属字段（竞赛名称/参赛时间/软著名称…）后端未随详情返回，编辑回填仅能还原通用扩展字段。
+ * 奖项专属字段缺失为后端缺口，见 2026-08-31 修改记录「遗留事项」。
+ */
+const AWARD_DETAIL_GENERIC_MAP: Record<string, string> = {
+  certificateNo: 'certNumber',
+  issuingUnit: 'issuingAuthority',
+  validUntil: 'validityPeriod',
+  participantRole: 'role',
+}
+
+/**
+ * 后端活动详情 → 前端表单字段平铺对象。
+ * @param type 前端申报类型 key（competition/scholarship/… / 奖项之星类）
+ * @param detail GET /activities/{type}/{id} 返回的 ActivityDetailResponse 主体
+ */
+export function mapDetailToForm(type: string, detail: any): Record<string, any> {
+  const nested = (detail?.detail ?? {}) as Record<string, any>
+  const map =
+    DETAIL_TO_FORM_MAP[type] ??
+    (STAR_TYPES.includes(type as ApplicationType) ? AWARD_DETAIL_GENERIC_MAP : {})
+  const out: Record<string, any> = {}
+  for (const [from, to] of Object.entries(map)) {
+    const v = nested[from]
+    if (v != null && v !== '') out[to] = v
+  }
+  // 通用取得时间 obtainTime → 扩展表单 acquisitionDate（重复校验 obtainedTime 用）
+  if (nested.obtainTime != null && nested.obtainTime !== '') {
+    out.acquisitionDate = nested.obtainTime
+  }
+  // 学期：详情在顶层返回 semesterName（列表为 semester_name）
+  if (detail?.semesterName) out.semester = detail.semesterName
+  // 附件：evidenceFiles（file_id/file_name/file_url）→ proofMaterials（UploadUserFile 形状，含自定义 fileId）
+  if (Array.isArray(detail?.evidenceFiles) && detail.evidenceFiles.length > 0) {
+    out.proofMaterials = detail.evidenceFiles.map((f: any, idx: number) => ({
+      // uid 用大基数 + 索引，避免与 el-upload 自增 uid 冲突
+      uid: 1_000_000_000 + idx,
+      name: f.file_name ?? f.fileName ?? '',
+      url: f.file_url ?? f.fileUrl ?? '',
+      status: 'success' as const,
+      fileId: f.file_id ?? f.fileId,
+    }))
+  }
+  return out
 }
 
 /** 日期归一化为 YYYY-MM-DD（兼容 Date 对象、'YYYY-MM'、'YYYY-MM-DD' 及 ISO 时间串） */

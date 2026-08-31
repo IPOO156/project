@@ -120,18 +120,24 @@ async function openVersions(row: any) {
 
 /* ===================== 评选说明 ===================== */
 
-/** 档案类前端类型 → 评选说明接口类型（GET /applications/{type}/guide） */
+/**
+ * 档案类前端类型 → 评选说明接口类型（GET /applications/{type}/guide）。
+ * 后端 ApplicationService.getGuide 用 ArchiveTypeEnum.of(type) 校验，仅接受下划线编码
+ *（academic_competition/innovation_entrepreneurship/academic_research/honor_certificate/
+ *  training_project/social_practice/book_review 等，见 ArchiveTypeEnum.java）；
+ * 此前用驼峰短别名（competition/innovation/…）导致 of() 返回 null → 400「不支持的档案类型」。
+ */
 const ARCHIVE_GUIDE_TYPES: Record<string, string> = {
-  competition: 'competition',
+  competition: 'academic_competition',
   scholarship: 'scholarship',
-  innovation: 'innovation',
-  research: 'research',
-  certificate: 'certificate',
+  innovation: 'innovation_entrepreneurship',
+  research: 'academic_research',
+  certificate: 'honor_certificate',
   internship: 'internship',
   organization: 'organization',
-  training: 'training',
-  socialPractice: 'practice',
-  bookReport: 'book-review',
+  training: 'training_project',
+  socialPractice: 'social_practice',
+  bookReport: 'book_review',
 }
 
 /** 奖项类前端类型 → 评选说明接口类型（GET /awards/{type}/guide） */

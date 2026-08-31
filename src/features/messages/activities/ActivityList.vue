@@ -6,17 +6,19 @@ import type {
   SubmissionRecord,
 } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Filter, Search, Undo2, X } from 'lucide-vue-next'
+import { Filter, Pencil, Search, Trash2, Undo2, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useActivityStore, useSubmissionStore } from '@/app/stores/stores'
+import { sourcePathOf } from '@/shared/api/submission'
 import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import StatusTag from '@/shared/ui/StatusTag.vue'
 import ActivityCenterHeader from '../components/ActivityCenterHeader.vue'
 
 /**
  * 动态中心页面（学生端）
- * 整合「动态记录」与「报名记录」，学生仅可查看，不可编辑或删除。
+ * 整合「动态记录」与「报名记录」；报名记录操作列按后端 6.1 can_edit/can_delete/can_withdraw
+ * 开关展示 查看/编辑/删除/撤回（6.3 编辑跳转来源页、6.4 删除、6.5 撤回）。
  */
 
 type TabKey = 'activity' | 'submission'
@@ -98,10 +100,10 @@ watch(
   { flush: 'post' },
 )
 
+// 状态筛选含「草稿」：草稿自动保存（isDraft=1）会把记录落库为 status=0（草稿），
+// 此前硬编码剔除 draft 导致全为草稿的记录在状态筛选时选任何状态都筛不出（0 条）。
 const statusOptions = computed(() =>
-  Object.entries(APPLICATION_STATUS)
-    .filter(([value]) => value !== 'draft')
-    .map(([value, config]) => ({ value, label: config.label })),
+  Object.entries(APPLICATION_STATUS).map(([value, config]) => ({ value, label: config.label })),
 )
 
 const typeOptions = computed(() =>
@@ -164,6 +166,25 @@ function viewSubmission(path: string) {
   router.push(path)
 }
 
+/** 编辑：跳转来源申报/奖项页，并带 ?edit=<id>，目标页 useApplicationPage 自动进入该记录编辑态 */
+function editSubmission(row: SubmissionRecord) {
+  router.push(sourcePathOf(row.type, row.id))
+}
+
+async function handleDeleteSubmission(row: SubmissionRecord) {
+  try {
+    await ElMessageBox.confirm(`确定要删除"${row.title}"吗？删除后不可恢复。`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await submissionStore.deleteSubmission(row.id)
+    ElMessage.success('已删除')
+  } catch {
+    // 用户取消；删除失败由全局拦截器统一提示，本地记录保留
+  }
+}
+
 async function handleWithdrawSubmission(row: SubmissionRecord) {
   try {
     await ElMessageBox.confirm(`确定要撤回"${row.title}"吗？撤回后状态将变为草稿。`, '撤回确认', {
@@ -176,6 +197,35 @@ async function handleWithdrawSubmission(row: SubmissionRecord) {
   } catch {
     // 用户取消
   }
+}
+
+/**
+ * 撤回操作：以后端 6.1 返回的 canWithdraw 开关为准（false 强制隐藏），
+ * 未返回开关（本地/临时记录）时回退"待审批"状态判断；
+ * 撤回成功后 store 本地将 status 置为 withdrawn，按钮随之隐藏。
+ */
+function canWithdrawSubmission(row: SubmissionRecord): boolean {
+  return row.status === 'pending' && row.canWithdraw !== false
+}
+
+/**
+ * 编辑操作：以后端 6.1 返回的 canEdit 开关为准（false 强制隐藏），
+ * 未返回开关（本地/临时记录）时回退状态判断——已通过的记录不可再编辑。
+ * 已撤回（withdrawn）记录同样不可编辑：撤回 = 撤销本次申报，仅保留查看/删除。
+ */
+function canEditSubmission(row: SubmissionRecord): boolean {
+  if (row.status === 'withdrawn') return false
+  return row.canEdit !== undefined ? row.canEdit : row.status !== 'approved'
+}
+
+/**
+ * 删除操作：以后端 6.1 返回的 canDelete 开关为准（false 强制隐藏），
+ * 未返回开关（本地/临时记录）时回退状态判断——已通过的记录不可删除。
+ * 已撤回（withdrawn）记录允许删除（撤回后仅可查看/删除，不可编辑）。
+ */
+function canDeleteSubmission(row: SubmissionRecord): boolean {
+  if (row.status === 'withdrawn') return true
+  return row.canDelete !== undefined ? row.canDelete : row.status !== 'approved'
 }
 
 function formatSemester(semester: string) {
@@ -353,7 +403,7 @@ onMounted(() => {
               <StatusTag :status="(row as SubmissionRecord).status" size="small" />
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right" align="center">
+          <el-table-column label="操作" width="300" fixed="right" align="center">
             <template #default="{ row }">
               <el-button
                 type="primary"
@@ -365,7 +415,27 @@ onMounted(() => {
                 查看
               </el-button>
               <el-button
-                v-if="(row as SubmissionRecord).status === 'pending'"
+                v-if="canEditSubmission(row as SubmissionRecord)"
+                type="primary"
+                link
+                size="small"
+                :icon="Pencil"
+                @click="editSubmission(row as SubmissionRecord)"
+              >
+                编辑
+              </el-button>
+              <el-button
+                v-if="canDeleteSubmission(row as SubmissionRecord)"
+                type="danger"
+                link
+                size="small"
+                :icon="Trash2"
+                @click="handleDeleteSubmission(row as SubmissionRecord)"
+              >
+                删除
+              </el-button>
+              <el-button
+                v-if="canWithdrawSubmission(row as SubmissionRecord)"
                 type="warning"
                 link
                 size="small"

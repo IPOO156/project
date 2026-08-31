@@ -375,6 +375,12 @@ export interface SubmissionRecord {
   semester: string
   status: 'draft' | 'pending' | 'rejected' | 'approved' | 'withdrawn'
   sourcePath: string
+  /** 后端 6.1 返回的可撤回开关（false=不可撤回）；本地/临时记录无此字段 */
+  canWithdraw?: boolean
+  /** 后端 6.1 返回的可编辑开关（false=不可编辑）；本地/临时记录无此字段 */
+  canEdit?: boolean
+  /** 后端 6.1 返回的可删除开关（false=不可删除）；本地/临时记录无此字段 */
+  canDelete?: boolean
 }
 
 // 职业规划记录

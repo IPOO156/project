@@ -1,6 +1,6 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { reactive, ref, toRaw } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, reactive, ref, toRaw, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useNotificationStore } from '@/app/stores/stores'
 import { getActivityDetail, withdrawActivity } from '@/shared/api/activities'
 import { duplicateCheck } from '@/shared/api/applications'
@@ -10,6 +10,7 @@ import {
   activityCategoryOf,
   ARCHIVE_TYPE_ALIASES,
   deriveRecordTitle,
+  mapDetailToForm,
   submitApplication,
 } from '@/shared/api/submission'
 import { useCorrection } from './useCorrection'
@@ -26,15 +27,18 @@ export function useApplicationPage(
   requiredFields: { key: string; label: string }[] = [],
 ) {
   const _u_router = useRouter()
+  const _u_route = useRoute()
   const notificationStore = useNotificationStore()
   const effectiveDraftKey = draftKey || type
 
   const form = reactive(emptyForm())
   const submitting = ref(false)
   // autoRestore=false：申报表单默认空白，不自动回填草稿；修改草稿走下拉记录"编辑"回填
+  // minDraftFields：必填字段未填齐前不建后端草稿（扩展表 NOT NULL 列会被后端 409 拒绝），仅本地兜底
   const { clearDraft, saveNow, setRecordId } = useFormDraft(effectiveDraftKey, form, {
     autoRestore: false,
     type,
+    minDraftFields: requiredFields.map((f) => f.key),
   })
   const {
     records,
@@ -249,7 +253,14 @@ export function useApplicationPage(
     if (isBackendRecord) {
       try {
         const detail = await getActivityDetail(Number(row.id), activityCategoryOf(type as any))
-        if (detail) row = { ...row, ...detail }
+        // 后端业务字段嵌在 detail.detail（后端字段名），按类型逆向映射为前端表单字段后并入 row，
+        // 否则 emptyForm() 循环全部落空 → 表单空白（2026-08-31 修复）。
+        // 注意不能用 {...row, ...detail} 直接展开：会把 row.status 覆盖成后端数字状态码
+        if (detail) {
+          row = { ...row, ...mapDetailToForm(type, detail) }
+          // 退回原因（detail 顶层字段）：被退回记录编辑时回填提示，列表摘要不携带
+          if (detail.rejectedReason) row.rejectedReason = detail.rejectedReason
+        }
       } catch {
         /* 详情拉取失败时沿用 row 摘要字段 */
       }
@@ -266,6 +277,30 @@ export function useApplicationPage(
     rejectionReason.value = row.rejectedReason || ''
     startEdit(row)
   }
+
+  /**
+   * 消息中心「编辑」跳转支持：来源页带 ?edit=<id>（/applications?tab=xxx&edit=<id> 或 /awards/*?edit=<id>）
+   * 记录列表加载完成后自动定位到对应记录并进入编辑态；触发后清除 edit 参数，刷新不再重复进入。
+   * 未找到目标记录（已删除/类型不符）时静默回落普通列表，不阻断页面。
+   */
+  const editIdQuery = computed(() =>
+    typeof _u_route.query.edit === 'string' ? _u_route.query.edit : '',
+  )
+  let editTriggeredFor = ''
+  watch(
+    [editIdQuery, () => records.value],
+    () => {
+      if (!editIdQuery.value || editTriggeredFor === editIdQuery.value) return
+      const target = records.value.find((r) => String(r.id) === editIdQuery.value)
+      if (!target) return
+      editTriggeredFor = editIdQuery.value
+      handleEditClick(target)
+      const query = { ..._u_route.query }
+      delete query.edit
+      _u_router.replace({ query }).catch(() => {})
+    },
+    { immediate: true },
+  )
 
   function handleCancel() {
     cancelEdit()
