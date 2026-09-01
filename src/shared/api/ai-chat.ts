@@ -1,16 +1,17 @@
 /**
  * AI 助手 API
- * 管理 AI 对话消息、对话历史、消息反馈
+ * 管理 AI 对话会话、消息、AI 辅助建议（与《学生端接口文档》九、AI 对话模块一致）。
  *
- * 后端就绪后：
- *   - sendMessage        → request.post('/ai/chat', { message, conversationId, context })
- *   - getConversations    → request.get('/ai/conversations')
- *   - getConversation     → request.get(`/ai/conversations/${id}`)
- *   - createConversation  → request.post('/ai/conversations', { title })
- *   - deleteConversation  → request.delete(`/ai/conversations/${id}`)
- *   - submitFeedback      → request.post('/ai/feedback', { messageId, feedback, conversationId })
+ * 真实后端接口（主链路）：/ai/conversations、/ai/conversations/{id}/messages、
+ * /ai/conversations/{id}/messages/{mid}/regenerate、/ai/suggestions、DELETE /ai/conversations/{id}
+ * （见下方「后端 AI 接口」节）。
+ *
+ * 本地模拟（非真实接口，保留用途）：
+ *   - sendMessage      → 离线回退（后端不可用时标注「离线模式」）
+ *   - submitFeedback   → 学生端文档无消息反馈端点（教师端反馈走 POST /teacher/ai/feedbacks），仅本地占位
+ * 旧 Mock getConversations/getConversation/createConversation/deleteConversation 已废弃删除。
  */
-import type { RichContent } from '@/features/ai-chat/types'
+import type { AISuggestion, RichContent } from '@/features/ai-chat/types'
 import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
 import {
   analysisToRichBlocks,
@@ -165,53 +166,7 @@ export function sendMessage(
   })
 }
 
-/** 获取对话历史列表 */
-export function getConversations(): Promise<ConversationSummary[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([...mockConversations.values()])
-    }, 200)
-  })
-}
-
-/** 获取对话详情 */
-export function getConversation(id: string): Promise<ConversationDetail | null> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(mockMessages.get(id) ?? null)
-    }, 200)
-  })
-}
-
-/** 创建新对话 */
-export function createConversation(title?: string): Promise<ConversationSummary> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const id = nextConvId()
-      const conv: ConversationSummary = {
-        id,
-        title: title ?? '新对话',
-        createTime: new Date().toLocaleString('zh-CN'),
-        messageCount: 0,
-      }
-      mockConversations.set(id, conv)
-      resolve(conv)
-    }, 200)
-  })
-}
-
-/** 删除对话 */
-export function deleteConversation(id: string): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      mockConversations.delete(id)
-      mockMessages.delete(id)
-      resolve()
-    }, 200)
-  })
-}
-
-/** 提交消息反馈（后端暂无反馈端点，保留本地行为，待后端反馈接口） */
+/** 提交消息反馈（学生端无反馈端点，保留本地行为；教师端反馈接口见 POST /teacher/ai/feedbacks） */
 export function submitFeedback(
   messageId: string,
   feedback: 'useful' | 'useless',
@@ -312,22 +267,11 @@ export function regenerateAIMessage(
   return request.post(`/ai/conversations/${conversationId}/messages/${messageId}/regenerate`)
 }
 
-/** 获取 AI 辅助建议（GET /ai/suggestions） */
+/** 获取 AI 辅助建议（GET /ai/suggestions，按来源记录查询改进建议） */
 export function getAISuggestions(params: {
   sourceType: 'archive' | 'career_plan' | 'weakness_analysis'
   sourceId: number
-}): Promise<{
-  list: Array<{
-    suggestionId: number
-    content: string
-    sourceArchives?: Array<{ archiveId: number; title: string }>
-    aiGenerated: boolean
-    aiWarning?: string
-    teacherAction?: number
-    teacherActionLabel?: string
-    createdAt: string
-  }>
-}> {
+}): Promise<{ list: AISuggestion[] }> {
   return request.get('/ai/suggestions', { params })
 }
 

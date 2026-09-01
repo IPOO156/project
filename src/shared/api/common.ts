@@ -64,6 +64,45 @@ export function uploadAvatar(file: File): Promise<{ avatarUrl: string; objectKey
   })
 }
 
+/* ===================== 封面上传（2.1.5） ===================== */
+
+/** 封面上传结果（2.1.5，coverUrl 为 OSS 签名 URL，30 天有效；前端将其作为 coverImage 传入成长时间轴） */
+export interface CoverUploadResult {
+  coverUrl: string
+  objectKey: string
+}
+
+/** 上传封面图（POST /common/upload/cover）——直达 OSS cover 正式目录，不写 file_uploads */
+export function uploadCover(file: File): Promise<CoverUploadResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/common/upload/cover', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}
+
+/* ===================== 登录页公开统计（11.1） ===================== */
+
+/** 登录页公开统计概览（GET /public/statistics，免鉴权白名单） */
+export interface PublicStatistics {
+  /** 在校学生数：COUNT(student_profiles) 全部未软删除行 */
+  studentCount: number
+  /** 档案条目数：COUNT(archives) 全部未软删除档案 */
+  archiveCount: number
+  /** 待审申请数：archives.status=1 与 award_applications.status=1 之和 */
+  pendingApplicationCount: number
+  /** 服务可用率（配置项 public.stats.service-availability，默认 99.9%） */
+  serviceAvailability: string
+  /** 系统稳定率（配置项 public.stats.system-stability，默认 99.99%） */
+  systemStability: string
+  /** 统计时间（yyyy-MM-dd HH:mm:ss） */
+  statTime: string
+}
+
+export function getPublicStatistics(): Promise<PublicStatistics> {
+  return request.get('/public/statistics')
+}
+
 /* ===================== 学期下拉 ===================== */
 
 export interface SemesterOption {

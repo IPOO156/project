@@ -1,4 +1,4 @@
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience, GrowthExperienceInput } from '../timeline-constants'
 import { computed, ref } from 'vue'
 import { addTimelineEvent, deleteTimelineEvent } from '@/shared/api/archive'
 import { getGrowthTimeline } from '@/shared/api/student'
@@ -72,29 +72,60 @@ export function useGrowthTimeline() {
     }
   }
 
-  async function addExperience(payload: Omit<GrowthExperience, 'id' | 'semester'>) {
+  async function addExperience(payload: GrowthExperienceInput) {
     const semester = inferSemester(payload.date)
     const newExperience: GrowthExperience = {
       ...payload,
       id: `local-${Date.now()}`,
       semester,
+      // 有关联来源时同步记录来源 ID，便于详情展示来源关联
+      ...(payload.sourceId != null ? { recordId: String(payload.sourceId) } : {}),
     }
-    // 同步到后端
-    addTimelineEvent({
-      semester,
-      type: 'other',
-      title: payload.title,
-      description: payload.description,
-      date: payload.date,
-    }).catch(() => {})
     localExperiences.value = [...localExperiences.value, newExperience]
     rebuildExperiences()
+
+    // 同步到后端（4.2.1 POST /profile/growth-timeline）。
+    // 后端 create 不强制来源：仅当携带 sourceType 时才要求 sourceId 并做 uk_gt_source 唯一校验；
+    // 未选来源时正常落库（status 默认 0=草稿，列表接口不按状态过滤，刷新仍可见）。
+    // 成功后用真实 id 回填，失败（网络/参数校验）保留本地经历。
+    try {
+      const created = await addTimelineEvent({
+        // 奖项报名来源归类为奖项事件（eventType=1），其余默认能力提升（eventType=6）
+        eventType: payload.sourceType === 'award_applications' ? 1 : 6,
+        eventName: payload.title,
+        content: payload.description,
+        eventAt: payload.date,
+        tags: payload.tags,
+        ...(payload.sourceId != null && payload.sourceType
+          ? { sourceId: payload.sourceId, sourceType: payload.sourceType }
+          : {}),
+      })
+      if (created?.id != null) {
+        localExperiences.value = localExperiences.value.map((e) =>
+          e.id === newExperience.id ? { ...e, id: `backend-${created.id}` } : e,
+        )
+        rebuildExperiences()
+      }
+    } catch {
+      /* 静默：保持本地经历 */
+    }
   }
 
-  function deleteExperience(id: string) {
+  async function deleteExperience(id: string) {
+    // 仅对后端已持久化的事件（id 形如 backend-<真实id>）调用删除接口（4.2.4 DELETE）；
+    // 本地未同步事件不请求后端，避免把前端前缀当真实 id 发出。
+    // 删除成功后才移除本地展示：失败（网络/20005 无权限/30001 不存在）时保留记录，
+    // 错误提示已由 request 拦截器弹出，避免「本地假删除、刷新后记录复活」的伪删除。
+    const backendId = /^backend-(\d+)$/.exec(id)?.[1]
+    if (backendId) {
+      try {
+        await deleteTimelineEvent(Number(backendId))
+      } catch {
+        return
+      }
+    }
     localExperiences.value = localExperiences.value.filter((e) => e.id !== id)
     backendExperiences.value = backendExperiences.value.filter((e) => e.id !== id)
-    deleteTimelineEvent(id).catch(() => {})
     if (selectedId.value === id) {
       selectedId.value = null
     }

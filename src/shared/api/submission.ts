@@ -461,9 +461,8 @@ export const DETAIL_TO_FORM_MAP: Record<string, Record<string, string>> = {
 }
 
 /**
- * 奖项类详情（buildAwardDetail）仅返回通用字段（awardType/certificateNo/issuingUnit/validUntil/participantRole），
- * 各奖项专属字段（竞赛名称/参赛时间/软著名称…）后端未随详情返回，编辑回填仅能还原通用扩展字段。
- * 奖项专属字段缺失为后端缺口，见 2026-08-31 修改记录「遗留事项」。
+ * 奖项类通用字段（buildAwardDetail 当前实际返回，字段名与 award_applications 列一致）：
+ * certificateNo/issuingUnit/validUntil/participantRole → 扩展表单 certNumber/issuingAuthority/validityPeriod/role。
  */
 const AWARD_DETAIL_GENERIC_MAP: Record<string, string> = {
   certificateNo: 'certNumber',
@@ -473,15 +472,57 @@ const AWARD_DETAIL_GENERIC_MAP: Record<string, string> = {
 }
 
 /**
+ * 奖项类各星专属字段（8.x 提交契约字段名，后端 AwardService.updateExtension 的 body key 一致）。
+ * 这些字段由后端按 awardType 存入子表（competition_star→award_competition_stars、
+ * innovation_star→award_innovation_stars、research_star→award_research_stars 及其
+ * projects/software/papers 子表），但 `ActivityService.buildAwardDetail` 目前不查子表、未随详情返回，
+ * 属后端缺口（见 2026-08-31 修改记录「遗留事项」）。此处预置映射，后端补齐返回后编辑回填自动生效。
+ * 软著 issuer（颁发单位）取 award_applications.issuing_unit 通用列（软著子表无颁发单位列）。
+ */
+const AWARD_SPECIFIC_DETAIL_MAP: Record<string, Record<string, string>> = {
+  competitionStar: {
+    competitionName: 'competitionName',
+    participatedTime: 'competitionDate',
+    competitionLevel: 'competitionLevel',
+    awardLevel: 'awardLevel',
+  },
+  innovationStar: {
+    companyName: 'companyName',
+    industryType: 'industryType',
+    applicantRank: 'ranking',
+    registeredTime: 'registerDate',
+  },
+  scientificProject: {
+    projectName: 'projectName',
+    projectLevel: 'projectLevel',
+    rankTotal: 'ranking',
+    establishedTime: 'startDate',
+  },
+  softwareCopyright: {
+    softwareName: 'softName',
+    rankTotal: 'ranking',
+    approvedTime: 'approveDate',
+    issuingUnit: 'issuer',
+  },
+  paper: {
+    journalName: 'journalName',
+    paperTitle: 'paperName',
+    rankTotal: 'ranking',
+    publishedTime: 'publishDate',
+  },
+}
+
+/**
  * 后端活动详情 → 前端表单字段平铺对象。
  * @param type 前端申报类型 key（competition/scholarship/… / 奖项之星类）
  * @param detail GET /activities/{type}/{id} 返回的 ActivityDetailResponse 主体
  */
 export function mapDetailToForm(type: string, detail: any): Record<string, any> {
   const nested = (detail?.detail ?? {}) as Record<string, any>
-  const map =
-    DETAIL_TO_FORM_MAP[type] ??
-    (STAR_TYPES.includes(type as ApplicationType) ? AWARD_DETAIL_GENERIC_MAP : {})
+  // 奖项类 = 通用字段 + 星类专属字段（具体优先，合并后 issuingUnit 同进 issuingAuthority 与软著 issuer）
+  const map = STAR_TYPES.includes(type as ApplicationType)
+    ? { ...AWARD_DETAIL_GENERIC_MAP, ...(AWARD_SPECIFIC_DETAIL_MAP[type] ?? {}) }
+    : (DETAIL_TO_FORM_MAP[type] ?? {})
   const out: Record<string, any> = {}
   for (const [from, to] of Object.entries(map)) {
     const v = nested[from]
@@ -493,17 +534,17 @@ export function mapDetailToForm(type: string, detail: any): Record<string, any> 
   }
   // 学期：详情在顶层返回 semesterName（列表为 semester_name）
   if (detail?.semesterName) out.semester = detail.semesterName
-  // 附件：evidenceFiles（file_id/file_name/file_url）→ proofMaterials（UploadUserFile 形状，含自定义 fileId）
-  if (Array.isArray(detail?.evidenceFiles) && detail.evidenceFiles.length > 0) {
-    out.proofMaterials = detail.evidenceFiles.map((f: any, idx: number) => ({
-      // uid 用大基数 + 索引，避免与 el-upload 自增 uid 冲突
-      uid: 1_000_000_000 + idx,
-      name: f.file_name ?? f.fileName ?? '',
-      url: f.file_url ?? f.fileUrl ?? '',
-      status: 'success' as const,
-      fileId: f.file_id ?? f.fileId,
-    }))
-  }
+  // 附件：evidenceFiles（file_id/file_name/file_url）→ proofMaterials（UploadUserFile 形状，含自定义 fileId）。
+  // 无附件时也返回空数组，保证 handleEditClick 回填后 form.proofMaterials 恒为数组（el-upload 需要数组而非 ''）
+  const files = Array.isArray(detail?.evidenceFiles) ? detail.evidenceFiles : []
+  out.proofMaterials = files.map((f: any, idx: number) => ({
+    // uid 用大基数 + 索引，避免与 el-upload 自增 uid 冲突
+    uid: 1_000_000_000 + idx,
+    name: f.file_name ?? f.fileName ?? '',
+    url: f.file_url ?? f.fileUrl ?? '',
+    status: 'success' as const,
+    fileId: f.file_id ?? f.fileId,
+  }))
   return out
 }
 

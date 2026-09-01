@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
+import type { AISuggestion } from '@/features/ai-chat/types'
 import { ElMessage } from 'element-plus'
 import { AlertTriangle, Sparkles } from 'lucide-vue-next'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
 import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
+import { getAISuggestions } from '@/shared/api/ai-chat'
 import { useDict } from '@/shared/composables/composables'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
@@ -27,6 +29,53 @@ const { clearDraft } = useFormDraft('career-plan', planForm)
 const _u_planFiles = ref<{ name: string; url: string }[]>([])
 const planRecords = computed(() => careerPlanStore.plans)
 const aiAnalysis = computed(() => careerPlanStore.aiAnalysis)
+
+/** 后端 AI 辅助建议（GET /ai/suggestions，sourceType=career_plan，按最新一条规划拉取） */
+const backendSuggestions = ref<AISuggestion[]>([])
+const suggestionsLoading = ref(false)
+/** 最新一条规划（后端建议以此记录的 planId 为 sourceId） */
+const latestPlan = computed(
+  () =>
+    [...planRecords.value].sort((a, b) =>
+      (b.submitDate || '').localeCompare(a.submitDate || ''),
+    )[0],
+)
+/** 后端建议展示形状：模板只读加工后字段，避免复杂表达式 */
+const displaySuggestions = computed(() =>
+  backendSuggestions.value.map((s) => ({
+    key: s.suggestionId,
+    content: s.content,
+    warning: s.aiWarning ?? '',
+    status: s.teacherActionLabel ?? '',
+    sources: s.sourceArchives?.map((a) => a.title).join('、') ?? '',
+  })),
+)
+const emptyText = computed(() =>
+  suggestionsLoading.value ? '正在加载 AI 建议…' : '点击「开始分析」获取个性化改进建议',
+)
+
+/** 拉取最新规划的后端 AI 建议；后端不可用时清空，回退现有本地分析 */
+async function loadAISuggestions() {
+  const plan = latestPlan.value
+  if (!plan) return
+  suggestionsLoading.value = true
+  try {
+    const res = await getAISuggestions({ sourceType: 'career_plan', sourceId: Number(plan.id) })
+    backendSuggestions.value = res.list ?? []
+  } catch {
+    backendSuggestions.value = []
+  } finally {
+    suggestionsLoading.value = false
+  }
+}
+
+/** 最新规划变化（首次加载 / 新提交）时自动刷新后端建议 */
+watch(
+  () => latestPlan.value?.id,
+  (id) => {
+    if (id) void loadAISuggestions()
+  },
+)
 
 /** 已填写的学期（去重，用于学期切换查看与进度统计） */
 const availableSemesters = computed(() => [
@@ -186,6 +235,22 @@ onMounted(() => {
                 >
               </div>
             </template>
+            <!-- 后端 AI 辅助建议（GET /ai/suggestions，sourceType=career_plan） -->
+            <div v-if="displaySuggestions.length" class="ai-result ai-suggestions">
+              <div class="ai-result__head">
+                <Sparkles :size="16" class="ai-result__icon" />
+                <h4 class="ai-result__title">AI 辅助建议</h4>
+                <span class="ai-result__time">AI 系统生成</span>
+              </div>
+              <div v-for="s in displaySuggestions" :key="s.key" class="ai-suggestion">
+                <p class="ai-suggestion__content">{{ s.content }}</p>
+                <div class="ai-suggestion__meta">
+                  <span v-if="s.sources" class="ai-suggestion__chip">依据：{{ s.sources }}</span>
+                  <span v-if="s.warning" class="ai-suggestion__warn">{{ s.warning }}</span>
+                  <span v-if="s.status" class="ai-suggestion__status">{{ s.status }}</span>
+                </div>
+              </div>
+            </div>
             <div v-if="aiAnalysis" class="ai-result">
               <div class="ai-result__head">
                 <Sparkles :size="16" class="ai-result__icon" />
@@ -222,9 +287,9 @@ onMounted(() => {
                    无法调用 /profile/career-plans/ai-add 一键加入计划。待后端补充 aiSuggestionId 后，
                    在此新增「采纳为计划」按钮并二次确认后提交。 -->
             </div>
-            <div v-else class="ai-empty">
+            <div v-else-if="!displaySuggestions.length" class="ai-empty">
               <Sparkles :size="28" class="ai-empty__icon" />
-              <p class="ai-empty__text">点击「开始分析」获取个性化改进建议</p>
+              <p class="ai-empty__text">{{ emptyText }}</p>
             </div>
           </el-card>
         </div>
@@ -575,6 +640,55 @@ onMounted(() => {
     font-size: 14px;
     color: #1e293b;
     line-height: 1.6;
+  }
+}
+
+// 后端 AI 辅助建议块（绿色系，与本地短板分析橙色区分）
+.ai-suggestion {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 60%);
+  border: 1px solid #bbf7d0;
+  border-left: 3px solid #22c55e;
+
+  &__content {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: #1e293b;
+    line-height: 1.6;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__chip {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #c2410c;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+  }
+
+  &__warn {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+  }
+
+  &__status {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
   }
 }
 

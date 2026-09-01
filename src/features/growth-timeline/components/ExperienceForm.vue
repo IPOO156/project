@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperienceInput } from '../timeline-constants'
 import { Plus } from 'lucide-vue-next'
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { useSubmissionStore } from '@/app/stores/stores'
+import { activityCategoryOf } from '@/shared/api/submission'
 import { inferSemester } from '../timeline-constants'
 
 interface Props {
@@ -11,7 +13,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
-  (e: 'submit', payload: Omit<GrowthExperience, 'id' | 'semester'>): void
+  (e: 'submit', payload: GrowthExperienceInput): void
 }>()
 
 interface SkillForm {
@@ -25,17 +27,32 @@ interface FormState {
   description: string
   tags: string
   skills: SkillForm[]
+  /** 关联来源记录 ID（4.2.1 sourceId） */
+  sourceId?: number
 }
 
+const submissionStore = useSubmissionStore()
 const form = reactive<FormState>({
   title: '',
   date: '',
   description: '',
   tags: '',
   skills: [{ name: '', growth: 0 }],
+  sourceId: undefined,
 })
 
 const submitting = ref(false)
+
+/** 可关联来源：已提交（待审核/已通过）的申报/报名记录，按 activityCategoryOf 归类为 4.2.1 的 archives / award_applications */
+const sourceOptions = computed(() =>
+  submissionStore.records
+    .filter((r) => r.status === 'approved' || r.status === 'pending')
+    .map((r) => ({
+      id: Number(r.id),
+      sourceType: activityCategoryOf(r.type) === 'award' ? 'award_applications' : 'archives',
+      label: `${r.title}（${r.typeLabel} · ${r.status === 'approved' ? '已通过' : '待审核'}）`,
+    })),
+)
 
 function reset() {
   form.title = ''
@@ -43,6 +60,7 @@ function reset() {
   form.description = ''
   form.tags = ''
   form.skills = [{ name: '', growth: 0 }]
+  form.sourceId = undefined
 }
 
 function addSkill() {
@@ -57,6 +75,7 @@ function handleSubmit() {
   if (!form.title || !form.date) return
   submitting.value = true
 
+  const selected = sourceOptions.value.find((o) => o.id === form.sourceId)
   setTimeout(() => {
     emit('submit', {
       title: form.title,
@@ -67,6 +86,7 @@ function handleSubmit() {
         .map((t) => t.trim())
         .filter(Boolean),
       skills: form.skills.filter((s) => s.name),
+      ...(selected ? { sourceId: selected.id, sourceType: selected.sourceType } : {}),
     })
     submitting.value = false
     reset()
@@ -76,8 +96,12 @@ function handleSubmit() {
 
 watch(
   () => props.visible,
-  (val) => {
-    if (!val) reset()
+  async (val) => {
+    reset()
+    if (val && submissionStore.records.length === 0) {
+      // 打开弹窗时确保来源记录已加载（成长时间轴页本身不拉申报列表）
+      await submissionStore.fetchRecords()
+    }
   },
 )
 </script>
@@ -106,6 +130,25 @@ watch(
 
       <el-form-item label="学期">
         <el-input :value="form.date ? inferSemester(form.date) : ''" disabled />
+      </el-form-item>
+
+      <el-form-item label="关联来源">
+        <el-select
+          v-model="form.sourceId"
+          placeholder="选择已提交的申报/报名记录（可选）"
+          clearable
+          class="source-select"
+        >
+          <el-option
+            v-for="opt in sourceOptions"
+            :key="opt.id"
+            :label="opt.label"
+            :value="opt.id"
+          />
+        </el-select>
+        <div class="source-hint">
+          选择后该经历关联所选记录并提交至后端落库；不选择时仅保留在本地（接口要求来源必填）。
+        </div>
       </el-form-item>
 
       <el-form-item label="经历描述">
@@ -150,5 +193,17 @@ watch(
 
 .skill-slider {
   width: 160px;
+}
+
+.source-select {
+  width: 100%;
+}
+
+.source-hint {
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 4px;
+  color: var(--el-text-color-secondary);
 }
 </style>

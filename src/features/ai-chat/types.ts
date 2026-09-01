@@ -157,6 +157,25 @@ export interface AIRegenerateResult {
   createdAt: string
 }
 
+/** AI 辅助建议（GET /ai/suggestions 列表项，数据来源：improvement_suggestions 表） */
+export interface AISuggestion {
+  /** 建议ID */
+  suggestionId: number
+  /** 建议内容（improvement_suggestions.suggestion_content） */
+  content: string
+  /** 关联档案来源（如某条竞赛获奖记录） */
+  sourceArchives?: Array<{ archiveId: number; title: string }>
+  /** 是否 AI 自动生成 */
+  aiGenerated: boolean
+  /** AI 生成告警（如「AI辅助生成，请教师复核」） */
+  aiWarning?: string
+  /** 教师处理状态枚举 */
+  teacherAction?: number
+  /** 教师处理状态文案（如「待处理」） */
+  teacherActionLabel?: string
+  createdAt: string
+}
+
 /** 知识库条目 */
 export interface KnowledgeEntry {
   /** 主题标识 */
