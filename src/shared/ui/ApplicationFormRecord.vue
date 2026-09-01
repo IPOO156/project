@@ -1,7 +1,7 @@
 <script setup lang="ts" generic="T">
 import type { ApplicationType } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { h, ref } from 'vue'
+import { computed, h, ref, watch } from 'vue'
 import { getApplicationGuide, getApplicationVersions } from '@/shared/api/applications'
 import { getAwardGuide, getAwardVersions } from '@/shared/api/awards'
 import { activityCategoryOf } from '@/shared/api/submission'
@@ -58,6 +58,26 @@ const emit = defineEmits<{
   (e: 'score', row: T): void
   (e: 'update:extendedForm', field: string, value: any): void
 }>()
+
+/* ===================== 申报记录分页 ===================== */
+// 超过 PAGE_SIZE 条才启用分页（≤ 阈值时全量展示，保持简洁）；客户端分页基于当前 records 数组
+const PAGE_SIZE = 10
+const recordsPage = ref(1)
+const showRecordsPagination = computed(() => props.records.length > PAGE_SIZE)
+const pagedRecords = computed(() => {
+  const list = props.records
+  if (list.length <= PAGE_SIZE) return list
+  const start = (recordsPage.value - 1) * PAGE_SIZE
+  return list.slice(start, start + PAGE_SIZE)
+})
+// 记录增删后若当前页超出最大页，回退到最后一页，避免空白
+watch(
+  () => props.records.length,
+  () => {
+    const maxPage = Math.max(1, Math.ceil(props.records.length / PAGE_SIZE))
+    if (recordsPage.value > maxPage) recordsPage.value = maxPage
+  },
+)
 
 const _u_getLabel = useDict(APPLICATION_STATUS)
 
@@ -347,7 +367,7 @@ async function openGuide(row: any) {
         ><span class="card-title">申报记录</span
         ><span class="card-title__count">共 {{ records.length }} 条</span></template
       >
-      <el-table :data="records as any" stripe>
+      <el-table :data="pagedRecords as any" stripe>
         <slot name="columns" />
         <el-table-column label="状态" width="100" align="center"
           ><template #default="{ row }"
@@ -417,6 +437,16 @@ async function openGuide(row: any) {
           </template>
         </el-table-column>
       </el-table>
+      <div v-if="showRecordsPagination" class="record-card__pagination">
+        <el-pagination
+          v-model:current-page="recordsPage"
+          :page-size="PAGE_SIZE"
+          :total="records.length"
+          layout="prev, pager, next, jumper, total"
+          background
+          small
+        />
+      </div>
     </el-card>
 
     <VersionHistoryDrawer
@@ -448,6 +478,11 @@ async function openGuide(row: any) {
 }
 .card-title {
   font-weight: 600;
+}
+.record-card__pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
 .card-title__count {
   margin-left: 8px;

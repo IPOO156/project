@@ -12,6 +12,19 @@ export interface GrowthExperience {
   statusLabel?: string
 }
 
+/** 新增成长经历的提交入参（含可选来源记录：4.2.1 要求 sourceId+sourceType 来源必填才能落库） */
+export interface GrowthExperienceInput {
+  title: string
+  date: string
+  description: string
+  tags: string[]
+  skills: { name: string; growth: number }[]
+  /** 来源记录 ID（4.2.1 sourceId，从已提交的申报/报名记录中选择） */
+  sourceId?: number
+  /** 来源模型类型（4.2.1 sourceType：archives 申报 / award_applications 奖项报名） */
+  sourceType?: string
+}
+
 export interface SemesterRing {
   level: number
   label: string

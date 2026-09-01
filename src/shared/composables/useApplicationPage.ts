@@ -164,6 +164,8 @@ export function useApplicationPage(
   const currentStatus = ref('')
   // 被退回原因：编辑/查看退回记录时回填，传给 ApplicationFormRecord 的 rejection-reason 属性
   const rejectionReason = ref('')
+  // 查看详情弹窗加载态：真实后端记录需拉取详情接口补全表单字段，加载期间弹窗显示 loading
+  const detailLoading = ref(false)
 
   async function doSubmit(data: Record<string, any>) {
     submitting.value = true
@@ -319,9 +321,25 @@ export function useApplicationPage(
   function handleCorrection(row: any) {
     openCorrection(row)
   }
-  function viewRecord(row: any) {
+  async function viewRecord(row: any) {
     rejectionReason.value = row.rejectedReason || ''
+    // 先展示列表摘要，立即打开弹窗，避免点击后无反馈
     _viewRecord(row)
+    // 真实后端记录：列表接口（GET /activities）仅返回摘要字段，详情接口才含用户填写的表单内容。
+    // 拉取详情并逆向映射为表单字段后合并进展示记录，让「查看」展示申报表单填写的具体内容。
+    const isBackendRecord =
+      row.id && row.id !== DRAFT_LOCAL_ID && !String(row.id).startsWith('rec-')
+    if (!isBackendRecord) return
+    detailLoading.value = true
+    try {
+      const detail = await getActivityDetail(Number(row.id), activityCategoryOf(type as any))
+      // mapDetailToForm 仅映射业务字段（不含 status），避免覆盖行上的前端状态/退回原因
+      if (detail) _viewRecord({ ...row, ...mapDetailToForm(type, detail) })
+    } catch {
+      /* 详情拉取失败：沿用列表摘要字段 */
+    } finally {
+      detailLoading.value = false
+    }
   }
   function init() {
     loadEnrollmentInfo()
@@ -337,6 +355,7 @@ export function useApplicationPage(
     detailRecord,
     currentStatus,
     rejectionReason,
+    detailLoading,
     enrollmentInfo,
     extendedForm,
     correctionVisible,

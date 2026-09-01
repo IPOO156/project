@@ -267,6 +267,7 @@ function handleScrollToGrowth() {
         :selected-id="selectedId"
         @select="handleListViewSelect"
         @add="openForm"
+        @delete="handleDeleteExperience"
       />
     </template>
 

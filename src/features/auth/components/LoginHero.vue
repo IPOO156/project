@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PublicStatistics } from '@/shared/api/common'
 import {
   Award,
   BookOpen,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import logoIcon from '@/assets/logo/logo-icon.png'
+import { getPublicStatistics } from '@/shared/api/common'
 
 const props = defineProps<{
   loginType: 'student' | 'admin'
@@ -160,18 +162,30 @@ const floatCards = computed(() => {
   ]
 })
 
+/** 11.1 登录页公开统计实时数据；接口未实现/失败时为 null，回退下方原展示数据 */
+const liveStats = ref<PublicStatistics | null>(null)
+
+function formatCount(n: number | undefined): string {
+  return n != null ? n.toLocaleString('en-US') : '—'
+}
+
 const statsData = computed(() => {
+  const s = liveStats.value
   if (props.loginType === 'student') {
     return [
-      { num: '2,840+', label: '在校学生', icon: Users },
-      { num: '12,580', label: '档案条目', icon: Layers },
-      { num: '99.9%', label: '服务可用', icon: Zap },
+      { num: s ? `${formatCount(s.studentCount)}+` : '2,840+', label: '在校学生', icon: Users },
+      { num: s ? formatCount(s.archiveCount) : '12,580', label: '档案条目', icon: Layers },
+      { num: s?.serviceAvailability || '99.9%', label: '服务可用', icon: Zap },
     ]
   }
   return [
-    { num: '386', label: '待审申请', icon: FileCheck },
-    { num: '12,580', label: '学生档案', icon: Users },
-    { num: '99.99%', label: '系统稳定', icon: Zap },
+    {
+      num: s ? formatCount(s.pendingApplicationCount) : '386',
+      label: '待审申请',
+      icon: FileCheck,
+    },
+    { num: s ? formatCount(s.archiveCount) : '12,580', label: '学生档案', icon: Users },
+    { num: s?.systemStability || '99.99%', label: '系统稳定', icon: Zap },
   ]
 })
 
@@ -181,9 +195,15 @@ function updateClock() {
   currentTime.value = `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}:${String(n.getSeconds()).padStart(2, '0')}`
 }
 
-onMounted(() => {
+onMounted(async () => {
   updateClock()
   clockInterval = window.setInterval(updateClock, 1000)
+  // 11.1 登录页公开统计：接口未实现（404 已静默）或失败时保留原展示数据
+  try {
+    liveStats.value = await getPublicStatistics()
+  } catch {
+    /* 静默：保留硬编码兜底 */
+  }
 })
 
 onUnmounted(() => {

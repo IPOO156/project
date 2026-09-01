@@ -6,6 +6,7 @@ import { AWARD_LEVELS, COMPETITION_TYPES, SEMESTER_OPTIONS } from '@/shared/cons
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
+import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 import {
   buildSemesterMonthDisabledDate,
@@ -179,6 +180,17 @@ onMounted(() => {
     :title="page.indicatorTitle"
     :indicators="page.indicators"
     @close="page.closeIndicator"
+  />
+  <RecordDetailDialog
+    :visible="page.detailVisible"
+    :record="page.detailRecord"
+    :loading="page.detailLoading"
+    @update:visible="
+      (v) => {
+        if (!v) page.closeDetail()
+      }
+    "
+    @close="page.closeDetail"
   />
 </template>
 
