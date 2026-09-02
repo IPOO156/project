@@ -17,6 +17,7 @@ import {
 } from '@/shared/api/student'
 import AvatarUploader from './components/AvatarUploader.vue'
 import AwardsPanel from './components/AwardsPanel.vue'
+import CompletenessBar from './components/CompletenessBar.vue'
 import DimensionPanel from './components/DimensionPanel.vue'
 import InterestPanel from './components/InterestPanel.vue'
 import SelfEvaluationPanel from './components/SelfEvaluationPanel.vue'
@@ -224,15 +225,7 @@ async function handleExportResume() {
       </div>
     </div>
 
-    <div v-if="completenessRate !== null" class="completeness-bar">
-      <span class="completeness-bar__label">档案数据完整度</span>
-      <el-progress
-        :percentage="completenessRate"
-        :stroke-width="8"
-        class="completeness-bar__progress"
-        text-inside
-      />
-    </div>
+    <CompletenessBar v-if="completenessRate !== null" :rate="completenessRate" />
 
     <div class="stat-grid">
       <div class="stat-card">
@@ -446,28 +439,6 @@ async function handleExportResume() {
 .page-head__actions {
   display: flex;
   gap: 12px;
-}
-
-// 数据完整度提示条
-.completeness-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-radius: 8px;
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
-
-  &__label {
-    font-size: 13px;
-    color: #475569;
-    white-space: nowrap;
-  }
-
-  &__progress {
-    flex: 1;
-    min-width: 200px;
-  }
 }
 
 // 统计卡片

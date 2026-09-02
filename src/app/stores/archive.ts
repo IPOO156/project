@@ -6,7 +6,6 @@ import { getAwards, getDimensions, getGrades, getTimelineEvents } from '@/shared
 import {
   deleteInterest as apiDeleteInterest,
   updateInterests as apiUpdateInterests,
-  getGrowthTimeline,
   getProfileInfo,
 } from '@/shared/api/student'
 import { useUserStore } from './user'
@@ -108,41 +107,17 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  /** 从后端 /profile/growth-timeline 拉取时间线（失败回退 Mock） */ async function fetchTimeline(): Promise<void> {
-    try {
-      const data = await getGrowthTimeline()
-      if (data.timeline && data.timeline.length > 0) {
-        timelineEvents.value = data.timeline.map((e: any) => ({
-          id: String(e.id),
-          semester: e.semesterName || '',
-          type: mapEventType(e.eventType),
-          title: e.eventName,
-          description: e.content || '',
-          date: e.eventAt,
-          recordId: e.sourceId ? String(e.sourceId) : undefined,
-        }))
-        return
-      }
-    } catch {
-      /* 回退 Mock */
-    }
+  /**
+   * 从后端 /profile/growth-timeline（viewType=list）拉取成长时间线
+   * 单一数据源：复用 api 层 getTimelineEvents 的统一映射（eventType 1-6 → TimelineNode.type）
+   * 成功写入 timelineEvents；失败置空，不阻塞页面渲染。
+   */
+  async function fetchTimeline(): Promise<void> {
     try {
       timelineEvents.value = await getTimelineEvents()
     } catch {
       timelineEvents.value = []
     }
-  }
-
-  function mapEventType(type: number | undefined): TimelineNode['type'] {
-    const map: Record<number, TimelineNode['type']> = {
-      1: 'award',
-      2: 'grade',
-      3: 'practice',
-      4: 'other',
-      5: 'other',
-      6: 'other',
-    }
-    return map[type ?? 0] || 'other'
   }
 
   // 兴趣标签已切到后端真实接口（/profile/info + PUT/DELETE /profile/interests），无独立 Mock 回填

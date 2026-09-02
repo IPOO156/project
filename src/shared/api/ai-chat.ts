@@ -3,12 +3,11 @@
  * 管理 AI 对话会话、消息、AI 辅助建议（与《学生端接口文档》九、AI 对话模块一致）。
  *
  * 真实后端接口（主链路）：/ai/conversations、/ai/conversations/{id}/messages、
- * /ai/conversations/{id}/messages/{mid}/regenerate、/ai/suggestions、DELETE /ai/conversations/{id}
- * （见下方「后端 AI 接口」节）。
+ * /ai/conversations/{id}/messages/{mid}/regenerate、/ai/suggestions、/ai/messages/{mid}/feedback、
+ * DELETE /ai/conversations/{id}（见下方「后端 AI 接口」节）。
  *
  * 本地模拟（非真实接口，保留用途）：
  *   - sendMessage      → 离线回退（后端不可用时标注「离线模式」）
- *   - submitFeedback   → 学生端文档无消息反馈端点（教师端反馈走 POST /teacher/ai/feedbacks），仅本地占位
  * 旧 Mock getConversations/getConversation/createConversation/deleteConversation 已废弃删除。
  */
 import type { AISuggestion, RichContent } from '@/features/ai-chat/types'
@@ -42,24 +41,9 @@ export interface ConversationSummary {
   messageCount: number
 }
 
-export interface ConversationDetail {
-  id: string
-  title: string
-  messages: Array<{
-    id: string
-    role: 'user' | 'ai'
-    content: string
-    time: string
-    richContent?: RichContent
-    feedback?: 'useful' | 'useless' | null
-  }>
-  createTime: string
-}
-
 // ── Mock 辅助 ──
 let convIdCounter = 0
 const mockConversations = new Map<string, ConversationSummary>()
-const mockMessages = new Map<string, ConversationDetail>()
 
 function nextConvId(): string {
   return `conv_${++convIdCounter}`
@@ -166,23 +150,15 @@ export function sendMessage(
   })
 }
 
-/** 提交消息反馈（学生端无反馈端点，保留本地行为；教师端反馈接口见 POST /teacher/ai/feedbacks） */
+/**
+ * 提交消息反馈（9.8 POST /ai/messages/{messageId}/feedback，幂等：同消息重复反馈覆盖）
+ * messageId 须为后端真实消息 ID（数字）；离线模拟/欢迎语等本地消息无后端 ID，调用方不应上报。
+ */
 export function submitFeedback(
-  messageId: string,
+  messageId: number | string,
   feedback: 'useful' | 'useless',
-  conversationId?: string,
-): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // 同步到 mock 消息存储（如果有的话）
-      if (conversationId && mockMessages.has(conversationId)) {
-        const detail = mockMessages.get(conversationId)!
-        const msg = detail.messages.find((m) => m.id === messageId)
-        if (msg) msg.feedback = feedback
-      }
-      resolve()
-    }, 200)
-  })
+): Promise<{ messageId: number; feedback: string }> {
+  return request.post(`/ai/messages/${messageId}/feedback`, { feedback })
 }
 
 /** 创建对话会话（POST /ai/conversations） */
@@ -226,6 +202,8 @@ export function getAIConversationMessages(conversationId: number): Promise<{
     tokenUsage?: number
     generationTimeMs?: number
     createdAt: string
+    /** 当前用户对该消息的反馈（待后端 MessageItem 补字段后返回；未返回/未反馈为 null） */
+    feedback?: 'useful' | 'useless' | null
   }>
 }> {
   return request.get(`/ai/conversations/${conversationId}/messages`)
