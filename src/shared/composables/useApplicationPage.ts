@@ -1,7 +1,6 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, reactive, ref, toRaw, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useNotificationStore } from '@/app/stores/stores'
 import { getActivityDetail, withdrawActivity } from '@/shared/api/activities'
 import { duplicateCheck } from '@/shared/api/applications'
 import { awardDuplicateCheck } from '@/shared/api/awards'
@@ -28,7 +27,6 @@ export function useApplicationPage(
 ) {
   const _u_router = useRouter()
   const _u_route = useRoute()
-  const notificationStore = useNotificationStore()
   const effectiveDraftKey = draftKey || type
 
   const form = reactive(emptyForm())
@@ -188,12 +186,8 @@ export function useApplicationPage(
       }
       await clearDraft()
       await loadRecords() // 提交成功后刷新真实列表，新记录以真实 id/状态展示
-      notificationStore.addNotification({
-        title: `${typeLabel}申报已提交`,
-        content: `您的${typeLabel}「${title}」已成功提交。`,
-        category: 'audit_remind',
-        jumpUrl: '/approval/pending',
-      })
+      // 申报提交成功消息由后端 MessageProduceAspect 在 submit 成功后自动写入 user_messages（archive→「申报提交成功」/award→「奖项申报提交成功」）。
+      // 前端不再本地注入重复消息：假 id（notif-*）会让消息中心归档/已读请求后端 400，且刷新即消失。
       ElMessage.success('申报提交成功')
       resetForm()
       // 清空表单后再次清草稿：防深 watcher（800ms 防抖）在 clearDraft 与 resetForm 之间把旧内容重写回 localStorage

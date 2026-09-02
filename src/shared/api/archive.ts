@@ -225,7 +225,8 @@ function mapBackendEventType(type: number | undefined): TimelineNode['type'] {
 
 /**
  * 获取成长时间轴事件列表（GET /profile/growth-timeline，viewType=list）
- * 复用 student.ts getGrowthTimeline（已解包），此处映射为 TimelineNode 供档案概览「时间线」面板消费
+ * 复用 student.ts getGrowthTimeline（已解包），此处映射为 TimelineNode，
+ * 供档案 Store fetchTimeline 消费（成长发展页「成长记录」/ 成长数据来源统计）
  */
 export async function getTimelineEvents(): Promise<TimelineNode[]> {
   const data = await getGrowthTimeline({ viewType: 'list' })

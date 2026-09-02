@@ -122,6 +122,11 @@ export interface AIConversationMessage {
   tokenUsage?: number
   generationTimeMs?: number
   createdAt: string
+  /**
+   * 当前用户对该消息的反馈（可选，待后端消息列表 DTO 补 feedback 字段后回显）
+   * 未反馈或后端未返回时为 undefined → 映射为 null，图标不激活
+   */
+  feedback?: MessageFeedback
 }
 
 /** 建议操作（后端运行时组装，如跳转个人档案） */

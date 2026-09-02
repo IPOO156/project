@@ -166,7 +166,7 @@ function handleRemove(id: string) {
 
 onMounted(() => {
   careerPlanStore.fetchPlans()
-  if (archiveStore.timelineEvents.length === 0) archiveStore.fetchArchive()
+  if (archiveStore.timelineEvents.length === 0) archiveStore.fetchTimeline()
 })
 </script>
 
