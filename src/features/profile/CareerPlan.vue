@@ -1,247 +1,700 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
+import type { AISuggestion } from '@/features/ai-chat/types'
 import { ElMessage } from 'element-plus'
-import { AlertTriangle, Download, Eye, Plus } from 'lucide-vue-next'
-import { computed, reactive, ref } from 'vue'
+import { AlertTriangle, Sparkles } from 'lucide-vue-next'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
+import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
+import { getAISuggestions } from '@/shared/api/ai-chat'
 import { useDict } from '@/shared/composables/composables'
+import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import CareerPlanDetail from './components/CareerPlanDetail.vue'
+import CopyCareerPlanDialog from './components/CopyCareerPlanDialog.vue'
+import GrowthRecords from './components/GrowthRecords.vue'
 
-interface PlanRecord {
-  id: string
-  semester: string
-  title: string
-  submitDate: string
-  status: 'draft' | 'submitted'
-}
+const archiveStore = useArchiveStore()
+const careerPlanStore = useCareerPlanStore()
 
-// ── 响应式数据 ──
 const planForm = reactive({
   semester: '',
   title: '',
   content: '',
+  requirement: '',
+  goals: [] as any[],
+  evidenceFileIds: [] as number[],
 })
+const { clearDraft } = useFormDraft('career-plan', planForm)
+const _u_planFiles = ref<{ name: string; url: string }[]>([])
+const planRecords = computed(() => careerPlanStore.plans)
+const aiAnalysis = computed(() => careerPlanStore.aiAnalysis)
 
-const planFiles = ref<{ name: string, url: string }[]>([])
+/** 后端 AI 辅助建议（GET /ai/suggestions，sourceType=career_plan，按最新一条规划拉取） */
+const backendSuggestions = ref<AISuggestion[]>([])
+const suggestionsLoading = ref(false)
+/** 最新一条规划（后端建议以此记录的 planId 为 sourceId） */
+const latestPlan = computed(
+  () =>
+    [...planRecords.value].sort((a, b) =>
+      (b.submitDate || '').localeCompare(a.submitDate || ''),
+    )[0],
+)
+/** 后端建议展示形状：模板只读加工后字段，避免复杂表达式 */
+const displaySuggestions = computed(() =>
+  backendSuggestions.value.map((s) => ({
+    key: s.suggestionId,
+    content: s.content,
+    warning: s.aiWarning ?? '',
+    status: s.teacherActionLabel ?? '',
+    sources: s.sourceArchives?.map((a) => a.title).join('、') ?? '',
+  })),
+)
+const emptyText = computed(() =>
+  suggestionsLoading.value ? '正在加载 AI 建议…' : '点击「开始分析」获取个性化改进建议',
+)
 
-// ── Mock 数据（接口联调后替换） ──
-const planRecords = ref<PlanRecord[]>([
-  { id: '1', semester: '2023-2024-1', title: '大二学年成长规划', submitDate: '2025-09-15', status: 'submitted' },
-  { id: '2', semester: '2022-2023-2', title: '大一学年总结与规划', submitDate: '2025-03-10', status: 'submitted' },
+/** 拉取最新规划的后端 AI 建议；后端不可用时清空，回退现有本地分析 */
+async function loadAISuggestions() {
+  const plan = latestPlan.value
+  if (!plan) return
+  suggestionsLoading.value = true
+  try {
+    const res = await getAISuggestions({ sourceType: 'career_plan', sourceId: Number(plan.id) })
+    backendSuggestions.value = res.list ?? []
+  } catch {
+    backendSuggestions.value = []
+  } finally {
+    suggestionsLoading.value = false
+  }
+}
+
+/** 最新规划变化（首次加载 / 新提交）时自动刷新后端建议 */
+watch(
+  () => latestPlan.value?.id,
+  (id) => {
+    if (id) void loadAISuggestions()
+  },
+)
+
+/** 已填写的学期（去重，用于学期切换查看与进度统计） */
+const availableSemesters = computed(() => [
+  ...new Set(planRecords.value.map((p) => p.semester).filter((s) => s)),
 ])
+const semesterFilter = ref('')
+const filteredRecords = computed(() =>
+  semesterFilter.value
+    ? planRecords.value.filter((p) => p.semester === semesterFilter.value)
+    : planRecords.value,
+)
 
-const weaknesses = ref([
-  { dimension: '科研创新', score: 60, weakness: '科研项目经历较少，缺乏论文发表', suggestion: '建议参与导师科研项目，尝试撰写学术论文' },
-  { dimension: '竞赛实践', score: 65, weakness: '高级别竞赛参与度不足', suggestion: '关注国家级竞赛信息，组建团队参赛' },
-])
-
+// TODO(待后端契约字段)：计划详情「教师反馈(teacherFeedback)、学生反思(reflection)」
+// 及「完成进度(目标/行动完成数)」尚未在 CareerPlanRecord 契约中定义，暂不展示；
+// 进度仅基于本地已有数据（已填学期数）计算。
+const filledSemesterCount = computed(() => availableSemesters.value.length)
+const totalSemesterCount = SEMESTER_OPTIONS.length
+const planProgressPercent = computed(() =>
+  totalSemesterCount === 0 ? 0 : Math.round((filledSemesterCount.value / totalSemesterCount) * 100),
+)
 const loading = ref(false)
-const dialogVisible = ref(false)
+const _u_dialogVisible = ref(false)
+const aiDrawerVisible = ref(false)
+const aiDrawerKey = ref(0)
+const aiInitialQuestion = '请分析我的职业规划短板并给出改进建议'
 
-// ── Computed ──
+const detailVisible = ref(false)
+const detailPlanId = ref<number | null>(null)
+const copyDialogVisible = ref(false)
+
+const activeTab = ref<'plan' | 'growth'>('plan')
+
+function openAIDrawer() {
+  aiDrawerKey.value++
+  aiDrawerVisible.value = true
+}
+
+function openDetail(row: any) {
+  detailPlanId.value = Number(row.id)
+  detailVisible.value = true
+}
+
+function openCopyDialog() {
+  copyDialogVisible.value = true
+}
+
 const { getColor, getLabel } = useDict(APPLICATION_STATUS)
+const getStatusType = computed(
+  () =>
+    (status: string): TagProps['type'] =>
+      (getColor(status) as TagProps['type']) ?? 'info',
+)
 
-const getStatusType = computed(() => (status: PlanRecord['status']): TagProps['type'] => {
-  return (getColor(status) as TagProps['type']) ?? 'info'
-})
-
-// ── 方法函数 ──
-function handleSubmit() {
+async function handleSubmit() {
   if (!planForm.semester || !planForm.title) {
-    ElMessage.warning('请填写完整信息')
+    ElMessage.warning('请填写学期和标题')
     return
   }
   loading.value = true
-  setTimeout(() => {
-    planRecords.value.unshift({
-      id: Date.now().toString(),
+  try {
+    await careerPlanStore.submitPlan({
       semester: planForm.semester,
       title: planForm.title,
-      submitDate: new Date().toISOString().slice(0, 10),
-      status: 'submitted',
+      content: planForm.content,
+      requirement: planForm.requirement,
+      goals: planForm.goals,
+      evidenceFileIds: planForm.evidenceFileIds,
     })
-    ElMessage.success('规划材料提交成功')
-    dialogVisible.value = false
+    clearDraft()
     planForm.semester = ''
     planForm.title = ''
     planForm.content = ''
-    planFiles.value = []
+    planForm.requirement = ''
+    planForm.goals = []
+    planForm.evidenceFileIds = []
+    ElMessage.success('规划已提交')
+  } catch {
+    ElMessage.error('提交失败')
+  } finally {
     loading.value = false
-  }, 600)
+  }
 }
+
+function handleRemove(id: string) {
+  careerPlanStore.plans = careerPlanStore.plans.filter((p: any) => p.id !== id)
+  ElMessage.success('已删除')
+}
+
+onMounted(() => {
+  careerPlanStore.fetchPlans()
+  if (archiveStore.timelineEvents.length === 0) archiveStore.fetchTimeline()
+})
 </script>
 
 <template>
-  <div class="career-plan">
-    <el-card>
-      <template #header>
-        <div class="career-plan__header">
-          <span class="card-title">职业规划与材料填写</span>
-          <el-button type="primary" :icon="Plus" @click="dialogVisible = true">
-            新增规划
-          </el-button>
-        </div>
-      </template>
+  <div class="growth-dev">
+    <div class="gd-header">
+      <h1 class="gd-header__title">成长发展</h1>
+      <p class="gd-header__subtitle">职业规划与成长记录管理</p>
+    </div>
 
-      <!-- 规划列表 -->
-      <el-table :data="planRecords" stripe>
-        <el-table-column prop="semester" label="学期" width="120" />
-        <el-table-column prop="title" label="规划名称" />
-        <el-table-column prop="submitDate" label="提交时间" width="140" />
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="getStatusType(row.status)" size="small">
-              {{ getLabel(row.status) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
-          <template #default>
-            <el-button text type="primary" :icon="Eye" size="small">查看</el-button>
-            <el-button text type="primary" :icon="Download" size="small">下载</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-card>
+    <el-tabs v-model="activeTab" class="gd-tabs">
+      <el-tab-pane label="职业规划" name="plan">
+        <div class="gd-two-col">
+          <!-- 左侧：表单 -->
+          <el-card class="gd-card">
+            <template #header><span class="card-title">填写规划</span></template>
+            <el-form :model="planForm" label-width="70px" size="default">
+              <el-form-item label="学期" required>
+                <el-select v-model="planForm.semester" placeholder="请选择学期" class="form-w">
+                  <el-option
+                    v-for="s in SEMESTER_OPTIONS"
+                    :key="s.value"
+                    :label="s.label"
+                    :value="s.value"
+                  />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="标题" required>
+                <el-input
+                  v-model="planForm.title"
+                  placeholder="如：大二下学期学习规划"
+                  class="form-w"
+                />
+              </el-form-item>
+              <el-form-item label="内容">
+                <el-input
+                  v-model="planForm.content"
+                  type="textarea"
+                  :rows="5"
+                  placeholder="请描述你的规划目标与具体措施..."
+                />
+              </el-form-item>
+              <el-form-item label="要求/目标">
+                <el-input
+                  v-model="planForm.requirement"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="如：GPA达到3.5以上，参与至少一项科研项目"
+                />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="loading" @click="handleSubmit"
+                  >提交规划</el-button
+                >
+              </el-form-item>
+            </el-form>
+          </el-card>
 
-    <!-- 短板识别与改进建议 -->
-    <el-card class="career-plan__section">
-      <template #header>
-        <div class="career-plan__header">
-          <div class="section-title">
-            <AlertTriangle :size="18" />
-            <span>短板识别与改进建议</span>
-          </div>
-          <el-tag size="small" type="warning">AI 生成</el-tag>
-        </div>
-      </template>
-      <div v-for="item in weaknesses" :key="item.dimension" class="weakness-item">
-        <div class="weakness-item__header">
-          <span class="weakness-item__dim">{{ item.dimension }}</span>
-          <el-progress
-            :percentage="item.score"
-            :stroke-width="8"
-            class="progress-fixed"
-            status="exception"
-            :format="() => `${item.score}分`"
-          />
-        </div>
-        <el-alert
-          :title="`短板：${item.weakness}`"
-          type="warning"
-          :closable="false"
-          show-icon
-          class="mb-8"
-        />
-        <el-alert
-          :title="`建议：${item.suggestion}`"
-          type="success"
-          :closable="false"
-          show-icon
-        />
-      </div>
-    </el-card>
-
-    <!-- 新增规划弹窗 -->
-    <el-dialog
-      v-model="dialogVisible"
-      title="填写职业规划"
-      width="640px"
-      :close-on-click-modal="false"
-    >
-      <el-form :model="planForm" label-width="100px">
-        <el-form-item label="学期" required>
-          <el-select v-model="planForm.semester" placeholder="请选择学期" class="form-select">
-            <el-option
-              v-for="s in SEMESTER_OPTIONS"
-              :key="s.value"
-              :label="s.label"
-              :value="s.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="规划标题" required>
-          <el-input v-model="planForm.title" placeholder="请输入规划标题" />
-        </el-form-item>
-        <el-form-item label="规划内容">
-          <el-input
-            v-model="planForm.content"
-            type="textarea"
-            :rows="6"
-            placeholder="请描述你的职业规划、学习目标..."
-          />
-        </el-form-item>
-        <el-form-item label="规划文件">
-          <el-upload
-            v-model:file-list="planFiles"
-            action="#"
-            :auto-upload="false"
-            list-type="text"
-          >
-            <el-button type="primary" plain>选择文件</el-button>
-            <template #tip>
-              <div class="el-upload__tip">支持 pdf、doc、docx 格式</div>
+          <!-- 右侧：AI 分析 -->
+          <el-card class="gd-card gd-card--ai">
+            <template #header>
+              <div class="card-space">
+                <span class="card-title">AI 深度分析</span>
+                <el-button size="small" type="primary" :icon="Sparkles" @click="openAIDrawer"
+                  >开始分析</el-button
+                >
+              </div>
             </template>
-          </el-upload>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="loading" @click="handleSubmit">提交</el-button>
-      </template>
-    </el-dialog>
+            <!-- 后端 AI 辅助建议（GET /ai/suggestions，sourceType=career_plan） -->
+            <div v-if="displaySuggestions.length" class="ai-result ai-suggestions">
+              <div class="ai-result__head">
+                <Sparkles :size="16" class="ai-result__icon" />
+                <h4 class="ai-result__title">AI 辅助建议</h4>
+                <span class="ai-result__time">AI 系统生成</span>
+              </div>
+              <div v-for="s in displaySuggestions" :key="s.key" class="ai-suggestion">
+                <p class="ai-suggestion__content">{{ s.content }}</p>
+                <div class="ai-suggestion__meta">
+                  <span v-if="s.sources" class="ai-suggestion__chip">依据：{{ s.sources }}</span>
+                  <span v-if="s.warning" class="ai-suggestion__warn">{{ s.warning }}</span>
+                  <span v-if="s.status" class="ai-suggestion__status">{{ s.status }}</span>
+                </div>
+              </div>
+            </div>
+            <div v-if="aiAnalysis" class="ai-result">
+              <div class="ai-result__head">
+                <Sparkles :size="16" class="ai-result__icon" />
+                <h4 class="ai-result__title">个人化短板分析</h4>
+                <span class="ai-result__time">{{ aiAnalysis.generatedAt }}</span>
+              </div>
+              <p v-if="aiAnalysis.summary" class="ai-result__summary">
+                {{ aiAnalysis.summary }}
+              </p>
+              <div v-if="aiAnalysis.materials?.length" class="ai-result__materials">
+                <span class="ai-result__materials-label">依据材料：</span>
+                <span v-for="(m, i) in aiAnalysis.materials" :key="i" class="ai-result__chip">
+                  {{ m }}
+                </span>
+              </div>
+              <div v-if="aiAnalysis.weaknesses?.length" class="ai-result__list">
+                <div
+                  v-for="(item, i) in aiAnalysis.weaknesses"
+                  :key="`${item.dimension}-${i}`"
+                  class="ai-item"
+                >
+                  <div class="ai-item__head">
+                    <AlertTriangle :size="14" />
+                    <span class="ai-item__dim">{{ item.dimension }}</span>
+                    <span class="ai-item__score"
+                      >{{ item.score }} / {{ item.target }}（差 {{ item.gap }}）</span
+                    >
+                  </div>
+                  <p class="ai-item__desc">{{ item.weakness }}</p>
+                  <p class="ai-item__suggest"><strong>建议：</strong>{{ item.suggestion }}</p>
+                </div>
+              </div>
+              <!-- TODO(待后端契约字段)：当前 AI 分析由前端本地生成，未携带 aiSuggestionId，
+                   无法调用 /profile/career-plans/ai-add 一键加入计划。待后端补充 aiSuggestionId 后，
+                   在此新增「采纳为计划」按钮并二次确认后提交。 -->
+            </div>
+            <div v-else-if="!displaySuggestions.length" class="ai-empty">
+              <Sparkles :size="28" class="ai-empty__icon" />
+              <p class="ai-empty__text">{{ emptyText }}</p>
+            </div>
+          </el-card>
+        </div>
+
+        <!-- 计划完成进度（仅基于本地已有数据：已填学期数） -->
+        <el-card class="gd-card gd-card--progress">
+          <template #header><span class="card-title">计划完成进度</span></template>
+          <div class="plan-progress">
+            <div class="plan-progress__stat">
+              <span class="plan-progress__num">{{ filledSemesterCount }}</span>
+              <span class="plan-progress__total">/ {{ totalSemesterCount }} 个学期已制定规划</span>
+            </div>
+            <el-progress :percentage="planProgressPercent" :stroke-width="10" />
+            <p class="plan-progress__hint">
+              已提交规划 {{ planRecords.length }} 份，覆盖 {{ filledSemesterCount }} 个学期。
+            </p>
+          </div>
+        </el-card>
+
+        <!-- 规划记录 -->
+        <el-card class="gd-card gd-card--table">
+          <template #header>
+            <div class="card-space">
+              <span class="card-title">规划记录</span>
+              <div class="card-space__ops">
+                <el-button size="small" @click="openCopyDialog">复制上一学期计划</el-button>
+                <el-select
+                  v-model="semesterFilter"
+                  placeholder="全部学期"
+                  size="small"
+                  clearable
+                  class="semester-filter"
+                >
+                  <el-option label="全部学期" value="" />
+                  <el-option v-for="s in availableSemesters" :key="s" :label="s" :value="s" />
+                </el-select>
+              </div>
+            </div>
+          </template>
+          <el-table
+            v-loading="careerPlanStore.loading"
+            :data="filteredRecords"
+            stripe
+            style="width: 100%"
+            size="small"
+          >
+            <el-table-column prop="semester" label="学期" width="160" />
+            <el-table-column prop="title" label="标题" min-width="200" />
+            <el-table-column prop="submitDate" label="提交时间" width="120" />
+            <el-table-column label="进度" width="120">
+              <template #default="{ row }">
+                <el-progress
+                  v-if="row.progressRate != null"
+                  :percentage="row.progressRate"
+                  :stroke-width="8"
+                />
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="90">
+              <template #default="{ row }"
+                ><el-tag :type="getStatusType(row.status)" size="small">{{
+                  row.statusLabel || getLabel(row.status)
+                }}</el-tag></template
+              >
+            </el-table-column>
+            <!-- TODO(待后端契约字段)：教师反馈(teacherFeedback)、学生反思(reflection) 尚未在
+                 CareerPlanRecord 契约中定义，待后端补充后在此新增两列展示 -->
+            <el-table-column label="操作" width="130" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" size="small" @click="openDetail(row)"
+                  >详情</el-button
+                >
+                <el-button type="danger" link size="small" @click="handleRemove(row.id)"
+                  >删除</el-button
+                >
+              </template>
+            </el-table-column>
+          </el-table>
+        </el-card>
+
+        <AIChatDrawer
+          :key="aiDrawerKey"
+          :visible="aiDrawerVisible"
+          :initial-question="aiInitialQuestion"
+          @close="aiDrawerVisible = false"
+        />
+
+        <CareerPlanDetail
+          :visible="detailVisible"
+          :plan-id="detailPlanId"
+          @close="detailVisible = false"
+          @refresh="careerPlanStore.fetchPlans()"
+        />
+
+        <CopyCareerPlanDialog
+          :visible="copyDialogVisible"
+          @close="copyDialogVisible = false"
+          @success="careerPlanStore.fetchPlans()"
+        />
+      </el-tab-pane>
+
+      <!-- Tab 2: 成长记录 -->
+      <el-tab-pane label="成长记录" name="growth">
+        <el-card class="gd-card">
+          <template #header><span class="card-title">成长时间轴</span></template>
+          <GrowthRecords :events="archiveStore.timelineEvents" />
+        </el-card>
+      </el-tab-pane>
+    </el-tabs>
   </div>
 </template>
 
 <style scoped lang="scss">
-.career-plan {
+.growth-dev {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  user-select: none;
+}
 
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+.gd-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.gd-header__title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px;
+}
+
+.gd-header__subtitle {
+  font-size: 16px;
+  color: #64748b;
+  margin: 0;
+}
+
+.gd-tabs {
+  margin-top: 0;
+
+  :deep(.el-tabs__item) {
+    font-size: 16px;
+    height: 44px;
+    line-height: 44px;
   }
 
-  &__section {
-    .section-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 16px;
-      font-weight: 600;
-    }
+  :deep(.el-tabs__nav-wrap::after) {
+    height: 1px;
+  }
+}
+
+.gd-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.gd-card {
+  :deep(.el-card__body) {
+    padding: 16px 20px;
+  }
+
+  &--ai {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+  }
+
+  &--table :deep(.el-card__body) {
+    padding: 0;
   }
 }
 
 .card-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
+  color: #1e293b;
 }
 
-.form-select {
-  width: 200px;
+.card-space {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.weakness-item {
-  margin-bottom: 20px;
-  padding: 16px;
-  background: var(--el-fill-color-lighter);
+.card-space__ops {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.semester-filter {
+  width: 180px;
+}
+
+.plan-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &__stat {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  &__num {
+    font-size: 28px;
+    font-weight: 700;
+    color: #d4a574;
+  }
+
+  &__total {
+    font-size: 14px;
+    color: #64748b;
+  }
+
+  &__hint {
+    margin: 0;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+}
+
+.form-w {
+  width: 100%;
+  max-width: 400px;
+}
+
+.ai-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 0;
+  color: #94a3b8;
+  font-size: 14px;
+
+  &__icon {
+    color: #d4a574;
+    opacity: 0.5;
+  }
+}
+
+.ai-result {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ai-result__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-result__icon {
+  color: var(--el-color-primary);
+}
+
+.ai-result__title {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ai-result__time {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.ai-result__summary {
+  margin: 0;
+  padding: 10px 14px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.ai-result__materials {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-result__materials-label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.ai-result__chip {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #c2410c;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+}
+
+.ai-result__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-item {
+  padding: 12px 14px;
   border-radius: 8px;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 60%);
+  border: 1px solid #fed7aa;
+  border-left: 3px solid #f97316;
 
-  &:last-child { margin-bottom: 0; }
-
-  &__header {
+  &__head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 6px;
+    color: #c2410c;
   }
 
   &__dim {
-    font-weight: 600;
     font-size: 15px;
+    font-weight: 600;
+  }
+
+  &__score {
+    margin-left: auto;
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+
+  &__desc {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.6;
+  }
+
+  &__suggest {
+    margin: 0;
+    font-size: 14px;
+    color: #1e293b;
+    line-height: 1.6;
+  }
+}
+
+// 后端 AI 辅助建议块（绿色系，与本地短板分析橙色区分）
+.ai-suggestion {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 60%);
+  border: 1px solid #bbf7d0;
+  border-left: 3px solid #22c55e;
+
+  &__content {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: #1e293b;
+    line-height: 1.6;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__chip {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #c2410c;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+  }
+
+  &__warn {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+  }
+
+  &__status {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #1d4ed8;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+  }
+}
+
+@media (max-width: 900px) {
+  .gd-two-col {
+    grid-template-columns: 1fr;
   }
 }
 </style>

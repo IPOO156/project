@@ -1,100 +1,52 @@
 <script setup lang="ts">
-import {
-  Award,
-  BarChart3,
-  BookOpen,
-  Briefcase,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  FilePen,
-  FileText,
-  FlaskConical,
-  GraduationCap,
-  HeartHandshake,
-  Home,
-  Lightbulb,
-  Medal,
-  ShieldCheck,
-  Star,
-  Trophy,
-  User,
-  Users,
-} from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, SwitchCamera } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAppStore } from '@/app/stores/stores'
+import { useAppStore, useUserStore } from '@/app/stores/stores'
+import logoIcon from '@/assets/logo/logo-icon.png'
+import { getTeacherMenuItems } from '@/shared/config/teacherModuleRegistry'
+import { menuItems } from '@/shared/constants/menu'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
+const userStore = useUserStore()
 
-interface MenuItem {
-  label: string
-  icon?: any
-  path?: string
-  children?: MenuItem[]
-}
+// 是否为教师端
+const isTeacher = computed(() => userStore.isTeacher)
 
-const menuItems: MenuItem[] = [
-  { label: '首页', icon: Home, path: '/dashboard' },
-  {
-    label: '个人中心',
-    icon: User,
-    children: [
-      { label: '修改密码', path: '/profile/edit-password' },
-      { label: '个人档案信息', path: '/profile/info' },
-      { label: '成长时间轴', path: '/profile/timeline' },
-      { label: '职业规划', path: '/profile/career-plan' },
-    ],
-  },
-  {
-    label: '个人档案信息申报',
-    icon: FilePen,
-    children: [
-      { label: '学科竞赛', icon: Trophy, path: '/applications/competition' },
-      { label: '创新创业', icon: Lightbulb, path: '/applications/innovation' },
-      { label: '学术研究', icon: FlaskConical, path: '/applications/research' },
-      { label: '奖学金', icon: Medal, path: '/applications/scholarship' },
-      { label: '荣誉证书', icon: Award, path: '/applications/certificate' },
-      { label: '实习经历', icon: Briefcase, path: '/applications/internship' },
-      { label: '组织履历', icon: Users, path: '/applications/organization' },
-      { label: '实训项目', icon: BarChart3, path: '/applications/training' },
-      { label: '社会实践', icon: HeartHandshake, path: '/applications/social-practice' },
-      { label: '图书心得', icon: BookOpen, path: '/applications/book-report' },
-    ],
-  },
-  {
-    label: '奖项报名',
-    icon: Star,
-    children: [
-      { label: '奖项总览', icon: BarChart3, path: '/awards' },
-      { label: '竞赛之星报名', icon: Trophy, path: '/awards/competition-star' },
-      { label: '科研之星报名', icon: GraduationCap, path: '/awards/scientific-star' },
-      { label: '双创之星报名', icon: Lightbulb, path: '/awards/innovation-star' },
-    ],
-  },
-  {
-    label: '审批与记录',
-    icon: ShieldCheck,
-    children: [
-      { label: '待审批信息', icon: Clock, path: '/approval/pending' },
-      { label: '提交记录', icon: FileText, path: '/approval/records' },
-    ],
-  },
-]
+// 当前菜单：学生端/教师端自动切换
+const currentMenuItems = computed(() => {
+  if (isTeacher.value) {
+    return getTeacherMenuItems(userStore.currentRole)
+  }
+  return menuItems
+})
 
 // 当前路由所属的顶级菜单，用于 el-menu 的 default-active
 const activeMenu = computed(() => {
   const path = route.path
-  if (path === '/dashboard')
+  if (isTeacher.value) {
+    if (path.startsWith('/teacher/dashboard')) return '/teacher/dashboard'
+    return path
+  }
+  if (path === '/dashboard') {
     return '/dashboard'
-  // 返回当前路由 path，让 el-menu 高亮
+  }
   return path
 })
 
+// 教师端标题
+const sidebarTitle = computed(() => (isTeacher.value ? '教师档鉴未来' : '档鉴未来'))
+
 function handleMenuSelect(index: string) {
+  if (index === route.fullPath) return
   router.push(index)
+}
+
+function handleSwitchToStudent() {
+  userStore.logout()
+  router.push('/login')
 }
 </script>
 
@@ -103,10 +55,12 @@ function handleMenuSelect(index: string) {
     <!-- Logo -->
     <div class="sidebar__logo">
       <div class="sidebar__logo-icon">
-        <GraduationCap :size="28" />
+        <img :src="logoIcon" alt="档鉴未来" class="sidebar__logo-img" />
       </div>
       <transition name="fade">
-        <span v-show="!appStore.isSidebarCollapsed" class="sidebar__logo-text">档案管理系统</span>
+        <span v-show="!appStore.isSidebarCollapsed" class="sidebar__logo-text">{{
+          sidebarTitle
+        }}</span>
       </transition>
     </div>
 
@@ -116,11 +70,11 @@ function handleMenuSelect(index: string) {
         :default-active="activeMenu"
         :collapse="appStore.isSidebarCollapsed"
         :collapse-transition="false"
-        router
+        :unique-opened="true"
         class="sidebar__el-menu"
         @select="handleMenuSelect"
       >
-        <template v-for="item in menuItems" :key="item.label">
+        <template v-for="item in currentMenuItems" :key="item.label">
           <!-- 无子菜单 -->
           <el-menu-item v-if="!item.children && item.path" :index="item.path">
             <component :is="item.icon" v-if="item.icon" :size="18" />
@@ -150,13 +104,13 @@ function handleMenuSelect(index: string) {
       </el-menu>
     </el-scrollbar>
 
-    <!-- 折叠按钮 -->
+    <!-- 折叠按钮 + 教师端切换 -->
     <div class="sidebar__footer">
-      <el-button
-        text
-        class="sidebar__collapse-btn"
-        @click="appStore.toggleSidebar()"
-      >
+      <el-button v-if="isTeacher" text class="sidebar__switch-btn" @click="handleSwitchToStudent">
+        <component :is="SwitchCamera" :size="16" />
+        <span v-show="!appStore.isSidebarCollapsed">切换学生端</span>
+      </el-button>
+      <el-button text class="sidebar__collapse-btn" @click="appStore.toggleSidebar()">
         <component :is="appStore.isSidebarCollapsed ? ChevronRight : ChevronLeft" :size="16" />
         <span v-show="!appStore.isSidebarCollapsed">收起</span>
       </el-button>
@@ -176,7 +130,9 @@ function handleMenuSelect(index: string) {
   display: flex;
   flex-direction: column;
   z-index: 100;
-  transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
 
   &--collapsed {
@@ -184,7 +140,7 @@ function handleMenuSelect(index: string) {
   }
 
   &__logo {
-    height: 56px;
+    height: 80px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -197,6 +153,16 @@ function handleMenuSelect(index: string) {
       flex-shrink: 0;
       display: flex;
       align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      overflow: hidden;
+    }
+
+    &-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
     &-text {
@@ -214,13 +180,14 @@ function handleMenuSelect(index: string) {
   }
 
   // === Element Plus el-menu 自定义样式 ===
+  // Element Plus 未暴露这些内部样式的 props，需通过 :deep() 覆盖以统一侧边栏视觉风格。
   // 移除 el-menu 默认背景和边框
   :deep(.sidebar__el-menu) {
     border-right: none !important;
     background: transparent !important;
   }
 
-  // 菜单项
+  // 菜单项：Element Plus 未提供对应样式 props，需覆盖内部类名以统一侧边栏尺寸与交互色。
   :deep(.el-menu-item) {
     height: 42px;
     line-height: 42px;
@@ -263,7 +230,7 @@ function handleMenuSelect(index: string) {
     }
   }
 
-  // 子菜单标题
+  // 子菜单标题：Element Plus 未提供对应样式 props，需覆盖内部类名以统一侧边栏尺寸与交互色。
   :deep(.el-sub-menu__title) {
     height: 42px;
     line-height: 42px;
@@ -282,16 +249,18 @@ function handleMenuSelect(index: string) {
     }
   }
 
-  // 子菜单弹出层
+  // 子菜单弹出层：折叠状态下 Element Plus 内部标题仍使用默认 padding，需覆盖以保持居中。
   :deep(.el-menu--collapse .el-sub-menu__title) {
     justify-content: center;
     padding: 0 !important;
   }
 
+  // 子菜单面板背景：Element Plus 默认背景色与侧边栏主题不符，需覆盖内部类名。
   :deep(.el-sub-menu .el-menu) {
     background: transparent !important;
   }
 
+  // 子菜单项缩进：Element Plus 默认缩进尺寸与侧边栏设计规范不一致，需覆盖内部类名。
   :deep(.el-sub-menu .el-menu .el-menu-item) {
     padding: 0 16px 0 44px !important;
     font-size: 13px;
@@ -335,5 +304,19 @@ function handleMenuSelect(index: string) {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+</style>
+
+<style lang="scss">
+/* 夜间模式：logo 图标容器使用浅色背景 + 发光效果，避免 logo 看不清 */
+html.dark .sidebar__logo-icon {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  box-shadow:
+    0 0 12px rgba(148, 163, 184, 0.3),
+    inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+}
+html.dark .sidebar__logo-img {
+  filter: brightness(1.3);
 }
 </style>

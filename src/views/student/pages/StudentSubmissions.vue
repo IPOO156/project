@@ -12,13 +12,39 @@ const submissions = {
     { id: 2, title: '学科竞赛 — 校赛报名表', date: '2026-02-28', files: 2, category: '学科竞赛' },
   ],
   ok: [
-    { id: 3, title: '实习经历 — 某某科技（合同/证明）', date: '2026-04-12', files: 3, category: '实习经历' },
-    { id: 4, title: '学业成绩 — 2025-2026第一学期', date: '2026-01-15', files: 5, category: '学业成绩' },
+    {
+      id: 3,
+      title: '实习经历 — 某某科技（合同/证明）',
+      date: '2026-04-12',
+      files: 3,
+      category: '实习经历',
+    },
+    {
+      id: 4,
+      title: '学业成绩 — 2025-2026第一学期',
+      date: '2026-01-15',
+      files: 5,
+      category: '学业成绩',
+    },
     { id: 5, title: '学科竞赛 — 省赛获奖证明', date: '2025-12-20', files: 4, category: '学科竞赛' },
   ],
   no: [
-    { id: 6, title: '学术研究 — 论文投稿记录', date: '2026-02-01', files: 1, category: '学术研究', reason: '缺少期刊录用证明' },
-    { id: 7, title: '社会实践 — 暑期三下乡', date: '2025-08-15', files: 6, category: '社会实践', reason: '材料不完整' },
+    {
+      id: 6,
+      title: '学术研究 — 论文投稿记录',
+      date: '2026-02-01',
+      files: 1,
+      category: '学术研究',
+      reason: '缺少期刊录用证明',
+    },
+    {
+      id: 7,
+      title: '社会实践 — 暑期三下乡',
+      date: '2025-08-15',
+      files: 6,
+      category: '社会实践',
+      reason: '材料不完整',
+    },
   ],
 }
 
@@ -43,7 +69,16 @@ function getIcon(category) {
         <p class="pageSub">管理你的所有档案提交</p>
       </div>
       <UiButton variant="primary" size="sm">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
@@ -60,7 +95,16 @@ function getIcon(category) {
         @click="tab = 'wait'"
       >
         <span class="tabIcon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
@@ -68,14 +112,18 @@ function getIcon(category) {
         待审核
         <span class="tabCount warning">2</span>
       </button>
-      <button
-        class="tabItem"
-        :class="{ active: tab === 'ok' }"
-        type="button"
-        @click="tab = 'ok'"
-      >
+      <button class="tabItem" :class="{ active: tab === 'ok' }" type="button" @click="tab = 'ok'">
         <span class="tabIcon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
             <polyline points="22 4 12 14.01 9 11.01" />
           </svg>
@@ -83,14 +131,18 @@ function getIcon(category) {
         已通过
         <span class="tabCount success">3</span>
       </button>
-      <button
-        class="tabItem"
-        :class="{ active: tab === 'no' }"
-        type="button"
-        @click="tab = 'no'"
-      >
+      <button class="tabItem" :class="{ active: tab === 'no' }" type="button" @click="tab = 'no'">
         <span class="tabIcon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <circle cx="12" cy="12" r="10" />
             <line x1="15" y1="9" x2="9" y2="15" />
             <line x1="9" y1="9" x2="15" y2="15" />
@@ -118,7 +170,16 @@ function getIcon(category) {
             <h3 class="itemTitle">{{ item.title }}</h3>
             <div class="itemMeta">
               <span class="metaDate">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                   <line x1="16" y1="2" x2="16" y2="6" />
                   <line x1="8" y1="2" x2="8" y2="6" />
@@ -127,7 +188,16 @@ function getIcon(category) {
                 {{ item.date }}
               </span>
               <span class="metaFiles">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <polyline points="14 2 14 8 20 8" />
                 </svg>
@@ -157,7 +227,16 @@ function getIcon(category) {
             <h3 class="itemTitle">{{ item.title }}</h3>
             <div class="itemMeta">
               <span class="metaDate">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                   <line x1="16" y1="2" x2="16" y2="6" />
                   <line x1="8" y1="2" x2="8" y2="6" />
@@ -166,7 +245,16 @@ function getIcon(category) {
                 {{ item.date }}
               </span>
               <span class="metaFiles">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <polyline points="14 2 14 8 20 8" />
                 </svg>
@@ -196,7 +284,16 @@ function getIcon(category) {
             <h3 class="itemTitle">{{ item.title }}</h3>
             <div class="itemMeta">
               <span class="metaDate">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                   <line x1="16" y1="2" x2="16" y2="6" />
                   <line x1="8" y1="2" x2="8" y2="6" />
@@ -205,7 +302,16 @@ function getIcon(category) {
                 {{ item.date }}
               </span>
               <span class="metaFiles">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <polyline points="14 2 14 8 20 8" />
                 </svg>
@@ -213,7 +319,16 @@ function getIcon(category) {
               </span>
             </div>
             <div class="itemReason">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <circle cx="12" cy="12" r="10" />
                 <line x1="12" y1="8" x2="12" y2="12" />
                 <line x1="12" y1="16" x2="12.01" y2="16" />

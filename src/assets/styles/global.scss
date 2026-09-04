@@ -79,16 +79,16 @@
   font-size: $font-size-base;
 
   th.el-table__cell {
-    background-color: #f8fafc;
+    background-color: var(--el-fill-color-light);
     font-weight: 600;
-    color: $color-text-primary;
+    color: var(--el-text-color-primary);
   }
 
   .el-table__row {
     transition: background-color 0.15s;
 
-    &:hover {
-      background-color: rgba($color-primary, 0.02);
+    &:hover > td.el-table__cell {
+      background-color: var(--el-fill-color-lighter);
     }
   }
 }
@@ -100,19 +100,6 @@
   --el-button-hover-border-color: #{$color-primary-light};
   --el-button-active-bg-color: #{color.adjust($color-primary, $lightness: -8%)};
   --el-button-active-border-color: #{color.adjust($color-primary, $lightness: -8%)};
-}
-
-.el-breadcrumb {
-  font-size: $font-size-base;
-
-  &__inner {
-    color: $color-text-secondary;
-  }
-
-  &__item:last-child &__inner {
-    color: $color-text-primary;
-    font-weight: 500;
-  }
 }
 
 // 滚动条美化
@@ -136,8 +123,12 @@
 
 // 骨架动画
 @keyframes skeleton-loading {
-  0% { background-position: -200px 0; }
-  100% { background-position: calc(200px + 100%) 0; }
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
 }
 
 .skeleton {
@@ -182,4 +173,23 @@
 
 .progress-fixed {
   width: 200px;
+}
+
+// 暗色模式滚动条适配
+html.dark {
+  ::-webkit-scrollbar-thumb {
+    background: #475569;
+
+    &:hover {
+      background: #64748b;
+    }
+  }
+}
+
+// 输入框、文本域始终允许文本选择，即使父元素禁用了 user-select
+input,
+textarea,
+.el-input__inner,
+.el-textarea__inner {
+  user-select: auto !important;
 }

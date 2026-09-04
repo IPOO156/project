@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
+import { useUserStore } from '@/app/stores/stores'
+import { validatePasswordStrength } from '@/shared/utils/validatePassword'
+
+const userStore = useUserStore()
 
 const passwordForm = reactive({
   oldPassword: '',
@@ -10,7 +14,7 @@ const passwordForm = reactive({
 
 const loading = ref(false)
 
-function handleSubmit() {
+async function handleSubmit() {
   if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
     ElMessage.warning('请填写完整信息')
     return
@@ -19,19 +23,27 @@ function handleSubmit() {
     ElMessage.error('两次密码输入不一致')
     return
   }
-  if (passwordForm.newPassword.length < 6) {
-    ElMessage.warning('新密码长度不能少于6位')
+  const strength = validatePasswordStrength(passwordForm.newPassword)
+  if (!strength.valid) {
+    ElMessage.warning(strength.message)
     return
   }
 
   loading.value = true
-  setTimeout(() => {
+  try {
+    await userStore.changePassword({
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword,
+    })
     ElMessage.success('密码修改成功')
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
+  } catch {
+    // 错误提示已由请求拦截器统一弹出（如"原密码错误"），此处不再重复提示
+  } finally {
     loading.value = false
-  }, 800)
+  }
 }
 </script>
 
@@ -46,7 +58,7 @@ function handleSubmit() {
         :model="passwordForm"
         label-width="100px"
         class="edit-password__form"
-        @keyup.enter="handleSubmit"
+        @submit.prevent="handleSubmit"
       >
         <el-form-item label="原密码" required>
           <el-input
@@ -61,7 +73,7 @@ function handleSubmit() {
           <el-input
             v-model="passwordForm.newPassword"
             type="password"
-            placeholder="请输入新密码（至少6位）"
+            placeholder="6-32 位，含大小写字母、数字与特殊字符"
             show-password
             class="form-input--password"
           />
@@ -76,9 +88,7 @@ function handleSubmit() {
           />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" @click="handleSubmit">
-            确认修改
-          </el-button>
+          <el-button type="primary" :loading="loading" @click="handleSubmit"> 确认修改 </el-button>
         </el-form-item>
       </el-form>
     </el-card>

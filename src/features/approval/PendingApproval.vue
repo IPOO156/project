@@ -1,149 +1,340 @@
 <script setup lang="ts">
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { ref } from 'vue'
-import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
+/**
+ * DeclarationBoard - 申报看板（个人档案信息申报）
+ *
+ * 统计总览 + 各类型申报数量 + 提交状态分布 + 学期趋势 + 档案完整度网格。
+ * 数据源：submissionStore.filteredRecords（GET /activities 真实数据），仅统计 10 个申报类型。
+ */
+import { Check, CircleCheck, Clock, FileText, Plus, TrendingUp, X } from 'lucide-vue-next'
+import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useSubmissionStore } from '@/app/stores/stores'
+import { ARCHIVE_TYPE_ALIASES } from '@/shared/api/submission'
+import { APPLICATION_STATUS } from '@/shared/constants/dict'
+import PageContainer from '@/shared/ui/PageContainer.vue'
+import PageHeader from '@/shared/ui/PageHeader.vue'
+import BoardCharts from './components/BoardCharts.vue'
+import PieChart from './components/PieChart.vue'
+import { DECLARATION_TYPE_KEYS, DECLARATION_TYPE_LABELS } from './components/review-columns'
+import TrendChart from './components/TrendChart.vue'
 
-interface PendingItem {
-  id: string
-  type: string
-  applicant: string
-  title: string
-  submitDate: string
-  content: string
+const router = useRouter()
+const submissionStore = useSubmissionStore()
+
+/** 后端 archive_type 别名 → 前端 type key（如 academic_competition → competition），对齐 useFormRecords */
+const ALIAS_TO_TYPE: Record<string, string> = {}
+for (const [type, aliases] of Object.entries(ARCHIVE_TYPE_ALIASES)) {
+  ALIAS_TO_TYPE[type] = type
+  for (const alias of aliases) ALIAS_TO_TYPE[alias] = type
+}
+const DECLARATION_TYPE_SET = new Set<string>(DECLARATION_TYPE_KEYS)
+
+function normalizeType(type: string): string {
+  return ALIAS_TO_TYPE[type] ?? type
 }
 
-// ── Mock 数据（接口联调后替换） ──
-const list = ref<PendingItem[]>([
-  { id: '1', type: 'competition', applicant: '李四', title: '全国大学生英语竞赛', submitDate: '2026-06-28', content: '申请登记全国大学生英语竞赛参赛信息' },
-  { id: '2', type: 'innovation', applicant: '王五', title: '智创科技工作室', submitDate: '2026-06-27', content: '申请登记创新创业项目信息' },
-  { id: '3', type: 'scholarship', applicant: '赵六', title: '校级一等奖学金', submitDate: '2026-06-25', content: '申请校级一等奖学金认定' },
-])
+/** 仅统计 10 个申报类型的真实记录 */
+const declarationRecords = computed(() =>
+  submissionStore.filteredRecords.filter((r) => DECLARATION_TYPE_SET.has(normalizeType(r.type))),
+)
 
-const detailVisible = ref(false)
-const currentItem = ref<PendingItem | null>(null)
+const totalCount = computed(() => declarationRecords.value.length)
+const pendingCount = computed(
+  () => declarationRecords.value.filter((r) => r.status === 'pending').length,
+)
+const approvedCount = computed(
+  () => declarationRecords.value.filter((r) => r.status === 'approved').length,
+)
 
-function viewDetail(item: PendingItem) {
-  currentItem.value = item
-  detailVisible.value = true
-}
+const currentSemester = computed(() => {
+  const sorted = [...declarationRecords.value].sort((a, b) =>
+    b.submitDate.localeCompare(a.submitDate),
+  )
+  return sorted[0]?.semester || '2024-2025-2'
+})
+const semesterCount = computed(
+  () => declarationRecords.value.filter((r) => r.semester === currentSemester.value).length,
+)
 
-function handleApprove(item: PendingItem) {
-  ElMessageBox.confirm(`确认通过「${item.title}」的申报？`, '审批确认', {
-    confirmButtonText: '通过',
-    cancelButtonText: '驳回',
-    type: 'warning',
-  }).then(() => {
-    ElMessage.success('已审批通过')
-    list.value = list.value.filter(i => i.id !== item.id)
-  }).catch(() => {
-    ElMessageBox.prompt('请输入驳回原因', '驳回', {
-      confirmButtonText: '确认驳回',
-      cancelButtonText: '取消',
-    }).then(({ value }) => {
-      ElMessage.info(`已驳回，原因：${value || '未填写'}`)
-      list.value = list.value.filter(i => i.id !== item.id)
-    }).catch(() => {})
+const typeData = computed(() => {
+  const map = new Map<string, number>()
+  declarationRecords.value.forEach((r) => {
+    const type = normalizeType(r.type)
+    const label = DECLARATION_TYPE_LABELS[type] || type
+    map.set(label, (map.get(label) || 0) + 1)
   })
+  return Array.from(map.entries())
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+})
+
+const statusData = computed(() => {
+  const statusMap = APPLICATION_STATUS as Record<string, { label: string }>
+  const map = new Map<string, number>()
+  declarationRecords.value.forEach((r) => {
+    const label = statusMap[r.status]?.label ?? r.status
+    map.set(label, (map.get(label) || 0) + 1)
+  })
+  return Array.from(map.entries()).map(([name, value]) => ({ name, value }))
+})
+
+const trendData = computed(() => {
+  const map = new Map<string, number>()
+  declarationRecords.value.forEach((r) => {
+    if (r.semester) map.set(r.semester, (map.get(r.semester) || 0) + 1)
+  })
+  return Array.from(map.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([semester, count]) => ({ semester, count }))
+})
+
+const completenessList = computed(() => {
+  return DECLARATION_TYPE_KEYS.map((key) => {
+    const label = DECLARATION_TYPE_LABELS[key] || key
+    const hasData = declarationRecords.value.some((r) => normalizeType(r.type) === key)
+    const pathMap: Record<string, string> = {
+      competition: '/applications?tab=competition',
+      innovation: '/applications?tab=innovation',
+      research: '/applications?tab=research',
+      scholarship: '/applications?tab=scholarship',
+      certificate: '/applications?tab=certificate',
+      internship: '/applications?tab=internship',
+      organization: '/applications?tab=organization',
+      training: '/applications?tab=training',
+      socialPractice: '/applications?tab=social-practice',
+      bookReport: '/applications?tab=book-report',
+    }
+    return { key, label, hasData, path: pathMap[key] || '/applications' }
+  })
+})
+
+onMounted(() => {
+  if (submissionStore.filteredRecords.length === 0) submissionStore.fetchRecords()
+})
+
+function goTo(path: string) {
+  router.push(path)
 }
 </script>
 
 <template>
-  <div class="approval-page">
-    <el-card>
-      <template #header>
-        <span class="card-title">待审批信息</span>
-      </template>
+  <PageContainer>
+    <PageHeader title="申报看板" subtitle="总览各类型申报情况，快速了解档案完整度" />
 
-      <el-empty v-if="list.length === 0" description="暂无待审批事项" />
+    <el-alert
+      v-if="submissionStore.loadError"
+      title="申报数据加载失败，请检查网络后重试"
+      type="error"
+      show-icon
+      :closable="false"
+      class="board-error"
+    />
 
-      <div v-for="item in list" :key="item.id" class="approval-card">
-        <div class="approval-card__left">
-          <div class="approval-card__type">
-            <el-tag size="small" effect="plain">
-              {{ APPLICATION_TYPE_MAP[item.type] || item.type }}
-            </el-tag>
-          </div>
-          <div class="approval-card__body">
-            <p class="approval-card__title">{{ item.title }}</p>
-            <div class="approval-card__meta">
-              <span>申请人：{{ item.applicant }}</span>
-              <span>提交时间：{{ item.submitDate }}</span>
+    <el-row :gutter="16" class="stats-row">
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">申报总数</p>
+              <p class="stat-card__value">{{ totalCount }}</p>
             </div>
+            <div class="stat-card__icon"><FileText :size="24" /></div>
           </div>
-        </div>
-        <div class="approval-card__actions">
-          <el-button text type="primary" @click="viewDetail(item)">查看详情</el-button>
-          <el-button type="primary" @click="handleApprove(item)">审批</el-button>
-        </div>
-      </div>
-    </el-card>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">待审核</p>
+              <p class="stat-card__value">{{ pendingCount }}</p>
+            </div>
+            <div class="stat-card__icon stat-card__icon--warning"><Clock :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">已通过</p>
+              <p class="stat-card__value">{{ approvedCount }}</p>
+            </div>
+            <div class="stat-card__icon stat-card__icon--success"><CircleCheck :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">本学期新增</p>
+              <p class="stat-card__value">{{ semesterCount }}</p>
+            </div>
+            <div class="stat-card__icon stat-card__icon--primary"><TrendingUp :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
 
-    <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="申报详情" width="560px">
-      <template v-if="currentItem">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="申报类型">{{ APPLICATION_TYPE_MAP[currentItem.type] }}</el-descriptions-item>
-          <el-descriptions-item label="申请人">{{ currentItem.applicant }}</el-descriptions-item>
-          <el-descriptions-item label="申报标题">{{ currentItem.title }}</el-descriptions-item>
-          <el-descriptions-item label="提交时间">{{ currentItem.submitDate }}</el-descriptions-item>
-          <el-descriptions-item label="申报内容">{{ currentItem.content }}</el-descriptions-item>
-        </el-descriptions>
+    <el-row :gutter="16">
+      <el-col :span="14"><BoardCharts :data="typeData" title="各类型申报数量" /></el-col>
+      <el-col :span="10"><PieChart :data="statusData" title="提交状态分布" /></el-col>
+    </el-row>
+
+    <el-row :gutter="16">
+      <el-col :span="24"><TrendChart :data="trendData" title="各学期申报趋势" /></el-col>
+    </el-row>
+
+    <el-card class="completeness-card">
+      <template #header>
+        <div class="completeness-header">
+          <span class="completeness-title">档案完整度总览</span>
+          <span class="completeness-sub"
+            >已填写 {{ completenessList.filter((c) => c.hasData).length }}/{{
+              completenessList.length
+            }}
+            项</span
+          >
+        </div>
       </template>
-    </el-dialog>
-  </div>
+      <el-row :gutter="12">
+        <el-col v-for="item in completenessList" :key="item.key" :span="6" class="completeness-col">
+          <div
+            class="completeness-item"
+            :class="{ 'is-filled': item.hasData }"
+            @click="goTo(item.path)"
+          >
+            <div class="completeness-item__icon">
+              <Check v-if="item.hasData" :size="18" class="check" />
+              <X v-else :size="18" class="cross" />
+            </div>
+            <div class="completeness-item__label">{{ item.label }}</div>
+            <el-button
+              :type="item.hasData ? 'primary' : 'default'"
+              size="small"
+              link
+              @click.stop="goTo(item.path)"
+            >
+              {{ item.hasData ? '查看' : '去填写' }}
+              <Plus :size="12" style="margin-left: 2px" />
+            </el-button>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+  </PageContainer>
 </template>
 
 <style scoped lang="scss">
-.card-title {
-  font-size: 16px;
-  font-weight: 600;
+.board-error {
+  margin-bottom: 16px;
 }
+.stats-row {
+  margin-bottom: 16px;
+}
+.stat-card {
+  &__body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  &__label {
+    font-size: 14px;
+    color: var(--el-text-color-secondary);
+    margin-bottom: 4px;
+  }
+  &__value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  &__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #f1f5f9;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 
-.approval-card {
+    &--warning {
+      background: #e6a23c15;
+      color: #e6a23c;
+    }
+    &--success {
+      background: #67c23a15;
+      color: #67c23a;
+    }
+    &--primary {
+      background: #409eff15;
+      color: var(--el-color-primary);
+    }
+  }
+}
+.completeness-card {
+  margin-bottom: 16px;
+}
+.completeness-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
+}
+.completeness-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.completeness-sub {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+.completeness-col {
   margin-bottom: 12px;
-  transition: box-shadow 0.2s;
-
+}
+.completeness-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--el-border-color-lighter);
+  background: var(--el-fill-color-light);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
   &:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-color: #94a3b8;
+    background: #fff;
   }
-
-  &__left {
+  &.is-filled {
+    border-color: #d4edda;
+    background: #f0fdf4;
+    &:hover {
+      border-color: #10b981;
+    }
+    .check {
+      color: #10b981;
+    }
+  }
+  .cross {
+    color: #94a3b8;
+  }
+  &__icon {
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
   }
-
-  &__type {
-    flex-shrink: 0;
-  }
-
-  &__title {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-    margin-bottom: 4px;
-  }
-
-  &__meta {
-    display: flex;
-    gap: 16px;
+  &__label {
     font-size: 13px;
-    color: var(--el-text-color-secondary);
-  }
-
-  &__actions {
-    display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-    margin-left: 16px;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+    text-align: center;
   }
 }
 </style>

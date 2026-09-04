@@ -45,8 +45,8 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   'update:keyword': [value: string]
   'update:status': [value: string | number]
-  'search': []
-  'reset': []
+  search: []
+  reset: []
 }>()
 
 function handleKeywordInput(value: string) {
@@ -114,9 +114,7 @@ defineExpose({ keyword: props.keyword, status: props.status })
       <el-button v-if="showSearch" type="primary" :icon="Search" @click="handleSearch">
         搜索
       </el-button>
-      <el-button :icon="X" @click="handleReset">
-        重置
-      </el-button>
+      <el-button :icon="X" @click="handleReset"> 重置 </el-button>
     </div>
 
     <!-- 右侧：操作区 -->

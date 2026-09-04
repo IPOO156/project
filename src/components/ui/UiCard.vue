@@ -6,7 +6,11 @@ const props = defineProps({
 </script>
 
 <template>
-  <section class="uiCard" :data-padding="props.padding" :data-hoverable="props.hoverable ? '1' : '0'">
+  <section
+    class="uiCard"
+    :data-padding="props.padding"
+    :data-hoverable="props.hoverable ? '1' : '0'"
+  >
     <slot />
   </section>
 </template>

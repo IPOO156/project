@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
-const props = defineProps({
+defineProps({
   groups: { type: Array, required: true },
   collapsed: { type: Boolean, default: false },
 })

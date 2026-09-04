@@ -1,5 +1,5 @@
 // =============================================================================
-// 设计 Token - 档案管理系统
+// 设计 Token - 档鉴未来
 // 主色：深海蓝 #1e3a5f  辅色：琥珀金 #d4a574
 // =============================================================================
 
@@ -28,13 +28,7 @@ $color-bg-page: #f8fafc;
 $color-border: #e2e8f0;
 
 // 字体
-$font-family-base:
-  'PingFang SC',
-  'Microsoft YaHei',
-  'Helvetica Neue',
-  Helvetica,
-  Arial,
-  sans-serif;
+$font-family-base: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 $font-family-title: Georgia, 'Times New Roman', serif;
 
 // 字号
@@ -44,6 +38,8 @@ $font-size-base: 14px;
 $font-size-lg: 16px;
 $font-size-xl: 20px;
 $font-size-2xl: 24px;
+$font-size-3xl: 28px;
+$font-size-4xl: 32px;
 
 // 间距
 $spacing-xs: 4px;
@@ -58,6 +54,7 @@ $radius-sm: 4px;
 $radius-base: 6px;
 $radius-lg: 8px;
 $radius-xl: 12px;
+$radius-2xl: 16px;
 
 // 阴影
 $shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -69,3 +66,91 @@ $sidebar-width: 240px;
 $sidebar-collapsed-width: 64px;
 $header-height: 56px;
 $content-max-width: 1440px;
+
+// z-index 层级比例尺（与 .cursor/rules/04-styling-layout.mdc 一致）
+$z-dropdown: 10;
+$z-sticky: 20;
+$z-fixed: 30;
+$z-modal-backdrop: 40;
+$z-modal: 50;
+$z-popover: 60;
+$z-tooltip: 70;
+$z-toast: 100;
+
+// 动画 token（ui-ux-pro-max skill §6：150-300ms / transform + opacity）
+$duration-instant: 100ms;
+$duration-fast: 150ms;
+$duration-base: 200ms;
+$duration-slow: 280ms;
+$duration-slower: 400ms;
+
+$ease-standard: cubic-bezier(0.4, 0, 0.2, 1); // Material 标准曲线（默认）
+$ease-decelerate: cubic-bezier(0, 0, 0.2, 1); // 入场（减速）
+$ease-accelerate: cubic-bezier(0.4, 0, 1, 1); // 出场（加速）
+$ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1); // 强调入场（弹性）
+
+// =============================================================================
+// 可复用混合宏
+// =============================================================================
+
+/**
+ * 表格行逐行刷入动画（刷刷刷效果）
+ * 通过 CSS 变量可配置：
+ *   --mc-row-duration: 单个动画时长，默认 0.6s
+ *   --mc-row-delay:   行间延迟，默认 0.08s
+ *   --mc-row-easing:  缓动函数，默认 $ease-emphasized
+ *   --mc-row-offset:  水平滑入偏移量，默认 -60px
+ * 用法：
+ *   .my-table { @include table-row-staggered(50); }
+ */
+@mixin table-row-staggered($max-rows: 50) {
+  .el-table__row {
+    --_duration: var(--mc-row-duration, 0.6s);
+    --_delay: var(--mc-row-delay, 0.08s);
+    --_easing: var(--mc-row-easing, #{$ease-emphasized});
+
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: table-row-brush var(--_duration) var(--_easing) both;
+  }
+
+  @for $i from 1 through $max-rows {
+    .el-table__body .el-table__row:nth-child(#{$i}) {
+      animation-delay: calc((#{$i} - 1) * var(--_delay));
+    }
+  }
+}
+
+@keyframes table-row-brush {
+  from {
+    opacity: 0;
+    transform: translateX(var(--mc-row-offset, -60px)) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/**
+ * 列表项/卡片逐行刷入动画
+ * 与表格动画保持一致的节奏，默认从左侧滑入并带轻微缩放
+ */
+@mixin list-item-staggered($max-items: 50) {
+  > * {
+    --_duration: var(--mc-row-duration, 0.6s);
+    --_delay: var(--mc-row-delay, 0.08s);
+    --_easing: var(--mc-row-easing, #{$ease-emphasized});
+
+    opacity: 0;
+    will-change: transform, opacity;
+    animation: table-row-brush var(--_duration) var(--_easing) both;
+  }
+
+  @for $i from 1 through $max-items {
+    > *:nth-child(#{$i}) {
+      animation-delay: calc((#{$i} - 1) * var(--_delay));
+    }
+  }
+}

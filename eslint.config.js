@@ -1,4 +1,5 @@
 import antfu from '@antfu/eslint-config'
+import eslintConfigPrettier from 'eslint-config-prettier'
 
 export default antfu({
   rules: {
@@ -11,6 +12,8 @@ export default antfu({
     'node/prefer-global/process': 'off',
     'style/max-statements-per-line': 'off',
     'ts/no-empty-object-type': 'off',
+    // Prettier 会把 `if (x)\n  return` 合并成一行，与 antfu/if-newline 冲突
+    'antfu/if-newline': 'off',
   },
   ignores: [
     // 参考手册、文档与修改记录中的代码片段不参与 ESLint 校验
@@ -24,4 +27,4 @@ export default antfu({
     // Husky 钩子脚本由 Husky 管理，不参与 ESLint 校验
     '.husky/**',
   ],
-})
+}).append(eslintConfigPrettier)
