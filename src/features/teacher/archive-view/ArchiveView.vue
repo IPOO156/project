@@ -11,12 +11,15 @@ import type {
  * - /admin/archives/overview（组织档案汇总，维度全校/学院/专业/班级 + 下钻）
  * - /admin/archives（学生档案列表，支持组织/状态/学期/关键词筛选）
  * - /admin/archives/{archiveId}（档案详情）
+ * 教师端无等价接口，以上三项暂保留 admin（后端缺口见核查报告）。
+ * 行内「学生档案」按钮进入 /teacher/student-detail/{userId}（教师端 /teacher/students/*）。
  * 学期下拉与学院/专业/班级范围来自 /common/semesters + /auth/me scopes。
  */
 import { ElMessage } from 'element-plus'
-import { Eye, FileSearch, Filter, RefreshCw, Search } from 'lucide-vue-next'
+import { Eye, FileSearch, Filter, RefreshCw, Search, UserRound } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   getArchiveDetail,
   getArchiveOverview,
@@ -27,6 +30,17 @@ import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import StatisticsOverview from './components/StatisticsOverview.vue'
 
 defineOptions({ name: 'ArchiveView' })
+
+const router = useRouter()
+
+/** 进入学生成长档案详情（/teacher/students/{userId}） */
+function openStudentArchive(row: ArchiveAdminListItem) {
+  if (!row.userId) {
+    ElMessage.warning('该档案缺少学生信息')
+    return
+  }
+  void router.push(`/teacher/student-detail/${row.userId}`)
+}
 
 /**
  * 单条组织档案在状态分布条中的占比（按总数归一化，避免除 0）。
@@ -591,8 +605,17 @@ onMounted(async () => {
           <el-table-column prop="submittedAt" label="提交时间" width="160">
             <template #default="{ row }">{{ row.submittedAt ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="80" align="center" fixed="right">
+          <el-table-column label="操作" width="170" align="center" fixed="right">
             <template #default="{ row }">
+              <el-button
+                text
+                type="primary"
+                size="small"
+                :icon="UserRound"
+                @click="openStudentArchive(row as ArchiveAdminListItem)"
+              >
+                学生档案
+              </el-button>
               <el-button
                 text
                 type="primary"
