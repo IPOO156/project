@@ -18,6 +18,12 @@ const teacherRoutes: RouteRecordRaw[] = [
     meta: { title: '档案查看', teacher: true, permission: 'archive-view' },
   },
   {
+    path: 'student-detail/:userId',
+    name: 'TeacherStudentDetail',
+    component: () => import('@/features/teacher/student-detail/StudentDetail.vue'),
+    meta: { title: '学生成长档案', teacher: true, permission: 'archive-view' },
+  },
+  {
     path: 'archive-export',
     name: 'TeacherArchiveExport',
     component: () => import('@/features/teacher/archive-export/ArchiveExport.vue'),
@@ -25,15 +31,45 @@ const teacherRoutes: RouteRecordRaw[] = [
   },
   {
     path: 'material-review',
-    name: 'TeacherMaterialReview',
-    component: () => import('@/features/teacher/material-review/CollegeReview.vue'),
-    meta: { title: '材料审核', teacher: true, permission: 'material-review' },
+    redirect: '/teacher/material-review/pending',
+    children: [
+      {
+        path: 'pending',
+        name: 'TeacherMaterialReviewPending',
+        component: () => import('@/features/teacher/material-review/AuditPendingList.vue'),
+        meta: { title: '材料审核', teacher: true, permission: 'material-review' },
+      },
+      {
+        path: 'history',
+        name: 'TeacherMaterialReviewHistory',
+        component: () => import('@/features/teacher/material-review/AuditHistory.vue'),
+        meta: { title: '审核记录', teacher: true, permission: 'material-review' },
+      },
+    ],
+  },
+  {
+    path: 'messages',
+    name: 'TeacherMessageCenter',
+    component: () => import('@/features/teacher/messages/TeacherMessageCenter.vue'),
+    meta: { title: '消息中心', teacher: true },
+  },
+  {
+    path: 'org-management',
+    name: 'TeacherOrgManagement',
+    component: () => import('@/features/teacher/organization/OrganizationManagement.vue'),
+    meta: { title: '组织架构', teacher: true, permission: 'org-management' },
   },
   {
     path: 'heat-map',
     name: 'TeacherHeatMap',
     component: () => import('@/features/teacher/heat-map/HeatMap.vue'),
     meta: { title: '成果热力图', teacher: true, permission: 'heat-map' },
+  },
+  {
+    path: 'delegation',
+    name: 'TeacherDelegation',
+    component: () => import('@/features/teacher/delegation/DelegationManage.vue'),
+    meta: { title: '审批委托管理', teacher: true, permission: 'delegation' },
   },
   {
     path: 'log-view',
@@ -100,6 +136,18 @@ const teacherRoutes: RouteRecordRaw[] = [
     name: 'TeacherFormCustomization',
     component: () => import('@/features/teacher/form-customization/FormCustomization.vue'),
     meta: { title: '表单自定义', teacher: true, permission: 'form-customization' },
+  },
+  {
+    path: 'system-config',
+    name: 'TeacherSystemConfig',
+    component: () => import('@/features/teacher/system-config/SystemConfig.vue'),
+    meta: { title: '系统配置', teacher: true, permission: 'system-config' },
+  },
+  {
+    path: 'scheduled-task',
+    name: 'TeacherScheduledTask',
+    component: () => import('@/features/teacher/scheduled-task/ScheduledTask.vue'),
+    meta: { title: '定时任务', teacher: true, permission: 'scheduled-task' },
   },
   {
     path: 'account-management',
