@@ -2,7 +2,7 @@
 import type { HeatmapStatistics, SemesterItem } from '@/shared/types/teacher'
 /**
  * HeatMap - 成果热力图
- * 对接后端 /admin/statistics/heatmap（组织 × 学期 指标矩阵，values 为 0-100 归一化值，
+ * 对接后端教师端 /teacher/statistics/heatmap（组织 × 学期 指标矩阵，values 为 0-100 归一化值，
  * rawValues 为原始值，maxValue/minValue 为全校原始值范围）。
  * 学期与学院/专业/班级范围来自 /common/semesters + /auth/me scopes。
  */

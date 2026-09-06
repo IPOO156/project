@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
  * ScoreRecalculate - 评分重算
- * 对接后端 /admin/scores/recalculate（触发）+ /recalculation-tasks/{taskId}（查询进度）。
+ * 对接后端教师端 /teacher/scores/recalculate（触发）+ /teacher/scores/recalculation-tasks/{taskId}（查询进度）。
+ * 教师端仅支持 targetType 1学生 / 2班级 / 3学期，已去掉 admin 版的全量重算/指定专业。
  */
 import type { SemesterItem } from '@/shared/types/teacher'
 import { ElMessage } from 'element-plus'
@@ -14,13 +15,11 @@ const targetTypeOptions = [
   { value: 1, label: '指定学生' },
   { value: 2, label: '指定班级' },
   { value: 3, label: '指定学期' },
-  { value: 4, label: '全量重算' },
-  { value: 5, label: '指定专业' },
 ]
 
 const semesters = ref<SemesterItem[]>([])
 const form = reactive({
-  targetType: 4,
+  targetType: 1,
   targetId: undefined as number | undefined,
   semesterId: undefined as number | undefined,
 })
@@ -52,21 +51,21 @@ async function handleRecalculate() {
     ElMessage.warning('请选择学期')
     return
   }
-  if (form.targetType !== 4 && !form.targetId) {
+  if (form.targetType !== 3 && !form.targetId) {
     ElMessage.warning('请填写范围 ID')
     return
   }
   try {
     const res = await triggerScoreRecalculate({
       targetType: form.targetType,
-      targetId: form.targetType === 4 ? undefined : form.targetId,
+      targetId: form.targetType === 3 ? form.semesterId : form.targetId,
       semesterId: form.semesterId,
     })
     ElMessage.success(`评分重算任务已创建（任务 ID: ${res.taskId}）`)
     tasks.value.unshift({
       taskId: res.taskId,
       targetTypeLabel:
-        targetTypeOptions.find((t) => t.value === form.targetType)?.label ?? '全量重算',
+        targetTypeOptions.find((t) => t.value === form.targetType)?.label ?? '评分重算',
       status: res.status,
       statusLabel: res.statusLabel,
       progress: 0,
@@ -117,7 +116,7 @@ onUnmounted(() => {
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">评分重算</h2>
         <p class="mc-page-head__desc">
-          触发学生成长档案评分的重新计算，支持按学生 / 班级 / 学期 / 专业 / 全量重算。
+          触发学生成长档案评分的重新计算，支持按学生 / 班级 / 学期重算（教师端）。
         </p>
       </div>
       <div class="mc-page-head__actions">
@@ -141,7 +140,7 @@ onUnmounted(() => {
               />
             </el-select>
           </el-form-item>
-          <el-form-item v-if="form.targetType !== 4" label="范围 ID">
+          <el-form-item v-if="form.targetType !== 3" label="范围 ID">
             <el-input-number v-model="form.targetId" :min="1" style="width: 160px" />
           </el-form-item>
           <el-form-item label="学期">

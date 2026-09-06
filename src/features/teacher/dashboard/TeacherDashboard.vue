@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import type { DashboardStatistics, SemesterItem } from '@/shared/types/teacher'
+import type {
+  SemesterItem,
+  TeacherDashboardData,
+  TeacherDashboardOverview,
+} from '@/shared/types/teacher'
 /**
  * TeacherDashboard - 教师端首页仪表盘
  *
  * 数据来源（能接就接，均为后端真实接口）：
  *   - 欢迎区：userStore（登录后已写入）
- *   - 未读消息：GET /messages
+ *   - 未读消息：GET /messages（与学生端共用，保持不动）
  *   - 数据范围：GET /auth/me 的 scopes
- *   - 最近操作：管理员 → GET /admin/logs/system；其余角色 → 最近消息
+ *   - 待办/今日审核/最近审核动态：GET /teacher/dashboard（教师端）
+ *   - 数据概览：GET /teacher/statistics/dashboard（教师端）
+ *   - 统计快照刷新：POST /teacher/statistics/refresh（教师端）
+ *   - 最近操作：管理员 → GET /admin/logs/system（教师端无等价接口）；其余角色 → 最近消息
  */
+import { ElMessage } from 'element-plus'
 import {
   Activity,
   Bell,
@@ -17,6 +25,7 @@ import {
   Download,
   Eye,
   MapPin,
+  RefreshCw,
   TrendingUp,
   Users,
 } from 'lucide-vue-next'
@@ -25,9 +34,11 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores/stores'
 import {
   getSemesters,
-  getStatisticsDashboard,
   getSystemLogs,
+  getTeacherDashboardOverview,
+  getTeacherStatisticsDashboard,
   listMessages,
+  refreshTeacherStatistics,
 } from '@/shared/api/teacher'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { TEACHER_ROLE_LABELS } from '@/shared/types/types'
@@ -89,12 +100,12 @@ async function loadStats() {
   }
 }
 
-// ── 学校档案数据概览（管理员，/admin/statistics/dashboard）──
+// ── 数据概览（/teacher/statistics/dashboard）──
 const semesters = ref<SemesterItem[]>([])
 const loadingSemesters = ref(false)
 const dashSemesterId = ref<number | undefined>(undefined)
 const dashboardLoading = ref(false)
-const dashboardData = ref<DashboardStatistics | null>(null)
+const dashboardData = ref<TeacherDashboardData | null>(null)
 
 async function loadSemesters() {
   loadingSemesters.value = true
@@ -108,16 +119,72 @@ async function loadSemesters() {
 }
 
 async function loadDashboard() {
-  if (!isAdmin.value) return
   dashboardLoading.value = true
   try {
-    dashboardData.value = await getStatisticsDashboard({ semesterId: dashSemesterId.value })
+    dashboardData.value = await getTeacherStatisticsDashboard({ semesterId: dashSemesterId.value })
   } catch {
     dashboardData.value = null
   } finally {
     dashboardLoading.value = false
   }
 }
+
+// ── 待办工作台（GET /teacher/dashboard）──
+const dashboardOverview = ref<TeacherDashboardOverview | null>(null)
+const overviewLoading = ref(false)
+
+async function loadDashboardOverview() {
+  try {
+    dashboardOverview.value = await getTeacherDashboardOverview()
+  } catch {
+    dashboardOverview.value = null
+  }
+}
+
+/** 统计快照刷新（POST /teacher/statistics/refresh） */
+async function handleRefreshSnapshot() {
+  if (!dashSemesterId.value) {
+    ElMessage.warning('请先选择学期')
+    return
+  }
+  overviewLoading.value = true
+  try {
+    await refreshTeacherStatistics({ semesterId: dashSemesterId.value })
+    ElMessage.success('统计快照已刷新')
+    await Promise.all([loadDashboard(), loadDashboardOverview()])
+  } catch {
+    /* 拦截器已提示 */
+  } finally {
+    overviewLoading.value = false
+  }
+}
+
+const pendingItems = computed(() => [
+  {
+    label: '档案待审',
+    value: dashboardOverview.value?.pendingStats.archivePending ?? '—',
+    icon: BookOpen,
+    color: 'var(--el-color-primary)',
+  },
+  {
+    label: '奖项待审',
+    value: dashboardOverview.value?.pendingStats.awardPending ?? '—',
+    icon: TrendingUp,
+    color: 'var(--el-color-warning)',
+  },
+  {
+    label: '规划待审',
+    value: dashboardOverview.value?.pendingStats.careerPlanPending ?? '—',
+    icon: ClipboardCheck,
+    color: 'var(--el-color-danger)',
+  },
+  {
+    label: '今日审核',
+    value: dashboardOverview.value?.todayAudited ?? '—',
+    icon: Activity,
+    color: 'var(--el-color-success)',
+  },
+])
 
 watch(dashSemesterId, () => void loadDashboard())
 
@@ -235,7 +302,8 @@ onMounted(() => {
   void loadStats()
   void loadRecent()
   void loadSemesters()
-  if (isAdmin.value) void loadDashboard()
+  void loadDashboard()
+  void loadDashboardOverview()
 })
 </script>
 
@@ -279,12 +347,50 @@ onMounted(() => {
       </el-col>
     </el-row>
 
-    <!-- 学校档案数据概览（管理员） -->
-    <el-card v-if="isAdmin" class="teacher-dashboard__section dash-overview">
+    <!-- 待办工作台（GET /teacher/dashboard） -->
+    <el-card class="teacher-dashboard__section dash-overview">
       <template #header>
-        <span class="section-title">学校档案数据概览</span>
-        <span v-if="dashboardData?.semesterName" class="dash-overview__scope">
-          统计时间：{{ dashboardData.semesterName }}
+        <span class="section-title">待办工作台</span>
+        <span v-if="dashboardOverview?.currentSemesterName" class="dash-overview__scope">
+          当前学期：{{ dashboardOverview.currentSemesterName }}
+        </span>
+        <div class="dash-overview__tools">
+          <el-button size="small" :loading="overviewLoading" @click="loadDashboardOverview"
+            >刷新</el-button
+          >
+        </div>
+      </template>
+      <div v-loading="overviewLoading">
+        <template v-if="dashboardOverview">
+          <div class="dash-overview__kpis">
+            <div v-for="item in pendingItems" :key="item.label" class="dash-overview__kpi">
+              <span class="dash-overview__label">{{ item.label }}</span>
+              <span class="dash-overview__value mc-num">{{ item.value }}</span>
+            </div>
+          </div>
+          <div v-if="dashboardOverview.recentAudits?.length" class="dash-overview__dims">
+            <span class="dash-overview__dim-label">最近审核动态</span>
+            <el-tag
+              v-for="a in dashboardOverview.recentAudits"
+              :key="a.id"
+              size="small"
+              effect="plain"
+              class="dash-overview__dim"
+            >
+              {{ a.studentName }} · {{ a.title }} · {{ a.actionLabel }}
+            </el-tag>
+          </div>
+        </template>
+        <el-empty v-else-if="!overviewLoading" description="暂无待办数据" :image-size="72" />
+      </div>
+    </el-card>
+
+    <!-- 档案数据概览（/teacher/statistics/dashboard） -->
+    <el-card class="teacher-dashboard__section dash-overview">
+      <template #header>
+        <span class="section-title">档案数据概览</span>
+        <span v-if="dashboardData?.scopeName" class="dash-overview__scope">
+          统计范围：{{ dashboardData.scopeName }}
         </span>
         <div class="dash-overview__tools">
           <el-select
@@ -300,6 +406,13 @@ onMounted(() => {
           <el-button size="small" :loading="dashboardLoading" @click="loadDashboard"
             >刷新</el-button
           >
+          <el-button
+            size="small"
+            :icon="RefreshCw"
+            :loading="overviewLoading"
+            @click="handleRefreshSnapshot"
+            >刷新快照</el-button
+          >
         </div>
       </template>
       <div v-loading="dashboardLoading">
@@ -312,26 +425,32 @@ onMounted(() => {
               }}</span>
             </div>
             <div class="dash-overview__kpi">
-              <span class="dash-overview__label">档案数</span>
+              <span class="dash-overview__label">已提交</span>
               <span class="dash-overview__value mc-num">{{
-                dashboardData.archiveCount ?? '—'
+                dashboardData.submittedCount ?? '—'
               }}</span>
             </div>
             <div class="dash-overview__kpi">
-              <span class="dash-overview__label">获奖数</span>
-              <span class="dash-overview__value mc-num">{{ dashboardData.awardCount ?? '—' }}</span>
+              <span class="dash-overview__label">待审核</span>
+              <span class="dash-overview__value mc-num">{{
+                dashboardData.pendingCount ?? '—'
+              }}</span>
+            </div>
+            <div class="dash-overview__kpi">
+              <span class="dash-overview__label">已通过</span>
+              <span class="dash-overview__value mc-num">{{
+                dashboardData.approvedCount ?? '—'
+              }}</span>
+            </div>
+            <div class="dash-overview__kpi">
+              <span class="dash-overview__label">被退回</span>
+              <span class="dash-overview__value mc-num">{{
+                dashboardData.rejectedCount ?? '—'
+              }}</span>
             </div>
             <div class="dash-overview__kpi">
               <span class="dash-overview__label">平均绩点</span>
-              <span class="dash-overview__value mc-num">{{ dashboardData.avgGpa ?? '—' }}</span>
-            </div>
-            <div class="dash-overview__kpi">
-              <span class="dash-overview__label">数据完整度</span>
-              <el-progress
-                :percentage="Math.round(dashboardData.dataCompleteness ?? 0)"
-                :stroke-width="8"
-                class="dash-overview__completeness"
-              />
+              <span class="dash-overview__value mc-num">{{ dashboardData.averageGpa ?? '—' }}</span>
             </div>
           </div>
           <div v-if="dashboardData.dimensionAvgScores?.length" class="dash-overview__dims">
