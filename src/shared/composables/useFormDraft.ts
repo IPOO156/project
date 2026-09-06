@@ -16,6 +16,11 @@ function isNonEmpty(data: Record<string, unknown>): boolean {
   })
 }
 
+/** 单字段是否为空（undefined/null/''/空数组）——与 useApplicationPage 必填校验判定一致 */
+function fieldEmpty(v: unknown): boolean {
+  return v == null || v === '' || (Array.isArray(v) && v.length === 0)
+}
+
 export function useFormDraft<T extends Record<string, unknown>>(
   key: string,
   form: T,
@@ -27,6 +32,13 @@ export function useFormDraft<T extends Record<string, unknown>>(
     autoRestore?: boolean
     /** 申报/报名类型 key（如 competition / competitionStar），用于区分档案 autosaveApplication 与奖项 autosaveAward */
     type?: string
+    /**
+     * 新建后端草稿（isDraft=1）前必须非空的字段 key（通常为各类型页必填字段）。
+     * 扩展表含 NOT NULL 列（如 archive_competitions.competition_type/award_level），
+     * 必填字段缺失时 POST 会被后端以 409「数据校验失败」拦截并全局弹错；
+     * 传入后，字段未齐全时跳过建草稿，仅本地 localStorage 兜底（表单填齐后自动建草稿）。
+     */
+    minDraftFields?: string[]
   },
 ) {
   const storageKey = DRAFT_PREFIX + key
@@ -34,6 +46,7 @@ export function useFormDraft<T extends Record<string, unknown>>(
   const enableLeaveGuard = options?.enableLeaveGuard !== false
   const autoRestore = options?.autoRestore !== false
   const applicationType = options?.type ?? key
+  const minDraftFields = options?.minDraftFields
   // 档案类走 /applications/{archiveId}/autosave，奖项之星类走 /awards/{applicationId}/autosave
   const category = activityCategoryOf(applicationType as any)
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -79,6 +92,8 @@ export function useFormDraft<T extends Record<string, unknown>>(
     try {
       const id = currentId()
       if (id == null) {
+        // 扩展表含 NOT NULL 列，必填字段缺失时后端会以 409 拒绝建草稿；此时仅本地保存，填齐后自动建草稿
+        if (minDraftFields?.some((k) => fieldEmpty(form[k]))) return
         const created = await createDraft(applicationType, { ...form })
         if (created != null) setRecordId(created)
         return
@@ -92,7 +107,8 @@ export function useFormDraft<T extends Record<string, unknown>>(
   }
   function save() {
     saveLocal()
-    hasDirtyData = true
+    // 仅当表单实际有内容才标记脏数据：空白表单（如保存草稿/提交后 resetForm 触发深 watcher）不弹离开提示
+    hasDirtyData = isNonEmpty(form)
     saveToBackend()
   }
 
@@ -112,7 +128,7 @@ export function useFormDraft<T extends Record<string, unknown>>(
     clearTimeout(timer)
     saveLocal()
     if (enableBackend) saveToBackend()
-    hasDirtyData = true
+    hasDirtyData = isNonEmpty(form)
   }
 
   async function restoreDraft() {
@@ -179,7 +195,8 @@ export function useFormDraft<T extends Record<string, unknown>>(
 
   if (enableLeaveGuard) {
     onBeforeRouteLeave(async (_to, _from, next) => {
-      if (!hasDirtyData) {
+      // 表单空白（含保存草稿/提交后的重置态、防抖窗口内）不弹未保存提示，仅"填了内容"才拦截
+      if (!hasDirtyData || !isNonEmpty(form)) {
         next()
         return
       }

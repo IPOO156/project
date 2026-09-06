@@ -121,6 +121,15 @@ function goTo(path: string) {
   <PageContainer>
     <PageHeader title="申报看板" subtitle="总览各类型申报情况，快速了解档案完整度" />
 
+    <el-alert
+      v-if="submissionStore.loadError"
+      title="申报数据加载失败，请检查网络后重试"
+      type="error"
+      show-icon
+      :closable="false"
+      class="board-error"
+    />
+
     <el-row :gutter="16" class="stats-row">
       <el-col :span="6">
         <el-card shadow="hover" class="stat-card">
@@ -218,6 +227,9 @@ function goTo(path: string) {
 </template>
 
 <style scoped lang="scss">
+.board-error {
+  margin-bottom: 16px;
+}
 .stats-row {
   margin-bottom: 16px;
 }

@@ -132,7 +132,8 @@ export function getActivities(filters?: ActivityFilters): Promise<Activity[]> {
                 ? 'withdrawn'
                 : 'submitted',
         text: item.content || item.title,
-        time: (item.submitTime || '').replace('T', ' ').slice(0, 16),
+        // 后端实测返回下划线字段 submit_time（见 activities.ts 接口注释），驼峰 submitTime 仅为历史兼容别名
+        time: ((item.submit_time ?? item.submitTime) || '').replace('T', ' ').slice(0, 16),
         status: statusMap[item.status] ?? 'submitted',
       })),
     )

@@ -1,7 +1,6 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { reactive, ref, toRaw } from 'vue'
-import { useRouter } from 'vue-router'
-import { useNotificationStore } from '@/app/stores/stores'
+import { computed, reactive, ref, toRaw, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { getActivityDetail, withdrawActivity } from '@/shared/api/activities'
 import { duplicateCheck } from '@/shared/api/applications'
 import { awardDuplicateCheck } from '@/shared/api/awards'
@@ -10,6 +9,7 @@ import {
   activityCategoryOf,
   ARCHIVE_TYPE_ALIASES,
   deriveRecordTitle,
+  mapDetailToForm,
   submitApplication,
 } from '@/shared/api/submission'
 import { useCorrection } from './useCorrection'
@@ -26,15 +26,17 @@ export function useApplicationPage(
   requiredFields: { key: string; label: string }[] = [],
 ) {
   const _u_router = useRouter()
-  const notificationStore = useNotificationStore()
+  const _u_route = useRoute()
   const effectiveDraftKey = draftKey || type
 
   const form = reactive(emptyForm())
   const submitting = ref(false)
   // autoRestore=false：申报表单默认空白，不自动回填草稿；修改草稿走下拉记录"编辑"回填
+  // minDraftFields：必填字段未填齐前不建后端草稿（扩展表 NOT NULL 列会被后端 409 拒绝），仅本地兜底
   const { clearDraft, saveNow, setRecordId } = useFormDraft(effectiveDraftKey, form, {
     autoRestore: false,
     type,
+    minDraftFields: requiredFields.map((f) => f.key),
   })
   const {
     records,
@@ -160,6 +162,8 @@ export function useApplicationPage(
   const currentStatus = ref('')
   // 被退回原因：编辑/查看退回记录时回填，传给 ApplicationFormRecord 的 rejection-reason 属性
   const rejectionReason = ref('')
+  // 查看详情弹窗加载态：真实后端记录需拉取详情接口补全表单字段，加载期间弹窗显示 loading
+  const detailLoading = ref(false)
 
   async function doSubmit(data: Record<string, any>) {
     submitting.value = true
@@ -182,12 +186,8 @@ export function useApplicationPage(
       }
       await clearDraft()
       await loadRecords() // 提交成功后刷新真实列表，新记录以真实 id/状态展示
-      notificationStore.addNotification({
-        title: `${typeLabel}申报已提交`,
-        content: `您的${typeLabel}「${title}」已成功提交。`,
-        category: 'audit_remind',
-        jumpUrl: '/approval/pending',
-      })
+      // 申报提交成功消息由后端 MessageProduceAspect 在 submit 成功后自动写入 user_messages（archive→「申报提交成功」/award→「奖项申报提交成功」）。
+      // 前端不再本地注入重复消息：假 id（notif-*）会让消息中心归档/已读请求后端 400，且刷新即消失。
       ElMessage.success('申报提交成功')
       resetForm()
       // 清空表单后再次清草稿：防深 watcher（800ms 防抖）在 clearDraft 与 resetForm 之间把旧内容重写回 localStorage
@@ -249,7 +249,14 @@ export function useApplicationPage(
     if (isBackendRecord) {
       try {
         const detail = await getActivityDetail(Number(row.id), activityCategoryOf(type as any))
-        if (detail) row = { ...row, ...detail }
+        // 后端业务字段嵌在 detail.detail（后端字段名），按类型逆向映射为前端表单字段后并入 row，
+        // 否则 emptyForm() 循环全部落空 → 表单空白（2026-08-31 修复）。
+        // 注意不能用 {...row, ...detail} 直接展开：会把 row.status 覆盖成后端数字状态码
+        if (detail) {
+          row = { ...row, ...mapDetailToForm(type, detail) }
+          // 退回原因（detail 顶层字段）：被退回记录编辑时回填提示，列表摘要不携带
+          if (detail.rejectedReason) row.rejectedReason = detail.rejectedReason
+        }
       } catch {
         /* 详情拉取失败时沿用 row 摘要字段 */
       }
@@ -266,6 +273,30 @@ export function useApplicationPage(
     rejectionReason.value = row.rejectedReason || ''
     startEdit(row)
   }
+
+  /**
+   * 消息中心「编辑」跳转支持：来源页带 ?edit=<id>（/applications?tab=xxx&edit=<id> 或 /awards/*?edit=<id>）
+   * 记录列表加载完成后自动定位到对应记录并进入编辑态；触发后清除 edit 参数，刷新不再重复进入。
+   * 未找到目标记录（已删除/类型不符）时静默回落普通列表，不阻断页面。
+   */
+  const editIdQuery = computed(() =>
+    typeof _u_route.query.edit === 'string' ? _u_route.query.edit : '',
+  )
+  let editTriggeredFor = ''
+  watch(
+    [editIdQuery, () => records.value],
+    () => {
+      if (!editIdQuery.value || editTriggeredFor === editIdQuery.value) return
+      const target = records.value.find((r) => String(r.id) === editIdQuery.value)
+      if (!target) return
+      editTriggeredFor = editIdQuery.value
+      handleEditClick(target)
+      const query = { ..._u_route.query }
+      delete query.edit
+      _u_router.replace({ query }).catch(() => {})
+    },
+    { immediate: true },
+  )
 
   function handleCancel() {
     cancelEdit()
@@ -284,9 +315,25 @@ export function useApplicationPage(
   function handleCorrection(row: any) {
     openCorrection(row)
   }
-  function viewRecord(row: any) {
+  async function viewRecord(row: any) {
     rejectionReason.value = row.rejectedReason || ''
+    // 先展示列表摘要，立即打开弹窗，避免点击后无反馈
     _viewRecord(row)
+    // 真实后端记录：列表接口（GET /activities）仅返回摘要字段，详情接口才含用户填写的表单内容。
+    // 拉取详情并逆向映射为表单字段后合并进展示记录，让「查看」展示申报表单填写的具体内容。
+    const isBackendRecord =
+      row.id && row.id !== DRAFT_LOCAL_ID && !String(row.id).startsWith('rec-')
+    if (!isBackendRecord) return
+    detailLoading.value = true
+    try {
+      const detail = await getActivityDetail(Number(row.id), activityCategoryOf(type as any))
+      // mapDetailToForm 仅映射业务字段（不含 status），避免覆盖行上的前端状态/退回原因
+      if (detail) _viewRecord({ ...row, ...mapDetailToForm(type, detail) })
+    } catch {
+      /* 详情拉取失败：沿用列表摘要字段 */
+    } finally {
+      detailLoading.value = false
+    }
   }
   function init() {
     loadEnrollmentInfo()
@@ -302,6 +349,7 @@ export function useApplicationPage(
     detailRecord,
     currentStatus,
     rejectionReason,
+    detailLoading,
     enrollmentInfo,
     extendedForm,
     correctionVisible,

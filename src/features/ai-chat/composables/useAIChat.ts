@@ -274,6 +274,8 @@ export function useAIChat() {
         role: m.role === 'assistant' ? ('ai' as const) : ('user' as const),
         content: m.content,
         time: formatTime(new Date(m.createdAt)),
+        // 回显已提交反馈（后端 MessageItem 补 feedback 字段后生效；未返回/未反馈为 null）
+        feedback: m.feedback ?? null,
       }))
     } catch {
       messages.value = createWelcomeMessages()
@@ -297,15 +299,17 @@ export function useAIChat() {
     }
   }
 
-  /** 设置消息反馈（后端暂无反馈端点，保留本地行为，待后端反馈接口） */
+  /** 设置消息反馈（真实消息走 POST /ai/messages/{messageId}/feedback 持久化；离线/本地消息仅本地切换） */
   async function setFeedback(msgId: string, feedback: MessageFeedback) {
     const msg = messages.value.find((m) => m.id === msgId)
     if (!msg) return
     // 再次点击同一反馈则取消
     const newFeedback = msg.feedback === feedback ? null : feedback
     msg.feedback = newFeedback
-    if (newFeedback) {
-      apiSubmitFeedback(msgId, newFeedback).catch(() => {})
+    // 仅对后端真实消息（数字 messageId）上报反馈；离线模拟/欢迎语/错误气泡等本地消息
+    // 无后端消息 ID，上报会返回「消息不存在」，只做本地切换
+    if (newFeedback && /^\d+$/.test(msgId)) {
+      apiSubmitFeedback(Number(msgId), newFeedback).catch(() => {})
     }
   }
 

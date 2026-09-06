@@ -16,6 +16,12 @@ import {
  * 消息通知 Store
  * 字段与后端 user_messages 表一致（isRead/isArchived 为 0/1，jumpUrl 为跳转链接）
  */
+
+/** 本地即时通知 id（addNotification 注入，格式 notif-<时间戳>）：无后端记录，读/归档等操作仅改本地状态，不请求接口，避免 400 */
+function isLocalNotification(id: string): boolean {
+  return id.startsWith('notif-')
+}
+
 export const useNotificationStore = defineStore('notification', () => {
   const notifications = ref<Notification[]>([])
   const filteredNotifications = ref<Notification[]>([])
@@ -78,7 +84,7 @@ export const useNotificationStore = defineStore('notification', () => {
     const target = notifications.value.find((n) => n.id === id)
     if (!target || target.isRead === 1) return
 
-    await apiMarkOne(id)
+    if (!isLocalNotification(id)) await apiMarkOne(id)
     target.isRead = 1
     target.readAt = new Date().toISOString()
     const filtered = filteredNotifications.value.find((n) => n.id === id)
@@ -126,7 +132,7 @@ export const useNotificationStore = defineStore('notification', () => {
       }
     }
 
-    await apiArchive(id)
+    if (!isLocalNotification(id)) await apiArchive(id)
     target.isArchived = 1
     target.archivedAt = new Date().toISOString()
     const filtered = filteredNotifications.value.find((n) => n.id === id)
@@ -152,7 +158,8 @@ export const useNotificationStore = defineStore('notification', () => {
         return
       }
     }
-    await Promise.all(ids.map((id) => apiArchive(id)))
+    const backendIds = ids.filter((n) => !isLocalNotification(n))
+    if (backendIds.length > 0) await Promise.all(backendIds.map((id) => apiArchive(id)))
     const now = new Date().toISOString()
     const idSet = new Set(ids)
     const patch = (list: Notification[]) => {
@@ -171,7 +178,8 @@ export const useNotificationStore = defineStore('notification', () => {
   /** 将指定 id 集合标为已读（PUT /messages/batch-read） */
   async function markMultipleAsRead(ids: string[]): Promise<void> {
     if (ids.length === 0) return
-    await apiBatchRead(ids)
+    const backendIds = ids.filter((n) => !isLocalNotification(n))
+    if (backendIds.length > 0) await apiBatchRead(backendIds)
     const now = new Date().toISOString()
     const idSet = new Set(ids)
     const patch = (list: Notification[]) => {
@@ -192,7 +200,7 @@ export const useNotificationStore = defineStore('notification', () => {
     const target = notifications.value.find((n) => n.id === id)
     if (!target) return
 
-    await apiUnarchive(id)
+    if (!isLocalNotification(id)) await apiUnarchive(id)
     target.isArchived = 0
     target.archivedAt = null
     const filtered = filteredNotifications.value.find((n) => n.id === id)

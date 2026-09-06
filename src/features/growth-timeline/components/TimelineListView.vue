@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GrowthExperience } from '../timeline-constants'
-import { Plus } from 'lucide-vue-next'
+import { Plus, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { findRingBySemester, getSemesterLabel } from '../timeline-constants'
 
@@ -16,6 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: 'select', id: string): void
   (e: 'add'): void
+  (e: 'delete', id: string): void
 }>()
 
 interface TypeMeta {
@@ -92,6 +93,11 @@ function handleSelect(id: string) {
 
 function handleAdd() {
   emit('add')
+}
+
+/** 撤回/删除经历：交由父级（GrowthTimeline）统一弹确认框并调 deleteExperience */
+function handleDelete(id: string) {
+  emit('delete', id)
 }
 </script>
 
@@ -171,7 +177,7 @@ function handleAdd() {
     </div>
 
     <ul v-else class="tlv-list">
-      <li v-for="exp in filteredExperiences" :key="exp.id">
+      <li v-for="exp in filteredExperiences" :key="exp.id" class="tlv-row">
         <button
           type="button"
           class="tlv-item"
@@ -189,6 +195,15 @@ function handleAdd() {
             <span class="tlv-item-date">{{ exp.date }}</span>
           </span>
           <span class="tlv-item-semester">{{ getSemesterLabel(exp.semester) }}</span>
+        </button>
+        <button
+          type="button"
+          class="tlv-delete"
+          aria-label="撤回该经历"
+          title="撤回"
+          @click.stop="handleDelete(exp.id)"
+        >
+          <Trash2 :size="14" />
         </button>
       </li>
     </ul>
@@ -286,6 +301,72 @@ function handleAdd() {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+/* 列表行：记录卡片 + 撤回按钮并排（记录占满剩余宽度） */
+.tlv-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+
+  .tlv-item {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* 撤回按钮：与年轮视图 GrowthCard 的 delete-btn 同风格（hover 才显示，触摸常显） */
+.tlv-delete {
+  flex-shrink: 0;
+  align-self: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
+  background: rgba(var(--gt-card-rgb, 255 252 247), 0.8);
+  color: var(--ring-color, var(--bark-light, #8b6340));
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transition:
+    opacity 0.25s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.tlv-row:hover .tlv-delete,
+.tlv-delete:focus-visible {
+  opacity: 1;
+}
+
+.tlv-delete:hover {
+  background: #b94e4e;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.tlv-delete:active {
+  transform: scale(0.96);
+}
+
+@media (hover: none) {
+  .tlv-delete {
+    opacity: 1;
+  }
+}
+
+[data-theme='dark'] .tlv-delete {
+  background: rgba(var(--gt-card-rgb, 30 28 26), 0.85);
+  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.2);
+  color: var(--ring-color, var(--bark-light, #d4a574));
+}
+
+[data-theme='dark'] .tlv-delete:hover {
+  background: #b94e4e;
+  color: #fff;
 }
 
 .tlv-item {

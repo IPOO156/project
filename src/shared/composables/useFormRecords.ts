@@ -54,6 +54,19 @@ const TYPE_LABELS: Record<string, string> = {
   paper: '发表论文',
 }
 
+/**
+ * 科研之星主记录 archive_type 统一为 research_star（后端 ActivityService.toListItem 未按子类型区分，
+ * 列表项也不含子类型字段），提交后 title 形如"科研之星-科研项目"。此处按标题中的子类中文名把主记录
+ * 定位到对应子页签，避免同一主记录重复出现在三个子页（2026-08-31 修复）。
+ * 后端根治（archive_type 按 award_research_stars.primary_category 返回 project/software_copyright/
+ * published_paper）后，该分支命中条件不再成立（archive_type 变为子类型值），自动回落到 aliases 匹配，无需回退。
+ */
+const RESEARCH_STAR_TITLE_HINTS: Record<string, string> = {
+  scientificProject: '科研项目',
+  softwareCopyright: '软件著作权',
+  paper: '发表论文',
+}
+
 /** 判断本地草稿是否含有效内容（学期/空附件不算） */
 function isNonEmptyDraft(data: Record<string, unknown>): boolean {
   return Object.entries(data).some(([k, v]) => {
@@ -106,8 +119,16 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
       // 后端实际字段为下划线（archive_type/submit_time/semester_name），驼峰仅为兼容别名。
       const aliases = ARCHIVE_TYPE_ALIASES[type] ?? []
       const accepted = new Set([type, ...aliases])
+      const researchHint = RESEARCH_STAR_TITLE_HINTS[type]
       const real = list
-        .filter((a) => accepted.has(a.archive_type ?? a.archiveType ?? ''))
+        .filter((a) => {
+          const archiveType = a.archive_type ?? a.archiveType ?? ''
+          // 科研之星主记录统一 archive_type=research_star，按提交后 title 中的子类中文名定位子页签
+          if (archiveType === 'research_star' && researchHint) {
+            return ((a.title ?? a.content ?? '') as string).includes(researchHint)
+          }
+          return accepted.has(archiveType)
+        })
         .map((a) => ({
           ...a,
           id: String(a.id),

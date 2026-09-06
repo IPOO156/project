@@ -6,6 +6,7 @@ import { AWARD_LEVELS, COMPETITION_TYPES, SEMESTER_OPTIONS } from '@/shared/cons
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
+import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 function emptyForm() {
@@ -158,20 +159,17 @@ onMounted(() => {
     @close="page.closeIndicator"
   />
 
-  <!-- 查看详情弹窗 -->
-  <el-dialog v-model="page.detailVisible" title="记录详情" width="560px">
-    <template v-if="page.detailRecord">
-      <el-descriptions :column="1" border>
-        <el-descriptions-item
-          v-for="(val, key) in page.detailRecord"
-          :key="String(key)"
-          :label="String(key)"
-          >{{ String(val) }}</el-descriptions-item
-        >
-      </el-descriptions>
-    </template>
-    <template #footer><el-button @click="page.closeDetail">关闭</el-button></template>
-  </el-dialog>
+  <RecordDetailDialog
+    :visible="page.detailVisible"
+    :record="page.detailRecord"
+    :loading="page.detailLoading"
+    @update:visible="
+      (v) => {
+        if (!v) page.closeDetail()
+      }
+    "
+    @close="page.closeDetail"
+  />
 </template>
 
 <style scoped lang="scss">

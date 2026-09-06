@@ -806,16 +806,17 @@ POST /ai/chat
 ### 11.3 消息反馈上报
 
 ```
-POST /ai/feedback
+POST /ai/messages/{messageId}/feedback
 ```
 
-| 参数           | 类型                    | 必填 | 说明        |
-| -------------- | ----------------------- | ---- | ----------- |
-| messageId      | string                  | 是   | AI 消息 ID  |
-| feedback       | `'useful' \| 'useless'` | 是   | 用户反馈    |
-| conversationId | string                  | 否   | 所属对话 ID |
+| 参数           | 类型                    | 必填 | 说明                                     |
+| -------------- | ----------------------- | ---- | ---------------------------------------- |
+| 路径 messageId | number（Long）          | 是   | 后端真实消息 ID（对话消息列表返回的 id） |
+| feedback       | `'useful' \| 'useless'` | 是   | 用户反馈                                 |
 
-无返回数据。
+返回：`{ messageId, feedback }`。幂等：同一条消息重复反馈时覆盖已有记录（`ai_message_feedbacks`）。错误码：反馈为空/非法、消息不存在、非本人会话越权。
+
+> 说明：`messageId` 必须为后端返回的真实消息 ID（数字）。离线模拟/欢迎语等本地消息无后端 ID，前端不上报（仅本地切换图标）。
 
 ---
 
