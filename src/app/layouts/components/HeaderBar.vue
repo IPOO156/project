@@ -15,21 +15,47 @@ import {
   SwitchCamera,
   User,
 } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAppStore, useNotificationStore, useThemeStore, useUserStore } from '@/app/stores/stores'
+import {
+  useAppStore,
+  useNotificationStore,
+  useTeacherMessageStore,
+  useThemeStore,
+  useUserStore,
+} from '@/app/stores/stores'
 import { useThemeRipple } from '@/shared/composables/useThemeRipple'
 import NavTabs from './NavTabs.vue'
 
 const userStore = useUserStore()
 const appStore = useAppStore()
 const notificationStore = useNotificationStore()
+const teacherMessageStore = useTeacherMessageStore()
 const themeStore = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 const { toggleThemeWithRipple } = useThemeRipple()
 const isGrowthTimeline = computed(() => route.path.startsWith('/growth-timeline'))
 const isTeacher = computed(() => userStore.isTeacher)
+
+// 铃铛角标：学生端取学生消息 Store；教师端取 /teacher/messages 的未读总数
+const unreadBadge = computed(() =>
+  isTeacher.value ? teacherMessageStore.unreadCount : notificationStore.unreadCount,
+)
+
+onMounted(() => {
+  if (isTeacher.value) {
+    teacherMessageStore.refreshUnread()
+  }
+})
+
+function openMessages() {
+  if (isTeacher.value) {
+    router.push('/teacher/messages')
+  } else {
+    router.push('/messages')
+  }
+}
 
 const roleLabel = computed(() => {
   if (!isTeacher.value) return ''
@@ -74,18 +100,9 @@ function switchToStudent() {
     </div>
 
     <div class="header__right">
-      <!-- 通知铃铛：学生端可用；教师端暂无独立消息中心，隐藏避免跳转到学生端页面 -->
-      <el-badge
-        v-if="!isTeacher"
-        :value="notificationStore.unreadCount"
-        :hidden="notificationStore.unreadCount === 0"
-        class="header__action"
-      >
-        <el-button
-          text
-          :aria-label="`消息中心，未读消息 ${notificationStore.unreadCount} 条`"
-          @click="router.push('/messages')"
-        >
+      <!-- 通知铃铛：学生端跳 /messages；教师端跳 /teacher/messages（各自 Store 维护角标） -->
+      <el-badge :value="unreadBadge" :hidden="unreadBadge === 0" class="header__action">
+        <el-button text :aria-label="`消息中心，未读消息 ${unreadBadge} 条`" @click="openMessages">
           <Bell :size="18" />
         </el-button>
       </el-badge>
