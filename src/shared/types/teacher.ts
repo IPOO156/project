@@ -1100,3 +1100,782 @@ export interface SemesterImportResult {
   failCount: number
   failures: SemesterImportFailItem[]
 }
+
+/* ===================== 教师端-工作台（/teacher/dashboard）===================== */
+
+export interface TeacherDashboardScope {
+  scopeType: number
+  scopeId: number
+  scopeName: string
+}
+
+export interface TeacherDashboardPendingStats {
+  archivePending: number
+  awardPending: number
+  careerPlanPending: number
+  totalPending: number
+}
+
+export interface TeacherDashboardRecentAudit {
+  id: number
+  type: string
+  archiveType: string
+  title: string
+  studentName: string
+  studentNo: string
+  action: string
+  actionLabel: string
+  auditedAt: string
+}
+
+/** GET /teacher/dashboard 教师端工作台总览 */
+export interface TeacherDashboardOverview {
+  teacherName: string
+  teacherNo: string
+  currentSemesterId: number | null
+  currentSemesterName: string | null
+  scopes: TeacherDashboardScope[]
+  pendingStats: TeacherDashboardPendingStats
+  todayAudited: number
+  recentAudits: TeacherDashboardRecentAudit[]
+  unreadMessageCount: number
+}
+
+/** GET /teacher/statistics/dashboard 教师端统计看板（字段与 admin 版不同，前端适配） */
+export interface TeacherDashboardData {
+  semesterId: number | null
+  scopeName: string | null
+  studentCount: number | null
+  submittedCount: number | null
+  approvedCount: number | null
+  pendingCount: number | null
+  rejectedCount: number | null
+  averageGpa: number | null
+  dimensionAvgScores: DimensionAvgScoreItem[]
+  archiveTypeDistribution: StatisticsTypeCountItem[]
+  cacheHit: boolean | null
+}
+
+/** POST /teacher/statistics/refresh 统计快照刷新 */
+export interface TeacherSnapshotRefreshPayload {
+  semesterId?: number
+  scopeType?: number
+  scopeId?: number
+}
+
+export interface TeacherSnapshotRefresh {
+  schoolId: number | null
+  semesterId: number | null
+  statDate: string | null
+  refreshedAt: string | null
+  studentCount: number | null
+  archiveCount: number | null
+  awardCount: number | null
+  avgGpa: number | null
+}
+
+/* ===================== 教师端-数据导出（/teacher/exports）===================== */
+
+export interface TeacherExportTemplate {
+  templateId: number
+  templateName: string
+  exportType: string
+  exportTypeLabel: string
+  scopeType: number | null
+  scopeTypeLabel: string | null
+}
+
+export interface TeacherExportJob {
+  exportJobId: number
+  templateName: string | null
+  exportType: string
+  status: number
+  statusLabel: string
+  totalCount: number | null
+  successCount: number | null
+  downloadUrl: string | null
+  expireAt: string | null
+  createdAt: string | null
+}
+
+export interface TeacherExportJobListResult {
+  list: TeacherExportJob[]
+  pagination?: {
+    page: number
+    per_page: number
+    total: number
+    total_pages: number
+  }
+}
+
+export interface TeacherExportDeleteResult {
+  jobId: number
+  deletedAt: string | null
+}
+
+/* ===================== 教师端-学生档案（/teacher/students）===================== */
+
+export interface TeacherStudentAcademicInfo {
+  userId: number
+  name: string | null
+  studentNo: string | null
+  grade: string | null
+  major: string | null
+  degreeType: number | null
+  degreeTypeLabel: string | null
+  className: string | null
+  collegeName: string | null
+  gender: number | null
+  genderLabel: string | null
+  politicalStatus: number | null
+  politicalStatusLabel: string | null
+  studentStatus: number | null
+  studentStatusLabel: string | null
+  birthDate: string | null
+}
+
+export interface TeacherStudentContactInfo {
+  email: string | null
+  phone: string | null
+  avatar: string | null
+  address: string | null
+  emergencyName: string | null
+  emergencyRelation: string | null
+  emergencyPhone: string | null
+}
+
+export interface TeacherDimensionProfileItem {
+  dimensionCode: string
+  dimensionName: string
+  score: number | null
+  targetScore: number | null
+  gap: number | null
+  calculationId: number | null
+  ruleVersion: number | null
+  calculatedAt: string | null
+}
+
+/** GET /teacher/students/{userId}/profile（isInScope + ProfileInfo 扁平展开） */
+export interface TeacherStudentProfile {
+  isInScope: boolean
+  academicInfo: TeacherStudentAcademicInfo
+  contactInfo: TeacherStudentContactInfo
+  totalVolunteerHours: number | null
+  dimensionProfile: TeacherDimensionProfileItem[]
+  interests: string[] | null
+  semesterGrades: unknown[] | null
+  personalAwards: unknown[] | null
+  weaknessAnalysis: string | null
+  selfEvaluation: string | null
+}
+
+/* 成长时间轴 */
+
+export interface TeacherTimelineSummary {
+  experiences: number | null
+  skills: number | null
+  averageGrowth: number | null
+  potential: number | null
+}
+
+export interface TeacherTimelineItem {
+  id: number
+  semesterId: number | null
+  semesterName: string | null
+  eventAt: string | null
+  eventName: string
+  content: string | null
+  eventType: number
+  eventTypeLabel: string
+  status: number | null
+  statusLabel: string | null
+  coverImage: string | null
+  sourceId: number | null
+  sourceType: string | null
+  abilityData: unknown | null
+  tags: string[] | null
+}
+
+export interface TeacherGrowthTimeline {
+  summary: TeacherTimelineSummary
+  timeline: TeacherTimelineItem[]
+  tree: unknown | null
+  ring: unknown | null
+}
+
+/* 职业规划详情 */
+
+export interface TeacherCareerFeedbackItem {
+  id: number
+  teacherName: string | null
+  feedbackContent: string
+  createdAt: string | null
+}
+
+/** GET /teacher/students/{userId}/career-plans/{planId} */
+export interface TeacherCareerPlanDetail {
+  id: number
+  semesterId: number | null
+  semesterName: string | null
+  title: string
+  content: string | null
+  requirement: string | null
+  progressRate: number | null
+  status: number | null
+  statusLabel: string | null
+  submittedAt: string | null
+  auditedAt: string | null
+  auditorName: string | null
+  rejectedReason: string | null
+  goals: unknown[] | null
+  reflections: unknown[] | null
+  feedbacks: TeacherCareerFeedbackItem[]
+  versionHistory: unknown[] | null
+}
+
+export interface TeacherCareerFeedbackPayload {
+  feedbackContent: string
+  suggestionItems?: string[]
+}
+
+export interface TeacherCareerFeedbackResult {
+  feedbackId: number
+  createdAt: string | null
+}
+
+/* 短板与改进建议 */
+
+export interface TeacherWeaknessItem {
+  id: number
+  weaknessType: string | null
+  weaknessDesc: string | null
+  severityLevel: number | null
+  source: number | null
+  sourceLabel: string | null
+  isRead: number | null
+  createdAt: string | null
+}
+
+export interface TeacherImprovementSuggestionPayload {
+  weaknessId?: number
+  suggestionType: string
+  content: string
+  relatedGoalId?: number
+}
+
+export interface TeacherImprovementSuggestionResult {
+  suggestionId: number
+  createdAt: string | null
+}
+
+/* ===================== 教师端-审批委托（/teacher/delegations）===================== */
+
+export interface TeacherUserBrief {
+  userId: number
+  name: string | null
+  userNo: string | null
+}
+
+export interface TeacherRoleBrief {
+  roleId: number
+  roleName: string
+}
+
+export interface TeacherDelegationItem {
+  delegationId: number
+  delegator: TeacherUserBrief | null
+  delegatee: TeacherUserBrief | null
+  role: TeacherRoleBrief | null
+  scopeType: number | null
+  scopeTypeLabel: string | null
+  scopeId: number | null
+  scopeName: string | null
+  startTime: string | null
+  endTime: string | null
+  reason: string | null
+  /** 0待生效 / 1生效中 / 2已过期 / 3已取消 */
+  status: number
+  statusLabel: string
+  createdAt: string | null
+}
+
+export interface TeacherDelegationListResult {
+  list: TeacherDelegationItem[]
+  pagination: {
+    page: number
+    per_page: number
+    total: number
+    total_pages: number
+  }
+}
+
+export interface TeacherDelegationCreatePayload {
+  delegateeId: number
+  roleId?: number
+  scopeType?: number
+  scopeId?: number
+  startTime: string
+  endTime: string
+  reason?: string
+}
+
+export interface TeacherDelegationCreateResult {
+  delegationId: number
+  delegateeName: string | null
+  status: number
+  statusLabel: string
+  startTime: string | null
+  endTime: string | null
+}
+
+export interface TeacherDelegationCancelPayload {
+  cancelReason?: string
+}
+
+export interface TeacherDelegationCancelResult {
+  delegationId: number
+  status: number
+  statusLabel: string
+  cancelledAt: string | null
+}
+
+/* ===================== 表单自定义（/admin/form-templates）===================== */
+
+/** 表单字段静态选项（select/radio/checkbox 用，后端结构为 {value,label}） */
+export interface FormTemplateOption {
+  value: string
+  label: string
+}
+
+export interface FormTemplateFieldItem {
+  key: string
+  label: string
+  /** input / textarea / number / select / radio / checkbox / date / upload / switch */
+  type: string
+  required?: boolean
+  placeholder?: string
+  rules?: unknown
+  options?: FormTemplateOption[] | null
+  dataSource?: string | null
+  visible?: boolean
+  sort?: number
+}
+
+export interface FormTemplateItem {
+  id: number
+  schoolId: number | null
+  templateName: string
+  code: string
+  /** archive / award / career_plan */
+  category: string
+  categoryLabel: string | null
+  description: string | null
+  applicableRoles: string[] | null
+  isDefault: number | null
+  version: number | null
+  status: number | null
+  statusLabel: string | null
+  createdBy: number | null
+  createdByName: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface FormTemplateDetail extends FormTemplateItem {
+  fields: FormTemplateFieldItem[]
+  layoutConfig: unknown | null
+}
+
+export interface FormTemplateCreatePayload {
+  templateName: string
+  code: string
+  category: string
+  description?: string
+  fields: FormTemplateFieldItem[]
+  layoutConfig?: unknown
+  applicableRoles?: string[]
+  isDefault?: number
+  status?: number
+}
+
+export interface FormTemplateUpdatePayload {
+  templateName?: string
+  description?: string
+  fields?: FormTemplateFieldItem[]
+  layoutConfig?: unknown
+  applicableRoles?: string[]
+  status?: number
+}
+
+/* ===================== 系统配置（/admin/settings）===================== */
+
+export interface SettingItem {
+  settingKey: string
+  settingName: string
+  settingValue: string | null
+  group: string | null
+  description: string | null
+  updatedAt: string | null
+}
+
+export interface SettingUpdatePayload {
+  settingKey: string
+  settingValue: string
+}
+
+/* ===================== 公告管理（/admin/announcements）===================== */
+
+export interface AnnouncementItem {
+  announcementId: number
+  title: string
+  content: string
+  /** 发布对象：all/college/major/class（后端枚举 AnnouncementTargetTypeEnum） */
+  targetType: string | null
+  status: number | null
+  statusLabel: string | null
+  publishedAt: string | null
+  publisherId: number | null
+  createdAt: string | null
+}
+
+export interface AnnouncementPayload {
+  title: string
+  content: string
+  /** 发布对象：all/college/major/class */
+  targetType?: string
+  targetId?: number
+  status?: number
+  publishedAt?: string
+}
+
+export interface AnnouncementIdResult {
+  announcementId: number
+}
+
+/* ===================== 定时任务（/admin/scheduled-tasks）===================== */
+
+export interface ScheduledTaskItem {
+  taskId: number
+  taskName: string
+  taskCode: string
+  taskGroup: string | null
+  cronExpression: string | null
+  status: number | null
+  statusLabel: string | null
+  lastRunAt: string | null
+  lastRunStatus: number | null
+  lastRunStatusLabel: string | null
+}
+
+export interface ScheduledTaskStatusPayload {
+  status: number
+}
+
+export interface ScheduledTaskStatusResult {
+  taskId: number
+  status: number
+  statusLabel: string
+}
+
+/* ===================== 教师端-待审核任务（/teacher/audits）===================== */
+
+/** 审核业务类型：archive 档案申报 / award 奖项报名 / career_plan 职业规划 */
+export type AuditBusinessType = 'archive' | 'award' | 'career_plan'
+
+/** GET /teacher/audits/pending 查询参数（范围类参数与列表联动，详情接口需同步携带） */
+export interface AuditPendingQuery extends PageQuery {
+  type?: string
+  archiveType?: string
+  scopeType?: number
+  scopeId?: number
+  semesterId?: number
+  grade?: string
+  keyword?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+}
+
+/** 4.1 待审核列表项（Lzw.AuditTaskService.PendingListItem） */
+export interface AuditPendingItem {
+  taskId: number
+  type: string
+  archiveType: string
+  archiveTypeLabel: string
+  approvableId: number
+  title: string
+  applicantId: number
+  applicantName: string
+  applicantNo: string
+  className: string
+  majorName: string
+  semesterId: number
+  semesterName: string
+  submitTime: string
+  stepNo: number
+  stepName: string
+  status: number
+  statusLabel: string
+  duplicateCheckStatus: number
+  duplicateCheckStatusLabel: string
+}
+
+/** 4.2 详情-申请人信息 */
+export interface AuditApplicant {
+  userId: number
+  name: string
+  studentNo: string
+  className: string
+  majorName: string
+  grade: string
+}
+
+/** 4.2 详情-申报主体公共字段（baseInfo，可空字段后端可能缺省） */
+export interface AuditBaseInfo {
+  semesterId: number | null
+  semesterName: string | null
+  obtainTime: string | null
+  certificateNo: string | null
+  issuingUnit: string | null
+  validUntil: string | null
+  participantRole: string | null
+  participantRoleLabel: string | null
+}
+
+/** 4.2 详情-佐证材料文件 */
+export interface AuditEvidenceFile {
+  fileId: number
+  fileName: string
+  fileUrl: string
+  previewUrl: string | null
+  fileSize: number
+}
+
+/** 4.2 详情-重复检测 */
+export interface AuditDuplicateInfo {
+  isDuplicate: boolean
+  duplicateRecords: unknown[]
+}
+
+/** 4.2 详情-审批历史节点 */
+export interface AuditApprovalHistoryItem {
+  nodeId: number
+  stepNo: number
+  stepName: string
+  auditorName: string
+  action: number
+  actionLabel: string
+  comment: string
+  createdAt: string
+}
+
+/** 4.2 详情-版本历史 */
+export interface AuditVersionHistoryItem {
+  version: number
+  status: number
+  statusLabel: string
+  createdAt: string
+}
+
+/** 4.2 详情-前后游标（在同一筛选条件下定位上一条/下一条任务） */
+export interface AuditCursor {
+  prevTaskId: number | null
+  nextTaskId: number | null
+}
+
+/** 4.2 待审核详情 */
+export interface AuditPendingDetail {
+  taskId: number
+  type: string
+  archiveType: string
+  approvableId: number
+  title: string
+  applicant: AuditApplicant | null
+  baseInfo: AuditBaseInfo | null
+  detail: Record<string, unknown>
+  evidenceFiles: AuditEvidenceFile[]
+  duplicateInfo: AuditDuplicateInfo | null
+  approvalHistory: AuditApprovalHistoryItem[]
+  versionHistory: AuditVersionHistoryItem[]
+  cursor: AuditCursor | null
+}
+
+/** 4.3 审核通过请求/响应 */
+export interface AuditApprovePayload {
+  comment?: string
+  nextAuditorId?: number
+}
+
+export interface AuditApproveResult {
+  taskId: number
+  approvableId: number
+  status: number
+  statusLabel: string
+  auditedAt: string
+}
+
+/** 4.4 审核退回请求/响应 */
+export interface AuditRejectPayload {
+  /** 退回原因（后端必填，不可为空） */
+  comment: string
+  templateCode?: string
+  /** 多级流程退回到指定步骤；当前单节点流程默认退回申请人，可不传 */
+  rejectToStep?: number
+}
+
+export interface AuditRejectResult {
+  taskId: number
+  approvableId: number
+  status: number
+  statusLabel: string
+  returnedAt: string
+  rejectedReason: string
+}
+
+/** 4.5 批量通过请求/响应 */
+export interface AuditBatchApprovePayload {
+  taskIds: number[]
+  comment?: string
+}
+
+export interface AuditBatchResultItem {
+  taskId: number
+  success: boolean
+  status: number
+}
+
+export interface AuditBatchResult {
+  total: number
+  success: number
+  failed: number
+  results: AuditBatchResultItem[]
+}
+
+/** 4.7 常用退回原因模板 */
+export interface AuditRejectTemplate {
+  templateCode: string
+  templateContent: string
+  usageCount: number
+}
+
+/** 4.6 撤销已审核记录（仅 admin 角色） */
+export interface AuditRevokePayload {
+  revokeReason?: string
+}
+
+export interface AuditRevokeResult {
+  taskId: number
+  approvableId: number
+  status: number
+  statusLabel: string
+  revokeReason: string
+  revokedAt: string
+}
+
+/* ===================== 教师端-审核历史（/teacher/audits/history）===================== */
+
+export interface AuditHistoryQuery extends PageQuery {
+  type?: string
+  /** 1通过 2退回 3撤回 4转交 */
+  action?: number
+  semesterId?: number
+  /** YYYY-MM-DD */
+  startDate?: string
+  /** YYYY-MM-DD */
+  endDate?: string
+  keyword?: string
+}
+
+/** 5.1 审核历史列表项（后端 @JsonInclude(NON_NULL)，关联解析缺失的字段可能缺省） */
+export interface AuditHistoryItem {
+  auditId: number
+  type: string
+  archiveType: string | null
+  title: string | null
+  studentName: string | null
+  studentNo: string | null
+  action: number
+  actionLabel: string | null
+  comment: string | null
+  auditedAt: string
+}
+
+/* ===================== 教师端-操作日志（/teacher/logs）===================== */
+
+/** GET /teacher/logs 查询参数（比管理端 system 多 grade/keyword） */
+export interface TeacherLogQuery extends PageQuery {
+  operatorId?: number
+  action?: string
+  module?: string
+  logLevel?: number
+  startTime?: string
+  endTime?: string
+  relatedType?: string
+  relatedId?: number
+  grade?: string
+  keyword?: string
+}
+
+/* ===================== 组织架构（/admin/schools|colleges|majors|classes）===================== */
+
+export interface OrgSchoolItem {
+  schoolId: number
+  schoolName: string
+  code: string | null
+  status: number | null
+}
+
+export interface OrgCollegeItem {
+  collegeId: number
+  collegeName: string
+  code: string | null
+  schoolId: number | null
+  status: number | null
+}
+
+export interface OrgMajorItem {
+  majorId: number
+  majorName: string
+  code: string | null
+  collegeId: number | null
+  status: number | null
+}
+
+export interface OrgClassItem {
+  classId: number
+  className: string
+  grade: string | null
+  majorId: number | null
+  studentCount: number | null
+  status: number | null
+}
+
+export interface OrgClassQuery extends PageQuery {
+  majorId?: number
+  collegeId?: number
+  schoolId?: number
+  grade?: string
+  status?: number
+  keyword?: string
+}
+
+/** 创建/更新班级（11.5/11.6） */
+export interface OrgClassSavePayload {
+  majorId: number
+  className: string
+  grade?: string
+  status?: number
+}
+
+/** 创建专业（11.7） */
+export interface OrgMajorCreatePayload {
+  collegeId: number
+  majorName: string
+  majorCode?: string
+  status?: number
+}
+
+/** 创建班级/专业响应（classId 或 majorId 二选一） */
+export interface OrgCreateIdResult {
+  classId?: number
+  majorId?: number
+}

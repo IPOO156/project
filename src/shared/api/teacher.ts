@@ -2,6 +2,9 @@ import type {
   AbilityDimensionItem,
   AbilityDimensionPayload,
   AdminIndicatorTree,
+  AnnouncementIdResult,
+  AnnouncementItem,
+  AnnouncementPayload,
   ApprovalFlowDetail,
   ApprovalFlowItem,
   ApprovalFlowMapping,
@@ -14,6 +17,20 @@ import type {
   ArchiveExportPayload,
   ArchiveExportResult,
   ArchiveOverviewResult,
+  AuditApprovePayload,
+  AuditApproveResult,
+  AuditBatchApprovePayload,
+  AuditBatchResult,
+  AuditHistoryItem,
+  AuditHistoryQuery,
+  AuditPendingDetail,
+  AuditPendingItem,
+  AuditPendingQuery,
+  AuditRejectPayload,
+  AuditRejectResult,
+  AuditRejectTemplate,
+  AuditRevokePayload,
+  AuditRevokeResult,
   CaptchaResponse,
   CommonIndicatorTree,
   CreateUserPayload,
@@ -33,6 +50,10 @@ import type {
   ExportTemplatePreviewResult,
   FilePreviewResult,
   FileUploadResult,
+  FormTemplateCreatePayload,
+  FormTemplateDetail,
+  FormTemplateItem,
+  FormTemplateUpdatePayload,
   GradeImportConfigItem,
   GradeImportConfigPayload,
   GradeImportDetail,
@@ -57,7 +78,15 @@ import type {
   MessageReadAllResult,
   MessageSetting,
   MessageSettingUpdatePayload,
+  OrgClassItem,
+  OrgClassQuery,
+  OrgClassSavePayload,
+  OrgCollegeItem,
+  OrgCreateIdResult,
+  OrgMajorCreatePayload,
+  OrgMajorItem,
   OrgOverviewStatistics,
+  OrgSchoolItem,
   PageResult,
   PasswordResetConfirmPayload,
   PasswordResetPayload,
@@ -66,6 +95,9 @@ import type {
   RoleListItem,
   RolePermissionsResult,
   RoleSavePayload,
+  ScheduledTaskItem,
+  ScheduledTaskStatusPayload,
+  ScheduledTaskStatusResult,
   ScopeConfigItem,
   ScoreRecalculatePayload,
   ScoreRecalculateResult,
@@ -75,9 +107,32 @@ import type {
   SemesterItem,
   SemesterListItem,
   SemesterSavePayload,
+  SettingItem,
+  SettingUpdatePayload,
   StatisticsQuery,
   SystemLogItem,
   SystemLogQuery,
+  TeacherCareerFeedbackPayload,
+  TeacherCareerFeedbackResult,
+  TeacherCareerPlanDetail,
+  TeacherDashboardData,
+  TeacherDashboardOverview,
+  TeacherDelegationCancelPayload,
+  TeacherDelegationCancelResult,
+  TeacherDelegationCreatePayload,
+  TeacherDelegationCreateResult,
+  TeacherDelegationListResult,
+  TeacherExportDeleteResult,
+  TeacherExportJobListResult,
+  TeacherExportTemplate,
+  TeacherGrowthTimeline,
+  TeacherImprovementSuggestionPayload,
+  TeacherImprovementSuggestionResult,
+  TeacherLogQuery,
+  TeacherSnapshotRefresh,
+  TeacherSnapshotRefreshPayload,
+  TeacherStudentProfile,
+  TeacherWeaknessItem,
   TokenRefreshResult,
   UpdateUserPayload,
   UserDetail,
@@ -88,8 +143,9 @@ import type {
  * 教师端/管理端 API 层
  *
  * 仅对接后端【已实现】的接口（Fmy/Lzw 包，context-path /api/v1）。
- * 后端尚未实现的教师端接口（/teacher/** 等）不在此处定义，
- * 相关模块页面以「契约层 + 优雅空状态」方式呈现，待后端就绪后补齐。
+ * 教师端页面优先使用 /teacher/** 接口（若存在）；教师端无等价接口的管理功能
+ * 继续使用 /admin/**（如用户/角色/学期/导出模板/组织架构等），后端缺口见核查报告。
+ * 教师消息中心独立走 /teacher/messages（DTO 与学生端 /messages 一致）。
  */
 import { getToken } from '@/shared/utils/token'
 import request from './request'
@@ -172,14 +228,40 @@ export function updateUserScopes(userId: number, scopes: ScopeConfigItem[]): Pro
   return request.put(`/admin/users/${userId}/scopes`, { scopes })
 }
 
-/* ===================== 数据导出（/admin/exports）===================== */
+/* ===================== 数据导出 ===================== */
 
+/**
+ * 提交档案导出（教师端 POST /teacher/exports）
+ * 后端教师端接口返回字段与 ArchiveExportResult 兼容（jobId/status/statusLabel/estimatedSeconds）
+ */
 export function submitArchiveExport(payload: ArchiveExportPayload): Promise<ArchiveExportResult> {
-  return request.post('/admin/exports/archives', payload)
+  return request.post('/teacher/exports', payload)
 }
 
+/** 管理端导出任务单条查询（/admin/exports/{jobId}，教师端无单条等价接口，仅管理员用） */
 export function getExportJob(jobId: number): Promise<ExportJobItem> {
   return request.get(`/admin/exports/${jobId}`)
+}
+
+/* ===================== 教师端-数据导出（/teacher/exports）===================== */
+
+/** 教师端可用导出模板（GET /teacher/exports/templates） */
+export function getTeacherExportTemplates(): Promise<TeacherExportTemplate[]> {
+  return request.get('/teacher/exports/templates')
+}
+
+/** 教师端导出任务列表（GET /teacher/exports） */
+export function getTeacherExportJobs(params: {
+  status?: number
+  page?: number
+  per_page?: number
+}): Promise<TeacherExportJobListResult> {
+  return request.get('/teacher/exports', { params })
+}
+
+/** 删除教师端导出任务（DELETE /teacher/exports/{jobId}） */
+export function deleteTeacherExportJob(jobId: number): Promise<TeacherExportDeleteResult> {
+  return request.delete(`/teacher/exports/${jobId}`)
 }
 
 /* ===================== 能力维度（/admin/ability-dimensions）===================== */
@@ -205,16 +287,17 @@ export function deleteAbilityDimension(id: number): Promise<void> {
   return request.delete(`/admin/ability-dimensions/${id}`)
 }
 
-/* ===================== 评分重算（/admin/scores）===================== */
+/* ===================== 评分重算（教师端 /teacher/scores）===================== */
 
+/** 触发评分重算（教师端仅支持 targetType 1学生/2班级/3学期，前端已去掉 4全量） */
 export function triggerScoreRecalculate(
   payload: ScoreRecalculatePayload,
 ): Promise<ScoreRecalculateResult> {
-  return request.post('/admin/scores/recalculate', payload)
+  return request.post('/teacher/scores/recalculate', payload)
 }
 
 export function getRecalculationTask(taskId: number): Promise<ScoreRecalculationTask> {
-  return request.get(`/admin/scores/recalculation-tasks/${taskId}`)
+  return request.get(`/teacher/scores/recalculation-tasks/${taskId}`)
 }
 
 /* ===================== 导出模板（/admin/export-templates）===================== */
@@ -542,20 +625,119 @@ export function getArchiveOverview(params: {
   return request.get('/admin/archives/overview', { params })
 }
 
-/* ===================== 统计看板（/admin/statistics）===================== */
+/* ===================== 教师端-学生档案（/teacher/students）===================== */
 
+/** 学生成长档案总览（GET /teacher/students/{userId}/profile） */
+export async function getTeacherStudentProfile(userId: number): Promise<TeacherStudentProfile> {
+  // 后端返回 { isInScope, profile: {...} }，此处展开 profile 供页面扁平化使用
+  const res = (await request.get(`/teacher/students/${userId}/profile`)) as unknown as {
+    isInScope?: boolean
+    profile?: TeacherStudentProfile
+  }
+  return { isInScope: res?.isInScope ?? true, ...(res?.profile ?? {}) } as TeacherStudentProfile
+}
+
+/** 学生成长时间轴（GET /teacher/students/{userId}/growth-timeline） */
+export function getTeacherStudentTimeline(
+  userId: number,
+  params?: { semesterId?: number; eventType?: number },
+): Promise<TeacherGrowthTimeline> {
+  return request.get(`/teacher/students/${userId}/growth-timeline`, { params })
+}
+
+/** 学生短板分析（GET /teacher/students/{userId}/weaknesses） */
+export function getTeacherStudentWeaknesses(userId: number): Promise<TeacherWeaknessItem[]> {
+  return request.get(`/teacher/students/${userId}/weaknesses`)
+}
+
+/** 学生职业规划详情（GET /teacher/students/{userId}/career-plans/{planId}） */
+export function getTeacherStudentCareerPlan(
+  userId: number,
+  planId: number,
+): Promise<TeacherCareerPlanDetail> {
+  return request.get(`/teacher/students/${userId}/career-plans/${planId}`)
+}
+
+/** 教师对职业规划提交反馈（POST /teacher/career-plans/{planId}/feedbacks） */
+export function submitTeacherCareerFeedback(
+  planId: number,
+  payload: TeacherCareerFeedbackPayload,
+): Promise<TeacherCareerFeedbackResult> {
+  return request.post(`/teacher/career-plans/${planId}/feedbacks`, payload)
+}
+
+/** 教师为学生添加改进建议（POST /teacher/students/{userId}/improvement-suggestions） */
+export function addTeacherImprovementSuggestion(
+  userId: number,
+  payload: TeacherImprovementSuggestionPayload,
+): Promise<TeacherImprovementSuggestionResult> {
+  return request.post(`/teacher/students/${userId}/improvement-suggestions`, payload)
+}
+
+/* ===================== 教师端-审批委托（/teacher/delegations）===================== */
+
+export function listTeacherDelegations(params: {
+  direction?: number
+  status?: number
+  keyword?: string
+  page?: number
+  per_page?: number
+}): Promise<TeacherDelegationListResult> {
+  return request.get('/teacher/delegations', { params })
+}
+
+export function createTeacherDelegation(
+  payload: TeacherDelegationCreatePayload,
+): Promise<TeacherDelegationCreateResult> {
+  return request.post('/teacher/delegations', payload)
+}
+
+export function cancelTeacherDelegation(
+  delegationId: number,
+  payload: TeacherDelegationCancelPayload,
+): Promise<TeacherDelegationCancelResult> {
+  return request.put(`/teacher/delegations/${delegationId}/cancel`, payload)
+}
+
+/* ===================== 统计看板 ===================== */
+
+/** 教师端统计看板（GET /teacher/statistics/dashboard，字段与 admin 版不同，前端已适配） */
+export function getTeacherStatisticsDashboard(
+  params: Pick<StatisticsQuery, 'semesterId' | 'grade'>,
+): Promise<TeacherDashboardData> {
+  return request.get('/teacher/statistics/dashboard', { params })
+}
+
+/** 管理端统计看板（/admin/statistics/dashboard，仅管理员，教师端已改用教师版） */
 export function getStatisticsDashboard(
   params: Pick<StatisticsQuery, 'semesterId' | 'grade'>,
 ): Promise<DashboardStatistics> {
   return request.get('/admin/statistics/dashboard', { params })
 }
 
+/** 管理端组织统计看板（/admin/statistics/overview，教师端无等价接口） */
 export function getStatisticsOverview(params: StatisticsQuery): Promise<OrgOverviewStatistics> {
   return request.get('/admin/statistics/overview', { params })
 }
 
+/** 教师端成果热力图（GET /teacher/statistics/heatmap，响应与 admin 版兼容） */
 export function getStatisticsHeatmap(params: StatisticsQuery): Promise<HeatmapStatistics> {
-  return request.get('/admin/statistics/heatmap', { params })
+  return request.get('/teacher/statistics/heatmap', { params })
+}
+
+/** 教师端统计快照刷新（POST /teacher/statistics/refresh） */
+export function refreshTeacherStatistics(
+  payload: TeacherSnapshotRefreshPayload,
+): Promise<TeacherSnapshotRefresh> {
+  // 后端以 @RequestParam 接收 semesterId，需走 query 而非 body
+  return request.post('/teacher/statistics/refresh', null, { params: payload })
+}
+
+/* ===================== 教师端-工作台（GET /teacher/dashboard）===================== */
+
+/** 教师端工作台总览：教师信息/管辖范围/待办统计/今日审核/最近审核动态 */
+export function getTeacherDashboardOverview(): Promise<TeacherDashboardOverview> {
+  return request.get('/teacher/dashboard')
 }
 
 /* ===================== 指标规则版本/批量状态（/admin/indicators）===================== */
@@ -725,6 +907,232 @@ export async function downloadSemesterImportTemplate(): Promise<void> {
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
+}
+
+/* ===================== 表单自定义（/admin/form-templates）===================== */
+
+export function listFormTemplates(params: {
+  category?: string
+  status?: number
+  keyword?: string
+  page?: number
+  per_page?: number
+}): Promise<PageResult<FormTemplateItem>> {
+  return request.get('/admin/form-templates', { params })
+}
+
+export function getFormTemplateDetail(templateId: number): Promise<FormTemplateDetail> {
+  return request.get(`/admin/form-templates/${templateId}`)
+}
+
+export function createFormTemplate(payload: FormTemplateCreatePayload): Promise<{ id: number }> {
+  return request.post('/admin/form-templates', payload)
+}
+
+export function updateFormTemplate(
+  templateId: number,
+  payload: FormTemplateUpdatePayload,
+): Promise<void> {
+  return request.put(`/admin/form-templates/${templateId}`, payload)
+}
+
+export function deleteFormTemplate(templateId: number): Promise<void> {
+  return request.delete(`/admin/form-templates/${templateId}`)
+}
+
+export function setDefaultFormTemplate(templateId: number): Promise<void> {
+  return request.put(`/admin/form-templates/${templateId}/default`)
+}
+
+/* ===================== 系统配置（/admin/settings）===================== */
+
+export function listSystemSettings(params?: {
+  group?: string
+  keyword?: string
+  page?: number
+  per_page?: number
+}): Promise<PageResult<SettingItem>> {
+  return request.get('/admin/settings', { params })
+}
+
+export function updateSystemSetting(payload: SettingUpdatePayload): Promise<void> {
+  return request.put('/admin/settings', payload)
+}
+
+/* ===================== 公告管理（/admin/announcements）===================== */
+
+export function listAnnouncements(params: {
+  status?: number
+  targetType?: string
+  page?: number
+  per_page?: number
+}): Promise<PageResult<AnnouncementItem>> {
+  return request.get('/admin/announcements', { params })
+}
+
+export function createAnnouncement(payload: AnnouncementPayload): Promise<AnnouncementIdResult> {
+  return request.post('/admin/announcements', payload)
+}
+
+export function updateAnnouncement(
+  announcementId: number,
+  payload: AnnouncementPayload,
+): Promise<void> {
+  return request.put(`/admin/announcements/${announcementId}`, payload)
+}
+
+export function deleteAnnouncement(announcementId: number): Promise<void> {
+  return request.delete(`/admin/announcements/${announcementId}`)
+}
+
+/* ===================== 定时任务（/admin/scheduled-tasks）===================== */
+
+export function listScheduledTasks(params: {
+  taskGroup?: string
+  status?: number
+  page?: number
+  per_page?: number
+}): Promise<PageResult<ScheduledTaskItem>> {
+  return request.get('/admin/scheduled-tasks', { params })
+}
+
+export function updateScheduledTaskStatus(
+  taskId: number,
+  payload: ScheduledTaskStatusPayload,
+): Promise<ScheduledTaskStatusResult> {
+  return request.put(`/admin/scheduled-tasks/${taskId}/status`, payload)
+}
+
+/* ===================== 待审核任务（/teacher/audits）===================== */
+
+/** 待审核列表（范围/学期/关键字过滤，sortBy 默认 submit_time） */
+export function listAuditPending(params: AuditPendingQuery): Promise<PageResult<AuditPendingItem>> {
+  return request.get('/teacher/audits/pending', { params })
+}
+
+/**
+ * 待审核详情。
+ * 详情接口会同步读取列表筛选条件以计算上一条/下一条游标（cursor），
+ * 因此需把当前列表的过滤参数一并传入（含 sortOrder）。
+ */
+export function getAuditPendingDetail(
+  taskId: number,
+  params?: AuditPendingQuery,
+): Promise<AuditPendingDetail> {
+  return request.get(`/teacher/audits/pending/${taskId}`, { params })
+}
+
+/** 审核通过（comment 可空，nextAuditorId 用于转交下一级） */
+export function approveAuditTask(
+  taskId: number,
+  payload: AuditApprovePayload,
+): Promise<AuditApproveResult> {
+  return request.post(`/teacher/audits/${taskId}/approve`, payload)
+}
+
+/** 审核退回（后端要求 comment 必填，不可为空） */
+export function rejectAuditTask(
+  taskId: number,
+  payload: AuditRejectPayload,
+): Promise<AuditRejectResult> {
+  return request.post(`/teacher/audits/${taskId}/reject`, payload)
+}
+
+/** 批量通过（无批量退回接口，见核查报告） */
+export function batchApproveAuditTasks(
+  payload: AuditBatchApprovePayload,
+): Promise<AuditBatchResult> {
+  return request.post('/teacher/audits/batch/approve', payload)
+}
+
+/** 常用退回原因模板 */
+export function getAuditRejectTemplates(): Promise<AuditRejectTemplate[]> {
+  return request.get('/teacher/audits/reject-templates')
+}
+
+/** 撤销已审核记录（接口层面仅 admin 角色可调） */
+export function revokeAuditTask(
+  taskId: number,
+  payload?: AuditRevokePayload,
+): Promise<AuditRevokeResult> {
+  return request.post(`/teacher/audits/${taskId}/revoke`, payload)
+}
+
+/* ===================== 我的审核记录（/teacher/audits/history）===================== */
+
+export function listAuditHistory(params: AuditHistoryQuery): Promise<PageResult<AuditHistoryItem>> {
+  return request.get('/teacher/audits/history', { params })
+}
+
+/* ===================== 操作日志（/teacher/logs）===================== */
+
+/** 教师端授权范围内操作日志（仅当前教师自身 + 授权范围内学生相关日志） */
+export function listTeacherLogs(params: TeacherLogQuery): Promise<PageResult<SystemLogItem>> {
+  return request.get('/teacher/logs', { params })
+}
+
+/* ===================== 教师消息中心（/teacher/messages）===================== */
+
+export interface TeacherMessageArchiveResult {
+  messageId: number
+  isArchived: number
+  archivedAt: string | null
+}
+
+export function getTeacherMessages(params: {
+  category?: MessageCategory | string
+  isRead?: number
+  isArchived?: number
+  keyword?: string
+  page?: number
+  per_page?: number
+}): Promise<MessageListResult> {
+  return request.get('/teacher/messages', { params })
+}
+
+export function markTeacherMessageRead(messageId: number): Promise<void> {
+  return request.put(`/teacher/messages/${messageId}/read`)
+}
+
+export function archiveTeacherMessage(messageId: number): Promise<TeacherMessageArchiveResult> {
+  return request.put(`/teacher/messages/${messageId}/archive`)
+}
+
+/* ===================== 组织架构（/admin/schools|colleges|majors|classes）===================== */
+
+export function listSchools(): Promise<OrgSchoolItem[]> {
+  return request.get('/admin/schools')
+}
+
+export function listColleges(params?: {
+  schoolId?: number
+  status?: number
+}): Promise<OrgCollegeItem[]> {
+  return request.get('/admin/colleges', { params })
+}
+
+export function listMajors(params?: {
+  collegeId?: number
+  schoolId?: number
+  status?: number
+}): Promise<OrgMajorItem[]> {
+  return request.get('/admin/majors', { params })
+}
+
+export function listClasses(params: OrgClassQuery): Promise<PageResult<OrgClassItem>> {
+  return request.get('/admin/classes', { params })
+}
+
+export function createClass(payload: OrgClassSavePayload): Promise<OrgCreateIdResult> {
+  return request.post('/admin/classes', payload)
+}
+
+export function updateClass(classId: number, payload: OrgClassSavePayload): Promise<void> {
+  return request.put(`/admin/classes/${classId}`, payload)
+}
+
+export function createMajor(payload: OrgMajorCreatePayload): Promise<OrgCreateIdResult> {
+  return request.post('/admin/majors', payload)
 }
 
 // 供部分页面类型标注复用，避免零散 any

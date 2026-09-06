@@ -216,3 +216,87 @@ export const COMMON_STATUS: Record<number, { label: string; tag: 'success' | 'da
   1: { label: '启用', tag: 'success' },
   0: { label: '禁用', tag: 'danger' },
 }
+
+// 审核业务类型（/teacher/audits 的 type，与后端 approvableType 归一化值对应）
+export const AUDIT_BUSINESS_TYPES: Record<string, string> = {
+  archive: '档案申报',
+  award: '奖项报名',
+  career_plan: '职业规划',
+}
+
+// 审核动作（AuditActionEnum：1通过 2退回 3撤回 4转交）
+export const AUDIT_ACTIONS: Record<
+  number,
+  { label: string; tag: 'success' | 'danger' | 'info' | 'warning' }
+> = {
+  1: { label: '通过', tag: 'success' },
+  2: { label: '退回', tag: 'danger' },
+  3: { label: '撤回', tag: 'info' },
+  4: { label: '转交', tag: 'warning' },
+}
+
+// 审核详情「填报内容」动态字段 key → 中文名（表单自定义字段可能超出此表，未命中则原样显示 key）
+export const AUDIT_DETAIL_LABELS: Record<string, string> = {
+  // 通用 / 基础信息
+  semester: '学期',
+  semesterName: '学期',
+  obtainTime: '取得时间',
+  certificateNo: '证书编号',
+  issuingUnit: '发证单位',
+  validUntil: '有效期至',
+  participantRole: '本人角色',
+  participantRoleLabel: '本人角色',
+  // 竞赛 / 学科竞赛
+  competitionName: '竞赛名称',
+  competitionLevel: '竞赛级别',
+  competitionType: '竞赛类型',
+  competitionDate: '参赛时间',
+  awardLevel: '获奖等级',
+  awardDate: '获奖时间',
+  awardName: '奖项名称',
+  prizeName: '奖项名称',
+  // 创新创业
+  projectName: '项目名称',
+  projectLevel: '项目级别',
+  projectContent: '项目内容',
+  companyName: '公司名称',
+  companyType: '公司类型',
+  industryType: '行业类型',
+  teamRole: '团队角色',
+  registerDate: '注册时间',
+  projectDate: '项目时间',
+  // 奖学金 / 科研
+  scholarshipLevel: '奖学金级别',
+  scholarshipGrade: '获奖等级',
+  journalName: '期刊名称',
+  paperName: '论文名称',
+  ranking: '排名/总人数',
+  publishDate: '发表时间',
+  softName: '软著名称',
+  issuer: '颁发单位',
+  approveDate: '获批时间',
+  // 证书
+  certType: '证书类型',
+  certName: '证书名称',
+  certDate: '获得时间',
+  certNumber: '证书编号',
+  issuingAuthority: '发证单位',
+  acquisitionDate: '取得时间',
+  validityPeriod: '有效期',
+  // 实习 / 社会实践 / 图书心得
+  company: '实习单位',
+  location: '实习地点',
+  position: '实习岗位',
+  startDate: '开始时间',
+  endDate: '结束时间',
+  organizationLevel: '组织级别',
+  department: '部门',
+  activityName: '活动名称',
+  organization: '组织单位',
+  volunteerHours: '志愿时长',
+  bookName: '图书名称',
+  bookDate: '阅读时间',
+  review: '心得体会',
+  role: '本人角色',
+  title: '标题',
+}
