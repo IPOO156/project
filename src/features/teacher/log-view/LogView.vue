@@ -12,11 +12,18 @@ import type { ExportLogItem, LoginLogItem, SystemLogItem } from '@/shared/types/
 import { RefreshCw, Search } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useUserStore } from '@/app/stores/stores'
 import { getExportLogs, getLoginLogs, getSystemLogs } from '@/shared/api/teacher'
 import { LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
 import ExportLogTable from './components/ExportLogTable.vue'
 import LoginLogTable from './components/LoginLogTable.vue'
 import LogTable from './components/LogTable.vue'
+import ScopedLogView from './components/ScopedLogView.vue'
+
+const userStore = useUserStore()
+// teacher / reviewer 角色只能查看自身 + 授权范围内学生的操作日志（/teacher/logs），
+// admin / super_admin 保留系统 / 登录 / 导出三个维度（/admin/logs/**）。
+const isScoped = computed(() => userStore.isTeacherRole || userStore.isReviewer)
 
 // ── 操作日志（系统日志）：筛选与分页 ──
 const filters = reactive({
@@ -257,12 +264,14 @@ function handleRefresh() {
           查看授权范围内的系统操作记录。操作人、学号与 IP 按角色脱敏展示。
         </p>
       </div>
-      <div class="mc-page-head__actions">
+      <div v-if="!isScoped" class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="isLoading" @click="handleRefresh">刷新</el-button>
       </div>
     </div>
 
-    <el-tabs v-model="activeTab" class="log-view__tabs">
+    <ScopedLogView v-if="isScoped" />
+
+    <el-tabs v-else v-model="activeTab" class="log-view__tabs">
       <!-- 操作日志 -->
       <el-tab-pane label="操作日志" name="system">
         <div class="mc-filter-bar">
