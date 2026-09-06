@@ -312,7 +312,14 @@ onMounted(async () => {
           <p class="heat-map__filter-group-title">指标维度</p>
           <div class="heat-map__filter-row">
             <el-select v-model="filters.metric" class="heat-map__select heat-map__select--narrow">
-              <el-option v-for="m in METRIC_OPTIONS" :key="m.value" :value="m.value">
+              <!-- 自定义下拉内容（圆点+文案）同时需显式 :label，
+                   否则收起态 el-select 无法取到 label，会在输入框回退显示 raw value（如 "award"） -->
+              <el-option
+                v-for="m in METRIC_OPTIONS"
+                :key="m.value"
+                :value="m.value"
+                :label="m.label"
+              >
                 <template #default>
                   <span class="heat-map__metric-option">
                     <span class="heat-map__metric-dot is-sm" :style="{ background: m.accent }" />

@@ -245,8 +245,13 @@ export function getExportJob(jobId: number): Promise<ExportJobItem> {
 
 /* ===================== 教师端-数据导出（/teacher/exports）===================== */
 
-/** 教师端可用导出模板（GET /teacher/exports/templates） */
-export function getTeacherExportTemplates(): Promise<TeacherExportTemplate[]> {
+/**
+ * 教师端可用导出模板（GET /teacher/exports/templates）
+ * 注意：该接口返回分页包装 { total, list, pagination }（见 /teacher/exports/jobs 同型），
+ * 并非裸数组；调用方需解包 .list。曾将整个包装对象当数组赋值给 ref，
+ * 导致 v-for 迭代 total/list/pagination 三个键产生 value/label 均 undefined 的空选项。
+ */
+export function getTeacherExportTemplates(): Promise<PageResult<TeacherExportTemplate>> {
   return request.get('/teacher/exports/templates')
 }
 

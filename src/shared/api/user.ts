@@ -53,7 +53,13 @@ export function changePassword(payload: {
   })
 }
 
-/** 退出登录（通知后端失效令牌） */
-export function logout(): Promise<void> {
-  return request.post('/auth/logout')
+/**
+ * 退出登录（通知后端失效令牌）。
+ * @param token 调用方快照的令牌。登录态清除后请求拦截器不再自动附带 Authorization，
+ *              若不显式传入，后端会对匿名 /auth/logout 返回 401 且令牌不会真正失效，
+ *              故由调用方（user store logout）先 getToken() 快照再传入。
+ */
+export function logout(token?: string): Promise<void> {
+  const config = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined
+  return request.post('/auth/logout', null, config)
 }

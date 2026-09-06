@@ -45,6 +45,24 @@ async function loadList() {
   }
 }
 
+/**
+ * 按筛选条件回到第 1 页并重新加载（输入框回车 / 查询 / 切换分页大小共用）。
+ * 模板禁止多语句内联表达式（Vue 编译器将换行当作空白，多行无分号的
+ * `page = 1\nloadList()` 会解析失败导致模块 500），故抽为具名函数。
+ */
+function searchTasks() {
+  page.value = 1
+  void loadList()
+}
+
+/**
+ * el-switch 变更回调：归一化 change 载荷（布尔开关）后执行启用/停用。
+ * 原模板内联跨行箭头带 TS 类型标注，模板解析易失败，故抽为具名函数。
+ */
+function handleStatusChange(row: ScheduledTaskItem, v: boolean | string | number) {
+  void handleToggle(row, v === true || v === 'true' || v === 1)
+}
+
 /** 启用/停用定时任务 */
 async function handleToggle(row: ScheduledTaskItem, enabled: boolean) {
   const status = enabled ? 1 : 0
@@ -95,20 +113,9 @@ onMounted(() => void loadList())
             placeholder="按任务分组筛选"
             clearable
             style="width: 180px"
-            @keyup.enter="
-              page = 1
-              loadList()
-            "
+            @keyup.enter="searchTasks"
           />
-          <el-button
-            type="primary"
-            :icon="Search"
-            @click="
-              page = 1
-              loadList()
-            "
-            >查询</el-button
-          >
+          <el-button type="primary" :icon="Search" @click="searchTasks">查询</el-button>
         </div>
       </div>
       <div class="mc-card__body">
@@ -144,10 +151,7 @@ onMounted(() => void loadList())
                 inline-prompt
                 active-text="启用"
                 inactive-text="停用"
-                @change="
-                  (v: boolean | string | number) =>
-                    handleToggle(row as ScheduledTaskItem, v === true || v === 'true' || v === 1)
-                "
+                @change="handleStatusChange(row as ScheduledTaskItem, $event)"
               />
             </template>
           </el-table-column>
@@ -161,10 +165,7 @@ onMounted(() => void loadList())
             layout="total, sizes, prev, pager, next, jumper"
             background
             @current-change="loadList"
-            @size-change="
-              page = 1
-              loadList()
-            "
+            @size-change="searchTasks"
           />
         </div>
         <el-empty v-if="!loading && !list.length" description="暂无定时任务" :image-size="72" />

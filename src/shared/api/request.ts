@@ -65,7 +65,13 @@ function tryRefreshToken(): Promise<string | null> {
 
 function forceLogout() {
   clearAuth()
-  window.location.href = '/login'
+  // 已在登录页/根路径时禁止整页跳转：对相同 URL 赋值 location 会触发 reload。
+  // 若 401 源是"匿名访问被安全链拒绝"而非"会话过期"，跳转会形成 ~150ms 一次的无休止
+  // reload 循环（登录页 /public/statistics 401 曾触发此死循环），故仅非登录页才回跳。
+  const pathname = window.location.pathname
+  if (pathname !== '/' && !pathname.startsWith('/login')) {
+    window.location.href = '/login'
+  }
 }
 
 // 业务 401：登录/修改密码等接口返回 401 表示"凭据有误"而非"令牌过期"，
@@ -90,7 +96,15 @@ request.interceptors.response.use(
       const url: string | undefined = error.config?.url
       // 401：优先用 refreshToken 换新令牌并原样重试一次；刷新失败才回登录页。
       // 业务 401（登录/修改密码等凭据有误）不在此列，见 isBusiness401。
+      // 匿名请求（未携带 Authorization）的 401 表示该接口本身不可匿名访问（如设计为公开、
+      // 但后端白名单尚未放行的 /public/**），并非"令牌过期"：一律下抛交由调用方 catch
+      // 静默处理，禁止走刷新/登出——否则登录页对这类 401 的 forceLogout 会整页 reload，
+      // 形成无休止刷新死循环。
       if (status === 401 && !isBusiness401(url)) {
+        const hadToken = Boolean(error.config?.headers?.Authorization)
+        if (!hadToken) {
+          return Promise.reject(error)
+        }
         return tryRefreshToken().then((token) => {
           if (!token) {
             forceLogout()

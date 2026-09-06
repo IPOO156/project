@@ -140,6 +140,24 @@ async function loadAnnouncements() {
   }
 }
 
+/**
+ * 公告筛选查询：回到第 1 页并重新加载（查询 / 切换分页大小共用）。
+ * 模板禁止多语句内联表达式（Vue 编译器会将换行当作空白，导致
+ * 多行无分号的 `page = 1\nloadAnnouncements()` 解析失败、模块 500），
+ * 故统一抽为具名函数，模板仅 `@click="searchAnnouncements"` 引用。
+ */
+function searchAnnouncements() {
+  page.value = 1
+  void loadAnnouncements()
+}
+
+/** 重置公告筛选条件并回到第 1 页重新加载 */
+function resetAnnouncementFilters() {
+  announcementFilters.targetType = ''
+  announcementFilters.status = ''
+  searchAnnouncements()
+}
+
 const annDialog = reactive({
   visible: false,
   saving: false,
@@ -294,25 +312,8 @@ onMounted(() => {
               </el-select>
             </el-form-item>
             <el-form-item>
-              <el-button
-                type="primary"
-                @click="
-                  page = 1
-                  loadAnnouncements()
-                "
-                >查询</el-button
-              >
-              <el-button
-                :icon="RefreshCw"
-                @click="
-                  announcementFilters.targetType = ''
-                  announcementFilters.status = ''
-                  page = 1
-                  loadAnnouncements()
-                "
-              >
-                重置
-              </el-button>
+              <el-button type="primary" @click="searchAnnouncements">查询</el-button>
+              <el-button :icon="RefreshCw" @click="resetAnnouncementFilters">重置</el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -376,10 +377,7 @@ onMounted(() => {
                 layout="total, sizes, prev, pager, next, jumper"
                 background
                 @current-change="loadAnnouncements"
-                @size-change="
-                  page = 1
-                  loadAnnouncements()
-                "
+                @size-change="searchAnnouncements"
               />
             </div>
             <el-empty

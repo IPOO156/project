@@ -70,7 +70,8 @@ const selectedTemplateId = ref<number | undefined>(undefined)
 async function loadTemplates() {
   templatesLoading.value = true
   try {
-    templates.value = await getTeacherExportTemplates()
+    const res = await getTeacherExportTemplates()
+    templates.value = res.list ?? []
   } catch {
     templates.value = []
   } finally {
