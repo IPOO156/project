@@ -192,18 +192,20 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  function logout() {
-    // 通知后端使令牌失效（fire-and-forget，本地登出不依赖其成功）。
+  async function logout() {
+    // 通知后端使令牌失效。
     // 请求拦截器在微任务中异步读取 token，故必须先 getToken() 快照并作为显式
     // Authorization 传给 apiLogout —— 否则 clearAuth 后请求变匿名，/auth/logout
-    // 会返回 401，令牌在服务端也不会真正失效（登录页曾因此多一条 401 资源错误日志）。
-    const pendingLogout = apiLogout(getToken() ?? undefined).catch(() => {})
+    // 会返回 401，令牌在服务端也不会真正失效。
+    const tokenSnapshot = getToken()
+    try {
+      await apiLogout(tokenSnapshot)
+    } catch {}
     token.value = ''
     userInfo.value = null
     cachedAvatar.value = undefined
     clearAuth()
     localStorage.removeItem(AVATAR_CACHE_KEY)
-    void pendingLogout
     // 登出时清理已访问 tab（防止跨账号污染）
     // tabsStore 必须延迟获取：避免 user store 初始化时 tabs store 未注册
     try {

@@ -178,16 +178,14 @@ function handleDeleteGoal(goal: any) {
   if (props.planId == null) return
   const planId = props.planId
   confirmDelete('确定删除该目标吗？其下行动与里程碑将被一并删除。', () =>
-    deleteCareerGoal(planId, goal.id),
-  )
+    deleteCareerGoal(planId, goal.id),  )
 }
 
 function handleDeleteAction(action: any) {
   if (props.planId == null) return
   const planId = props.planId
   confirmDelete('确定删除该行动吗？其下里程碑将被一并删除。', () =>
-    deleteCareerAction(planId, action.id),
-  )
+    deleteCareerAction(planId, action.id),  )
 }
 
 function handleDeleteMilestone(milestone: any) {

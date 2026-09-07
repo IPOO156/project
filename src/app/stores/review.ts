@@ -16,44 +16,31 @@ export const useReviewStore = defineStore('review', () => {
   const typeRecords = ref<Record<string, ReviewRecord[]>>({})
   const loading = ref(false)
 
-  /** 加载全部审核记录（对接 GET /activities，接口异常回退 Mock） */
-  async function fetchAll(filters?: ReviewFilters): Promise<ReviewRecord[]> {
-    loading.value = true
-    try {
-      const params: Record<string, any> = {}
-      if (filters?.keyword) params.keyword = filters.keyword
-      if (filters?.status) params.status = Number(filters.status)
-      const activities = await getActivities(params)
-      const mapped = activities.map((a: any) => ({
-        id: a.id,
-        type: a.type || '',
-        typeLabel: a.typeLabel || '',
-        title: a.text || a.title || '',
-        submitDate: a.time || '',
-        semester: a.semester || '',
-        status: a.status || 'pending',
-        proofMaterials: [],
-      }))
-      allRecords.value = mapped
-      if (filters)
-        return allRecords.value.filter((r) => !filters.keyword || r.title.includes(filters.keyword))
-      return allRecords.value
-    } finally {
-      loading.value = false
-    }
-  }
+  let pendingFetch: Promise<ReviewRecord[]> | null = null
+  let lastFullFetchAt = 0
+  const CACHE_TTL_MS = 60_000
+  const pendingByType = new Map<string, Promise<ReviewRecord[]>>()
 
-  /** 按类型加载审核记录（对接 /activities，按类型过滤） */
-  async function fetchByType(
-    type: string,
-    _filters?: Record<string, any>,
-  ): Promise<ReviewRecord[]> {
+  /** 加载全部审核记录（对接 GET /activities，接口异常回退 Mock） */
+  async function fetchAll(filters?: ReviewFilters, force = false): Promise<ReviewRecord[]> {
+    if (pendingFetch) return pendingFetch
+    const isFiltered = !!(filters?.keyword || filters?.status)
+    if (
+      !force &&
+      !isFiltered &&
+      Date.now() - lastFullFetchAt < CACHE_TTL_MS &&
+      allRecords.value.length > 0
+    ) {
+      return allRecords.value
+    }
     loading.value = true
-    try {
-      const activities = await getActivities()
-      const records = activities
-        .filter((a: any) => a.type === type)
-        .map((a: any) => ({
+    pendingFetch = (async () => {
+      try {
+        const params: Record<string, any> = {}
+        if (filters?.keyword) params.keyword = filters.keyword
+        if (filters?.status) params.status = Number(filters.status)
+        const activities = await getActivities(params)
+        const mapped = activities.map((a: any) => ({
           id: a.id,
           type: a.type || '',
           typeLabel: a.typeLabel || '',
@@ -63,10 +50,61 @@ export const useReviewStore = defineStore('review', () => {
           status: a.status || 'pending',
           proofMaterials: [],
         }))
+        allRecords.value = mapped
+        if (!isFiltered) lastFullFetchAt = Date.now()
+        if (filters) {
+          return allRecords.value.filter(
+            (r) => !filters.keyword || r.title.includes(filters.keyword),
+          )
+}
+        return allRecords.value
+      } finally {
+        loading.value = false
+      }
+    })()
+    try {
+      return await pendingFetch
+    } finally {
+      pendingFetch = null
+    }
+  }
+
+  /** 按类型加载审核记录（对接 /activities，按类型过滤） */
+  async function fetchByType(
+    type: string,
+    _filters?: Record<string, any>,
+  ): Promise<ReviewRecord[]> {
+    // 同一个 type 已经在飞了，共享同一个 Promise
+    const existing = pendingByType.get(type)
+    if (existing) return existing
+
+    loading.value = true
+    const task = (async () => {
+      try {
+        const activities = await getActivities()
+        return activities
+          .filter((a: any) => a.type === type)
+          .map((a: any) => ({
+            id: a.id,
+            type: a.type || '',
+            typeLabel: a.typeLabel || '',
+            title: a.text || a.title || '',
+            submitDate: a.time || '',
+            semester: a.semester || '',
+            status: a.status || 'pending',
+            proofMaterials: [],
+          }))
+      } finally {
+        loading.value = false
+      }
+    })()
+    pendingByType.set(type, task)
+    try {
+      const records = await task
       typeRecords.value = { ...typeRecords.value, [type]: records }
       return records
     } finally {
-      loading.value = false
+      pendingByType.delete(type)
     }
   }
 

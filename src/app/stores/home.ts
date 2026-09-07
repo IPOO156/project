@@ -10,14 +10,28 @@ export const useHomeStore = defineStore('home', () => {
   const data = ref<any>(null)
   const loading = ref(false)
 
-  async function fetchDashboard(): Promise<void> {
+  let pendingFetch: Promise<void> | null = null
+  let lastFetchedAt = 0
+  const CACHE_TTL_MS = 60_000
+
+  async function fetchDashboard(force = false): Promise<void> {
+    if (pendingFetch) return pendingFetch
+    if (!force && Date.now() - lastFetchedAt < CACHE_TTL_MS && data.value) return
     loading.value = true
+    pendingFetch = (async () => {
+      try {
+        data.value = await getHomeDashboard()
+        lastFetchedAt = Date.now()
+      } catch {
+        data.value = null
+      } finally {
+        loading.value = false
+      }
+    })()
     try {
-      data.value = await getHomeDashboard()
-    } catch {
-      data.value = null
+      await pendingFetch
     } finally {
-      loading.value = false
+      pendingFetch = null
     }
   }
 

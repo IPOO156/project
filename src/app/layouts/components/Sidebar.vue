@@ -44,8 +44,8 @@ function handleMenuSelect(index: string) {
   router.push(index)
 }
 
-function handleSwitchToStudent() {
-  userStore.logout()
+async function handleSwitchToStudent() {
+  await userStore.logout()
   router.push('/login')
 }
 </script>

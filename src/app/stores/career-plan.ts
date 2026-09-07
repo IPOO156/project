@@ -20,12 +20,26 @@ export const useCareerPlanStore = defineStore('career-plan', () => {
   /** AI 短板分析结果（null = 尚未分析） */
   const aiAnalysis = ref<CareerAnalysis | null>(null)
 
-  async function fetchPlans(): Promise<void> {
+  let pendingFetch: Promise<void> | null = null
+  let lastFetchedAt = 0
+  const CACHE_TTL_MS = 60_000
+
+  async function fetchPlans(force = false): Promise<void> {
+    if (pendingFetch) return pendingFetch
+    if (!force && Date.now() - lastFetchedAt < CACHE_TTL_MS && plans.value.length > 0) return
     loading.value = true
+    pendingFetch = (async () => {
+      try {
+        plans.value = await getCareerPlans()
+        lastFetchedAt = Date.now()
+      } finally {
+        loading.value = false
+      }
+    })()
     try {
-      plans.value = await getCareerPlans()
+      await pendingFetch
     } finally {
-      loading.value = false
+      pendingFetch = null
     }
   }
 

@@ -25,16 +25,35 @@ export const useArchiveStore = defineStore('archive', () => {
   const profileData = ref<any>(null)
   const loading = ref(false)
 
+  // ── 去重：pending 防并发重入，lastFetchedAt 防跨页冗余 ──
+  let pendingFetch: Promise<void> | null = null
+  let pendingTimeline: Promise<void> | null = null
+  let lastArchiveFetchAt = 0
+  let lastTimelineFetchAt = 0
+  const CACHE_TTL_MS = 60_000
+
   /** 从后端 /profile/info 拉取画像数据（失败回退 Mock） */
-  async function fetchArchive(): Promise<void> {
+  async function fetchArchive(force = false): Promise<void> {
+    if (pendingFetch) return pendingFetch
+    if (!force && Date.now() - lastArchiveFetchAt < CACHE_TTL_MS && dimensions.value.length > 0) {
+      return
+    }
     loading.value = true
+    pendingFetch = (async () => {
+      try {
+        const profile = await getProfileInfo()
+        applyProfileInfo(profile)
+        lastArchiveFetchAt = Date.now()
+      } catch {
+        await fetchArchiveMock()
+      } finally {
+        loading.value = false
+      }
+    })()
     try {
-      const profile = await getProfileInfo()
-      applyProfileInfo(profile)
-    } catch {
-      await fetchArchiveMock()
+      await pendingFetch
     } finally {
-      loading.value = false
+      pendingFetch = null
     }
   }
 
@@ -112,11 +131,23 @@ export const useArchiveStore = defineStore('archive', () => {
    * 单一数据源：复用 api 层 getTimelineEvents 的统一映射（eventType 1-6 → TimelineNode.type）
    * 成功写入 timelineEvents；失败置空，不阻塞页面渲染。
    */
-  async function fetchTimeline(): Promise<void> {
+  async function fetchTimeline(force = false): Promise<void> {
+    if (pendingTimeline) return pendingTimeline
+    if (!force && Date.now() - lastTimelineFetchAt < CACHE_TTL_MS && timelineEvents.value.length > 0) {
+      return
+    }
+    pendingTimeline = (async () => {
+      try {
+        timelineEvents.value = await getTimelineEvents()
+        lastTimelineFetchAt = Date.now()
+      } catch {
+        timelineEvents.value = []
+      }
+    })()
     try {
-      timelineEvents.value = await getTimelineEvents()
-    } catch {
-      timelineEvents.value = []
+      await pendingTimeline
+    } finally {
+      pendingTimeline = null
     }
   }
 

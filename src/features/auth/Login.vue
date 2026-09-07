@@ -96,22 +96,31 @@ const isAdminLogin = computed(() => loginType.value === 'admin')
 const backendCaptcha = ref<{ key: string; image: string } | null>(null)
 const captchaFailed = ref(false)
 let captchaKey = ''
+let captchaPending: Promise<void> | null = null
 
 async function loadBackendCaptcha() {
-  captchaFailed.value = false
-  try {
-    const res = await getCaptcha()
-    if (res?.key && res?.image) {
-      backendCaptcha.value = res
-      captchaKey = res.key
-      loginForm.captcha = ''
-    } else {
+  if (captchaPending) return captchaPending
+  captchaPending = (async () => {
+    captchaFailed.value = false
+    try {
+      const res = await getCaptcha()
+      if (res?.key && res?.image) {
+        backendCaptcha.value = res
+        captchaKey = res.key
+        loginForm.captcha = ''
+      } else {
+        backendCaptcha.value = null
+        captchaFailed.value = true
+      }
+    } catch {
       backendCaptcha.value = null
       captchaFailed.value = true
     }
-  } catch {
-    backendCaptcha.value = null
-    captchaFailed.value = true
+  })()
+  try {
+    await captchaPending
+  } finally {
+    captchaPending = null
   }
 }
 

@@ -77,7 +77,9 @@ function forceLogout() {
 // 业务 401：登录/修改密码等接口返回 401 表示"凭据有误"而非"令牌过期"，
 // 此时只提示错误信息，禁止触发令牌刷新与强制登出（否则原密码错误会误登出用户）。
 function isBusiness401(url = '') {
-  return url.includes('/auth/login') || url.includes('/auth/password')
+  return (
+    url.includes('/auth/login') || url.includes('/auth/password') || url.includes('/auth/logout')
+  )
 }
 
 // 响应拦截器
@@ -105,17 +107,20 @@ request.interceptors.response.use(
         if (!hadToken) {
           return Promise.reject(error)
         }
-        return tryRefreshToken().then((token) => {
-          if (!token) {
-            forceLogout()
-            return Promise.reject(error)
-          }
-          error.config.headers = {
-            ...error.config.headers,
-            Authorization: `Bearer ${token}`,
-          }
-          return request(error.config)
-        })
+        if (((error.config as any).refreshCount || 0) < 3) {
+          return tryRefreshToken().then((token) => {
+            if (!token) {
+              forceLogout()
+              return Promise.reject(error)
+            }
+            ;(error.config as any).refreshCount = ((error.config as any).refreshCount || 0) + 1
+            error.config.headers = {
+              ...error.config.headers,
+              Authorization: `Bearer ${token}`,
+            }
+            return request(error.config)
+          })
+        }
       }
       switch (status) {
         case 401:
@@ -126,6 +131,8 @@ request.interceptors.response.use(
           } else if (url?.includes('/auth/password')) {
             // 修改密码/忘记密码返回 401 表示原密码或验证码有误：仅提示，不登出
             ElMessage.error(error.response.data?.message || '原密码错误或修改失败')
+          } else if (url?.includes('/auth/logout')) {
+            forceLogout()
           } else {
             forceLogout()
           }

@@ -39,20 +39,57 @@ export const useSubmissionStore = defineStore('submission', () => {
     }
   }
 
-  async function fetchRecords(filters?: SubmissionFilters): Promise<void> {
+  let pendingFetch: Promise<void> | null = null
+  let lastFetchedAt = 0
+  const CACHE_TTL_MS = 60_000
+
+  async function fetchRecords(filters?: SubmissionFilters, force = false): Promise<void> {
+    // ① 并发重入：已经有请求在飞，直接共享同一个 Promise
+    if (pendingFetch) return pendingFetch
+
+    const isFiltered = !!filters
+
+    // ② 跨页冗余：全量数据刚拉过且没过期，直接用缓存不发请求
+    if (
+      !force &&
+      !isFiltered &&
+      Date.now() - lastFetchedAt < CACHE_TTL_MS &&
+      records.value.length > 0
+    ) {
+      filteredRecords.value = records.value
+      return
+    }
+
     loading.value = true
     loadError.value = false
+
+    // ③ 把整段请求逻辑包进 IIFE，赋值给 pendingFetch
+    pendingFetch = (async () => {
+      try {
+        // 只有 filters 场景才发条件请求，否则只发一次全量
+        const raw = isFiltered ? await getSubmissionRecords(filters) : await getSubmissionRecords()
+        const data = applyWithdrawnMarks(raw)
+
+        filteredRecords.value = data
+
+        if (!isFiltered) {
+          // ④ 全量结果才写 records 缓存 + 记时间戳（TTL 靠这个）
+          records.value = data
+          lastFetchedAt = Date.now()
+        }
+      } catch {
+        // 异常已由全局请求拦截器统一提示；此处置错误态供页面展示，保留已加载记录不清空
+        loadError.value = true
+      } finally {
+        loading.value = false
+      }
+    })()
+
+    // ⑤ 调用方 await 同一个 Promise，完成后清理
     try {
-      if (records.value.length === 0)
-        records.value = applyWithdrawnMarks(await getSubmissionRecords())
-      filteredRecords.value = applyWithdrawnMarks(
-        filters ? await getSubmissionRecords(filters) : records.value,
-      )
-    } catch {
-      // 异常已由全局请求拦截器统一提示；此处置错误态供页面展示，保留已加载记录不清空
-      loadError.value = true
+      await pendingFetch
     } finally {
-      loading.value = false
+      pendingFetch = null
     }
   }
 
