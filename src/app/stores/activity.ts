@@ -17,17 +17,37 @@ export const useActivityStore = defineStore('activity', () => {
   const filteredActivities = ref<Activity[]>([])
   const loading = ref(false)
 
-  async function fetchActivities(filters?: ActivityFilters): Promise<void> {
+  let pendingFetch: Promise<void> | null = null
+  let lastFetchedAt = 0
+  const CACHE_TTL_MS = 60_000
+
+  async function fetchActivities(filters?: ActivityFilters, force = false): Promise<void> {
+    if (pendingFetch) return pendingFetch
+    if (
+      !force &&
+      !filters &&
+      Date.now() - lastFetchedAt < CACHE_TTL_MS &&
+      activities.value.length > 0
+    ) {
+      filteredActivities.value = activities.value
+      return
+    }
     loading.value = true
-    try {
-      // 全量数据（用于计数），首次加载后缓存
-      if (activities.value.length === 0) {
-        activities.value = await getActivities()
+    pendingFetch = (async () => {
+      try {
+        if (!filters && activities.value.length === 0) {
+          activities.value = await getActivities()
+          lastFetchedAt = Date.now()
+        }
+        filteredActivities.value = filters ? await getActivities(filters) : activities.value
+      } finally {
+        loading.value = false
       }
-      // 筛选数据
-      filteredActivities.value = filters ? await getActivities(filters) : activities.value
+    })()
+    try {
+      await pendingFetch
     } finally {
-      loading.value = false
+      pendingFetch = null
     }
   }
 

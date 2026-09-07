@@ -60,17 +60,39 @@ export const useNotificationStore = defineStore('notification', () => {
     return mergeNotifications(...resolved)
   }
 
-  async function fetchNotifications(filters?: NotificationFilters): Promise<void> {
+  let pendingFetch: Promise<void> | null = null
+  let lastFullFetchAt = 0
+  const CACHE_TTL_MS = 60_000
+
+  async function fetchNotifications(filters?: NotificationFilters, force = false): Promise<void> {
+    if (pendingFetch) return pendingFetch
+    const isFiltered = !!filters
+    if (
+      !force &&
+      !isFiltered &&
+      Date.now() - lastFullFetchAt < CACHE_TTL_MS &&
+      notifications.value.length > 0
+    ) {
+      filteredNotifications.value = notifications.value
+      return
+    }
     loading.value = true
     loadError.value = false
-    try {
-      if (notifications.value.length === 0) {
-        // 接口异常：不 mock、不伪造，置空态并标记加载失败（页面据此展示错误提示而非"暂无消息"）
-        notifications.value = await fetchMerged()
+    pendingFetch = (async () => {
+      try {
+        if (!isFiltered && notifications.value.length === 0) {
+          notifications.value = await fetchMerged()
+          lastFullFetchAt = Date.now()
+        }
+        filteredNotifications.value = filters ? await fetchMerged(filters) : notifications.value
+      } finally {
+        loading.value = false
       }
-      filteredNotifications.value = filters ? await fetchMerged(filters) : notifications.value
+    })()
+    try {
+      await pendingFetch
     } finally {
-      loading.value = false
+      pendingFetch = null
     }
   }
 

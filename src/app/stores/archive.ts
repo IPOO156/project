@@ -26,16 +26,35 @@ export const useArchiveStore = defineStore('archive', () => {
   const profileData = ref<any>(null)
   const loading = ref(false)
 
+  // ── 去重：pending 防并发重入，lastFetchedAt 防跨页冗余 ──
+  let pendingFetch: Promise<void> | null = null
+  let pendingTimeline: Promise<void> | null = null
+  let lastArchiveFetchAt = 0
+  let lastTimelineFetchAt = 0
+  const CACHE_TTL_MS = 60_000
+
   /** 从后端 /profile/info 拉取画像数据（失败回退 Mock） */
-  async function fetchArchive(): Promise<void> {
+  async function fetchArchive(force = false): Promise<void> {
+    if (pendingFetch) return pendingFetch
+    if (!force && Date.now() - lastArchiveFetchAt < CACHE_TTL_MS && dimensions.value.length > 0) {
+      return
+    }
     loading.value = true
+    pendingFetch = (async () => {
+      try {
+        const profile = await getProfileInfo()
+        applyProfileInfo(profile)
+        lastArchiveFetchAt = Date.now()
+      } catch {
+        await fetchArchiveMock()
+      } finally {
+        loading.value = false
+      }
+    })()
     try {
-      const profile = await getProfileInfo()
-      applyProfileInfo(profile)
-    } catch {
-      await fetchArchiveMock()
+      await pendingFetch
     } finally {
-      loading.value = false
+      pendingFetch = null
     }
   }
 
@@ -108,28 +127,45 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  /** 从后端 /profile/growth-timeline 拉取时间线（失败回退 Mock） */ async function fetchTimeline(): Promise<void> {
-    try {
-      const data = await getGrowthTimeline()
-      if (data.timeline && data.timeline.length > 0) {
-        timelineEvents.value = data.timeline.map((e: any) => ({
-          id: String(e.id),
-          semester: e.semesterName || '',
-          type: mapEventType(e.eventType),
-          title: e.eventName,
-          description: e.content || '',
-          date: e.eventAt,
-          recordId: e.sourceId ? String(e.sourceId) : undefined,
-        }))
-        return
-      }
-    } catch {
-      /* 回退 Mock */
+  /** 从后端 /profile/growth-timeline 拉取时间线（失败回退 Mock） */
+  async function fetchTimeline(force = false): Promise<void> {
+    if (pendingTimeline) return pendingTimeline
+    if (
+      !force &&
+      Date.now() - lastTimelineFetchAt < CACHE_TTL_MS &&
+      timelineEvents.value.length > 0
+    ) {
+      return
     }
+    pendingTimeline = (async () => {
+      try {
+        const data = await getGrowthTimeline()
+        if (data.timeline && data.timeline.length > 0) {
+          timelineEvents.value = data.timeline.map((e: any) => ({
+            id: String(e.id),
+            semester: e.semesterName || '',
+            type: mapEventType(e.eventType),
+            title: e.eventName,
+            description: e.content || '',
+            date: e.eventAt,
+            recordId: e.sourceId ? String(e.sourceId) : undefined,
+          }))
+          lastTimelineFetchAt = Date.now()
+          return
+        }
+      } catch {
+        /* 回退 Mock */
+      }
+      try {
+        timelineEvents.value = await getTimelineEvents()
+      } catch {
+        timelineEvents.value = []
+      }
+    })()
     try {
-      timelineEvents.value = await getTimelineEvents()
-    } catch {
-      timelineEvents.value = []
+      await pendingTimeline
+    } finally {
+      pendingTimeline = null
     }
   }
 

@@ -40,8 +40,8 @@ const roleLabel = computed(() => {
   return ''
 })
 
-function handleLogout() {
-  userStore.logout()
+async function handleLogout() {
+  await userStore.logout()
   router.push('/login')
 }
 
@@ -49,8 +49,8 @@ function openSidebar() {
   appStore.setSidebarCollapsed(false)
 }
 
-function switchToStudent() {
-  userStore.logout()
+async function switchToStudent() {
+  await userStore.logout()
   router.push('/login')
 }
 </script>

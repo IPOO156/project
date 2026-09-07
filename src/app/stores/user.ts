@@ -192,14 +192,15 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      await apiLogout()
+    } catch {}
     token.value = ''
     userInfo.value = null
     cachedAvatar.value = undefined
     clearAuth()
     localStorage.removeItem(AVATAR_CACHE_KEY)
-    // 通知后端使令牌失效（fire-and-forget，本地登出不依赖其成功）
-    apiLogout().catch(() => {})
     // 登出时清理已访问 tab（防止跨账号污染）
     // tabsStore 必须延迟获取：避免 user store 初始化时 tabs store 未注册
     try {
