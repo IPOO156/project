@@ -185,9 +185,12 @@ async function openEdit(item: FormTemplateItem) {
         }))
       : [emptyField()]
     form.status = detail.status ?? 1
-  } catch {
+  } catch (e) {
     dialogVisible.value = false
-    ElMessage.error('模板详情加载失败')
+    // 404 走拦截器静默降级（接口未实现），此处兜底提示；其余错误拦截器已统一提示
+    if ((e as { response?: { status?: number } })?.response?.status === 404) {
+      ElMessage.error('模板详情加载失败')
+    }
   } finally {
     loadingDetail.value = false
   }

@@ -60,7 +60,7 @@ async function handleAdd() {
     return
   }
   if (form.password !== form.confirmPassword) {
-    ElMessage.error('两次输入的密码不一致')
+    ElMessage.warning('两次输入的密码不一致')
     return
   }
   if (form.role === 'teacher' && !form.collegeId) {

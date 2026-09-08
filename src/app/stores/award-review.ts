@@ -48,13 +48,12 @@ export const useAwardReviewStore = defineStore('award-review', () => {
     }
   }
 
-  /** 重新提交奖项审核记录（对接 PUT /activities/{id}） */
+  /**
+   * 重新提交奖项审核记录（对接 PUT /activities/{id}）。
+   *  接口失败时错误向上抛出（拦截器已统一提示），禁止本地伪造 pending 状态与假成功提示
+   */
   async function resubmit(id: string, data: Record<string, any>): Promise<void> {
-    try {
-      await updateActivity(Number(id), 'award', data)
-    } catch {
-      /* 接口失败时本地更新 */
-    }
+    await updateActivity(Number(id), 'award', data)
     const idx = allRecords.value.findIndex((r) => r.id === id)
     if (idx >= 0) allRecords.value[idx] = { ...allRecords.value[idx], ...data, status: 'pending' }
     ElMessage.success('修改已保存，等待重新审核')

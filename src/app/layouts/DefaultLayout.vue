@@ -349,6 +349,11 @@ watch(isLoading, async (loading) => {
   }
 }
 
+// 夜间模式适配：加载遮罩改为页面底色系深色蒙层，避免白色高亮刺眼
+html.dark .layout__loading {
+  background: rgba(11, 17, 32, 0.72);
+}
+
 // =============================================================================
 // 2. 动画系统（ui-ux-pro-max skill §6：transform + opacity，150-280ms）
 //    所有动画使用合成层属性；时长统一从 $duration-* 取

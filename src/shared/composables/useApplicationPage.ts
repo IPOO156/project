@@ -12,11 +12,27 @@ import {
   mapDetailToForm,
   submitApplication,
 } from '@/shared/api/submission'
+import {
+  buildSemesterMonthDisabledDate,
+  isMonthInSemester,
+  sanitizeSemesterMonthPair,
+} from '@/shared/utils/semester'
 import { useCorrection } from './useCorrection'
 import { useFormDraft } from './useFormDraft'
 import { useFormEdit } from './useFormEdit'
 import { DRAFT_LOCAL_ID, useFormRecords } from './useFormRecords'
 import { useScoreIndicator } from './useScoreIndicator'
+
+/**
+ * 学期-日期联动配置：当表单存在「学期」+「月份日期」联动校验时启用。
+ * 启用后自动处理：日期选择器禁用非该学期月份、学期变化时清空不匹配日期、提交前校验。
+ */
+export interface SemesterMonthConfig {
+  /** 日期字段名，如 competitionDate / registerDate / publishDate / approveDate / startDate */
+  monthField: string
+  /** 日期字段中文名，用于错误提示，如「参赛时间」「注册时间」 */
+  monthFieldLabel: string
+}
 
 export function useApplicationPage(
   type: string,
@@ -24,6 +40,7 @@ export function useApplicationPage(
   emptyForm: () => Record<string, any>,
   draftKey?: string,
   requiredFields: { key: string; label: string }[] = [],
+  semesterMonthConfig?: SemesterMonthConfig,
 ) {
   const _u_router = useRouter()
   const _u_route = useRoute()
@@ -31,6 +48,25 @@ export function useApplicationPage(
 
   const form = reactive(emptyForm())
   const submitting = ref(false)
+
+  // ── 学期-日期联动 ──
+  // 配置了 semesterMonthConfig 时，自动处理：
+  // 1. disabledDate：日期选择器禁用非该学期的月份
+  // 2. watch 学期变化：若已选日期不在新学期内则清空
+  // 3. handleSubmit：提交前校验日期与学期是否匹配
+  const disabledDate = computed(() =>
+    semesterMonthConfig ? buildSemesterMonthDisabledDate(form.semester) : () => false,
+  )
+
+  if (semesterMonthConfig) {
+    const { monthField } = semesterMonthConfig
+    watch(
+      () => form.semester,
+      () => {
+        sanitizeSemesterMonthPair(form, monthField, 'semester')
+      },
+    )
+  }
   // autoRestore=false：申报表单默认空白，不自动回填草稿；修改草稿走下拉记录"编辑"回填
   // minDraftFields：必填字段未填齐前不建后端草稿（扩展表 NOT NULL 列会被后端 409 拒绝），仅本地兜底
   const { clearDraft, saveNow, setRecordId } = useFormDraft(effectiveDraftKey, form, {
@@ -135,6 +171,8 @@ export function useApplicationPage(
       }
       return true
     } catch {
+      // 查重服务失败不阻塞提交，但需明确告知用户本次未执行重复检测
+      ElMessage.warning('查重服务暂不可用，本次未执行重复检测')
       return true
     }
   }
@@ -193,7 +231,7 @@ export function useApplicationPage(
       // 清空表单后再次清草稿：防深 watcher（800ms 防抖）在 clearDraft 与 resetForm 之间把旧内容重写回 localStorage
       await clearDraft()
     } catch {
-      ElMessage.error('提交失败')
+      /* 拦截器已提示 */
     } finally {
       submitting.value = false
     }
@@ -209,6 +247,15 @@ export function useApplicationPage(
     if (missing.length > 0) {
       ElMessage.warning(`请填写必填项：${missing.map((f) => f.label).join('、')}`)
       return
+    }
+    // 学期-日期联动校验：若配置了 monthField，提交前校验日期是否在所选学期内
+    if (semesterMonthConfig) {
+      const { monthField, monthFieldLabel } = semesterMonthConfig
+      sanitizeSemesterMonthPair(form, monthField, 'semester')
+      if (!isMonthInSemester((form as any)[monthField], form.semester)) {
+        ElMessage.error(`${monthFieldLabel}与学期不匹配，请重新选择`)
+        return
+      }
     }
     const ok = await checkDuplicateBeforeSubmit({
       ...toRaw(form),
@@ -342,6 +389,7 @@ export function useApplicationPage(
   return {
     form,
     submitting,
+    disabledDate,
     records,
     isEditing,
     editingId,

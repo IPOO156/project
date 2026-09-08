@@ -296,4 +296,46 @@ function goTo(path: string) {
     text-align: center;
   }
 }
+
+// ─── 夜间模式适配 ───
+// 图标盒降为低透明度叠色；完整度项 hover 不再纯白、已填写项改暗绿色调；
+// 硬编码深色文字亮化保证可读
+html.dark {
+  .stat-card__value {
+    color: #f1f5f9;
+  }
+  .stat-card__icon {
+    background: rgba(255, 255, 255, 0.06);
+
+    // 彩色修饰类需重申，避免被基础覆盖的高特异性吞掉；夜间略提透明度保证可见
+    &--warning {
+      background: rgba(230, 162, 60, 0.14);
+    }
+    &--success {
+      background: rgba(103, 194, 58, 0.14);
+    }
+    &--primary {
+      background: rgba(64, 158, 255, 0.14);
+    }
+  }
+
+  .completeness-title {
+    color: #f1f5f9;
+  }
+
+  .completeness-item {
+    &:hover {
+      background: #1e293b;
+    }
+
+    &.is-filled {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.08);
+
+      &:hover {
+        border-color: rgba(16, 185, 129, 0.5);
+      }
+    }
+  }
+}
 </style>

@@ -44,6 +44,7 @@ const {
   createConversation,
   switchConversation,
   deleteConversation,
+  renameConversation,
   setFeedback,
 } = useAIChat()
 const { settings, update: updateSetting } = useChatSettings()
@@ -109,6 +110,11 @@ function handleDelete(id: number) {
   void deleteConversation(id)
 }
 
+/** 重命名历史对话 */
+function handleRename(id: number, title: string) {
+  void renameConversation(id, title)
+}
+
 /** 导出当前对话 */
 function handleExport(format: ExportFormat) {
   exportConversation(messages.value, userName.value, format)
@@ -120,14 +126,13 @@ function handleFeedback(msgId: string, type: 'useful' | 'useless') {
   ElMessage.success(type === 'useful' ? '感谢反馈，已记录为"有用"' : '感谢反馈，已记录为"无用"')
 }
 
-/** 复制消息内容（content 字段已为纯文本，富文本回复时由 richToPlain 生成） */
-function handleCopy(msgId: string) {
-  const msg = messages.value.find((m) => m.id === msgId)
-  if (!msg) return
-  navigator.clipboard
-    .writeText(msg.content)
-    .then(() => ElMessage.success('已复制到剪贴板'))
-    .catch(() => ElMessage.error('复制失败，请手动选择文本'))
+/** 复制消息内容（实际复制由 MessageBubble 完成，含 HTTP 降级；此处仅提示结果） */
+function handleCopy(_msgId: string, success: boolean) {
+  if (success) {
+    ElMessage.success('已复制到剪贴板')
+  } else {
+    ElMessage.error('复制失败，请手动选择文本复制')
+  }
 }
 
 /** 设置项更新（持久化由 useChatSettings 负责） */
@@ -163,6 +168,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       @newchat="handleNewChat"
       @switch="handleSwitch"
       @delete="handleDelete"
+      @rename="handleRename"
       @opensettings="showSettings = true"
     />
 

@@ -21,13 +21,20 @@ function emptyForm() {
 }
 
 const page = reactive(
-  useApplicationPage('scientificProject', '科研项目', emptyForm, 'scientific-project', [
-    { key: 'projectName', label: '项目名称' },
-    { key: 'projectLevel', label: '项目级别' },
-    { key: 'ranking', label: '排名/总人数' },
-    { key: 'startDate', label: '立项时间' },
-    { key: 'semester', label: '学期' },
-  ]),
+  useApplicationPage(
+    'scientificProject',
+    '科研项目',
+    emptyForm,
+    'scientific-project',
+    [
+      { key: 'projectName', label: '项目名称' },
+      { key: 'projectLevel', label: '项目级别' },
+      { key: 'ranking', label: '排名/总人数' },
+      { key: 'startDate', label: '立项时间' },
+      { key: 'semester', label: '学期' },
+    ],
+    { monthField: 'startDate', monthFieldLabel: '立项时间' },
+  ),
 )
 
 function handleEditClick(row: any) {
@@ -105,9 +112,15 @@ onMounted(() => {
         <el-form-item label="排名/总人数" required
           ><el-input v-model="page.form.ranking" placeholder="如：2/5"
         /></el-form-item>
-        <el-form-item label="立项时间" required
-          ><el-date-picker v-model="page.form.startDate" type="month"
-        /></el-form-item>
+        <el-form-item label="立项时间" required>
+          <el-date-picker
+            v-model="page.form.startDate"
+            type="month"
+            format="YYYY-MM"
+            value-format="YYYY-MM"
+            :disabled-date="page.disabledDate"
+          />
+        </el-form-item>
         <el-form-item label="学期" required>
           <el-select v-model="page.form.semester" class="form-select">
             <el-option

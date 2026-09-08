@@ -26,7 +26,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   feedback: [msgId: string, type: 'useful' | 'useless']
-  copy: [msgId: string]
+  copy: [msgId: string, success: boolean]
   retry: []
 }>()
 
@@ -63,7 +63,7 @@ watch(() => props.showThinking, scrollToBottom)
         :user-name="props.userName"
         :show-feedback="props.showFeedback"
         @feedback="(t) => emit('feedback', msg.id, t)"
-        @copy="emit('copy', msg.id)"
+        @copy="(success) => emit('copy', msg.id, success)"
       />
 
       <!-- AI 失败重试入口 -->

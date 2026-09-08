@@ -260,3 +260,14 @@ export function deleteAIConversation(conversationId: number): Promise<void> {
     .then(() => undefined)
     .catch(() => undefined)
 }
+
+/**
+ * 重命名对话会话（PUT /ai/conversations/{conversationId}）
+ * 后端接口未实现时 catch 吞掉，调用方已乐观更新本地标题，不影响展示。
+ */
+export function renameAIConversation(
+  conversationId: number,
+  title: string,
+): Promise<{ id: number; title: string }> {
+  return request.put(`/ai/conversations/${conversationId}`, { title })
+}

@@ -492,4 +492,54 @@ watch(
     border-radius: 4px;
   }
 }
+
+// ─── 夜间模式适配 ───
+// 表头/信息条降为填充层深色，分数徽章改低透明度叠色，
+// 硬编码深色文字亮化保证可读
+html.dark {
+  .score-indicator__th,
+  .calc-detail__th,
+  .indicator-tree__meta {
+    color: #a3a6ad;
+    background: #1a2433;
+    border-bottom-color: #334155;
+  }
+
+  .score-indicator__td,
+  .calc-detail__td {
+    color: #e2e8f0;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .score-indicator__score--high {
+    color: #85ce61;
+    background: rgba(103, 194, 58, 0.14);
+  }
+
+  .score-indicator__score--mid {
+    color: #ebb563;
+    background: rgba(230, 162, 60, 0.14);
+  }
+
+  .score-indicator__score--low {
+    color: #f78989;
+    background: rgba(245, 108, 108, 0.14);
+  }
+
+  .score-indicator__total-label {
+    color: #cbd5e1;
+  }
+
+  .calc-detail {
+    border-top-color: #334155;
+  }
+
+  .calc-detail__title {
+    color: #e2e8f0;
+  }
+
+  .calc-detail__meta {
+    color: #a3a6ad;
+  }
+}
 </style>

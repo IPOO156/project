@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, onMounted, reactive, watch } from 'vue'
+import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { AWARD_LEVELS, COMPETITION_TYPES, SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -8,11 +8,6 @@ import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
 import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
-import {
-  buildSemesterMonthDisabledDate,
-  isMonthInSemester,
-  sanitizeSemesterMonthPair,
-} from '@/shared/utils/semester'
 
 function emptyForm() {
   return {
@@ -26,23 +21,21 @@ function emptyForm() {
 }
 
 const page = reactive(
-  useApplicationPage('competitionStar', '竞赛之星报名', emptyForm, 'competition-star', [
-    { key: 'semester', label: '学期' },
-    { key: 'competitionName', label: '竞赛名称' },
-    { key: 'competitionDate', label: '参赛时间' },
-    { key: 'competitionLevel', label: '竞赛级别' },
-    { key: 'awardLevel', label: '获奖级别' },
-    { key: 'proofMaterials', label: '佐证材料' },
-  ]),
-)
-
-const disabledDate = computed(() => buildSemesterMonthDisabledDate(page.form.semester))
-
-watch(
-  () => page.form.semester,
-  () => {
-    sanitizeSemesterMonthPair(page.form, 'competitionDate', 'semester')
-  },
+  useApplicationPage(
+    'competitionStar',
+    '竞赛之星报名',
+    emptyForm,
+    'competition-star',
+    [
+      { key: 'semester', label: '学期' },
+      { key: 'competitionName', label: '竞赛名称' },
+      { key: 'competitionDate', label: '参赛时间' },
+      { key: 'competitionLevel', label: '竞赛级别' },
+      { key: 'awardLevel', label: '获奖级别' },
+      { key: 'proofMaterials', label: '佐证材料' },
+    ],
+    { monthField: 'competitionDate', monthFieldLabel: '参赛时间' },
+  ),
 )
 
 function handleEditClick(row: any) {
@@ -52,15 +45,6 @@ function handleEditClick(row: any) {
   page.form.awardLevel = row.awardLevel || ''
   page.form.semester = row.semester || ''
   page.handleEditClick(row)
-}
-
-async function handleSubmit() {
-  sanitizeSemesterMonthPair(page.form, 'competitionDate', 'semester')
-  if (!isMonthInSemester(page.form.competitionDate, page.form.semester)) {
-    ElMessage.error('参赛时间与学期不匹配，请重新选择')
-    return
-  }
-  return page.handleSubmit()
 }
 
 async function handleRemove(row: any) {
@@ -101,7 +85,7 @@ onMounted(() => {
       }
     "
     @save-draft="page.handleSaveDraft"
-    @submit="handleSubmit"
+    @submit="page.handleSubmit"
     @view="(row) => page.viewRecord(row)"
     @edit="(row) => handleEditClick(row)"
     @remove="(row) => handleRemove(row)"
@@ -131,7 +115,7 @@ onMounted(() => {
             type="month"
             format="YYYY-MM"
             value-format="YYYY-MM"
-            :disabled-date="disabledDate"
+            :disabled-date="page.disabledDate"
           />
         </el-form-item>
         <el-form-item label="竞赛级别" required>

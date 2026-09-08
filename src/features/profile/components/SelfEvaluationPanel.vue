@@ -28,7 +28,7 @@ async function save() {
     await archiveStore.fetchArchive()
     ElMessage.success('自我评价已保存')
   } catch {
-    ElMessage.error('保存失败，请稍后重试')
+    /* 拦截器已提示 */
   }
 }
 </script>
@@ -95,5 +95,18 @@ async function save() {
   color: #475569;
   line-height: 1.7;
   white-space: pre-wrap;
+}
+
+// 夜间模式适配：外层卡片边框降暗、标题与正文亮化保证可读
+html.dark {
+  .section-card {
+    border-color: #334155;
+  }
+  .section-head__title {
+    color: #f1f5f9;
+  }
+  .self-eval__text {
+    color: #cbd5e1;
+  }
 }
 </style>

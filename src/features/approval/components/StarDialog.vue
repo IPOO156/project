@@ -170,7 +170,7 @@ async function handleSave() {
     emit('saved', props.record.id)
     emit('update:modelValue', false)
   } catch {
-    // ElMessage 已在 store 中处理
+    /* 拦截器已提示 */
   } finally {
     saving.value = false
   }

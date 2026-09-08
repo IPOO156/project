@@ -95,6 +95,30 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
 
   const isSupported = computed(() => !!SpeechRecognitionCtor && isSecureContextForVoice.value)
 
+  /**
+   * 语音不可用的具体原因（用于给用户明确的修复指引）：
+   * - 'no-api'：浏览器不支持 Web Speech API（需 Chrome/Edge）
+   * - 'insecure'：非 HTTPS/localhost 环境，浏览器禁用麦克风 API
+   * - null：可用
+   */
+  const unsupportedReason = computed<'no-api' | 'insecure' | null>(() => {
+    if (!SpeechRecognitionCtor) return 'no-api'
+    if (!isSecureContextForVoice.value) return 'insecure'
+    return null
+  })
+
+  /** 不可用时的用户可读提示（含当前协议，便于排查） */
+  const unsupportedHint = computed(() => {
+    const protocol = typeof window !== 'undefined' ? window.location.protocol : 'unknown:'
+    if (unsupportedReason.value === 'no-api') {
+      return '当前浏览器不支持语音输入，请使用最新版 Chrome 或 Edge 浏览器'
+    }
+    if (unsupportedReason.value === 'insecure') {
+      return `语音输入需要 HTTPS 安全环境（当前协议：${protocol}），请联系管理员为站点配置 HTTPS 证书，或在 localhost 下使用`
+    }
+    return ''
+  })
+
   let recognition: SpeechRecognition | null = null
   let finalText = ''
   let manualStop = false
@@ -169,12 +193,12 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
 
   function start() {
     if (!SpeechRecognitionCtor) {
-      errorMsg.value = '当前浏览器不支持语音输入，请使用最新版 Chrome 或 Edge'
+      errorMsg.value = unsupportedHint.value || '当前浏览器不支持语音输入'
       options?.onError?.(errorMsg.value)
       return
     }
     if (!isSecureContextForVoice.value) {
-      errorMsg.value = '语音输入仅支持 HTTPS 或 localhost 环境，请切换到本地地址或安全协议'
+      errorMsg.value = unsupportedHint.value || '语音输入仅支持 HTTPS 或 localhost 环境'
       options?.onError?.(errorMsg.value)
       return
     }
@@ -231,6 +255,8 @@ export function useVoiceInput(options?: UseVoiceInputOptions) {
     isRecording,
     transcript,
     isSupported,
+    unsupportedReason,
+    unsupportedHint,
     errorMsg,
     start,
     stop,

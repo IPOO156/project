@@ -47,12 +47,21 @@ export interface RichContent {
 /** 富文本块（联合类型，按 type 分流渲染） */
 export type RichBlock = ParagraphBlock | ListBlock | StepsBlock | CardBlock
 
+/** 内联片段（支持加粗） */
+export interface InlineSegment {
+  text: string
+  /** 是否加粗（来自 markdown **text**） */
+  bold?: boolean
+}
+
 /** 段落块 */
 export interface ParagraphBlock {
   type: 'paragraph'
   text: string
-  /** 需高亮的关键词列表 */
+  /** 需高亮的关键词列表（知识库场景） */
   highlights?: string[]
+  /** 内联片段序列（markdown 解析场景，支持加粗；存在时优先于 text 渲染） */
+  segments?: InlineSegment[]
 }
 
 /** 列表块 */

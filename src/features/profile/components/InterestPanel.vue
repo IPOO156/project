@@ -58,7 +58,7 @@ async function saveInterest() {
     else await archiveStore.createInterest({ ...interestForm })
     interestDialogVisible.value = false
   } catch {
-    ElMessage.error('保存失败')
+    /* 拦截器已提示 */
   }
 }
 
@@ -195,6 +195,32 @@ function deleteInterest(id: number) {
 .interest-card__acts {
   display: flex;
   gap: 8px;
+}
+
+// 夜间模式适配：外层 section-card 边框降暗、标题亮化；嵌套盒降一档亮度
+html.dark {
+  .section-card {
+    border-color: #334155;
+  }
+
+  .section-head__title {
+    color: #f1f5f9;
+  }
+
+  .interest-card {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+  }
+  .interest-card__top {
+    color: #7fb0e0;
+  }
+  .interest-card__cat {
+    color: #f1f5f9;
+  }
 }
 
 @media (max-width: 900px) {

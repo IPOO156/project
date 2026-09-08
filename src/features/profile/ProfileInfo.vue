@@ -149,7 +149,8 @@ async function saveEdit() {
     email: formData.value.email,
     phone: formData.value.phone,
   })
-  // 政治面貌 / 学生状态仅在用户改动时提交
+  // 政治面貌 / 学生状态仅在用户改动时提交；失败时拦截器已提示，
+  // 此处直接终止保存流程，禁止继续执行后续「已保存」造成成败提示并存
   try {
     if (formData.value.politicalStatus && formData.value.politicalStatus !== a.politicalStatus) {
       await updatePoliticalStatus(formData.value.politicalStatus)
@@ -158,7 +159,7 @@ async function saveEdit() {
       await updateStudentStatus(formData.value.studentStatus)
     }
   } catch {
-    ElMessage.error('学籍信息保存失败')
+    return
   }
   isEditing.value = false
   // 重新拉取 /profile/info，保证展示标签与后端一致
@@ -245,7 +246,7 @@ async function handleExportResume() {
             <p class="stat-card__label">获奖总数</p>
             <p class="stat-card__value">{{ totalAwardCount }}</p>
           </div>
-          <div class="stat-card__icon" style="background: #fef3e2; color: #d4a574">
+          <div class="stat-card__icon stat-card__icon--award">
             <Plus :size="20" />
           </div>
         </div>
@@ -267,7 +268,7 @@ async function handleExportResume() {
             <p class="stat-card__label">综合评分</p>
             <p class="stat-card__value">{{ dimAvg }}</p>
           </div>
-          <div class="stat-card__icon" style="background: #f0e6ff; color: #8b5cf6">
+          <div class="stat-card__icon stat-card__icon--score">
             <Lightbulb :size="20" />
           </div>
         </div>
@@ -484,6 +485,23 @@ async function handleExportResume() {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+
+  &--gpa {
+    background: #e8f0fe;
+    color: #4a7fb5;
+  }
+  &--award {
+    background: #fef3e2;
+    color: #d4a574;
+  }
+  &--course {
+    background: #e6f7ee;
+    color: #10b981;
+  }
+  &--score {
+    background: #f0e6ff;
+    color: #8b5cf6;
+  }
 }
 
 // 两列布局
@@ -615,5 +633,75 @@ async function handleExportResume() {
   position: absolute;
   left: -9999px;
   top: 0;
+}
+
+// ─── 夜间模式适配 ───
+// 盒子降亮度：页面级盒子与卡片同层（#0f172a），卡片内嵌套盒再暗一档（#1e293b），
+// 图标底改用低透明度叠色，避免实色浅底刺眼；硬编码深色文字同步亮化保证可读性
+html.dark {
+  .page-head {
+    border-bottom-color: #334155;
+  }
+  .page-head__title {
+    color: #f1f5f9;
+  }
+
+  .stat-card {
+    background: #0f172a;
+    border-color: #334155;
+
+    &:hover {
+      border-color: #475569;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    }
+  }
+  .stat-card__value {
+    color: #f1f5f9;
+  }
+  .stat-card__icon--gpa {
+    background: rgba(96, 165, 250, 0.14);
+    color: #7fb0e0;
+  }
+  .stat-card__icon--award {
+    background: rgba(212, 165, 116, 0.14);
+    color: #dbb68c;
+  }
+  .stat-card__icon--course {
+    background: rgba(16, 185, 129, 0.14);
+    color: #34d399;
+  }
+  .stat-card__icon--score {
+    background: rgba(139, 92, 246, 0.16);
+    color: #a78bfa;
+  }
+
+  .section-card {
+    border-color: #334155;
+  }
+  .section-head__title {
+    color: #f1f5f9;
+  }
+  .section-head__tag {
+    background: #1e293b;
+    color: #94a3b8;
+  }
+
+  .profile-top {
+    border-bottom-color: #334155;
+  }
+  .profile-top__name {
+    color: #f1f5f9;
+  }
+
+  .grade-item {
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .grade-item__num {
+    color: #f1f5f9;
+  }
+  .grade-item__lbl {
+    color: #64748b;
+  }
 }
 </style>

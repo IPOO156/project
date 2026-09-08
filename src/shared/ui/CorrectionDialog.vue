@@ -129,6 +129,11 @@ function handleBeforeClose(done: (cancel?: boolean) => void) {
     margin-bottom: 8px;
   }
 
+  // 夜间模式适配：变更对比框降为填充层深色
+  html.dark &__change {
+    background: #1e293b;
+  }
+
   &__field {
     font-weight: 600;
     font-size: 13px;

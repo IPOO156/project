@@ -259,21 +259,21 @@ watch(avgGrowth, (newVal) => {
   }
 }
 
-/* 夜间模式适配：增强卡片与背景的区分度 */
+/* 夜间模式适配：增强卡片与背景的区分度（明度整体下调，保持色相区分） */
 html.dark .summary-card:nth-child(1) {
-  background: #4a6270;
+  background: #2b3a43;
 }
 
 html.dark .summary-card:nth-child(2) {
-  background: #546b48;
+  background: #32422b;
 }
 
 html.dark .summary-card:nth-child(3) {
-  background: #7a643e;
+  background: #4a3d25;
 }
 
 html.dark .summary-card:nth-child(4) {
-  background: #5e4870;
+  background: #382c44;
 }
 
 html.dark .summary-card {

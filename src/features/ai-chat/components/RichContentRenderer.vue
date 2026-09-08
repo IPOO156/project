@@ -51,8 +51,18 @@ function cardSegments(block: CardBlock) {
     <template v-for="(block, i) in props.content.blocks" :key="i">
       <!-- 段落 -->
       <p v-if="block.type === 'paragraph'" class="rc__p">
-        <template v-for="(seg, j) in paragraphSegments(block)" :key="j">
-          <span :class="{ rc__hl: seg.isHighlight }">{{ seg.text }}</span>
+        <!-- markdown 解析场景：segments 支持内联加粗 -->
+        <template v-if="block.segments?.length">
+          <template v-for="(seg, j) in block.segments" :key="j">
+            <strong v-if="seg.bold" class="rc__strong">{{ seg.text }}</strong>
+            <span v-else>{{ seg.text }}</span>
+          </template>
+        </template>
+        <!-- 知识库场景：按 highlights 高亮 -->
+        <template v-else>
+          <template v-for="(seg, j) in paragraphSegments(block)" :key="j">
+            <span :class="{ rc__hl: seg.isHighlight }">{{ seg.text }}</span>
+          </template>
         </template>
       </p>
 
@@ -69,8 +79,8 @@ function cardSegments(block: CardBlock) {
         <div v-for="step in block.items" :key="step.num" class="rc__step">
           <span class="rc__step-num">{{ step.num }}</span>
           <span class="rc__step-body">
-            <strong class="rc__strong">{{ step.strong }}</strong>
-            <span> — {{ step.text }}</span>
+            <strong v-if="step.strong" class="rc__strong">{{ step.strong }}</strong>
+            <span>{{ step.strong ? ' — ' : '' }}{{ step.text }}</span>
           </span>
         </div>
       </div>

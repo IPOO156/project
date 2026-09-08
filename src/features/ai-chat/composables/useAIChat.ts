@@ -34,8 +34,10 @@ import {
   getAIConversationMessages,
   getAIConversations,
   regenerateAIMessage,
+  renameAIConversation,
   sendAIMessage,
 } from '@/shared/api/ai-chat'
+import { parseMarkdownToRichContent } from '../utils/richText'
 
 // 重新导出类型，保持旧的 `import type { ChatMessage } from './useAIChat'` 可用
 export type { ChatMessage, Conversation, MessageFeedback, RichContent }
@@ -143,10 +145,12 @@ export function useAIChat() {
     }
     const res: AISendMessageResult = await sendAIMessage(cid, text)
     lastAssistantMessageId = res.messageId
+    const richContent = parseMarkdownToRichContent(res.content)
     return {
       id: String(res.messageId),
       role: 'ai',
       content: res.content,
+      richContent,
       time: formatTime(new Date()),
     }
   }
@@ -176,10 +180,12 @@ export function useAIChat() {
     try {
       const res: AIRegenerateResult = await regenerateAIMessage(cid, messageId)
       lastAssistantMessageId = res.messageId
+      const richContent = parseMarkdownToRichContent(res.content)
       messages.value.push({
         id: String(res.messageId),
         role: 'ai',
         content: res.content,
+        richContent,
         time: formatTime(new Date()),
       })
       error.value = false
@@ -269,14 +275,19 @@ export function useAIChat() {
       const list: AIConversationMessage[] = detail.messages
       const lastAssistant = [...list].reverse().find((m) => m.role === 'assistant')
       lastAssistantMessageId = lastAssistant ? lastAssistant.id : null
-      messages.value = list.map((m) => ({
-        id: String(m.id),
-        role: m.role === 'assistant' ? ('ai' as const) : ('user' as const),
-        content: m.content,
-        time: formatTime(new Date(m.createdAt)),
-        // 回显已提交反馈（后端 MessageItem 补 feedback 字段后生效；未返回/未反馈为 null）
-        feedback: m.feedback ?? null,
-      }))
+      messages.value = list.map((m) => {
+        const isAi = m.role === 'assistant'
+        const richContent = isAi ? parseMarkdownToRichContent(m.content) : undefined
+        return {
+          id: String(m.id),
+          role: isAi ? ('ai' as const) : ('user' as const),
+          content: m.content,
+          richContent,
+          time: formatTime(new Date(m.createdAt)),
+          // 回显已提交反馈（后端 MessageItem 补 feedback 字段后生效；未返回/未反馈为 null）
+          feedback: m.feedback ?? null,
+        }
+      })
     } catch {
       messages.value = createWelcomeMessages()
     }
@@ -296,6 +307,25 @@ export function useAIChat() {
       currentConversationId.value = null
       lastAssistantMessageId = null
       messages.value = createWelcomeMessages()
+    }
+  }
+
+  /**
+   * 重命名历史对话（PUT /ai/conversations/{id}）
+   * 乐观更新本地标题；后端失败不回滚（接口未实现时静默降级）。
+   */
+  async function renameConversation(id: number, title: string) {
+    const conv = conversations.value.find((c) => c.id === id)
+    if (!conv) return
+    const trimmed = title.trim()
+    if (!trimmed) return
+    const oldTitle = conv.title
+    conv.title = trimmed
+    try {
+      await renameAIConversation(id, trimmed)
+    } catch {
+      // 后端未实现重命名接口时回滚本地标题，避免与服务端不一致
+      conv.title = oldTitle
     }
   }
 
@@ -329,6 +359,7 @@ export function useAIChat() {
     createConversation,
     switchConversation,
     deleteConversation,
+    renameConversation,
     setFeedback,
   }
 }

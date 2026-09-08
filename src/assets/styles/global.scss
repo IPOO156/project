@@ -184,6 +184,12 @@ html.dark {
       background: #64748b;
     }
   }
+
+  // 表格行 hover：fill-lighter 夜间回归暗色语义后与卡片底色过近，
+  // 单独提升一档亮度（fill 基础色）保持 hover 反馈可见
+  .el-table .el-table__row:hover > td.el-table__cell {
+    background-color: #1e293b;
+  }
 }
 
 // 输入框、文本域始终允许文本选择，即使父元素禁用了 user-select

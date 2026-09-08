@@ -137,6 +137,11 @@ const focusPassword = ref(false)
 const focusCaptcha = ref(false)
 const usernameInputRef = ref<{ input: HTMLInputElement } | null>(null)
 const passwordInputRef = ref<{ input: HTMLInputElement } | null>(null)
+const captchaInputRef = ref<{ input: HTMLInputElement } | null>(null)
+const forgotEmailInputRef = ref<{ input: HTMLInputElement } | null>(null)
+const forgotCodeInputRef = ref<{ input: HTMLInputElement } | null>(null)
+const forgotPasswordInputRef = ref<{ input: HTMLInputElement } | null>(null)
+const forgotConfirmInputRef = ref<{ input: HTMLInputElement } | null>(null)
 const isEntered = ref(false)
 const showCard = ref(false)
 
@@ -164,8 +169,16 @@ function checkCapsLock(event: KeyboardEvent) {
   capsLockOn.value = event.getModifierState?.('CapsLock') ?? false
 }
 async function handleLogin() {
-  if (!loginForm.username || !loginForm.password) {
-    ElMessage.warning('请输入用户名和密码')
+  // Enter 隐式提交不经过按钮禁用态，需在此兜底防止重复提交
+  if (loading.value || loginSuccess.value) return
+  if (!loginForm.username) {
+    ElMessage.warning('请输入用户名')
+    usernameInputRef.value?.input?.focus()
+    return
+  }
+  if (!loginForm.password) {
+    ElMessage.warning('请输入密码')
+    passwordInputRef.value?.input?.focus()
     return
   }
   if (isAdminLogin.value && !backendCaptcha.value) {
@@ -175,6 +188,7 @@ async function handleLogin() {
   }
   if (!loginForm.captcha) {
     ElMessage.warning('请输入验证码')
+    captchaInputRef.value?.input?.focus()
     return
   }
   loading.value = true
@@ -238,8 +252,10 @@ function openForgotDialog() {
 }
 
 async function handleSendResetEmail() {
+  if (forgotSending.value) return
   if (!forgotForm.email.trim()) {
     ElMessage.warning('请输入注册邮箱')
+    forgotEmailInputRef.value?.input?.focus()
     return
   }
   forgotSending.value = true
@@ -255,18 +271,22 @@ async function handleSendResetEmail() {
 }
 
 async function handleConfirmReset() {
+  if (forgotSubmitting.value) return
   const { email, verificationCode, newPassword, confirmPassword } = forgotForm
   if (!verificationCode.trim()) {
     ElMessage.warning('请输入邮箱收到的验证码')
+    forgotCodeInputRef.value?.input?.focus()
     return
   }
   const strength = validatePasswordStrength(newPassword)
   if (!strength.valid) {
     ElMessage.warning(strength.message)
+    forgotPasswordInputRef.value?.input?.focus()
     return
   }
   if (newPassword !== confirmPassword) {
-    ElMessage.warning('两次输入的新密码不一致')
+    ElMessage.warning('两次输入的密码不一致')
+    forgotConfirmInputRef.value?.input?.focus()
     return
   }
   forgotSubmitting.value = true
@@ -424,6 +444,7 @@ onUnmounted(() => {
                   >
                     <label class="login__floating-label">验证码</label>
                     <el-input
+                      ref="captchaInputRef"
                       v-model="loginForm.captcha"
                       placeholder=" "
                       :prefix-icon="Shield"
@@ -460,13 +481,14 @@ onUnmounted(() => {
                   忘记密码？
                 </button>
               </div>
+              <!-- native-type="submit"：使按钮成为表单默认提交按钮，Enter 键隐式提交与点击共用 @submit.prevent 一条链路 -->
               <el-button
                 type="primary"
                 size="large"
+                native-type="submit"
                 :loading="loading"
                 class="login__btn"
                 :class="{ 'login__btn--success': loginSuccess }"
-                @click="handleLogin"
               >
                 <span class="login__btn-text">
                   <template v-if="loginSuccess">登录成功，正在进入</template>
@@ -484,18 +506,30 @@ onUnmounted(() => {
     </section>
 
     <el-dialog v-model="forgotDialogVisible" title="忘记密码" width="420px" append-to-body>
-      <el-form v-if="forgotStep === 1" label-width="80px" @submit.prevent>
+      <!-- 单输入框表单：HTML 标准隐式提交原生支持 Enter 键提交，@submit.prevent 统一接管 -->
+      <el-form v-if="forgotStep === 1" label-width="80px" @submit.prevent="handleSendResetEmail">
         <el-form-item label="邮箱" required>
-          <el-input v-model="forgotForm.email" placeholder="请输入注册邮箱" />
+          <el-input
+            ref="forgotEmailInputRef"
+            v-model="forgotForm.email"
+            placeholder="请输入注册邮箱"
+          />
         </el-form-item>
         <p class="login__hint">验证码将发送到该邮箱，请确认邮箱可正常接收</p>
       </el-form>
-      <el-form v-else label-width="90px" @submit.prevent>
+      <el-form v-else label-width="90px" @submit.prevent="handleConfirmReset">
+        <!-- 隐藏原生 submit 按钮：多输入框表单须存在提交按钮才能触发 Enter 隐式提交（HTML 标准，四大浏览器行为一致） -->
+        <button type="submit" hidden tabindex="-1" aria-hidden="true"></button>
         <el-form-item label="验证码" required>
-          <el-input v-model="forgotForm.verificationCode" placeholder="邮箱收到的 6 位验证码" />
+          <el-input
+            ref="forgotCodeInputRef"
+            v-model="forgotForm.verificationCode"
+            placeholder="邮箱收到的 6 位验证码"
+          />
         </el-form-item>
         <el-form-item label="新密码" required>
           <el-input
+            ref="forgotPasswordInputRef"
             v-model="forgotForm.newPassword"
             type="password"
             show-password
@@ -504,6 +538,7 @@ onUnmounted(() => {
         </el-form-item>
         <el-form-item label="确认密码" required>
           <el-input
+            ref="forgotConfirmInputRef"
             v-model="forgotForm.confirmPassword"
             type="password"
             show-password

@@ -7,10 +7,9 @@ import type { SemesterItem, TeacherExportJob, TeacherExportTemplate } from '@/sh
  * 替代 admin 版单任务轮询 /admin/exports/{jobId}）、删除（DELETE /teacher/exports/{jobId}）、
  * 导出模板（GET /teacher/exports/templates）。
  * 研究数据导出（/admin/exports/research）无教师端等价接口，保留 admin。
- * 学院导入接口后端尚未实现，仍展示待后端就绪的占位。
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, FileDown, FlaskConical, Plus, Search, Trash2, Upload } from 'lucide-vue-next'
+import { Download, FileDown, FlaskConical, Plus, Search, Trash2 } from 'lucide-vue-next'
 
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useUserStore } from '@/app/stores/stores'
@@ -139,10 +138,9 @@ const pollingTimers = new Map<number, ReturnType<typeof setInterval>>()
 
 const statusOptions = ['全部', '已完成', '处理中', '失败']
 
-// ── 超管专属：添加学期 / 学院导入 / 可导年级 ──
+// ── 超管专属：添加学期 / 可导年级 ──
 const semesterDialogVisible = ref(false)
 const newSemester = ref('')
-const importDialogVisible = ref(false)
 const gradeSelection = ref<string[]>([])
 const gradeOptions = ['2024级', '2023级', '2022级', '2021级']
 
@@ -453,7 +451,6 @@ onUnmounted(() => {
           >
           <template v-if="isSuperAdmin">
             <el-button :icon="Plus" @click="semesterDialogVisible = true">手动添加学期</el-button>
-            <el-button :icon="Upload" @click="importDialogVisible = true">学院导入</el-button>
           </template>
         </div>
       </div>
@@ -552,22 +549,6 @@ onUnmounted(() => {
       <template #footer>
         <el-button @click="semesterDialogVisible = false">取消</el-button>
         <el-button type="primary">确定</el-button>
-      </template>
-    </el-dialog>
-
-    <el-dialog v-model="importDialogVisible" title="学院导入" width="450px">
-      <el-upload drag :auto-upload="false" accept=".xlsx,.xls">
-        <template #default>
-          <div class="upload-hint">
-            <Upload :size="40" class="upload-hint__icon" />
-            <p class="upload-hint__title">拖拽文件到此处，或点击上传</p>
-            <p class="upload-hint__desc">仅支持 .xlsx / .xls 格式</p>
-          </div>
-        </template>
-      </el-upload>
-      <template #footer>
-        <el-button @click="importDialogVisible = false">取消</el-button>
-        <el-button type="primary">开始导入</el-button>
       </template>
     </el-dialog>
 
@@ -709,22 +690,6 @@ onUnmounted(() => {
   }
   &__hint {
     margin-left: 8px;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-}
-.upload-hint {
-  padding: $spacing-xl;
-  &__icon {
-    color: var(--el-color-primary);
-    margin-bottom: $spacing-sm;
-  }
-  &__title {
-    font-size: 14px;
-    color: var(--el-text-color-primary);
-    margin-bottom: 4px;
-  }
-  &__desc {
     font-size: 12px;
     color: var(--el-text-color-secondary);
   }

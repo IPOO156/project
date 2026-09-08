@@ -102,12 +102,6 @@ export function submitCareerPlan(data: SubmitCareerPlanPayload): Promise<CareerP
         } as any)
         .then((res: any) => buildRecord(String(res.planId ?? nextId()), res)),
     )
-    .catch((err: any) => {
-      if (err instanceof Error && err.message.includes('未找到学期')) {
-        return Promise.reject(err)
-      }
-      return Promise.resolve(buildRecord(nextId()))
-    })
 }
 
 /** 保存职业规划草稿（对接 POST /profile/career-plans，isDraft=1） */

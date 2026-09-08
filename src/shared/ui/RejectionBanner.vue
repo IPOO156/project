@@ -62,4 +62,24 @@ const visible = ref(true)
   flex-shrink: 0;
   color: #a16207;
 }
+
+// 夜间模式适配：警告横幅降为低透明度琥珀叠色，文字亮化保证可读
+html.dark {
+  .rejection-banner {
+    background: rgba(251, 191, 36, 0.08);
+    border-color: rgba(251, 191, 36, 0.3);
+  }
+  .rejection-banner__icon {
+    color: #fbbf24;
+  }
+  .rejection-banner__title {
+    color: #fcd34d;
+  }
+  .rejection-banner__reason {
+    color: #fbbf24;
+  }
+  .rejection-banner__close {
+    color: #fbbf24;
+  }
+}
 </style>

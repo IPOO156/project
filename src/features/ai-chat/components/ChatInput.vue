@@ -32,6 +32,7 @@ const {
   isRecording,
   transcript,
   isSupported: voiceSupported,
+  unsupportedHint: voiceUnsupportedHint,
   toggle: toggleVoice,
 } = useVoiceInput({
   onFinal: (text) => {
@@ -113,7 +114,7 @@ function formatSize(bytes: number): string {
 
 function handleVoiceClick() {
   if (!voiceSupported.value) {
-    ElMessage.warning('当前环境不支持语音输入，请使用 HTTPS/localhost 下的最新版 Chrome 或 Edge')
+    ElMessage.warning(voiceUnsupportedHint.value)
     return
   }
   toggleVoice()
@@ -163,7 +164,7 @@ function handleVoiceClick() {
       <button
         class="ci__btn"
         :class="{ 'is-recording': isRecording }"
-        :title="voiceSupported ? '语音输入' : '当前环境不支持语音输入'"
+        :title="voiceSupported ? '语音输入' : voiceUnsupportedHint"
         @click="handleVoiceClick"
       >
         <Mic :size="18" />

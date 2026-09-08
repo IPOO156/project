@@ -56,7 +56,7 @@ export const useReviewStore = defineStore('review', () => {
           return allRecords.value.filter(
             (r) => !filters.keyword || r.title.includes(filters.keyword),
           )
-}
+        }
         return allRecords.value
       } finally {
         loading.value = false
@@ -108,13 +108,12 @@ export const useReviewStore = defineStore('review', () => {
     }
   }
 
-  /** 重新提交审核记录（对接 PUT /activities/{id}，6.3） */
+  /**
+   * 重新提交审核记录（对接 PUT /activities/{id}，6.3）。
+   *  接口失败时错误向上抛出（拦截器已统一提示），禁止本地伪造 pending 状态与假成功提示
+   */
   async function resubmit(id: string, data: Record<string, any>): Promise<void> {
-    try {
-      await updateActivity(Number(id), 'archive', data)
-    } catch {
-      /* 接口失败时本地更新 */
-    }
+    await updateActivity(Number(id), 'archive', data)
 
     const status = 'pending'
     const allIdx = allRecords.value.findIndex((r) => r.id === id)

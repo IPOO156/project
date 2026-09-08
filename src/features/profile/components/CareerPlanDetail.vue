@@ -68,8 +68,11 @@ async function fetchDetail() {
   loading.value = true
   try {
     detail.value = await getCareerPlanDetail(props.planId)
-  } catch {
-    ElMessage.error('详情加载失败')
+  } catch (e) {
+    // 404 走拦截器静默降级（接口未实现），此处兜底提示；其余错误拦截器已统一提示
+    if ((e as { response?: { status?: number } })?.response?.status === 404) {
+      ElMessage.error('详情加载失败')
+    }
     detail.value = null
   } finally {
     loading.value = false
@@ -178,14 +181,16 @@ function handleDeleteGoal(goal: any) {
   if (props.planId == null) return
   const planId = props.planId
   confirmDelete('确定删除该目标吗？其下行动与里程碑将被一并删除。', () =>
-    deleteCareerGoal(planId, goal.id),  )
+    deleteCareerGoal(planId, goal.id),
+  )
 }
 
 function handleDeleteAction(action: any) {
   if (props.planId == null) return
   const planId = props.planId
   confirmDelete('确定删除该行动吗？其下里程碑将被一并删除。', () =>
-    deleteCareerAction(planId, action.id),  )
+    deleteCareerAction(planId, action.id),
+  )
 }
 
 function handleDeleteMilestone(milestone: any) {

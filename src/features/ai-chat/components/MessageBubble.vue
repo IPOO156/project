@@ -9,6 +9,7 @@ import type { ChatMessage } from '../types'
  */
 import { Copy, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-vue-next'
 import { computed } from 'vue'
+import { richToPlain } from '../utils/richText'
 import RichContentRenderer from './RichContentRenderer.vue'
 
 const props = defineProps<{
@@ -21,7 +22,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   feedback: [type: 'useful' | 'useless']
-  copy: []
+  copy: [success: boolean]
 }>()
 
 const isAi = computed(() => props.message.role === 'ai')
@@ -34,16 +35,47 @@ const userInitial = computed(() => {
 
 const showActions = computed(() => isAi.value && props.showFeedback)
 
-async function handleCopy() {
-  try {
-    const text = props.message.richContent
-      ? props.message.content // content 已是 richToPlain 生成的纯文本摘要
-      : props.message.content
-    await navigator.clipboard.writeText(text)
-  } catch {
-    // 降级：不阻断，仍触发 copy 事件让父组件提示
+/**
+ * 复制到剪贴板（含 HTTP 环境降级方案）：
+ * 1. 优先 navigator.clipboard（需 HTTPS / localhost 安全上下文）
+ * 2. 降级 document.execCommand('copy') + 临时 textarea（HTTP 环境可用）
+ */
+function copyToClipboard(text: string): boolean {
+  // 优先现代 API
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text))
+    return true
   }
-  emit('copy')
+  return fallbackCopy(text)
+}
+
+/** execCommand 降级复制：创建临时 textarea 选中后执行 copy */
+function fallbackCopy(text: string): boolean {
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  textarea.style.top = '0'
+  textarea.style.left = '0'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+  try {
+    return document.execCommand('copy')
+  } catch {
+    return false
+  } finally {
+    document.body.removeChild(textarea)
+  }
+}
+
+async function handleCopy() {
+  // 富文本消息转纯文本（剥离 ** / ## 等 markdown 标记），普通消息直接用 content
+  const text = props.message.richContent
+    ? richToPlain(props.message.richContent)
+    : props.message.content
+  const success = copyToClipboard(text)
+  emit('copy', success)
 }
 </script>
 

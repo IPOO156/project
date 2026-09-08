@@ -72,7 +72,7 @@ export function useCorrection() {
       ElMessage.success('修改申请已提交')
       closeCorrection()
     } catch {
-      ElMessage.error('提交失败，请重试')
+      /* 拦截器已提示 */
     } finally {
       correctionSubmitting.value = false
     }

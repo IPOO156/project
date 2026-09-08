@@ -20,7 +20,7 @@ async function handleSubmit() {
     return
   }
   if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-    ElMessage.error('两次密码输入不一致')
+    ElMessage.warning('两次输入的密码不一致')
     return
   }
   const strength = validatePasswordStrength(passwordForm.newPassword)

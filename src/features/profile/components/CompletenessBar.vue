@@ -52,4 +52,18 @@ const BAR_COLOR = '#4a7fb5'
     flex-shrink: 0;
   }
 }
+
+// 夜间模式适配：盒子降为卡片层深色，文字亮化保证可读
+html.dark .completeness-bar {
+  background: #0f172a;
+  border-color: #334155;
+
+  &__label {
+    color: #94a3b8;
+  }
+
+  &__value {
+    color: #f1f5f9;
+  }
+}
 </style>

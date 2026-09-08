@@ -152,8 +152,10 @@ async function handleSubmit() {
     planForm.goals = []
     planForm.evidenceFileIds = []
     ElMessage.success('规划已提交')
-  } catch {
-    ElMessage.error('提交失败')
+  } catch (e) {
+    // 「未找到学期」为前端本地校验错误（未经拦截器），需就地明确提示；其余错误拦截器已提示
+    const msg = e instanceof Error ? e.message : ''
+    if (msg.includes('未找到学期')) ElMessage.warning(msg)
   } finally {
     loading.value = false
   }
@@ -695,6 +697,71 @@ onMounted(() => {
 @media (max-width: 900px) {
   .gd-two-col {
     grid-template-columns: 1fr;
+  }
+}
+
+// ─── 夜间模式适配 ───
+// AI 诊断卡白天为橙白/绿白大面积浅色渐变，夜间改为低透明度叠色渐变，
+// chips 同步降亮度；硬编码深色文字亮化保证可读
+html.dark {
+  .gd-card--ai {
+    background: #0f172a;
+    border-color: #334155;
+  }
+
+  .card-title,
+  .ai-result__title {
+    color: #f1f5f9;
+  }
+
+  .ai-result__summary {
+    background: #1e293b;
+    color: #cbd5e1;
+  }
+
+  .ai-result__chip,
+  .ai-suggestion__chip {
+    color: #fdba74;
+    background: rgba(249, 115, 22, 0.1);
+    border-color: rgba(249, 115, 22, 0.3);
+  }
+
+  .ai-item {
+    background: linear-gradient(180deg, rgba(249, 115, 22, 0.09) 0%, rgba(249, 115, 22, 0.02) 60%);
+    border-color: rgba(249, 115, 22, 0.28);
+
+    &__head {
+      color: #fb923c;
+    }
+
+    &__desc {
+      color: #cbd5e1;
+    }
+
+    &__suggest {
+      color: #f1f5f9;
+    }
+  }
+
+  .ai-suggestion {
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.09) 0%, rgba(34, 197, 94, 0.02) 60%);
+    border-color: rgba(34, 197, 94, 0.28);
+
+    &__content {
+      color: #f1f5f9;
+    }
+
+    &__warn {
+      color: #fcd34d;
+      background: rgba(251, 191, 36, 0.1);
+      border-color: rgba(251, 191, 36, 0.3);
+    }
+
+    &__status {
+      color: #93c5fd;
+      background: rgba(96, 165, 250, 0.1);
+      border-color: rgba(96, 165, 250, 0.3);
+    }
   }
 }
 </style>

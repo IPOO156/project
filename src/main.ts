@@ -1,4 +1,4 @@
-import ElementPlus from 'element-plus'
+import ElementPlus, { ElMessage } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
@@ -35,5 +35,16 @@ app.use(ElementPlus, { locale: zhCn })
 // 注入 router 实例到 tabs store（store 初始化在首次使用时惰性执行，
 // 此时 router 已通过 app.use(router) 注册完毕，无需等待组件渲染）
 initTabsRouter(router)
+
+// ── 全局错误兜底（CLAUDE.md 3.4：异常需日志记录，不向用户暴露技术细节）──
+// 组件渲染错误统一捕获：记录日志并给出友好提示
+app.config.errorHandler = (err) => {
+  console.error('[GlobalError]', err)
+  ElMessage.error('页面出现异常，请刷新重试')
+}
+// 未处理的 Promise rejection 仅记录日志（请求层 rejection 已由拦截器提示，此处避免重复弹窗）
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('[UnhandledRejection]', e.reason)
+})
 
 app.mount('#app')

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, onMounted, reactive, watch } from 'vue'
+import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { SEMESTER_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -8,11 +8,6 @@ import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
 import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
-import {
-  buildSemesterMonthDisabledDate,
-  isMonthInSemester,
-  sanitizeSemesterMonthPair,
-} from '@/shared/utils/semester'
 
 function emptyForm() {
   return {
@@ -26,23 +21,21 @@ function emptyForm() {
 }
 
 const page = reactive(
-  useApplicationPage('softwareCopyright', '软件著作权申报', emptyForm, 'software-copyright', [
-    { key: 'softName', label: '软著名称' },
-    { key: 'issuer', label: '颁发单位' },
-    { key: 'ranking', label: '排名/总人数' },
-    { key: 'approveDate', label: '获批时间' },
-    { key: 'semester', label: '学期' },
-    { key: 'proofMaterials', label: '证明材料' },
-  ]),
-)
-
-const disabledDate = computed(() => buildSemesterMonthDisabledDate(page.form.semester))
-
-watch(
-  () => page.form.semester,
-  () => {
-    sanitizeSemesterMonthPair(page.form, 'approveDate', 'semester')
-  },
+  useApplicationPage(
+    'softwareCopyright',
+    '软件著作权申报',
+    emptyForm,
+    'software-copyright',
+    [
+      { key: 'softName', label: '软著名称' },
+      { key: 'issuer', label: '颁发单位' },
+      { key: 'ranking', label: '排名/总人数' },
+      { key: 'approveDate', label: '获批时间' },
+      { key: 'semester', label: '学期' },
+      { key: 'proofMaterials', label: '证明材料' },
+    ],
+    { monthField: 'approveDate', monthFieldLabel: '获批时间' },
+  ),
 )
 
 function handleEditClick(row: any) {
@@ -52,15 +45,6 @@ function handleEditClick(row: any) {
   page.form.approveDate = row.approveDate || ''
   page.form.semester = row.semester || ''
   page.handleEditClick(row)
-}
-
-async function handleSubmit() {
-  sanitizeSemesterMonthPair(page.form, 'approveDate', 'semester')
-  if (!isMonthInSemester(page.form.approveDate, page.form.semester)) {
-    ElMessage.error('获批时间与学期不匹配，请重新选择')
-    return
-  }
-  return page.handleSubmit()
 }
 
 async function handleRemove(row: any) {
@@ -102,7 +86,7 @@ onMounted(() => {
       }
     "
     @save-draft="page.handleSaveDraft"
-    @submit="handleSubmit"
+    @submit="page.handleSubmit"
     @view="(row) => page.viewRecord(row)"
     @edit="(row) => handleEditClick(row)"
     @remove="(row) => handleRemove(row)"
@@ -128,7 +112,7 @@ onMounted(() => {
             type="month"
             format="YYYY-MM"
             value-format="YYYY-MM"
-            :disabled-date="disabledDate"
+            :disabled-date="page.disabledDate"
           />
         </el-form-item>
         <el-form-item label="学期" required>

@@ -8,7 +8,8 @@ import type { Conversation } from '../types'
  * - 历史对话列表（active 高亮 + 左侧金条 + hover 删除）
  * - 底部用户信息 + 设置入口
  */
-import { MessageSquare, Plus, Settings, Sparkles, Trash2 } from 'lucide-vue-next'
+import { MessageSquare, Pencil, Plus, Settings, Sparkles, Trash2 } from 'lucide-vue-next'
+import { ref } from 'vue'
 
 const props = defineProps<{
   conversations: Conversation[]
@@ -22,12 +23,39 @@ const emit = defineEmits<{
   newchat: []
   switch: [id: number]
   delete: [id: number]
+  rename: [id: number, title: string]
   opensettings: []
 }>()
+
+/** 正在编辑的对话 id，null 表示无编辑 */
+const editingId = ref<number | null>(null)
+/** 编辑中的标题 */
+const editTitle = ref('')
 
 function handleDelete(e: MouseEvent, id: number) {
   e.stopPropagation()
   emit('delete', id)
+}
+
+/** 进入编辑模式 */
+function handleRenameStart(e: MouseEvent, conv: Conversation) {
+  e.stopPropagation()
+  editingId.value = conv.id
+  editTitle.value = conv.title
+}
+
+/** 提交重命名（回车或失焦） */
+function handleRenameConfirm(id: number) {
+  const title = editTitle.value.trim()
+  if (title && title !== props.conversations.find((c) => c.id === id)?.title) {
+    emit('rename', id, title)
+  }
+  editingId.value = null
+}
+
+/** 取消编辑（Esc） */
+function handleRenameCancel() {
+  editingId.value = null
 }
 
 /** 会话时间展示：优先最近消息时间，回退创建时间 */
@@ -79,11 +107,35 @@ function formatConvTime(conv: Conversation): string {
           :title="conv.title"
           @click="emit('switch', conv.id)"
         >
-          <span class="cs__item-title">{{ conv.title }}</span>
-          <span class="cs__item-time">{{ formatConvTime(conv) }}</span>
-          <button class="cs__item-del" title="删除" @click="handleDelete($event, conv.id)">
-            <Trash2 :size="13" />
-          </button>
+          <!-- 编辑模式：输入框 -->
+          <input
+            v-if="editingId === conv.id"
+            v-model="editTitle"
+            class="cs__item-input"
+            :placeholder="conv.title"
+            @click.stop
+            @keydown.enter="handleRenameConfirm(conv.id)"
+            @keydown.esc="handleRenameCancel"
+            @blur="handleRenameConfirm(conv.id)"
+          />
+          <!-- 非编辑模式：标题 + 时间 -->
+          <template v-else>
+            <span class="cs__item-title">{{ conv.title }}</span>
+            <span class="cs__item-time">{{ formatConvTime(conv) }}</span>
+          </template>
+          <!-- 操作按钮组 -->
+          <div class="cs__item-actions">
+            <button class="cs__item-btn" title="重命名" @click="handleRenameStart($event, conv)">
+              <Pencil :size="13" />
+            </button>
+            <button
+              class="cs__item-btn cs__item-btn--del"
+              title="删除"
+              @click="handleDelete($event, conv.id)"
+            >
+              <Trash2 :size="13" />
+            </button>
+          </div>
         </li>
       </ul>
     </div>
@@ -210,7 +262,7 @@ function formatConvTime(conv: Conversation): string {
   &__item {
     position: relative;
     padding: $spacing-sm $spacing-md;
-    padding-right: 32px;
+    padding-right: 60px;
     border-radius: $radius-base;
     cursor: pointer;
     transition: background $duration-fast $ease-standard;
@@ -239,6 +291,17 @@ function formatConvTime(conv: Conversation): string {
     }
   }
 
+  &__item-input {
+    width: 100%;
+    border: 1px solid var(--mc-accent);
+    border-radius: $radius-sm;
+    padding: 2px 6px;
+    font-size: $font-size-sm;
+    background: var(--el-bg-color);
+    outline: none;
+    color: var(--el-text-color-primary);
+  }
+
   &__item-title {
     font-size: $font-size-sm;
     color: var(--el-text-color-primary);
@@ -252,11 +315,22 @@ function formatConvTime(conv: Conversation): string {
     color: var(--el-text-color-secondary);
   }
 
-  &__item-del {
+  &__item-actions {
     position: absolute;
-    right: 6px;
+    right: 4px;
     top: 50%;
     transform: translateY(-50%);
+    display: flex;
+    gap: 1px;
+    opacity: 0;
+    transition: opacity $duration-fast $ease-standard;
+  }
+
+  &__item:hover &__item-actions {
+    opacity: 1;
+  }
+
+  &__item-btn {
     width: 22px;
     height: 22px;
     border: none;
@@ -267,17 +341,17 @@ function formatConvTime(conv: Conversation): string {
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
     transition: all $duration-fast $ease-standard;
 
     &:hover {
+      background: var(--el-fill-color);
+      color: var(--mc-primary);
+    }
+
+    &--del:hover {
       background: rgba($color-danger, 0.1);
       color: $color-danger;
     }
-  }
-
-  &__item:hover &__item-del {
-    opacity: 1;
   }
 
   &__footer {

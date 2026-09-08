@@ -74,6 +74,16 @@ const emit = defineEmits<{
   border-radius: 6px;
   background: #fffbeb;
 }
+
+// 夜间模式适配：提示条目降为低透明度琥珀叠色
+html.dark .dup-list__item {
+  border-color: rgba(251, 191, 36, 0.3);
+  background: rgba(251, 191, 36, 0.08);
+
+  .dup-list__icon {
+    color: #fbbf24;
+  }
+}
 .dup-list__icon {
   color: #f59e0b;
   flex-shrink: 0;
