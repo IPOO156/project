@@ -141,33 +141,20 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  /**
+   * 更新联系信息（对接 PUT /profile/contact）。
+   *
+   * 注意：邮箱/手机号属于「档案联系信息」，与登录账号的注册邮箱不是同一份数据 ——
+   * 账号邮箱用于登录与找回密码，由后端在账号上维护，前端不提供修改入口。
+   * 因此这里只提交联系信息，**不回写 userInfo.email/phone**，避免把联系邮箱污染成账号邮箱
+   * （联系信息展示改由档案概览读取 archive store 的 /profile/info.contactInfo）。
+   * 接口失败向上抛出，由调用方决定是否提示「已保存」。
+   */
   async function updateUserInfo(partial: Partial<UserInfo>) {
-    const base = userInfo.value ?? ({ id: '', username: '' } as UserInfo)
-    const updated = { ...base, ...partial }
-    userInfo.value = updated
-    // 同步到后端（仅联系信息字段，对接 PUT /profile/contact），成功后用返回数据回填
-    try {
-      const res = await updateProfileContact({
-        email: partial.email || undefined,
-        phone: partial.phone || undefined,
-      })
-      if (res && userInfo.value) {
-        userInfo.value = {
-          ...userInfo.value,
-          email: res.email ?? userInfo.value.email,
-          phone: res.phone ?? userInfo.value.phone,
-          avatar: res.avatar ?? userInfo.value.avatar,
-        }
-      }
-    } catch {
-      /* 接口失败不阻塞本地保存 */
-    }
-    // 持久化到 localStorage
-    try {
-      localStorage.setItem('user_info_cache', JSON.stringify(userInfo.value))
-    } catch {
-      /* noop */
-    }
+    await updateProfileContact({
+      email: partial.email || undefined,
+      phone: partial.phone || undefined,
+    })
   }
 
   async function changePassword(payload: {

@@ -57,7 +57,12 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  /** 学籍/联系信息同步到 userStore（档案概览页「基本资料」的展示来源） */
+  /**
+   * 学籍信息同步到 userStore（档案概览页「基本资料」的展示来源）。
+   * 只同步学籍与头像：联系邮箱/手机号属 /profile/contact 的数据，展示直接读 profileData.contactInfo，
+   * 不写入 userInfo —— 否则会把「联系邮箱」覆盖到账号邮箱（userInfo.email）上，
+   * 用户误以为注册邮箱已改，忘记密码却仍提示「邮箱未注册」。
+   */
   function syncAcademicToUser(profile: any) {
     const a = profile?.academicInfo ?? {}
     const c = profile?.contactInfo ?? {}
@@ -71,8 +76,6 @@ export const useArchiveStore = defineStore('archive', () => {
       className: a.className ?? base.className,
       studentId: a.studentNo ?? base.studentId,
       college: a.collegeName ?? base.college,
-      email: c.email ?? base.email,
-      phone: c.phone ?? base.phone,
       avatar: c.avatar ?? base.avatar,
     })
   }
@@ -133,7 +136,11 @@ export const useArchiveStore = defineStore('archive', () => {
    */
   async function fetchTimeline(force = false): Promise<void> {
     if (pendingTimeline) return pendingTimeline
-    if (!force && Date.now() - lastTimelineFetchAt < CACHE_TTL_MS && timelineEvents.value.length > 0) {
+    if (
+      !force &&
+      Date.now() - lastTimelineFetchAt < CACHE_TTL_MS &&
+      timelineEvents.value.length > 0
+    ) {
       return
     }
     pendingTimeline = (async () => {
