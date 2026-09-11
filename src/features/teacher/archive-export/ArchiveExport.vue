@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SemesterItem, TeacherExportJob, TeacherExportTemplate } from '@/shared/types/teacher'
+import type { ExportJobItem, TeacherExportJob, TeacherExportTemplate } from '@/shared/types/teacher'
 /**
  * ArchiveExport - 档案导出
  *
@@ -12,38 +12,32 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, FileDown, FlaskConical, Plus, Search, Trash2 } from 'lucide-vue-next'
 
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { useUserStore } from '@/app/stores/stores'
 import {
   deleteTeacherExportJob,
   getExportJob,
-  getSemesters,
   getTeacherExportJobs,
   getTeacherExportTemplates,
   submitArchiveExport,
-  submitResearchExport,
 } from '@/shared/api/teacher'
-import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+import { usePollingTask } from '@/shared/composables/usePollingTask'
+import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import GradeImportPanel from './components/GradeImportPanel.vue'
+import ResearchExportDialog from './components/ResearchExportDialog.vue'
 
-const userStore = useUserStore()
-const { me } = useTeacherMe()
-const isSuperAdmin = computed(() => userStore.isSuperAdmin)
+// 以下四项能力按后端权限码判定（原先统一挂在 super_admin 上，而该角色不存在 → 对所有人生效为 false）
+const { hasPermission } = useTeacherAuthz()
+/** 研究数据导出（/admin/exports/research）：export:research */
+const canExportResearch = computed(() => hasPermission('export:research'))
+/** 成绩导入面板：grade:import */
+const canImportGrade = computed(() => hasPermission('grade:import'))
+/** 手动添加学期：semester:manage */
+const canManageSemester = computed(() => hasPermission('semester:manage'))
+/** 选择可导年级：export:manage（管理端导出配置） */
+const canChooseGrade = computed(() => hasPermission('export:manage'))
 
-const colleges = computed(() =>
-  (me.value?.scopes ?? [])
-    .filter((s) => s.scopeType === 2 && s.scopeId != null)
-    .map((s) => ({ id: s.scopeId, name: s.scopeName ?? `学院 ${s.scopeId}` })),
-)
-const majors = computed(() =>
-  (me.value?.scopes ?? [])
-    .filter((s) => s.scopeType === 3 && s.scopeId != null)
-    .map((s) => ({ id: s.scopeId, name: s.scopeName ?? `专业 ${s.scopeId}` })),
-)
-const classes = computed(() =>
-  (me.value?.scopes ?? [])
-    .filter((s) => s.scopeType === 4 && s.scopeId != null)
-    .map((s) => ({ id: s.scopeId, name: s.scopeName ?? `班级 ${s.scopeId}` })),
-)
+/** 组织范围下拉项（学院/专业/班级，来自 /auth/me 的 scopes） */
+const { colleges, majors, classes } = useScopeFilter()
 
 const filters = reactive({
   scope: '全校',
@@ -56,6 +50,9 @@ const filters = reactive({
 
 const scopeOptions = ['全校', '学院', '专业', '班级']
 const SCOPE_TYPE: Record<string, number> = { 全校: 1, 学院: 2, 专业: 3, 班级: 4 }
+
+/** 组织维度 → 学院/专业/班级下拉显隐（筛选栏） */
+const cascade = computed(() => scopeCascade(SCOPE_TYPE[filters.scope]))
 
 const exportTasks = ref<TeacherExportJob[]>([])
 const tasksLoading = ref(false)
@@ -134,7 +131,23 @@ const filteredTasks = computed(() => {
 })
 
 /** 研究数据导出任务单任务轮询（admin /admin/exports/{jobId}，无教师端等价接口，超管专属） */
-const pollingTimers = new Map<number, ReturnType<typeof setInterval>>()
+const researchPolling = usePollingTask<ExportJobItem>({
+  fetch: getExportJob,
+  getStatus: (job) => job.status,
+  onUpdate: (job, id) => {
+    const task = exportTasks.value.find((t) => t.exportJobId === id)
+    // 任务已从列表移除 → 终止轮询
+    if (!task) return false
+    task.status = job.status
+    task.statusLabel = job.statusLabel
+    task.downloadUrl = job.downloadUrl
+    return true
+  },
+  onFinish: (_id, ok) => {
+    if (ok) ElMessage.success('导出完成，可下载')
+    else ElMessage.error('导出失败')
+  },
+})
 
 const statusOptions = ['全部', '已完成', '处理中', '失败']
 
@@ -144,100 +157,14 @@ const newSemester = ref('')
 const gradeSelection = ref<string[]>([])
 const gradeOptions = ['2024级', '2023级', '2022级', '2021级']
 
-// ── 研究数据导出（/admin/exports/research）──
-const semesters = ref<SemesterItem[]>([])
-const loadingSemesters = ref(false)
+// ── 研究数据导出（/admin/exports/research）：弹窗已拆至 ResearchExportDialog.vue ──
 const researchDialogVisible = ref(false)
-const submittingResearch = ref(false)
 const submittingArchive = ref(false)
-const researchForm = reactive({
-  semesterId: undefined as number | undefined,
-  scope: '全校',
-  collegeId: undefined as number | undefined,
-  majorId: undefined as number | undefined,
-  classId: undefined as number | undefined,
-  grade: '',
-  // TODO 字段级选择需后端扩展导出接口参数
-  dataTypes: ['archives', 'scores'] as string[],
-  isAnonymized: true,
-  includeMetadata: true,
-})
 
-const RESEARCH_SCOPE_TYPE: Record<string, number> = {
-  全校: 1,
-  学院: 2,
-  专业: 3,
-  班级: 4,
-  年级: 6,
-}
-
-const DATA_TYPE_OPTIONS = [
-  { value: 'archives', label: '档案' },
-  { value: 'scores', label: '成绩' },
-  { value: 'audits', label: '审核' },
-  { value: 'ai', label: 'AI 分析' },
-  { value: 'career', label: '职业规划' },
-]
-
-function openResearch() {
-  researchForm.semesterId = semesters.value.find((s) => s.isCurrent === 1)?.value
-  researchDialogVisible.value = true
-}
-
-async function handleSubmitResearch() {
-  if (!researchForm.semesterId) {
-    ElMessage.warning('请选择学期')
-    return
-  }
-  if (!researchForm.dataTypes.length) {
-    ElMessage.warning('请至少选择一种数据类型')
-    return
-  }
-  let scopeId: number | undefined
-  if (researchForm.scope === '学院') scopeId = researchForm.collegeId
-  else if (researchForm.scope === '专业') scopeId = researchForm.majorId
-  else if (researchForm.scope === '班级') scopeId = researchForm.classId
-  if (researchForm.scope !== '全校' && researchForm.scope !== '年级' && !scopeId) {
-    ElMessage.warning(`请选择具体的${researchForm.scope}`)
-    return
-  }
-  if (researchForm.scope === '年级' && !researchForm.grade.trim()) {
-    ElMessage.warning('请填写年级，如 2023级')
-    return
-  }
-  submittingResearch.value = true
-  try {
-    const res = await submitResearchExport({
-      semesterId: researchForm.semesterId,
-      scopeType: RESEARCH_SCOPE_TYPE[researchForm.scope],
-      scopeId,
-      grade: researchForm.scope === '年级' ? researchForm.grade.trim() : undefined,
-      dataTypes: researchForm.dataTypes,
-      isAnonymized: researchForm.isAnonymized,
-      includeMetadata: researchForm.includeMetadata,
-    })
-    ElMessage.success(
-      `研究数据导出任务已创建（任务 ID: ${res.jobId}），预计 ${res.estimatedSeconds ?? 60} 秒完成`,
-    )
-    researchDialogVisible.value = false
-    exportTasks.value.unshift({
-      exportJobId: res.jobId,
-      templateName: '研究数据导出',
-      exportType: 'research',
-      status: res.status,
-      statusLabel: res.statusLabel,
-      totalCount: null,
-      successCount: null,
-      downloadUrl: null,
-      expireAt: null,
-      createdAt: new Date().toISOString(),
-    })
-    startPolling(res.jobId)
-  } catch {
-    /* 拦截器已提示 */
-  } finally {
-    submittingResearch.value = false
-  }
+/** 弹窗创建任务成功：入列表并启动进度轮询 */
+function handleResearchCreated(job: TeacherExportJob) {
+  exportTasks.value.unshift(job)
+  researchPolling.start(job.exportJobId)
 }
 
 async function handleExport(fileType: 'pdf' | 'xlsx') {
@@ -292,46 +219,14 @@ async function handleDeleteExport(row: TeacherExportJob) {
   }
 }
 
-// 研究数据导出任务单任务轮询（admin /admin/exports/{jobId}，无教师端等价接口）
-function startPolling(jobId: number) {
-  const timer = setInterval(async () => {
-    try {
-      const job = await getExportJob(jobId)
-      const task = exportTasks.value.find((t) => t.exportJobId === jobId)
-      if (!task) return
-      task.status = job.status
-      task.statusLabel = job.statusLabel
-      task.downloadUrl = job.downloadUrl
-      // 完成或失败时停止轮询
-      if (job.status === 2 || job.status === 3) {
-        clearInterval(timer)
-        pollingTimers.delete(jobId)
-        if (job.status === 2) ElMessage.success('导出完成，可下载')
-        else ElMessage.error('导出失败')
-      }
-    } catch {
-      /* 静默处理单次轮询失败 */
-    }
-  }, 3000)
-  pollingTimers.set(jobId, timer)
-}
-
 onMounted(async () => {
-  loadingSemesters.value = true
-  try {
-    semesters.value = await getSemesters()
-  } catch {
-    semesters.value = []
-  } finally {
-    loadingSemesters.value = false
-  }
   await Promise.all([loadTemplates(), loadExportTasks()])
   startListPolling()
 })
 
 onUnmounted(() => {
-  pollingTimers.forEach((timer) => clearInterval(timer))
-  pollingTimers.clear()
+  // 研究导出任务的单任务轮询由 usePollingTask 自行清理；
+  // 列表级 5s 轮询形状不同（无任务 id），保留在此单独清理。
   if (listPollTimer) {
     clearInterval(listPollTimer)
     listPollTimer = null
@@ -358,10 +253,7 @@ onUnmounted(() => {
             <el-option v-for="s in scopeOptions" :key="s" :label="s" :value="s" />
           </el-select>
         </el-form-item>
-        <el-form-item
-          v-if="filters.scope === '学院' || filters.scope === '专业' || filters.scope === '班级'"
-          label="学院"
-        >
+        <el-form-item v-if="cascade.college" label="学院">
           <el-select
             v-model="filters.collegeId"
             placeholder="全部学院"
@@ -371,7 +263,7 @@ onUnmounted(() => {
             <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="filters.scope === '专业' || filters.scope === '班级'" label="专业">
+        <el-form-item v-if="cascade.major" label="专业">
           <el-select
             v-model="filters.majorId"
             placeholder="全部专业"
@@ -381,7 +273,7 @@ onUnmounted(() => {
             <el-option v-for="m in majors" :key="m.id" :label="m.name" :value="m.id" />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="filters.scope === '班级'" label="班级">
+        <el-form-item v-if="cascade.class" label="班级">
           <el-select
             v-model="filters.classId"
             placeholder="全部班级"
@@ -446,15 +338,18 @@ onUnmounted(() => {
           <el-button :icon="FileDown" :loading="submittingArchive" @click="handleExport('xlsx')"
             >一键导出基本信息</el-button
           >
-          <el-button v-if="isSuperAdmin" :icon="FlaskConical" @click="openResearch"
+          <el-button
+            v-if="canExportResearch"
+            :icon="FlaskConical"
+            @click="researchDialogVisible = true"
             >研究数据导出</el-button
           >
-          <template v-if="isSuperAdmin">
+          <template v-if="canManageSemester">
             <el-button :icon="Plus" @click="semesterDialogVisible = true">手动添加学期</el-button>
           </template>
         </div>
       </div>
-      <div v-if="isSuperAdmin" class="mc-card__body">
+      <div v-if="canChooseGrade" class="mc-card__body">
         <el-form-item label="选择可导年级">
           <el-checkbox-group v-model="gradeSelection">
             <el-checkbox v-for="g in gradeOptions" :key="g" :label="g" :value="g" />
@@ -538,7 +433,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <GradeImportPanel v-if="isSuperAdmin" />
+    <GradeImportPanel v-if="canImportGrade" />
 
     <el-dialog v-model="semesterDialogVisible" title="手动添加学期" width="400px">
       <el-form>
@@ -552,100 +447,10 @@ onUnmounted(() => {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="researchDialogVisible" title="研究数据导出" width="520px">
-      <el-form label-width="100px">
-        <el-form-item label="学期" required>
-          <el-select
-            v-model="researchForm.semesterId"
-            placeholder="请选择学期"
-            style="width: 100%"
-            :loading="loadingSemesters"
-          >
-            <el-option v-for="s in semesters" :key="s.value" :label="s.label" :value="s.value" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="导出范围">
-          <el-radio-group v-model="researchForm.scope">
-            <el-radio-button
-              v-for="s in ['全校', '学院', '专业', '班级', '年级']"
-              :key="s"
-              :value="s"
-            >
-              {{ s }}
-            </el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item
-          v-if="
-            researchForm.scope === '学院' ||
-            researchForm.scope === '专业' ||
-            researchForm.scope === '班级'
-          "
-          label="学院"
-        >
-          <el-select
-            v-model="researchForm.collegeId"
-            clearable
-            placeholder="全部学院"
-            style="width: 200px"
-          >
-            <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item
-          v-if="researchForm.scope === '专业' || researchForm.scope === '班级'"
-          label="专业"
-        >
-          <el-select
-            v-model="researchForm.majorId"
-            clearable
-            placeholder="全部专业"
-            style="width: 200px"
-          >
-            <el-option v-for="m in majors" :key="m.id" :label="m.name" :value="m.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="researchForm.scope === '班级'" label="班级">
-          <el-select
-            v-model="researchForm.classId"
-            clearable
-            placeholder="全部班级"
-            style="width: 200px"
-          >
-            <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item v-if="researchForm.scope === '年级'" label="年级">
-          <el-input v-model="researchForm.grade" placeholder="如 2023级" style="width: 200px" />
-        </el-form-item>
-        <el-form-item label="数据类型" required>
-          <el-checkbox-group v-model="researchForm.dataTypes">
-            <el-checkbox
-              v-for="t in DATA_TYPE_OPTIONS"
-              :key="t.value"
-              :value="t.value"
-              :label="t.value"
-            >
-              {{ t.label }}
-            </el-checkbox>
-          </el-checkbox-group>
-        </el-form-item>
-        <el-form-item label="匿名化">
-          <el-switch v-model="researchForm.isAnonymized" />
-          <span class="archive-export__hint">用匿名编号替代姓名与学号</span>
-        </el-form-item>
-        <el-form-item label="含元数据">
-          <el-switch v-model="researchForm.includeMetadata" />
-          <span class="archive-export__hint">包含字段说明与数据版本</span>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="researchDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submittingResearch" @click="handleSubmitResearch">
-          创建导出任务
-        </el-button>
-      </template>
-    </el-dialog>
+    <ResearchExportDialog
+      v-model:visible="researchDialogVisible"
+      @created="handleResearchCreated"
+    />
   </div>
 </template>
 
@@ -685,11 +490,6 @@ onUnmounted(() => {
   }
   &__expire-hint {
     margin: 4px 0 0;
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-  &__hint {
-    margin-left: 8px;
     font-size: 12px;
     color: var(--el-text-color-secondary);
   }

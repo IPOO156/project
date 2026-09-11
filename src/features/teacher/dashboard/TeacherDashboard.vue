@@ -40,19 +40,18 @@ import {
   listMessages,
   refreshTeacherStatistics,
 } from '@/shared/api/teacher'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
-import { TEACHER_ROLE_LABELS } from '@/shared/types/types'
 
 const router = useRouter()
 const userStore = useUserStore()
 const { me } = useTeacherMe()
+// 模块授权与角色名统一取自 /auth/me（permissions / roleNames）
+const { hasPermission, canAccessModule, roleLabel } = useTeacherAuthz()
 
-const currentRole = computed(() => userStore.currentRole)
 const userName = computed(() => userStore.userName)
-const isAdmin = computed(() => userStore.isSuperAdmin || userStore.isAdmin)
-const roleLabel = computed(() =>
-  currentRole.value ? (TEACHER_ROLE_LABELS[currentRole.value] ?? '') : '',
-)
+// 系统日志接口（/admin/logs/system）仅管理员可用，持 log:view 即视为管理员侧
+const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
 
 // ── 真实统计数据 ──
 const unreadCount = ref<number | null>(null)
@@ -210,47 +209,58 @@ const statsCards = computed(() => [
   { label: '当前角色', value: roleLabel.value, icon: Users, color: 'var(--el-color-danger)' },
 ])
 
-const quickLinks = computed(() => {
-  const role = currentRole.value
-  const links: { label: string; icon: any; path: string; desc: string }[] = [
-    { label: '档案查看', icon: Eye, path: '/teacher/archive-view', desc: '查看学生档案信息' },
-    {
-      label: '档案导出',
-      icon: Download,
-      path: '/teacher/archive-export',
-      desc: '导出学生档案数据',
-    },
-  ]
-  if (role === 'reviewer' || role === 'super_admin' || role === 'admin') {
-    links.push({
-      label: '材料审核',
-      icon: ClipboardCheck,
-      path: '/teacher/material-review',
-      desc: '审核学生提交的材料',
-    })
-    links.push({
-      label: '成果热力图',
-      icon: TrendingUp,
-      path: '/teacher/heat-map',
-      desc: '学生成果数据可视化',
-    })
-  }
-  if (role === 'super_admin' || role === 'admin') {
-    links.push({
-      label: '账号管理',
-      icon: Users,
-      path: '/teacher/account-management',
-      desc: '管理学生与教师账号',
-    })
-    links.push({
-      label: '表单自定义',
-      icon: BookOpen,
-      path: '/teacher/form-customization',
-      desc: '维护申报菜单与模板',
-    })
-  }
-  return links
-})
+/**
+ * 快捷入口：每项按对应模块的权限码判定，与侧边栏菜单同源（teacherModuleRegistry），
+ * 避免「菜单里没有、首页快捷方式却能进」的不一致。
+ */
+const quickLinkCandidates = [
+  {
+    moduleId: 'archive-view',
+    label: '档案查看',
+    icon: Eye,
+    path: '/teacher/archive-view',
+    desc: '查看学生档案信息',
+  },
+  {
+    moduleId: 'export-center',
+    label: '导出中心',
+    icon: Download,
+    path: '/teacher/export-center',
+    desc: '导出学生档案数据',
+  },
+  {
+    moduleId: 'material-review',
+    label: '材料审核',
+    icon: ClipboardCheck,
+    path: '/teacher/material-review',
+    desc: '审核学生提交的材料',
+  },
+  {
+    moduleId: 'heat-map',
+    label: '成果热力图',
+    icon: TrendingUp,
+    path: '/teacher/heat-map',
+    desc: '学生成果数据可视化',
+  },
+  {
+    moduleId: 'account-role',
+    label: '账号与角色',
+    icon: Users,
+    path: '/teacher/account-role',
+    desc: '管理学生与教师账号',
+  },
+  {
+    moduleId: 'form-customization',
+    label: '表单自定义',
+    icon: BookOpen,
+    path: '/teacher/form-customization',
+    desc: '维护申报菜单与模板',
+  },
+]
+
+const quickLinks = computed(() =>
+  quickLinkCandidates.filter((link) => canAccessModule(link.moduleId)),
+)
 
 const todayDate = computed(() => {
   return new Date().toLocaleDateString('zh-CN', {
@@ -316,17 +326,7 @@ onMounted(() => {
         <p class="teacher-dashboard__date">{{ todayDate }}</p>
       </div>
       <div class="teacher-dashboard__welcome-role">
-        <span class="teacher-dashboard__role-tag">
-          {{
-            userStore.isSuperAdmin
-              ? '超级管理员'
-              : userStore.isAdmin
-                ? '管理员'
-                : userStore.isReviewer
-                  ? '审核员'
-                  : '课任教师'
-          }}
-        </span>
+        <span class="teacher-dashboard__role-tag">{{ roleLabel || '教师' }}</span>
       </div>
     </div>
 

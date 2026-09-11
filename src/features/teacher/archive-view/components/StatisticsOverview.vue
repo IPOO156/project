@@ -5,14 +5,13 @@ import { Search } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getSemesters, getStatisticsOverview } from '@/shared/api/teacher'
-import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 
 /**
  * StatisticsOverview - 统计看板（/admin/statistics/overview）
  * 组织维度聚合：学生/档案/获奖/平均绩点/平均得分/实践次数/兴趣 TOP/画像维度分。
  * 自包含筛选（学期/维度/组织/年级），不依赖父组件 ArchiveView 的筛选状态。
  */
-const { me } = useTeacherMe()
 
 /* ── 筛选选项 ── */
 
@@ -27,23 +26,12 @@ const DIMENSION_ORG_TYPE: Record<string, number | undefined> = {
   班级: 4,
 }
 
-const colleges = computed(() =>
-  (me.value?.scopes ?? [])
-    .filter((s) => s.scopeType === 2 && s.scopeId != null)
-    .map((s) => ({ id: s.scopeId, name: s.scopeName ?? `学院 ${s.scopeId}` })),
-)
-const majors = computed(() =>
-  (me.value?.scopes ?? [])
-    .filter((s) => s.scopeType === 3 && s.scopeId != null)
-    .map((s) => ({ id: s.scopeId, name: s.scopeName ?? `专业 ${s.scopeId}` })),
-)
-const classes = computed(() =>
-  (me.value?.scopes ?? [])
-    .filter((s) => s.scopeType === 4 && s.scopeId != null)
-    .map((s) => ({ id: s.scopeId, name: s.scopeName ?? `班级 ${s.scopeId}` })),
-)
+/** 组织范围下拉项（学院/专业/班级，来自 /auth/me 的 scopes） */
+const { colleges, majors, classes } = useScopeFilter()
 
 const dimension = ref('全校')
+/** 组织维度 → 学院/专业/班级下拉显隐 */
+const cascade = computed(() => scopeCascade(DIMENSION_ORG_TYPE[dimension.value]))
 const filters = reactive({
   semesterId: undefined as number | undefined,
   collegeId: undefined as number | undefined,
@@ -213,10 +201,7 @@ onMounted(async () => {
                 <el-option v-for="d in dimensionOptions" :key="d" :label="d" :value="d" />
               </el-select>
             </el-form-item>
-            <el-form-item
-              v-if="dimension === '学院' || dimension === '专业' || dimension === '班级'"
-              label="学院"
-            >
+            <el-form-item v-if="cascade.college" label="学院">
               <el-select
                 v-model="filters.collegeId"
                 clearable
@@ -226,7 +211,7 @@ onMounted(async () => {
                 <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
               </el-select>
             </el-form-item>
-            <el-form-item v-if="dimension === '专业' || dimension === '班级'" label="专业">
+            <el-form-item v-if="cascade.major" label="专业">
               <el-select
                 v-model="filters.majorId"
                 clearable
@@ -236,7 +221,7 @@ onMounted(async () => {
                 <el-option v-for="m in majors" :key="m.id" :label="m.name" :value="m.id" />
               </el-select>
             </el-form-item>
-            <el-form-item v-if="dimension === '班级'" label="班级">
+            <el-form-item v-if="cascade.class" label="班级">
               <el-select
                 v-model="filters.classId"
                 clearable

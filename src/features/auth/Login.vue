@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TeacherRole, UserInfo } from '@/shared/types/types'
+import type { UserInfo } from '@/shared/types/types'
 import { ElMessage } from 'element-plus'
 import { Lock, Moon, Shield, Sun, User } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
@@ -25,16 +25,8 @@ const themeStore = useThemeStore()
 const { toggleThemeWithRipple } = useThemeRipple()
 const { refresh: refreshTeacherMe } = useTeacherMe()
 
-// ── 后端角色 → 前端教师角色映射 ──
-// 后端 role code：super_admin=超级管理员 / admin=管理员 / counselor=辅导员≈审核员 / teacher=课任教师
-// 超级管理员同时持有 admin + super_admin 双角色，故先判断 super_admin。
-function mapBackendRole(roles: string[]): TeacherRole {
-  if (roles.includes('super_admin')) return 'super_admin'
-  if (roles.includes('admin')) return 'admin'
-  if (roles.includes('counselor')) return 'reviewer'
-  return 'teacher'
-}
-
+// 教师端身份不再映射为前端角色枚举：权限码由 /auth/me 的 permissions 提供，
+// 菜单与路由授权见 shared/composables/useTeacherAuthz.ts。
 function toUserInfo(user: {
   userId: number
   userNo: string
@@ -45,7 +37,6 @@ function toUserInfo(user: {
   roles: string[]
   avatar: string | null
 }): UserInfo {
-  const role = mapBackendRole(user.roles)
   return {
     id: String(user.userId),
     username: user.userNo,
@@ -57,7 +48,6 @@ function toUserInfo(user: {
     className: '',
     email: user.email ?? '',
     phone: user.phone ?? '',
-    role,
     college: user.schoolName ?? '',
     department: '',
     loginType: 'teacher',
@@ -98,16 +88,61 @@ const captchaFailed = ref(false)
 let captchaKey = ''
 let captchaPending: Promise<void> | null = null
 
-async function loadBackendCaptcha() {
+/**
+ * 验证码续期参数。
+ * 后端 /auth/captcha 目前只返回 key/image，未返回 expiresIn（已提需求待补，见 CaptchaResponse）。
+ * 兜底值取保守下限：偏小只会导致提前换一张（无害），偏大则续期无意义。
+ */
+const CAPTCHA_TTL_FALLBACK_SEC = 60
+/** 到期前多少秒触发续期，给用户留出重新输入的时间 */
+const CAPTCHA_REFRESH_AHEAD_SEC = 30
+/** 用户正在输入验证码时的延后重试间隔 */
+const CAPTCHA_DEFER_SEC = 15
+
+let captchaTimer = 0
+/** 当前验证码的失效时刻（ms），用于判断续期时是否已真过期 */
+let captchaExpiresAt = 0
+
+/** 按有效期安排续期定时器 */
+function scheduleCaptchaRefresh(ttlSec: number) {
+  window.clearTimeout(captchaTimer)
+  captchaExpiresAt = Date.now() + ttlSec * 1000
+  captchaTimer = window.setTimeout(
+    handleCaptchaDue,
+    Math.max(ttlSec - CAPTCHA_REFRESH_AHEAD_SEC, 0) * 1000,
+  )
+}
+
+/**
+ * 到期前的续期。
+ * 用户已开始输入时不换图（换图会让已输入的码作废），延后 CAPTCHA_DEFER_SEC 再查；
+ * 越过有效期后则无论是否已输入都换 —— 旧 key 在后端已失效，留着只会让本次提交必然失败。
+ */
+function handleCaptchaDue() {
+  const expired = Date.now() >= captchaExpiresAt
+  if (loginForm.captcha && !expired) {
+    captchaTimer = window.setTimeout(handleCaptchaDue, CAPTCHA_DEFER_SEC * 1000)
+    return
+  }
+  void loadBackendCaptcha({ notifyExpired: expired })
+}
+
+async function loadBackendCaptcha(options: { notifyExpired?: boolean } = {}) {
   if (captchaPending) return captchaPending
   captchaPending = (async () => {
     captchaFailed.value = false
     try {
       const res = await getCaptcha()
       if (res?.key && res?.image) {
+        const hadCode = !!loginForm.captcha
         backendCaptcha.value = res
         captchaKey = res.key
+        // 换图后旧码必然失配，清空输入框；因过期被动换图且用户已输入时，说明原因
         loginForm.captcha = ''
+        if (options.notifyExpired && hadCode) {
+          ElMessage.info('验证码已过期，已为你刷新，请重新输入')
+        }
+        scheduleCaptchaRefresh(res.expiresIn ?? CAPTCHA_TTL_FALLBACK_SEC)
       } else {
         backendCaptcha.value = null
         captchaFailed.value = true
@@ -210,12 +245,11 @@ async function handleLogin() {
 
     if (loginType.value === 'admin') {
       userStore.setUserInfo(toUserInfo(res.user))
-      // 拉取完整身份（roles / permissions / scopes），供教师端授权范围过滤
-      refreshTeacherMe()
-        .then((me) => {
-          if (me) userStore.setUserInfo(toUserInfo(me))
-        })
-        .catch(() => null)
+      // 拉取完整身份（roles / permissions / scopes）。
+      // 必须 await：教师端菜单与路由授权依据 /auth/me 的 permissions 渲染，
+      // 未拿到就跳转会导致侧边栏为空、模块页被守卫拦截。
+      const teacherMe = await refreshTeacherMe()
+      if (teacherMe) userStore.setUserInfo(toUserInfo(teacherMe))
       themeStore.applyTimeBasedTheme()
       setTimeout(() => router.push('/teacher/dashboard'), 300)
     } else {
@@ -325,6 +359,8 @@ onMounted(() => {
 })
 onUnmounted(() => {
   /* 子组件自行管理生命周期 */
+  // 清理验证码续期定时器：组件卸载后不得再发起请求
+  window.clearTimeout(captchaTimer)
 })
 </script>
 

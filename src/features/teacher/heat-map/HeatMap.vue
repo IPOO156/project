@@ -10,28 +10,13 @@ import { ArrowDownAZ, Flame, Search, Sigma } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getSemesters, getStatisticsHeatmap } from '@/shared/api/teacher'
-import { useTeacherMe } from '@/shared/composables/useTeacherMe'
-
-const { me } = useTeacherMe()
+import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 
 const semesters = ref<SemesterItem[]>([])
 const loadingSemesters = ref(false)
 
-const colleges = computed(() =>
-  (me.value?.scopes ?? [])
-    .filter((s) => s.scopeType === 2 && s.scopeId != null)
-    .map((s) => ({ id: s.scopeId, name: s.scopeName ?? `学院 ${s.scopeId}` })),
-)
-const majors = computed(() =>
-  (me.value?.scopes ?? [])
-    .filter((s) => s.scopeType === 3 && s.scopeId != null)
-    .map((s) => ({ id: s.scopeId, name: s.scopeName ?? `专业 ${s.scopeId}` })),
-)
-const classes = computed(() =>
-  (me.value?.scopes ?? [])
-    .filter((s) => s.scopeType === 4 && s.scopeId != null)
-    .map((s) => ({ id: s.scopeId, name: s.scopeName ?? `班级 ${s.scopeId}` })),
-)
+/** 组织范围下拉项（学院/专业/班级，来自 /auth/me 的 scopes） */
+const { colleges, majors, classes } = useScopeFilter()
 
 const METRIC_OPTIONS = [
   { value: 'gpa', label: '绩点', unit: '', decimals: 2, accent: '#1e3a5f' },
@@ -69,6 +54,9 @@ const filters = reactive({
   classId: undefined as number | undefined,
   semesterId: undefined as number | undefined,
 })
+
+/** 组织维度 → 学院/专业/班级下拉显隐 */
+const cascade = computed(() => scopeCascade(filters.orgType))
 
 const loading = ref(false)
 const heatmap = ref<HeatmapStatistics | null>(null)
@@ -342,7 +330,7 @@ onMounted(async () => {
           <p class="heat-map__filter-group-title">组织范围</p>
           <div class="heat-map__filter-row">
             <el-select
-              v-if="filters.orgType === 2 || filters.orgType === 3 || filters.orgType === 4"
+              v-if="cascade.college"
               v-model="filters.collegeId"
               clearable
               placeholder="全部学院"
@@ -351,7 +339,7 @@ onMounted(async () => {
               <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
             </el-select>
             <el-select
-              v-if="filters.orgType === 3 || filters.orgType === 4"
+              v-if="cascade.major"
               v-model="filters.majorId"
               clearable
               placeholder="全部专业"
@@ -360,7 +348,7 @@ onMounted(async () => {
               <el-option v-for="m in majors" :key="m.id" :label="m.name" :value="m.id" />
             </el-select>
             <el-select
-              v-if="filters.orgType === 4"
+              v-if="cascade.class"
               v-model="filters.classId"
               clearable
               placeholder="全部班级"

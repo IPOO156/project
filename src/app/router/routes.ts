@@ -1,6 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
-import { ROLE_PERMISSIONS } from '@/shared/types/types'
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+import { isModuleAllowed } from '@/shared/config/teacherModuleRegistry'
 import { getToken } from '@/shared/utils/token'
 import teacherRoutes from './teacher-routes'
 
@@ -68,7 +69,9 @@ const routes: RouteRecordRaw[] = [
             path: '',
             name: 'ApplicationsHub',
             component: () => import('@/features/applications/ApplicationHub.vue'),
-            meta: { title: '个人档案信息申报' },
+            // 本页用 ?tab=xxx 切换 10 个申报子模块（见同文件的 redirect 子项），
+            // singleTab 让它们共用顶栏一个标签（useTabs 据此判定），避免每切一个子模块裂一个标签。
+            meta: { title: '个人档案信息申报', singleTab: true },
           },
           {
             path: 'competition',
@@ -194,8 +197,15 @@ const router = createRouter({
   routes,
 })
 
+/**
+ * /auth/me 身份缓存（teacher_me）缺失时的补拉标记。
+ * 教师端菜单与模块授权全部依赖 permissions，缓存丢失会导致侧边栏为空，
+ * 故每次会话首次进入时补拉一次；仅一次，避免接口异常时每次跳转都等待网络。
+ */
+let meRecovered = false
+
 // 路由守卫
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const token = getToken()
 
   if (to.name !== 'Login' && !token) {
@@ -228,23 +238,33 @@ router.beforeEach((to, _from, next) => {
   if (to.meta?.teacher) {
     const userCache = localStorage.getItem('user_info_cache')
     if (userCache) {
+      let loginType: string | undefined
       try {
-        const info = JSON.parse(userCache)
-        if (info.loginType !== 'teacher') {
-          next({ path: '/dashboard' })
-          return
-        }
-        // 模块权限校验：未授权角色直接访问 URL 时重定向回教师首页，防止绕过菜单
-        if (to.meta?.permission) {
-          const allowed = info.role ? (ROLE_PERMISSIONS[info.role] ?? []) : []
-          if (!allowed.includes(to.meta.permission)) {
-            next({ path: '/teacher/dashboard' })
-            return
-          }
-        }
+        loginType = JSON.parse(userCache).loginType
       } catch {
         next({ path: '/login' })
         return
+      }
+      if (loginType !== 'teacher') {
+        next({ path: '/dashboard' })
+        return
+      }
+      // 模块权限校验：直接输入 URL 绕过菜单时重定向回教师首页。
+      // meta.permission 为模块 id（对应 teacherModuleRegistry 的 id），
+      // 判定依据是 /auth/me 的 permissionCode，不再是前端角色枚举。
+      const moduleId = to.meta?.permission
+      if (typeof moduleId === 'string' && moduleId) {
+        const { me, refresh } = useTeacherMe()
+        if (!me.value && !meRecovered) {
+          meRecovered = true
+          await refresh()
+        }
+        // 与侧边栏菜单同源判定：持 admin 角色直通（镜像后端 AdminAuthService），
+        // 否则按 module 声明的权限码（any-of）判定。
+        if (!isModuleAllowed(moduleId, me.value?.permissions ?? [], me.value?.roles ?? [])) {
+          next({ path: '/teacher/dashboard' })
+          return
+        }
       }
     } else {
       next({ path: '/login' })

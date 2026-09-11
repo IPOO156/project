@@ -4,12 +4,13 @@
  * 对接后端教师端 /teacher/scores/recalculate（触发）+ /teacher/scores/recalculation-tasks/{taskId}（查询进度）。
  * 教师端仅支持 targetType 1学生 / 2班级 / 3学期，已去掉 admin 版的全量重算/指定专业。
  */
-import type { SemesterItem } from '@/shared/types/teacher'
+import type { ScoreRecalculationTask, SemesterItem } from '@/shared/types/teacher'
 import { ElMessage } from 'element-plus'
 import { RefreshCw, Zap } from 'lucide-vue-next'
-import { onMounted, onUnmounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 
 import { getRecalculationTask, getSemesters, triggerScoreRecalculate } from '@/shared/api/teacher'
+import { usePollingTask } from '@/shared/composables/usePollingTask'
 
 const targetTypeOptions = [
   { value: 1, label: '指定学生' },
@@ -44,7 +45,27 @@ interface TaskItem {
 }
 
 const tasks = ref<TaskItem[]>([])
-const timers = new Map<number, ReturnType<typeof setInterval>>()
+
+/** 任务进度轮询（公共实现，组件卸载时自动清理定时器） */
+const polling = usePollingTask<ScoreRecalculationTask>({
+  fetch: getRecalculationTask,
+  getStatus: (task) => task.status,
+  onUpdate: (task, id) => {
+    const item = tasks.value.find((t) => t.taskId === id)
+    // 任务已从列表移除 → 终止轮询
+    if (!item) return false
+    item.status = task.status
+    item.statusLabel = task.statusLabel
+    item.progress = task.progress
+    item.successCount = task.successCount
+    item.failCount = task.failCount
+    return true
+  },
+  onFinish: (_id, ok) => {
+    if (ok) ElMessage.success('评分重算完成')
+    else ElMessage.error('评分重算失败')
+  },
+})
 
 async function handleRecalculate() {
   if (!form.semesterId) {
@@ -73,41 +94,13 @@ async function handleRecalculate() {
       failCount: 0,
       createdAt: new Date().toLocaleString('zh-CN'),
     })
-    startPolling(res.taskId)
+    polling.start(res.taskId)
   } catch {
     /* 拦截器已提示 */
   }
 }
 
-function startPolling(taskId: number) {
-  const timer = setInterval(async () => {
-    try {
-      const task = await getRecalculationTask(taskId)
-      const item = tasks.value.find((t) => t.taskId === taskId)
-      if (!item) return
-      item.status = task.status
-      item.statusLabel = task.statusLabel
-      item.progress = task.progress
-      item.successCount = task.successCount
-      item.failCount = task.failCount
-      if (task.status === 2 || task.status === 3) {
-        clearInterval(timer)
-        timers.delete(taskId)
-        if (task.status === 2) ElMessage.success('评分重算完成')
-        else ElMessage.error('评分重算失败')
-      }
-    } catch {
-      /* 静默处理单次轮询失败 */
-    }
-  }, 3000)
-  timers.set(taskId, timer)
-}
-
 onMounted(() => void loadSemesters())
-onUnmounted(() => {
-  timers.forEach((t) => clearInterval(t))
-  timers.clear()
-})
 </script>
 
 <template>

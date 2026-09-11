@@ -2,15 +2,16 @@
 import type { LoginLogItem } from '@/shared/types/teacher'
 import dayjs from 'dayjs'
 import { computed } from 'vue'
-import { useUserStore } from '@/app/stores/stores'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 
 interface Props {
   data: LoginLogItem[]
 }
 defineProps<Props>()
 
-const userStore = useUserStore()
-const isAdmin = computed(() => userStore.isSuperAdmin || userStore.isAdmin)
+// 持有系统日志权限的管理员看明文；教师 / 辅导员看脱敏（后端 /teacher/logs 亦为脱敏数据）
+const { hasPermission } = useTeacherAuthz()
+const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
 
 function nameTitle(name: string | null) {
   return isAdmin.value ? (name ?? '') : ''

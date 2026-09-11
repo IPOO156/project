@@ -43,7 +43,8 @@ function dedupeTabs(tabs: NavTab[]): NavTab[] {
 }
 
 /**
- * 读取 sessionStorage 并重新校验 affix（覆盖脏数据）。
+ * 读取 sessionStorage 并重新校验 affix（覆盖脏数据），
+ * 同时剔除指向 redirect 记录的死标签（页面被合并后遗留的历史路径）。
  * ⚠️ 这个函数在 store 初始化时调用，此时 router 已注册（main.ts 先 app.use(router)）。
  */
 function readStorage(router?: Router): NavTab[] {
@@ -69,7 +70,7 @@ function readStorage(router?: Router): NavTab[] {
     }
     const source = isTeacher ? parsed.filter((t) => t.path !== '/dashboard') : parsed
     return dedupeTabs(
-      source.map((t) => {
+      source.flatMap((t): NavTab[] => {
         const storedAffix = Boolean(t.affix)
         // 实时反查真实 affix：旧版本产生的脏数据会被自动修正
         let realAffix = storedAffix
@@ -77,18 +78,26 @@ function readStorage(router?: Router): NavTab[] {
           try {
             const resolved = router.resolve(t.path)
             const leaf = resolved.matched[resolved.matched.length - 1]
+            // 页面已合并为 redirect 记录（如 /teacher/role-selection/adjust 现指向账号与角色页）：
+            // 这类记录解不出组件，标签点得动却永远唤不回原页面，属死标签，直接丢弃。
+            // （纯 redirect 记录的 leaf.components 为 null，正常页面恒有组件）
+            if (leaf != null && leaf.components == null) {
+              return []
+            }
             // 严格 === true，避免父级 meta 继承或弱类型 true
             realAffix = leaf?.meta?.affix === true
           } catch {
             // resolve 失败（路由已不存在），保留存储值
           }
         }
-        return {
-          path: t.path,
-          title: t.title,
-          closable: !realAffix,
-          affix: realAffix,
-        } satisfies NavTab
+        return [
+          {
+            path: t.path,
+            title: t.title,
+            closable: !realAffix,
+            affix: realAffix,
+          } satisfies NavTab,
+        ]
       }),
     )
   } catch {
