@@ -4,6 +4,8 @@
  * 覆盖：网络安全（边界防护/流量防护/传输安全/无线安全/入侵防护）
  *       + 主机终端安全（服务器安全）
  * 说明：本页为安全防护配置台账，状态由安全平台同步。
+ * 该页未在 teacherModuleRegistry 注册（菜单中不可见），路由与页面保留，
+ * 待后端提供安全监控接口后再注册启用。
  */
 import { Activity, CheckCircle2, Lock, Radar, Server, ShieldCheck, Wifi } from 'lucide-vue-next'
 

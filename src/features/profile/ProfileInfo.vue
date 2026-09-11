@@ -122,6 +122,13 @@ const politicalOptions = ref<{ value: string; label: string }[]>([])
 /** /profile/info 中的学籍信息（政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
 const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})
 
+/**
+ * 联系邮箱/手机号：来自 /profile/info 的 contactInfo（PUT /profile/contact 的写入目标）。
+ * 与「账号邮箱」（userStore.userInfo.email，用于登录与找回密码）不是同一份数据，展示上分开。
+ */
+const contactEmail = computed(() => archiveStore.profileData?.contactInfo?.email ?? '')
+const contactPhone = computed(() => archiveStore.profileData?.contactInfo?.phone ?? '')
+
 /** 政治面貌选项来自后端字典（GET /common/dict?dictType=political_status），不前端硬编码 */
 async function loadPoliticalOptions() {
   try {
@@ -135,8 +142,8 @@ async function loadPoliticalOptions() {
 function startEdit() {
   const a = academicInfo.value
   formData.value = {
-    email: userStore.userInfo?.email ?? '',
-    phone: userStore.userInfo?.phone ?? '',
+    email: contactEmail.value,
+    phone: contactPhone.value,
     politicalStatus: a.politicalStatus ?? '',
     studentStatus: a.studentStatus ?? '',
   }
@@ -145,13 +152,13 @@ function startEdit() {
 }
 async function saveEdit() {
   const a = academicInfo.value
-  await userStore.updateUserInfo({
-    email: formData.value.email,
-    phone: formData.value.phone,
-  })
-  // 政治面貌 / 学生状态仅在用户改动时提交；失败时拦截器已提示，
-  // 此处直接终止保存流程，禁止继续执行后续「已保存」造成成败提示并存
+  // 三类保存（联系方式 PUT /profile/contact、政治面貌、学生状态）任一失败即终止流程，
+  // 不继续执行后续「已保存」，避免成败提示并存；失败提示由请求拦截器统一给出
   try {
+    await userStore.updateUserInfo({
+      email: formData.value.email,
+      phone: formData.value.phone,
+    })
     if (formData.value.politicalStatus && formData.value.politicalStatus !== a.politicalStatus) {
       await updatePoliticalStatus(formData.value.politicalStatus)
     }
@@ -327,17 +334,17 @@ async function handleExportResume() {
           <el-descriptions-item label="学生状态">{{
             academicInfo.studentStatusLabel || '-'
           }}</el-descriptions-item>
-          <el-descriptions-item label="邮箱">{{
-            userStore.userInfo?.email || '-'
-          }}</el-descriptions-item>
-          <el-descriptions-item label="手机号">{{
-            userStore.userInfo?.phone || '-'
-          }}</el-descriptions-item>
+          <el-descriptions-item label="账号邮箱">
+            {{ userStore.userInfo?.email || '-' }}
+            <div class="profile-desc__hint">用于登录与找回密码，如需修改请联系管理员</div>
+          </el-descriptions-item>
+          <el-descriptions-item label="联系邮箱">{{ contactEmail || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="手机号">{{ contactPhone || '-' }}</el-descriptions-item>
         </el-descriptions>
         <el-form v-else :model="formData" label-width="70px" class="profile-form">
           <el-row :gutter="12">
             <el-col :span="12"
-              ><el-form-item label="邮箱"
+              ><el-form-item label="联系邮箱"
                 ><el-input v-model="formData.email" size="small" /></el-form-item
             ></el-col>
             <el-col :span="12"
@@ -575,6 +582,11 @@ async function handleExportResume() {
   :deep(.el-descriptions__content) {
     font-size: 13px;
   }
+}
+.profile-desc__hint {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #94a3b8;
 }
 .profile-form {
   margin-top: 8px;

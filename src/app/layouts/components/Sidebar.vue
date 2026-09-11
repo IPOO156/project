@@ -1,16 +1,41 @@
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
 import { ChevronLeft, ChevronRight, SwitchCamera } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
 import logoIcon from '@/assets/logo/logo-icon.png'
-import { getTeacherMenuItems } from '@/shared/config/teacherModuleRegistry'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { menuItems } from '@/shared/constants/menu'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 const userStore = useUserStore()
+// 教师端菜单按 /auth/me 的权限码过滤（见 teacherModuleRegistry）
+const { menuItems: teacherMenuItems, baselineFallback } = useTeacherAuthz()
+
+/**
+ * 授权数据未就绪时的非阻断提示（每次进入应用至多一次）。
+ *
+ * 菜单此时是「按角色基线」降级展示的，用户看到的功能集可能比应有权限少；
+ * 不提示的话会误判成「系统坏了/我的功能被删了」。用 watch 而非 onMounted：
+ * /auth/me 可能在侧边栏挂载之后才拿到（登录后拉取、或守卫补拉），
+ * immediate 保证刷新后直接用缓存渲染的场景也能提示到。
+ */
+let hasWarnedFallback = false
+watch(
+  baselineFallback,
+  (fallback) => {
+    if (!fallback || hasWarnedFallback) return
+    hasWarnedFallback = true
+    ElMessage.warning({
+      message: '暂未同步到你的权限信息，菜单已按你的角色展示默认项；如缺少需要的功能，请联系管理员',
+      duration: 6000,
+    })
+  },
+  { immediate: true },
+)
 
 // 是否为教师端
 const isTeacher = computed(() => userStore.isTeacher)
@@ -18,7 +43,7 @@ const isTeacher = computed(() => userStore.isTeacher)
 // 当前菜单：学生端/教师端自动切换
 const currentMenuItems = computed(() => {
   if (isTeacher.value) {
-    return getTeacherMenuItems(userStore.currentRole)
+    return teacherMenuItems.value
   }
   return menuItems
 })

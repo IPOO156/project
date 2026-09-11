@@ -3,6 +3,8 @@
  * HardwareMaintenance - 硬件维护
  * 覆盖：服务器维护、网络设备维护、终端和外设维护、机房环境配套
  * 说明：本页为运维台账，数据由监控平台提供，后端暂无专门接口。
+ * 该页未在 teacherModuleRegistry 注册（菜单中不可见），路由与页面保留，
+ * 待后端提供监控接口后再注册启用。
  */
 import { AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-vue-next'
 import { ref } from 'vue'

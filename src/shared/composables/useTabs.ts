@@ -50,6 +50,16 @@ export function useTabs() {
   }
 
   /**
+   * 合并页判定：页内用 query 参数（如 ?tab=xxx）切换子模块的页面，共用一个顶栏标签。
+   * 由路由 meta.singleTab 声明（学生端 /applications、教师端各聚合页），
+   * 与 resolveAffix 同理只从 leaf matched 读，避免父级 meta 污染。
+   */
+  function resolveSingleTab(to: RouteLocationNormalized): boolean {
+    const leaf: RouteLocationMatched | undefined = to.matched[to.matched.length - 1]
+    return leaf?.meta?.singleTab === true
+  }
+
+  /**
    * 根据路由路径匹配菜单图标。
    * - 优先从学生端菜单配置中查找（与侧边栏保持一致）
    * - 教师端路由（/teacher 前缀）回退到教师端菜单查找
@@ -74,8 +84,9 @@ export function useTabs() {
     }
     // ✅ 严格 affix 判定（避免父级 meta 污染 + 弱类型 true）
     const affix = resolveAffix(to)
-    // 个人档案信息申报使用 query 参数切换内部模块，合并为单个 tab
-    const tabPath = to.path === '/applications' ? to.path : to.fullPath
+    // 声明了 meta.singleTab 的页面用 query 切换内部子模块，合并为单个 tab。
+    // 取 to.path（不含 query），resolveIcon 才能按路径命中菜单图标。
+    const tabPath = resolveSingleTab(to) ? to.path : to.fullPath
     const result = tabsStore.addTab({
       path: tabPath,
       title,

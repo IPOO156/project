@@ -3,6 +3,8 @@
  * SoftwareMaintenance - 软件维护
  * 覆盖：纠错性维护、环境适配、预防性运维、优化迭代
  * 说明：本页为运维台账，组件状态由运维平台同步。
+ * 该页未在 teacherModuleRegistry 注册（菜单中不可见），路由与页面保留，
+ * 待后端提供监控接口后再注册启用。
  */
 import { Bug, CheckCircle2, RefreshCw, ShieldCheck, Sparkles } from 'lucide-vue-next'
 import { ref } from 'vue'

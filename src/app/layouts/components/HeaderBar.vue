@@ -24,6 +24,7 @@ import {
   useThemeStore,
   useUserStore,
 } from '@/app/stores/stores'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { useThemeRipple } from '@/shared/composables/useThemeRipple'
 import NavTabs from './NavTabs.vue'
 
@@ -35,6 +36,8 @@ const themeStore = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 const { toggleThemeWithRipple } = useThemeRipple()
+// 角色中文名取自 /auth/me 的 roleNames，不再由前端角色枚举映射
+const { roleLabel } = useTeacherAuthz()
 const isGrowthTimeline = computed(() => route.path.startsWith('/growth-timeline'))
 const isTeacher = computed(() => userStore.isTeacher)
 
@@ -56,15 +59,6 @@ function openMessages() {
     router.push('/messages')
   }
 }
-
-const roleLabel = computed(() => {
-  if (!isTeacher.value) return ''
-  if (userStore.isSuperAdmin) return '超级管理员'
-  if (userStore.isAdmin) return '管理员'
-  if (userStore.isReviewer) return '审核员'
-  if (userStore.isTeacherRole) return '课任教师'
-  return ''
-})
 
 async function handleLogout() {
   await userStore.logout()

@@ -3,6 +3,10 @@ import type { RouteRecordRaw } from 'vue-router'
 /**
  * 教师端路由配置
  * 所有路由前缀为 /teacher，由 TeacherLayout 包裹
+ *
+ * meta.permission 承载的是**模块 id**（对应 shared/config/teacherModuleRegistry.ts 的 id，
+ * 如 'archive-view'），不是后端权限码 —— 守卫据此在注册表里查出该模块所需的权限码再判定。
+ * 因此模块 id 写错等于未授权（守卫按未知模块处理，重定向回 /teacher/dashboard）。
  */
 const teacherRoutes: RouteRecordRaw[] = [
   {
@@ -22,12 +26,6 @@ const teacherRoutes: RouteRecordRaw[] = [
     name: 'TeacherStudentDetail',
     component: () => import('@/features/teacher/student-detail/StudentDetail.vue'),
     meta: { title: '学生成长档案', teacher: true, permission: 'archive-view' },
-  },
-  {
-    path: 'archive-export',
-    name: 'TeacherArchiveExport',
-    component: () => import('@/features/teacher/archive-export/ArchiveExport.vue'),
-    meta: { title: '档案导出', teacher: true, permission: 'archive-export' },
   },
   {
     path: 'material-review',
@@ -66,6 +64,8 @@ const teacherRoutes: RouteRecordRaw[] = [
     meta: { title: '成果热力图', teacher: true, permission: 'heat-map' },
   },
   {
+    // 审批委托：业务口径为「管理员 → 教师」，教师不可互相委托。
+    // 对应注册表模块 delegation 目前只挂管理员菜单码，教师访问会被守卫拦回教师首页。
     path: 'delegation',
     name: 'TeacherDelegation',
     component: () => import('@/features/teacher/delegation/DelegationManage.vue'),
@@ -78,10 +78,12 @@ const teacherRoutes: RouteRecordRaw[] = [
     meta: { title: '日志查看', teacher: true, permission: 'log-view' },
   },
   {
-    path: 'ability-dimension',
-    name: 'TeacherAbilityDimension',
-    component: () => import('@/features/teacher/ability-dimension/AbilityDimension.vue'),
-    meta: { title: '能力维度', teacher: true, permission: 'ability-dimension' },
+    // 能力维度 + 指标配置合并为单页 Tab（原两个一级菜单，permissions 相同）。
+    // singleTab：页内用 ?tab=xxx 切换，顶栏共用一个标签（见 useTabs.resolveSingleTab）。
+    path: 'indicator-system',
+    name: 'TeacherIndicatorSystem',
+    component: () => import('@/features/teacher/indicator-system/IndicatorSystem.vue'),
+    meta: { title: '指标体系', teacher: true, permission: 'indicator-system', singleTab: true },
   },
   {
     path: 'score-recalculate',
@@ -90,16 +92,12 @@ const teacherRoutes: RouteRecordRaw[] = [
     meta: { title: '评分重算', teacher: true, permission: 'score-recalculate' },
   },
   {
-    path: 'export-template',
-    name: 'TeacherExportTemplate',
-    component: () => import('@/features/teacher/export-template/ExportTemplate.vue'),
-    meta: { title: '导出模板', teacher: true, permission: 'export-template' },
-  },
-  {
-    path: 'indicator',
-    name: 'TeacherIndicator',
-    component: () => import('@/features/teacher/indicator/Indicator.vue'),
-    meta: { title: '指标配置', teacher: true, permission: 'indicator' },
+    // 档案导出 + 导出模板合并为单页 Tab（原两个一级菜单，同一业务对象的两端）。
+    // singleTab：页内用 ?tab=xxx 切换，顶栏共用一个标签（见 useTabs.resolveSingleTab）。
+    path: 'export-center',
+    name: 'TeacherExportCenter',
+    component: () => import('@/features/teacher/export-center/ExportCenter.vue'),
+    meta: { title: '导出中心', teacher: true, permission: 'export-center', singleTab: true },
   },
   {
     path: 'approval-flow',
@@ -114,22 +112,13 @@ const teacherRoutes: RouteRecordRaw[] = [
     meta: { title: '系统管理', teacher: true, permission: 'system-management' },
   },
   {
-    path: 'role-selection',
-    redirect: '/teacher/role-selection/adjust',
-    children: [
-      {
-        path: 'adjust',
-        name: 'TeacherRoleAdjust',
-        component: () => import('@/features/teacher/role-selection/RoleAdjust.vue'),
-        meta: { title: '教师职位调整', teacher: true, permission: 'role-selection' },
-      },
-      {
-        path: 'add',
-        name: 'TeacherRoleAdd',
-        component: () => import('@/features/teacher/role-selection/RoleAdd.vue'),
-        meta: { title: '新增账号', teacher: true, permission: 'role-selection' },
-      },
-    ],
+    // 角色选择（职位调整 / 新增账号）+ 账号管理（学生 / 教师）合并为单页 Tab。
+    // 子页收进页内 Tab，故原侧边栏 el-sub-menu 消失 —— 属预期 IA 变化，功能未减。
+    // singleTab：页内用 ?tab=xxx 切换，顶栏共用一个标签（见 useTabs.resolveSingleTab）。
+    path: 'account-role',
+    name: 'TeacherAccountRole',
+    component: () => import('@/features/teacher/account-role/AccountRole.vue'),
+    meta: { title: '账号与角色', teacher: true, permission: 'account-role', singleTab: true },
   },
   {
     path: 'form-customization',
@@ -148,24 +137,6 @@ const teacherRoutes: RouteRecordRaw[] = [
     name: 'TeacherScheduledTask',
     component: () => import('@/features/teacher/scheduled-task/ScheduledTask.vue'),
     meta: { title: '定时任务', teacher: true, permission: 'scheduled-task' },
-  },
-  {
-    path: 'account-management',
-    redirect: '/teacher/account-management/student',
-    children: [
-      {
-        path: 'student',
-        name: 'TeacherAccountStudent',
-        component: () => import('@/features/teacher/account-management/StudentAccount.vue'),
-        meta: { title: '学生账号管理', teacher: true, permission: 'account-management' },
-      },
-      {
-        path: 'teacher',
-        name: 'TeacherAccountTeacher',
-        component: () => import('@/features/teacher/account-management/TeacherAccount.vue'),
-        meta: { title: '教师账号管理', teacher: true, permission: 'account-management' },
-      },
-    ],
   },
   {
     path: 'system-maintenance',
@@ -203,6 +174,23 @@ const teacherRoutes: RouteRecordRaw[] = [
       },
     ],
   },
+
+  /* ===================== 旧路径兜底 =====================
+   * 页面框架合并后，原一级菜单的 URL 变为 query 形式的 tab。
+   * 这些 redirect 记录是为了让旧书签 / 旧 sessionStorage 标签 / 浏览器历史仍能落地，
+   * 属纯跳转记录：不需要 meta.permission（vue-router 在导航解析阶段先解 redirect，
+   * 守卫只对最终目标跑一次，权限判定落在目标路由上）。
+   */
+  { path: 'archive-export', redirect: '/teacher/export-center?tab=export' },
+  { path: 'export-template', redirect: '/teacher/export-center?tab=template' },
+  { path: 'ability-dimension', redirect: '/teacher/indicator-system?tab=dimension' },
+  { path: 'indicator', redirect: '/teacher/indicator-system?tab=indicator' },
+  { path: 'role-selection', redirect: '/teacher/account-role?tab=adjust' },
+  { path: 'role-selection/adjust', redirect: '/teacher/account-role?tab=adjust' },
+  { path: 'role-selection/add', redirect: '/teacher/account-role?tab=add' },
+  { path: 'account-management', redirect: '/teacher/account-role?tab=student' },
+  { path: 'account-management/student', redirect: '/teacher/account-role?tab=student' },
+  { path: 'account-management/teacher', redirect: '/teacher/account-role?tab=teacher' },
 ]
 
 export default teacherRoutes

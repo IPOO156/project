@@ -52,15 +52,25 @@ const isLoading = computed(() => appStore.pageLoading)
 /** 从路由 meta 中推断页面标题，用于文档标题与无障碍属性 */
 const pageTitle = computed(() => (route.meta?.title as string) || '')
 
+/** 是否教师端页面（教师端路由均带 meta.teacher，见 router/teacher-routes.ts） */
+const isTeacherSide = computed(() => !!route.meta?.teacher)
+
+/** 文档标题：品牌后缀随端切换（学生端/教师端共用 DefaultLayout，不能写死一端） */
+const docTitle = computed(() =>
+  pageTitle.value ? `${pageTitle.value} · ${isTeacherSide.value ? '教师' : '学生'}档鉴未来` : '',
+)
+
 /** 是否全宽出血页面（如成长时间轴），需要去掉内容区 padding 与最大宽度限制 */
 const isFullBleed = computed(() => !!route.meta?.fullBleed)
 
 // 同步文档标题 → 屏幕阅读器在路由切换时能播报新页面
+// 监听整个 docTitle（含端后缀）而非仅 pageTitle：学生端与教师端首页 meta.title 同为「首页」，
+// 只监听 pageTitle 时两端互跳标题串不变，标签页仍显示上一端的品牌。
 watch(
-  () => pageTitle.value,
+  docTitle,
   (title) => {
     if (typeof document !== 'undefined' && title) {
-      document.title = `${title} · 学生档鉴未来`
+      document.title = title
     }
   },
   { immediate: true },

@@ -29,6 +29,11 @@ export interface PageResult<T> {
 export interface CaptchaResponse {
   key: string
   image: string
+  /**
+   * 验证码有效期（秒）。**后端尚未返回，已提需求待补**（GET /auth/captcha 目前只回 key/image）。
+   * 后端补上之前，前端按 CAPTCHA_TTL_FALLBACK_SEC 兜底倒计时；字段到位后自动生效，无需再改。
+   */
+  expiresIn?: number
 }
 
 export interface LoginPayload {

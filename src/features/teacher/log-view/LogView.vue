@@ -12,18 +12,18 @@ import type { ExportLogItem, LoginLogItem, SystemLogItem } from '@/shared/types/
 import { RefreshCw, Search } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useUserStore } from '@/app/stores/stores'
 import { getExportLogs, getLoginLogs, getSystemLogs } from '@/shared/api/teacher'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
 import ExportLogTable from './components/ExportLogTable.vue'
 import LoginLogTable from './components/LoginLogTable.vue'
 import LogTable from './components/LogTable.vue'
 import ScopedLogView from './components/ScopedLogView.vue'
 
-const userStore = useUserStore()
-// teacher / reviewer 角色只能查看自身 + 授权范围内学生的操作日志（/teacher/logs），
-// admin / super_admin 保留系统 / 登录 / 导出三个维度（/admin/logs/**）。
-const isScoped = computed(() => userStore.isTeacherRole || userStore.isReviewer)
+const { hasPermission } = useTeacherAuthz()
+// 仅持有 log:view / log:audit 的管理员可查看系统 / 登录 / 导出三个维度（/admin/logs/**）；
+// 教师 / 辅导员只能查看自身 + 授权范围内学生的操作日志（/teacher/logs，脱敏）。
+const isScoped = computed(() => !hasPermission('log:view') && !hasPermission('log:audit'))
 
 // ── 操作日志（系统日志）：筛选与分页 ──
 const filters = reactive({

@@ -4,7 +4,8 @@
  *
  * 对接后端 POST /admin/users 创建管理员 / 审核员（辅导员）/ 课任教师账号。
  * schoolId 取登录者 /auth/me 的 schoolId；学院下拉来自登录者授权范围（scopeType=2）。
- * 角色编码 → roleId：admin=2 / reviewer(辅导员)=4 / teacher=3。
+ * 角色编码 → roleIds：admin=[2] / reviewer=[3,4] / teacher=[3]。
+ * 审核员 = 教师 + 辅导员双角色（辅导员也是教师，与 RoleAdjust 口径一致）。
  */
 import { ElMessage } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
@@ -14,10 +15,10 @@ import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 
 const { me } = useTeacherMe()
 
-const ROLE_ID_MAP: Record<string, number> = {
-  admin: 2,
-  reviewer: 4, // 审核员 = 辅导员 counselor
-  teacher: 3,
+const ROLE_ID_MAP: Record<string, number[]> = {
+  admin: [2],
+  reviewer: [3, 4], // 审核员 = 教师(3) + 辅导员(4)
+  teacher: [3],
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -82,7 +83,7 @@ async function handleAdd() {
       email: form.email || undefined,
       phone: form.phone || undefined,
       schoolId,
-      roleIds: [ROLE_ID_MAP[form.role]],
+      roleIds: ROLE_ID_MAP[form.role],
       collegeId: form.collegeId,
     })
     ElMessage.success(`已创建${ROLE_LABELS[form.role]}账号「${form.name.trim()}」`)
