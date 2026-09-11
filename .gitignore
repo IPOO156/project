@@ -14,4 +14,7 @@ package-lock.json
 # Cursor AI 配置目录（本地规则，不入库）
 .cursor/
 
+# Trae AI 配置目录（本地规则，不入库）
+.trae/
+
 # package.json 由开发者维护，正常入库（保留）

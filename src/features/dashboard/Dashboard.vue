@@ -1,235 +1,470 @@
 <script setup lang="ts">
-import {
-  ArrowRight,
-  Award,
-  BookOpen,
-  Clock,
-  FileText,
-  Star,
-  TrendingUp,
-  Trophy,
-  Users,
-} from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import type { QuickEntry } from './composables/useQuickEntries'
+import { RadarChart } from 'echarts/charts'
+import { LegendComponent, RadarComponent, TooltipComponent } from 'echarts/components'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { ElMessage } from 'element-plus'
+import { Award, Clock, FileText, TrendingUp } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import VChart from 'vue-echarts'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/app/stores/stores'
+import {
+  useActivityStore,
+  useArchiveStore,
+  useHomeStore,
+  useSubmissionStore,
+  useThemeStore,
+} from '@/app/stores/stores'
+import { useScoreIndicator } from '@/shared/composables/composables'
+import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
+import StatusTag from '@/shared/ui/StatusTag.vue'
+import QuickEntries from './components/QuickEntries.vue'
+import QuickEntrySettings from './components/QuickEntrySettings.vue'
+import StatsOverview from './components/StatsOverview.vue'
+import { useQuickEntries } from './composables/useQuickEntries'
+
+use([CanvasRenderer, RadarComponent, RadarChart, TooltipComponent, LegendComponent])
 
 const router = useRouter()
-const userStore = useUserStore()
+const activityStore = useActivityStore()
+const archiveStore = useArchiveStore()
+const homeStore = useHomeStore()
+const submissionStore = useSubmissionStore()
+const themeStore = useThemeStore()
+const { visibleEntries, recordClick, refreshPool, updateOrder, toggleHidden } = useQuickEntries()
+const showSettings = ref(false)
 
-// ── Mock 数据（接口联调后替换） ──
+const {
+  indicators: scoreIndicators,
+  indicatorVisible,
+  indicatorLoading,
+  indicatorTitle,
+  indicatorCalculationId,
+  openIndicator,
+  closeIndicator,
+} = useScoreIndicator()
 
-// 统计卡片
-const statsCards = ref([
-  { label: '申报总数', value: 12, icon: FileText, color: '#409eff' },
-  { label: '已通过', value: 8, icon: Award, color: '#67c23a' },
-  { label: '待审批', value: 3, icon: Clock, color: '#e6a23c' },
-  { label: '学期均绩', value: '3.82', icon: TrendingUp, color: '#1e3a5f' },
-])
+// ── 从 store 派生展示数据（数据由 API 层填充 store） ──
 
-// 快捷入口
-const quickEntries = [
-  { label: '学科竞赛', path: '/applications/competition', icon: Trophy, color: '#e74c3c' },
-  { label: '社会实践', path: '/applications/social-practice', icon: Users, color: '#3498db' },
-  { label: '奖学金', path: '/applications/scholarship', icon: Star, color: '#f39c12' },
-  { label: '成长时间轴', path: '/profile/timeline', icon: BookOpen, color: '#2ecc71' },
-]
+// 学期均绩：所有课程按学分加权平均 GPA
+const overallGpa = computed(() => {
+  const grades = archiveStore.grades
+  const totalCredits = grades.reduce((s, g) => s + g.credits, 0)
+  if (totalCredits === 0) return '0.00'
+  const weighted = grades.reduce((s, g) => s + g.gpa * g.credits, 0)
+  return (weighted / totalCredits).toFixed(2)
+})
 
-// 最近动态 (模拟数据)
-const recentActivities = ref([
-  { type: 'submitted', text: '学科竞赛申报已提交', time: '2026-06-28 14:30' },
-  { type: 'approved', text: '社会实践申报已通过', time: '2026-06-25 10:20' },
-  { type: 'submitted', text: '奖学金申请已提交', time: '2026-06-20 16:45' },
-  { type: 'rejected', text: '创新创业申报需修改', time: '2026-06-18 09:00' },
-  { type: 'approved', text: '荣誉证书登记已通过', time: '2026-06-15 11:30' },
-])
+// 统计卡片：优先使用 /home/dashboard 数据，缺失时回退本地 store；本地也无数据则显示「--」
+const statsCards = computed(() => {
+  const home = homeStore.data
+  const records = submissionStore.records
+  const total = records.length > 0 ? records.length : '--'
+  const approved = records.length > 0 ? records.filter((r) => r.status === 'approved').length : '--'
+  const pending = records.length > 0 ? records.filter((r) => r.status === 'pending').length : '--'
+  return [
+    {
+      label: '申报总数',
+      value: home?.applicationTotal ?? total,
+      icon: FileText,
+      color: themeStore.isDark ? '#60a5fa' : '#2d5a87',
+      path: '/applications',
+    },
+    {
+      label: '已通过',
+      value: home?.approvedCount ?? approved,
+      icon: Award,
+      color: '#10b981',
+      path: '/approval/pending',
+    },
+    {
+      label: '待审批',
+      value: home?.pendingCount ?? pending,
+      icon: Clock,
+      color: '#d4a574',
+      path: '/approval/pending',
+    },
+    {
+      label: '学期均绩',
+      value: home?.currentGpa ?? (archiveStore.grades.length > 0 ? overallGpa.value : '--'),
+      icon: TrendingUp,
+      color: '#d4a574',
+      path: '/profile/info',
+    },
+  ]
+})
 
-// 多维度画像（模拟数据）
-const profileDimensions = ref([
-  { label: '学业成绩', score: 88, color: '#409eff' },
-  { label: '竞赛实践', score: 75, color: '#67c23a' },
-  { label: '科研创新', score: 60, color: '#e6a23c' },
-  { label: '社会工作', score: 85, color: '#f56c6c' },
-  { label: '综合素质', score: 80, color: '#9b59b6' },
-])
+// 多维度画像：优先使用 /home/dashboard radarChart，缺失时回退 archiveStore
+const profileDimensions = computed(() => {
+  const home = homeStore.data
+  if (home?.radarChart?.dimensions && home.radarChart.dimensions.length > 0) {
+    const { dimensions, current, target, previous } = home.radarChart
+    return dimensions.map((d: any, i: number) => ({
+      label: d.name,
+      current: current[i] ?? 0,
+      target: target[i] ?? 0,
+      previous: previous[i] ?? 0,
+    }))
+  }
+  return archiveStore.dimensions
+})
 
-const todayLabel = computed(() => {
-  return new Date().toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'long',
+const hasProfileDimensions = computed(() => profileDimensions.value.length > 0)
+
+const comparedSemesterMap = computed(() => {
+  const map = new Map<string, string>()
+  for (const ind of homeStore.data?.indicators ?? []) {
+    if (ind.dimensionName && ind.comparedSemesterName) {
+      map.set(ind.dimensionName, ind.comparedSemesterName)
+    }
+  }
+  return map
+})
+
+const indicatorMeta = computed(() => {
+  const first = homeStore.data?.indicators?.[0]
+  const rate = homeStore.data?.dataCompleteness?.rate
+  return {
+    ruleVersion: first?.ruleVersion == null ? '--' : `v${first.ruleVersion}`,
+    calculatedAt: first?.calculatedAt ?? '--',
+    completeness: rate == null ? '--' : `${Math.round(rate <= 1 ? rate * 100 : rate)}%`,
+  }
+})
+
+const profileSummary = computed(() => {
+  const comparedMap = comparedSemesterMap.value
+  return profileDimensions.value.map((item) => {
+    const deltaFromPrevious = item.current - item.previous
+    const comparedSemesterName = comparedMap.get(item.label)
+    return {
+      label: item.label,
+      current: item.current,
+      target: item.target,
+      previous: item.previous,
+      deltaFromPrevious,
+      deltaLabel: comparedSemesterName ? `较${comparedSemesterName}学期` : '较上阶段',
+      gapToTarget: item.target - item.current,
+      deltaClass: deltaFromPrevious >= 0 ? 'is-up' : 'is-down',
+      deltaSign: deltaFromPrevious >= 0 ? '+' : '',
+    }
   })
+})
+
+const radarTextColor = computed(() => (themeStore.isDark ? '#94a3b8' : '#334155'))
+const radarAxisColor = computed(() => (themeStore.isDark ? '#334155' : 'rgba(148, 163, 184, 0.18)'))
+const radarSplitColor = computed(() =>
+  themeStore.isDark ? '#1e293b' : 'rgba(148, 163, 184, 0.12)',
+)
+const radarAreaColors = computed(() =>
+  themeStore.isDark
+    ? ['rgba(30, 41, 59, 0.70)', 'rgba(15, 23, 42, 0.45)']
+    : ['rgba(248, 250, 252, 0.70)', 'rgba(241, 245, 249, 0.45)'],
+)
+const radarTooltipBg = computed(() =>
+  themeStore.isDark ? 'rgba(15, 23, 42, 0.92)' : 'rgba(17, 24, 39, 0.92)',
+)
+
+const radarOption = computed(() => {
+  if (!hasProfileDimensions.value) {
+    return null
+  }
+
+  return {
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: radarTooltipBg.value,
+      borderWidth: 0,
+      textStyle: { color: '#fff' },
+    },
+    legend: {
+      bottom: 0,
+      icon: 'circle',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: {
+        color: radarTextColor.value,
+        fontSize: 12,
+      },
+      data: ['当前画像', '目标值', '上一阶段'],
+    },
+    radar: {
+      radius: '62%',
+      center: ['50%', '44%'],
+      splitNumber: 5,
+      axisName: {
+        color: radarTextColor.value,
+        fontSize: 13,
+      },
+      splitLine: {
+        lineStyle: {
+          color: radarSplitColor.value,
+        },
+      },
+      splitArea: {
+        areaStyle: {
+          color: radarAreaColors.value,
+        },
+      },
+      axisLine: {
+        lineStyle: {
+          color: radarAxisColor.value,
+        },
+      },
+      indicator: profileDimensions.value.map((item) => ({
+        name: item.label,
+        max: 100,
+      })),
+    },
+    series: [
+      {
+        type: 'radar',
+        symbol: 'circle',
+        symbolSize: 7,
+        data: [
+          {
+            value: profileDimensions.value.map((item) => item.current),
+            name: '当前画像',
+            areaStyle: {
+              color: 'rgba(45, 90, 135, 0.20)',
+            },
+            lineStyle: {
+              color: '#2d5a87',
+              width: 3,
+            },
+            itemStyle: {
+              color: '#2d5a87',
+            },
+          },
+          {
+            value: profileDimensions.value.map((item) => item.target),
+            name: '目标值',
+            lineStyle: {
+              color: '#94a3b8',
+              width: 2,
+              type: 'dashed',
+            },
+            areaStyle: {
+              color: 'transparent',
+            },
+            itemStyle: {
+              color: '#94a3b8',
+            },
+          },
+          {
+            value: profileDimensions.value.map((item) => item.previous),
+            name: '上一阶段',
+            lineStyle: {
+              color: '#a855f7',
+              width: 2,
+            },
+            areaStyle: {
+              color: 'rgba(168, 85, 247, 0.08)',
+            },
+            itemStyle: {
+              color: '#a855f7',
+            },
+          },
+        ],
+      },
+    ],
+  }
+})
+
+const recentActivities = computed(() => activityStore.filteredActivities.slice(0, 5))
+
+async function onEntryClick(entry: QuickEntry) {
+  recordClick(entry.path)
+  try {
+    await router.push(entry.path)
+  } catch {
+    ElMessage.error('页面跳转失败，请稍后重试')
+  }
+}
+
+function onStatCardClick(path: string) {
+  void router.push(path)
+}
+
+function onQuickRefresh() {
+  refreshPool()
+}
+
+function onToggleHidden(id: string) {
+  toggleHidden(id)
+}
+
+function onUpdateOrder(orderedIds: string[]) {
+  updateOrder(orderedIds)
+}
+
+onMounted(() => {
+  homeStore.fetchDashboard()
+  activityStore.fetchActivities()
+  // 档案与申报数据：若已缓存则不重复拉取
+  if (archiveStore.dimensions.length === 0) archiveStore.fetchArchive()
+  if (submissionStore.records.length === 0) submissionStore.fetchRecords()
 })
 </script>
 
 <template>
   <div class="dashboard">
-    <!-- 欢迎区域 -->
-    <div class="dashboard__welcome">
-      <div class="dashboard__welcome-text">
-        <h2>欢迎回来，{{ userStore.userName }}同学</h2>
-        <p>{{ userStore.userInfo?.major }} · {{ userStore.userInfo?.className }} · 学号 {{ userStore.studentId }}</p>
-      </div>
-      <div class="dashboard__welcome-time">
-        <span>{{ todayLabel }}</span>
-      </div>
-    </div>
-
-    <!-- 统计卡片 -->
-    <el-row :gutter="16" class="dashboard__stats">
-      <el-col v-for="card in statsCards" :key="card.label" :span="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-card__body">
-            <div class="stat-card__info">
-              <p class="stat-card__label">{{ card.label }}</p>
-              <p class="stat-card__value">{{ card.value }}</p>
-            </div>
-            <div class="stat-card__icon" :style="{ background: `${card.color}15`, color: card.color }">
-              <component :is="card.icon" :size="24" />
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <StatsOverview :cards="statsCards" @card-click="onStatCardClick" />
 
     <el-row :gutter="16" class="dashboard__main">
-      <!-- 多维度画像 -->
-      <el-col :span="14">
-        <el-card class="dashboard__section">
+      <el-col :span="13" class="dashboard__col">
+        <el-card class="dashboard__section dashboard__section--radar">
           <template #header>
-            <span class="section-title">多维度画像评估</span>
+            <div class="dashboard__section-header">
+              <span class="section-title">多维度画像评估</span>
+              <span class="indicator-meta">
+                规则版本 {{ indicatorMeta.ruleVersion }} · 计算时间
+                {{ indicatorMeta.calculatedAt }} · 数据完整度 {{ indicatorMeta.completeness }}
+                <el-button link type="primary" @click="onStatCardClick('/profile/info')"
+                  >查看档案概览</el-button
+                >
+              </span>
+            </div>
           </template>
-          <div class="radar-section">
-            <div v-for="dim in profileDimensions" :key="dim.label" class="dimension-bar">
-              <div class="dimension-bar__header">
-                <span class="dimension-bar__label">{{ dim.label }}</span>
-                <span class="dimension-bar__score">{{ dim.score }}分</span>
-              </div>
-              <el-progress
-                :percentage="dim.score"
-                :color="dim.color"
-                :stroke-width="12"
-                :format="() => ''"
+          <div class="radar-panel">
+            <div class="radar-panel__chart-wrap" @click="onStatCardClick('/profile/info')">
+              <VChart
+                v-if="radarOption"
+                class="radar-panel__chart"
+                :option="radarOption"
+                autoresize
               />
+              <div v-else class="radar-panel__chart radar-panel__chart--empty">
+                <el-empty description="暂无维度数据" :image-size="80" />
+              </div>
+            </div>
+            <div v-if="profileSummary.length > 0" class="radar-panel__summary">
+              <div v-for="item in profileSummary" :key="item.label" class="radar-metric">
+                <div class="radar-metric__title-row">
+                  <span class="radar-metric__label">{{ item.label }}</span>
+                  <div class="radar-metric__score-group">
+                    <span class="radar-metric__score">{{ item.current }}分</span>
+                    <el-button
+                      class="radar-metric__link"
+                      link
+                      type="primary"
+                      @click="openIndicator(item.label, item.label)"
+                      >查看计算说明</el-button
+                    >
+                  </div>
+                </div>
+                <div class="radar-metric__meta">
+                  <span class="radar-metric__delta" :class="item.deltaClass">
+                    {{ item.deltaLabel }} {{ item.deltaSign }}{{ item.deltaFromPrevious }}分
+                  </span>
+                  <span class="radar-metric__gap">距目标 {{ item.gapToTarget }}分</span>
+                </div>
+              </div>
             </div>
           </div>
         </el-card>
       </el-col>
 
-      <!-- 快捷入口 -->
-      <el-col :span="10">
-        <el-card class="dashboard__section">
-          <template #header>
-            <span class="section-title">快捷入口</span>
-          </template>
-          <el-row :gutter="12">
-            <el-col v-for="entry in quickEntries" :key="entry.label" :span="12">
-              <el-card
-                shadow="hover"
-                class="quick-entry"
-                @click="router.push(entry.path)"
-              >
-                <div class="quick-entry__body">
-                  <div class="quick-entry__icon" :style="{ background: `${entry.color}15`, color: entry.color }">
-                    <component :is="entry.icon" :size="20" />
-                  </div>
-                  <span class="quick-entry__label">{{ entry.label }}</span>
-                  <ArrowRight :size="14" class="quick-entry__arrow" />
-                </div>
-              </el-card>
-            </el-col>
-          </el-row>
-        </el-card>
+      <el-col :span="11" class="dashboard__col">
+        <QuickEntries
+          :entries="visibleEntries"
+          @entry-click="onEntryClick"
+          @refresh="onQuickRefresh"
+          @toggle-hidden="onToggleHidden"
+          @update-order="onUpdateOrder"
+          @open-settings="showSettings = true"
+        />
 
-        <!-- 最近动态 -->
         <el-card class="dashboard__section dashboard__section--activities">
           <template #header>
-            <span class="section-title">最近动态</span>
+            <div class="dashboard__section-header">
+              <span class="section-title">最近动态</span>
+              <el-button link type="primary" @click="router.push('/messages/activities')">
+                查看全部
+              </el-button>
+            </div>
           </template>
-          <div class="activities">
-            <div v-for="(act, idx) in recentActivities" :key="idx" class="activity-item">
+          <div v-loading="activityStore.loading" class="activities">
+            <div v-for="act in recentActivities" :key="act.id" class="activity-item">
               <div class="activity-item__dot" :class="`activity-item__dot--${act.type}`" />
               <div class="activity-item__content">
-                <p class="activity-item__text">{{ act.text }}</p>
+                <div class="activity-item__title-row">
+                  <p class="activity-item__text">{{ act.text }}</p>
+                  <StatusTag :status="act.status" size="small" />
+                </div>
                 <span class="activity-item__time">{{ act.time }}</span>
               </div>
             </div>
+            <el-empty
+              v-if="!activityStore.loading && recentActivities.length === 0"
+              description="暂无动态"
+            />
           </div>
         </el-card>
       </el-col>
     </el-row>
+
+    <QuickEntrySettings v-model:visible="showSettings" />
+    <ScoreIndicatorDialog
+      :visible="indicatorVisible"
+      :loading="indicatorLoading"
+      :title="indicatorTitle"
+      :indicators="scoreIndicators"
+      :calculation-id="indicatorCalculationId"
+      @close="closeIndicator"
+    />
   </div>
 </template>
 
 <style scoped lang="scss">
 .dashboard {
-  &__welcome {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 12px;
+
+  &__main {
+    flex: 1;
+    min-height: 0;
+    margin-bottom: 0;
+  }
+
+  &__col {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    margin-bottom: 24px;
+    flex-direction: column;
+    height: 100%;
 
-    &-text {
-      h2 {
-        font-size: 22px;
-        font-weight: 600;
-        color: var(--el-text-color-primary);
-        margin-bottom: 6px;
-      }
-
-      p {
-        font-size: 14px;
-        color: var(--el-text-color-secondary);
-      }
-    }
-
-    &-time {
-      font-size: 14px;
-      color: var(--el-text-color-secondary);
+    /* 左列单卡片撑满 */
+    &:first-child :deep(.el-card) {
+      flex: 1;
     }
   }
 
-  &__stats {
-    margin-bottom: 20px;
+  &__col:last-child :deep(.el-card) {
+    flex: 1;
+  }
+
+  &__col:last-child :deep(.quick-entries-card) {
+    flex: 0 0 auto;
   }
 
   &__section {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 
     &--activities {
       margin-bottom: 0;
     }
   }
-}
 
-.stat-card {
-  &__body {
+  &__charts {
+    margin-bottom: 12px;
+  }
+
+  &__section-header {
     display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: center;
-  }
-
-  &__label {
-    font-size: 14px;
-    color: var(--el-text-color-secondary);
-    margin-bottom: 8px;
-  }
-
-  &__value {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--el-text-color-primary);
-  }
-
-  &__icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+    gap: 12px;
   }
 }
 
@@ -239,68 +474,88 @@ const todayLabel = computed(() => {
   color: var(--el-text-color-primary);
 }
 
-.dimension-bar {
-  margin-bottom: 18px;
-
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 6px;
-  }
-
-  &__label {
-    font-size: 14px;
-    color: var(--el-text-color-primary);
-  }
-
-  &__score {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--el-text-color-secondary);
-  }
+.indicator-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
-.quick-entry {
-  margin-bottom: 12px;
+.radar-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 1fr);
+  gap: $spacing-lg;
+  align-items: center;
+}
+
+.radar-panel__chart-wrap {
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+}
 
-  &:hover {
-    transform: translateY(-2px);
-    .quick-entry__arrow {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
+.radar-panel__chart {
+  height: 260px;
+  width: 100%;
+}
 
-  &__body {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+.radar-panel__summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  align-content: center;
+}
 
-  &__icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
+.radar-metric {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+}
 
-  &__label {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 500;
-  }
+.radar-metric__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
 
-  &__arrow {
-    opacity: 0;
-    transform: translateX(-4px);
-    transition: all 0.2s;
-    color: var(--el-text-color-secondary);
-  }
+.radar-metric__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.radar-metric__score {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--el-color-primary);
+}
+
+.radar-metric__score-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.radar-metric__link {
+  font-size: 12px;
+}
+
+.radar-metric__meta {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.radar-metric__delta.is-up {
+  color: #16a34a;
+}
+
+.radar-metric__delta.is-down {
+  color: #dc2626;
 }
 
 .activities {
@@ -325,9 +580,18 @@ const todayLabel = computed(() => {
     margin-top: 6px;
     flex-shrink: 0;
 
-    &--submitted { background: #e6a23c; }
-    &--approved { background: #67c23a; }
-    &--rejected { background: #f56c6c; }
+    &--draft {
+      background: #909399;
+    }
+    &--submitted {
+      background: #e6a23c;
+    }
+    &--approved {
+      background: #67c23a;
+    }
+    &--rejected {
+      background: #f56c6c;
+    }
   }
 
   &__content {
@@ -341,9 +605,36 @@ const todayLabel = computed(() => {
     }
   }
 
+  &__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
   &__time {
     font-size: 12px;
     color: var(--el-text-color-secondary);
+  }
+}
+
+@media (max-width: 1200px) {
+  .radar-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .radar-panel__chart {
+    height: 320px;
+  }
+
+  .radar-panel__summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .radar-panel__summary {
+    grid-template-columns: 1fr;
   }
 }
 </style>

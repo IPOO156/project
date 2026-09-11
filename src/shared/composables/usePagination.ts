@@ -6,7 +6,9 @@ export interface PaginationOptions<T> {
   immediate?: boolean
 }
 
-export function usePagination<T>(fetchFn: (params: PaginationParams) => Promise<PaginatedData<T> | T[]>) {
+export function usePagination<T>(
+  fetchFn: (params: PaginationParams) => Promise<PaginatedData<T> | T[]>,
+) {
   const pageNum = ref(1)
   const pageSize = ref(10)
   const total = ref(0)
@@ -39,14 +41,12 @@ export function usePagination<T>(fetchFn: (params: PaginationParams) => Promise<
       if (Array.isArray(res)) {
         list.value = res
         total.value = res.length
-      }
-      else {
+      } else {
         list.value = res.list ?? []
         total.value = res.total ?? 0
       }
       return res
-    }
-    finally {
+    } finally {
       loading.value = false
     }
   }

@@ -1,0 +1,556 @@
+<script setup lang="ts">
+import type { NotificationCategory, NotificationStatus } from '@/shared/types/types'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Archive, Bell, CheckCheck, Filter, Mail, Search, Settings, X } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useNotificationStore } from '@/app/stores/stores'
+import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
+import PageContainer from '@/shared/ui/PageContainer.vue'
+import MessageCard from './components/MessageCard.vue'
+import MessageSettings from './components/MessageSettings.vue'
+
+/**
+ * 消息中心通知页面
+ * 采用蓝白配色的自定义卡片风格，与系统页面布局一致。
+ * 支持归档筛选、批量归档、批量已读；删除已改为归档，重要消息归档前二次确认。
+ */
+
+const router = useRouter()
+const notificationStore = useNotificationStore()
+
+const keyword = ref('')
+const categoryFilter = ref<NotificationCategory | ''>('')
+const statusFilter = ref<NotificationStatus | ''>('')
+const archiveFilter = ref<'all' | 'active' | 'archived'>('active')
+
+const pageNum = ref(1)
+const pageSize = ref(10)
+
+// ─── 批量操作 ───
+const batchMode = ref(false)
+const selectedIds = ref<string[]>([])
+
+function toggleSelect(id: string) {
+  const idx = selectedIds.value.indexOf(id)
+  if (idx > -1) {
+    selectedIds.value.splice(idx, 1)
+  } else {
+    selectedIds.value.push(id)
+  }
+}
+
+function handleBatchRead() {
+  notificationStore.markMultipleAsRead(selectedIds.value)
+  selectedIds.value = []
+  batchMode.value = false
+}
+
+function handleBatchArchive() {
+  notificationStore.archiveNotifications(selectedIds.value)
+  selectedIds.value = []
+  batchMode.value = false
+}
+
+function handleCancelBatchMode() {
+  batchMode.value = false
+  selectedIds.value = []
+}
+
+// ─── 卡片逐行刷入动画触发 ───
+const listKey = ref(0)
+
+function bumpListAnimation() {
+  listKey.value++
+}
+
+watch(
+  () => notificationStore.loading,
+  (loading) => {
+    if (!loading) bumpListAnimation()
+  },
+)
+
+watch([pageNum, pageSize], () => bumpListAnimation(), { flush: 'post' })
+
+const categoryOptions = computed(() => [
+  { value: '' as const, label: '全部分类' },
+  ...Object.entries(NOTIFICATION_CATEGORY).map(([value, config]) => ({
+    value,
+    label: config.label,
+  })),
+])
+
+const statusOptions = [
+  { value: '' as const, label: '全部状态' },
+  { value: 'unread' as const, label: '未读' },
+  { value: 'read' as const, label: '已读' },
+]
+
+const archiveOptions = [
+  { value: 'active' as const, label: '未归档' },
+  { value: 'archived' as const, label: '已归档' },
+  { value: 'all' as const, label: '全部' },
+]
+
+const stats = computed(() => [
+  {
+    label: '未读消息',
+    value: notificationStore.unreadCount,
+    icon: Mail,
+  },
+  {
+    label: '消息总数',
+    value: notificationStore.notifications.length,
+    icon: Bell,
+  },
+  {
+    label: '已归档',
+    value: notificationStore.archivedCount,
+    icon: Archive,
+  },
+])
+
+const filteredByArchive = computed(() => {
+  const all = notificationStore.filteredNotifications
+  if (archiveFilter.value === 'active') return all.filter((n) => n.isArchived !== 1)
+  if (archiveFilter.value === 'archived') return all.filter((n) => n.isArchived === 1)
+  return all
+})
+
+const filteredUnreadCount = computed(
+  () => filteredByArchive.value.filter((n) => n.isRead !== 1).length,
+)
+
+const paginatedList = computed(() => {
+  const start = (pageNum.value - 1) * pageSize.value
+  return filteredByArchive.value.slice(start, start + pageSize.value)
+})
+
+const total = computed(() => filteredByArchive.value.length)
+
+function handleSearch() {
+  pageNum.value = 1
+  notificationStore.fetchNotifications({
+    keyword: keyword.value || undefined,
+    category: categoryFilter.value || undefined,
+    status: statusFilter.value || undefined,
+  })
+}
+
+function handleReset() {
+  keyword.value = ''
+  categoryFilter.value = ''
+  statusFilter.value = ''
+  archiveFilter.value = 'active'
+  pageNum.value = 1
+  notificationStore.fetchNotifications()
+}
+
+function handlePageChange(page: number) {
+  pageNum.value = page
+}
+
+function handleSizeChange(size: number) {
+  pageSize.value = size
+  pageNum.value = 1
+}
+
+function markAsRead(id: string) {
+  notificationStore.markAsRead(id)
+}
+
+function archiveItem(id: string) {
+  notificationStore.archiveNotification(id)
+}
+
+function markAllAsRead() {
+  // 一键已读只处理当前筛选结果中的未读消息，并二次确认
+  const unreadIds = filteredByArchive.value.filter((n) => n.isRead !== 1).map((n) => n.id)
+  if (unreadIds.length === 0) {
+    ElMessage.info('当前筛选结果中暂无未读消息')
+    return
+  }
+  ElMessageBox.confirm(
+    `将把当前筛选结果中的 ${unreadIds.length} 条未读消息全部标为已读，是否继续？`,
+    '一键已读确认',
+    { confirmButtonText: '全部已读', cancelButtonText: '取消', type: 'warning' },
+  )
+    .then(() => notificationStore.markMultipleAsRead(unreadIds))
+    .catch(() => {})
+}
+
+function navigateToActivities() {
+  router.push('/messages/activities')
+}
+
+const settingsVisible = ref(false)
+
+function openSettings() {
+  settingsVisible.value = true
+}
+
+onMounted(() => {
+  notificationStore.fetchNotifications()
+})
+</script>
+
+<template>
+  <PageContainer class="message-center">
+    <!-- 页面标题区 -->
+    <header class="message-header">
+      <div class="message-header__main">
+        <div class="message-header__icon">
+          <Bell :size="28" />
+        </div>
+        <div>
+          <h1 class="message-header__title">消息中心</h1>
+          <p class="message-header__subtitle">集中查看系统通知、审批提醒与动态记录</p>
+        </div>
+      </div>
+
+      <div class="message-header__stats">
+        <div v-for="stat in stats" :key="stat.label" class="message-header__stat">
+          <div class="message-header__stat-main">
+            <component :is="stat.icon" :size="18" />
+            <span class="message-header__stat-value">{{ stat.value }}</span>
+          </div>
+          <span class="message-header__stat-label">{{ stat.label }}</span>
+        </div>
+        <el-button type="primary" :disabled="filteredUnreadCount === 0" @click="markAllAsRead">
+          <CheckCheck :size="16" style="margin-right: 4px" />一键已读
+        </el-button>
+        <el-button class="message-header__settings-btn" @click="openSettings">
+          <Settings :size="16" />消息设置
+        </el-button>
+      </div>
+    </header>
+
+    <!-- 工具栏 -->
+    <div class="panel-toolbar">
+      <div class="panel-toolbar__filters">
+        <div class="mc-input-wrap">
+          <Search :size="16" class="mc-input-wrap__icon" />
+          <el-input
+            v-model="keyword"
+            placeholder="搜索通知标题或内容"
+            clearable
+            @keyup.enter="handleSearch"
+            @clear="handleSearch"
+          />
+        </div>
+        <el-select
+          v-model="categoryFilter"
+          placeholder="全部分类"
+          clearable
+          class="mc-select"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="opt in categoryOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+        <el-select
+          v-model="statusFilter"
+          placeholder="全部状态"
+          clearable
+          class="mc-select"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="opt in statusOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+        <el-select
+          v-model="archiveFilter"
+          placeholder="归档筛选"
+          class="mc-select"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="opt in archiveOptions"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+        <el-button type="primary" size="default" @click="handleSearch">
+          <Filter :size="14" style="margin-right: 4px" />筛选
+        </el-button>
+        <el-button @click="handleReset"> <X :size="14" style="margin-right: 4px" />重置 </el-button>
+      </div>
+
+      <div class="panel-toolbar__batch">
+        <el-button v-if="!batchMode" size="small" @click="batchMode = true"> 批量操作 </el-button>
+        <template v-else>
+          <span class="panel-toolbar__batch-count">已选 {{ selectedIds.length }} 条</span>
+          <el-button size="small" @click="handleCancelBatchMode">取消</el-button>
+          <el-button
+            size="small"
+            type="primary"
+            :disabled="selectedIds.length === 0"
+            @click="handleBatchRead"
+          >
+            批量已读
+          </el-button>
+          <el-button size="small" :disabled="selectedIds.length === 0" @click="handleBatchArchive">
+            <Archive :size="14" style="margin-right: 4px" />批量归档
+          </el-button>
+        </template>
+      </div>
+
+      <el-button @click="navigateToActivities">
+        <Mail :size="16" style="margin-right: 4px" />查看动态记录
+      </el-button>
+    </div>
+
+    <!-- 通知列表 -->
+    <div
+      :key="listKey"
+      v-loading="notificationStore.loading"
+      class="mc-card message-list message-list--staggered"
+    >
+      <MessageCard
+        v-for="item in paginatedList"
+        :key="item.id"
+        :item="item"
+        :batch-mode="batchMode"
+        :checked="selectedIds.includes(item.id)"
+        @read="markAsRead"
+        @archive="archiveItem"
+        @toggle-select="toggleSelect"
+      />
+
+      <div v-if="paginatedList.length > 0" class="mc-pagination">
+        <el-pagination
+          v-model:current-page="pageNum"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @current-change="handlePageChange"
+          @size-change="handleSizeChange"
+        />
+      </div>
+
+      <el-empty
+        v-else-if="!notificationStore.loading"
+        :description="
+          notificationStore.loadError ? '消息加载失败，请检查网络后重试' : '暂无通知消息'
+        "
+        class="mc-empty"
+      />
+    </div>
+
+    <MessageSettings v-model:visible="settingsVisible" />
+  </PageContainer>
+</template>
+
+<style scoped lang="scss">
+@use './styles/theme' as *;
+
+.message-center {
+  @include message-theme-vars;
+
+  font-family: $mc-font-body;
+  color: var(--mc-text);
+  user-select: none;
+}
+
+.message-header {
+  @include mc-fade-in;
+
+  background: var(--mc-card);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius);
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: var(--el-color-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--el-text-color-primary);
+  }
+
+  &__subtitle {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--mc-text-secondary);
+  }
+
+  &__stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 80px;
+    padding: 10px 14px;
+    background: var(--mc-bg);
+    border: 1px solid var(--mc-border);
+    border-radius: 8px;
+  }
+
+  &__stat-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #1e3a5f;
+  }
+
+  &__stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--el-text-color-primary);
+  }
+
+  &__stat-label {
+    font-size: 12px;
+    color: var(--mc-text-secondary);
+  }
+
+  &__read-all {
+    align-self: stretch;
+  }
+
+  &__settings-btn {
+    :deep(svg) {
+      margin-right: 4px;
+    }
+  }
+}
+
+.panel-toolbar {
+  @include mc-fade-in(0.1s);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+
+  &__filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__batch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__batch-count {
+    font-size: 13px;
+    color: var(--mc-text-secondary);
+  }
+}
+
+.mc-input-wrap {
+  @include mc-input-wrap(240px);
+}
+
+.mc-select {
+  @include mc-select(150px);
+}
+
+.mc-card {
+  @include mc-card;
+}
+
+.mc-pagination {
+  @include mc-pagination;
+}
+
+.mc-empty {
+  @include mc-empty;
+}
+
+.message-list {
+  @include mc-fade-in(0.15s);
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &--staggered {
+    --mc-row-duration: 0.5s;
+    --mc-row-delay: 0.07s;
+    --mc-row-offset: -40px;
+
+    @include list-item-staggered(50);
+  }
+}
+
+@media (max-width: 768px) {
+  .message-header {
+    padding: 20px;
+
+    &__title {
+      font-size: 22px;
+    }
+
+    &__stats {
+      width: 100%;
+    }
+
+    &__read-all {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+
+  .panel-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+
+    &__filters {
+      width: 100%;
+    }
+  }
+
+  .mc-input-wrap,
+  .mc-select {
+    width: 100%;
+  }
+}
+</style>

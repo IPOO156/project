@@ -1,0 +1,300 @@
+/**
+ * 消息中心 / 动态中心共享主题
+ * 深海蓝 + 琥珀金配色，与项目整体基调一致
+ */
+
+// ─── CSS 变量 ───
+@mixin message-theme-vars {
+  --mc-bg: #f8fafc;
+  --mc-row-hover: #f1f5f9;
+  --mc-card: #ffffff;
+  --mc-wood: #1e3a5f;
+  --mc-wood-light: #2d5a87;
+  --mc-terracotta: #1e3a5f;
+  --mc-sage: #10b981;
+  --mc-sage-fade: rgba(16, 185, 129, 0.1);
+  --mc-gold: #d4a574;
+  --mc-cream: rgba(30, 58, 95, 0.04);
+  --mc-text: #1e293b;
+  --mc-text-secondary: #64748b;
+  --mc-border: #e2e8f0;
+  --mc-shadow: 0 2px 8px rgba(30, 58, 95, 0.06);
+  --mc-shadow-hover: 0 6px 20px rgba(30, 58, 95, 0.1);
+  --mc-primary-shadow: rgba(30, 58, 95, 0.15);
+  --mc-primary-fade: rgba(30, 58, 95, 0.12);
+  --mc-primary-faint: rgba(30, 58, 95, 0.05);
+  --mc-danger: #ef4444;
+  --mc-danger-light: #fca5a5;
+  --mc-danger-fade: rgba(239, 68, 68, 0.08);
+  --mc-radius: 12px;
+
+  // 夜间模式覆盖
+  html.dark &,
+  [data-theme='dark'] & {
+    --mc-bg: #0b1120;
+    --mc-row-hover: #1e293b;
+    --mc-card: #0f172a;
+    --mc-wood: #d4a574;
+    --mc-wood-light: #e3c4a0;
+    --mc-terracotta: #d4a574;
+    --mc-sage: #6ee7b7;
+    --mc-sage-fade: rgba(110, 231, 183, 0.1);
+    --mc-gold: #d4a574;
+    --mc-cream: rgba(212, 165, 116, 0.06);
+    --mc-text: #f1f5f9;
+    --mc-text-secondary: #94a3b8;
+    --mc-border: #334155;
+    --mc-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    --mc-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.45);
+    --mc-primary-shadow: rgba(212, 165, 116, 0.25);
+    --mc-primary-fade: rgba(212, 165, 116, 0.2);
+    --mc-primary-faint: rgba(212, 165, 116, 0.08);
+    --mc-danger: #f87171;
+    --mc-danger-light: #7f1d1d;
+    --mc-danger-fade: rgba(248, 113, 113, 0.12);
+  }
+}
+
+// ─── 字体 ───
+$mc-font-display: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+$mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+
+// ─── 动画 ───
+@mixin mc-fade-in($delay: 0s) {
+  animation: mc-fade-in 0.4s ease $delay both;
+
+  @keyframes mc-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+// ─── 按钮基础 ───
+@mixin mc-btn-base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: $mc-font-body;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+@mixin mc-btn-primary {
+  @include mc-btn-base;
+  background: #1e3a5f;
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: #2d5a87;
+  }
+}
+
+@mixin mc-btn-secondary {
+  @include mc-btn-base;
+  background: var(--mc-card);
+  color: var(--mc-text);
+  border: 1px solid var(--mc-border);
+
+  &:hover:not(:disabled) {
+    border-color: #1e3a5f;
+    color: #1e3a5f;
+  }
+}
+
+@mixin mc-btn-ghost {
+  @include mc-btn-base;
+  background: var(--mc-card);
+  color: var(--mc-text-secondary);
+  border: 1px solid var(--mc-border);
+
+  &:hover:not(:disabled) {
+    background: var(--mc-cream);
+    border-color: var(--mc-wood);
+    color: var(--mc-wood);
+  }
+}
+
+// ─── 输入框 ───
+@mixin mc-input-wrap($width: 220px) {
+  position: relative;
+  width: $width;
+
+  :deep(.el-input__wrapper) {
+    padding-left: 36px;
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px var(--mc-border) inset;
+    background: var(--mc-bg);
+    transition: box-shadow 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 0 0 1px #94a3b8 inset;
+    }
+
+    &.is-focus {
+      box-shadow: 0 0 0 1.5px #1e3a5f inset;
+    }
+  }
+
+  :deep(.el-input__inner) {
+    height: 32px;
+    font-size: 13px;
+  }
+
+  &__icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    pointer-events: none;
+    z-index: 1;
+  }
+}
+
+// ─── 选择器 ───
+@mixin mc-select($width: 130px) {
+  width: $width;
+
+  :deep(.el-input__wrapper) {
+    border-radius: 6px;
+    box-shadow: 0 0 0 1px var(--mc-border) inset;
+    background: var(--mc-bg);
+
+    &:hover {
+      box-shadow: 0 0 0 1px #94a3b8 inset;
+    }
+
+    &.is-focus {
+      box-shadow: 0 0 0 1.5px #1e3a5f inset;
+    }
+  }
+
+  :deep(.el-input__inner) {
+    height: 32px;
+    font-size: 13px;
+  }
+}
+
+// ─── 卡片 ───
+@mixin mc-card {
+  background: var(--mc-card);
+  border: 1px solid var(--mc-border);
+  border-radius: var(--mc-radius);
+  padding: 16px 20px;
+}
+
+// ─── 弹窗 ───
+@mixin mc-dialog {
+  border-radius: var(--mc-radius);
+  overflow: hidden;
+
+  .el-dialog__header {
+    margin-right: 0;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--mc-border);
+
+    .el-dialog__title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1e3a5f;
+    }
+  }
+
+  .el-dialog__body {
+    padding: 20px;
+  }
+
+  .el-dialog__footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--mc-border);
+  }
+}
+
+// ─── 分页 ───
+@mixin mc-pagination {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mc-border);
+
+  .el-pagination.is-background .el-pager li:not(.is-disabled).is-active {
+    background: #1e3a5f;
+  }
+
+  .el-pagination.is-background .el-pager li:not(.is-disabled):hover {
+    color: #1e3a5f;
+  }
+}
+
+// ─── 表格 ───
+@mixin mc-table {
+  --el-table-header-bg-color: rgba(30, 58, 95, 0.03);
+  --el-table-header-text-color: #1e3a5f;
+  --el-table-row-hover-bg-color: var(--mc-row-hover);
+  --el-table-border-color: var(--mc-border);
+
+  border-radius: 8px;
+  overflow: hidden;
+
+  th.el-table__cell {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  td.el-table__cell {
+    font-size: 14px;
+    color: var(--mc-text);
+  }
+}
+
+// ─── 表单 ───
+@mixin mc-form {
+  .el-form-item__label {
+    color: var(--mc-text);
+    font-weight: 500;
+  }
+
+  .el-input__wrapper,
+  .el-textarea__inner,
+  .el-select .el-input__wrapper {
+    border-radius: 8px;
+    box-shadow: 0 0 0 1px var(--mc-border) inset;
+    background: var(--mc-card);
+
+    &:hover,
+    &.is-focus {
+      box-shadow: 0 0 0 1px #1e3a5f inset;
+    }
+  }
+
+  .el-textarea__inner {
+    padding: 10px 12px;
+  }
+}
+
+// ─── 空状态 ───
+@mixin mc-empty {
+  padding: 40px 0;
+
+  .el-empty__description {
+    color: var(--mc-text-secondary);
+  }
+}
