@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>检查验证码跳过请求头</title>
+</head>
+<body>
+  <h1>验证码跳过测试</h1>
+  <p>请在浏览器开发者工具的 Network（网络）标签中，筛选 POST 请求到 /api/v1/auth/login</p>
+  <p>查看请求头是否包含：</p>
+  <ul>
+    <li>X-Captcha-Skip-Token: true</li>
+    <li>Content-Type: application/json</li>
+  </ul>
+  <p>测试账号：</p>
+  <ul>
+    <li>学生端：202401002</li>
+    <li>教师端：T00003</li>
+    <li>管理员端：A00002</li>
+  </ul>
+  <button onclick="testRequest()" style="padding: 10px 20px;">测试请求</button>
+  <pre id="output" style="margin-top: 20px;"></pre>
+
+  <script>
+    async function testRequest() {
+      const output = document.getElementById('output');
+      const userNo = '202401002';
+      const password = '123456';
+
+      output.textContent = `正在测试请求...\n用户：${userNo}\n密码：${password}`;
+
+      try {
+        const response = await fetch('http://localhost:5173/api/v1/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userNo: userNo,
+            password: password,
+            captchaKey: 'test_key',
+            captchaCode: 'test_code'
+          })
+        });
+
+        const data = await response.json();
+
+        output.textContent += `\n\n响应状态：${response.status}\n`;
+        output.textContent += `响应数据：${JSON.stringify(data, null, 2)}\n`;
+
+        // 检查请求头
+        output.textContent += `\n检查请求头...\n`;
+        const headers = Object.fromEntries(response.headers.entries());
+        output.textContent += `X-Captcha-Skip-Token: ${headers['x-captcha-skip-token'] || '未发送'}\n`;
+        output.textContent += `Content-Type: ${headers['content-type']}\n`;
+
+        if (headers['x-captcha-skip-token'] === 'true') {
+          output.textContent += '\n✅ 请求头正确！应该可以跳过验证码。';
+        } else {
+          output.textContent += '\n❌ 请求头未正确发送！';
+        }
+      } catch (error) {
+        output.textContent += `\n\n错误：${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
