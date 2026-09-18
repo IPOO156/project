@@ -101,12 +101,7 @@ onMounted(() => {
     <el-card class="filter-card">
       <el-row :gutter="16" align="middle">
         <el-col :span="6">
-          <el-input
-            v-model="keyword"
-            placeholder="搜索关键词"
-            :prefix-icon="Search"
-            clearable
-          />
+          <el-input v-model="keyword" placeholder="搜索关键词" :prefix-icon="Search" clearable />
         </el-col>
         <el-col :span="5">
           <el-select
@@ -157,10 +152,7 @@ onMounted(() => {
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column label="模块类型" width="120">
           <template #default="{ row }">
-            <DictColumn
-              :value="row.type"
-              :options="typeOptions as any"
-            />
+            <DictColumn :value="row.type" :options="typeOptions as any" />
           </template>
         </el-table-column>
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
@@ -173,12 +165,7 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="操作" width="120" align="center">
           <template #default="{ row }">
-            <el-button
-              type="primary"
-              link
-              size="small"
-              @click="viewRecord(row.sourcePath)"
-            >
+            <el-button type="primary" link size="small" @click="viewRecord(row.sourcePath)">
               查看
             </el-button>
           </template>

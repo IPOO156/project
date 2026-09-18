@@ -4,16 +4,18 @@
 
 ## 已提供的公共 Composables
 
-| 路径                                        | 名称              | 职责                                          | 状态      |
-| ------------------------------------------- | ----------------- | --------------------------------------------- | --------- |
-| `src/shared/composables/useDict.ts`         | `useDict`         | 字典值 → 文本/颜色/选项转换                   | ✅ 已提供 |
-| `src/shared/composables/usePagination.ts`   | `usePagination`   | 分页状态 + 分页事件 + 数据获取                | ✅ 已提供 |
-| `src/shared/composables/useTableQuery.ts`   | `useTableQuery`   | 整合 searchForm + pagination + loading + list | ✅ 已提供 |
-| `src/shared/composables/useUpload.ts`       | `useUpload`       | 文件上传封装                                  | ✅ 已提供 |
-| `src/shared/composables/useApplication.ts`  | `useApplication`  | 通用申报表单/弹窗状态管理                     | ✅ 已提供 |
-| `src/shared/composables/usePermission.ts`   | `usePermission`   | 权限判断（待实现）                            | 🚧 占位   |
-| `src/shared/composables/useExport.ts`       | `useExport`       | 导入/导出逻辑（待实现）                       | 🚧 占位   |
-| `src/shared/composables/useFormValidate.ts` | `useFormValidate` | 表单校验复用（待实现）                        | 🚧 占位   |
+| 路径                                                    | 名称              | 职责                                          | 状态      |
+| ------------------------------------------------------- | ----------------- | --------------------------------------------- | --------- |
+| `src/shared/composables/useDict.ts`                     | `useDict`         | 字典值 → 文本/颜色/选项转换                   | ✅ 已提供 |
+| `src/shared/composables/usePagination.ts`               | `usePagination`   | 分页状态 + 分页事件 + 数据获取                | ✅ 已提供 |
+| `src/shared/composables/useTableQuery.ts`               | `useTableQuery`   | 整合 searchForm + pagination + loading + list | ✅ 已提供 |
+| `src/shared/composables/useUpload.ts`                   | `useUpload`       | 文件上传封装                                  | ✅ 已提供 |
+| `src/shared/composables/useApplication.ts`              | `useApplication`  | 通用申报表单/弹窗状态管理                     | ✅ 已提供 |
+| `src/shared/composables/usePermission.ts`               | `usePermission`   | 权限判断（待实现）                            | 🚧 占位   |
+| `src/shared/composables/useExport.ts`                   | `useExport`       | 导入/导出逻辑（待实现）                       | 🚧 占位   |
+| `src/shared/composables/useFormValidate.ts`             | `useFormValidate` | 表单校验复用（待实现）                        | 🚧 占位   |
+| `src/app/stores/theme.ts`                               | `useThemeStore`   | 全局主题模式（light / dark）状态管理          | ✅ 已提供 |
+| `src/features/dashboard/composables/useQuickEntries.ts` | `useQuickEntries` | 首页快捷入口推荐、刷新、排序与显示隐藏配置    | ✅ 已提供 |
 
 ## 命名与编码规范
 

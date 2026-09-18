@@ -13,5 +13,5 @@ const props = defineProps<Props>()
 </script>
 
 <template>
-  <span>{{ props.options.find(t => t.value === props.value)?.label || props.value }}</span>
+  <span>{{ props.options.find((t) => t.value === props.value)?.label || props.value }}</span>
 </template>

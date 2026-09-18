@@ -33,13 +33,7 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <div
-    class="page-header"
-    :class="[
-      `page-header--${size}`,
-      { 'page-header--plain': !decoration },
-    ]"
-  >
+  <div class="page-header" :class="[`page-header--${size}`, { 'page-header--plain': !decoration }]">
     <div class="page-header__main">
       <h2 class="page-header__title">
         <span v-if="decoration" class="page-header__bar" aria-hidden="true" />
@@ -76,9 +70,15 @@ withDefaults(defineProps<Props>(), {
     line-height: 1.4;
   }
 
-  &--sm &__title { font-size: $font-size-lg; }
-  &--md &__title { font-size: $font-size-xl; }
-  &--lg &__title { font-size: $font-size-2xl; }
+  &--sm &__title {
+    font-size: $font-size-lg;
+  }
+  &--md &__title {
+    font-size: $font-size-xl;
+  }
+  &--lg &__title {
+    font-size: $font-size-2xl;
+  }
 
   &__bar {
     display: inline-block;
