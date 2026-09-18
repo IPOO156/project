@@ -29,8 +29,11 @@ request.interceptors.request.use(
     }
 
     // 测试环境：对指定账号添加跳过验证码请求头
-    if (CAPTCHA_SKIP_ACCOUNTS.includes(config.data?.userNo || config.params?.userNo || '')) {
+    // 注意：axios POST 请求的数据在 config.data 中
+    const userNo = config.data?.userNo || config.params?.userNo
+    if (userNo && CAPTCHA_SKIP_ACCOUNTS.includes(String(userNo))) {
       config.headers['X-Captcha-Skip-Token'] = 'true'
+      console.warn('[Skip Captcha] Adding X-Captcha-Skip-Token for user:', userNo)
     }
 
     return config

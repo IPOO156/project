@@ -47,6 +47,7 @@ const filters = reactive({
   collegeId: undefined as number | undefined,
   majorId: undefined as number | undefined,
   classId: undefined as number | undefined,
+  grade: undefined as string | undefined,
   status: '',
   dateRange: [] as string[],
 })

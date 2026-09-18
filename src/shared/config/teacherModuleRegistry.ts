@@ -62,8 +62,8 @@ export const ANY_CODE = '*'
  * 即「改造前能看到的，改造后在数据缺失时至少还能看到」，只减不增，不放开新模块。
  */
 export const ROLE_BASELINE_MODULES: Record<string, string[]> = {
-  teacher: ['teacher-dashboard', 'archive-view', 'export-center', 'log-view', 'heat-map'],
-  counselor: ['teacher-dashboard', 'material-review', 'log-view', 'heat-map'],
+  teacher: ['teacher-dashboard', 'archive-view', 'export-center', 'heat-map'],
+  counselor: ['teacher-dashboard', 'material-review', 'heat-map'],
 }
 
 /**
@@ -193,8 +193,8 @@ export const teacherModules: TeacherModule[] = [
     icon: History,
     order: 40,
     routePrefix: '/teacher/log-view',
-    // 管理员持 log:view / log:audit；教师端 GET /teacher/logs 无权限码，过渡期通配放行
-    permissions: ['log:view', 'log:audit', ANY_CODE],
+    // 仅管理员可查看（持 log:view / log:audit），教师/辅导员无此权限
+    permissions: ['log:view', 'log:audit'],
     description: '系统操作日志',
     menuItems: [{ label: '日志查看', icon: History, path: '/teacher/log-view' }],
   },

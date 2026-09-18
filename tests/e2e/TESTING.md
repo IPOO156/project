@@ -271,8 +271,8 @@ export class StudentLoginPage {
 测试完成后需要清理数据：
 
 ```typescript
-test.afterEach(async ({ request }) => {
-  // 清理测试数据
+test.afterEach(async ({ request: _request }) => {
+  // 清理测试数据（需要时用 request API 清理创建的资源）
 })
 ```
 
