@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  DashboardStatistics,
   SemesterItem,
   TeacherDashboardData,
   TeacherDashboardOverview,
@@ -34,10 +35,12 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores/stores'
 import {
   getSemesters,
+  getStatisticsDashboard,
   getSystemLogs,
   getTeacherDashboardOverview,
   getTeacherStatisticsDashboard,
   listMessages,
+  refreshAdminStatistics,
   refreshTeacherStatistics,
 } from '@/shared/api/teacher'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
@@ -104,7 +107,11 @@ const semesters = ref<SemesterItem[]>([])
 const loadingSemesters = ref(false)
 const dashSemesterId = ref<number | undefined>(undefined)
 const dashboardLoading = ref(false)
-const dashboardData = ref<TeacherDashboardData | null>(null)
+const dashboardData = ref<DashboardStatistics | TeacherDashboardData | null>(null)
+
+// 类型隔离：两套 KPI 字段不同，按角色分开访问
+const teacherDash = computed(() => dashboardData.value as TeacherDashboardData | null)
+const adminDash = computed(() => dashboardData.value as DashboardStatistics | null)
 
 async function loadSemesters() {
   loadingSemesters.value = true
@@ -120,7 +127,10 @@ async function loadSemesters() {
 async function loadDashboard() {
   dashboardLoading.value = true
   try {
-    dashboardData.value = await getTeacherStatisticsDashboard({ semesterId: dashSemesterId.value })
+    // 管理员调 /admin/statistics/dashboard（全校数据），教师调 /teacher/statistics/dashboard（学院范围）
+    dashboardData.value = isAdmin.value
+      ? await getStatisticsDashboard({ semesterId: dashSemesterId.value })
+      : await getTeacherStatisticsDashboard({ semesterId: dashSemesterId.value })
   } catch {
     dashboardData.value = null
   } finally {
@@ -140,7 +150,7 @@ async function loadDashboardOverview() {
   }
 }
 
-/** 统计快照刷新（POST /teacher/statistics/refresh） */
+/** 统计快照刷新 —— 管理员走 /admin/statistics/refresh，教师走 /teacher/statistics/refresh */
 async function handleRefreshSnapshot() {
   if (!dashSemesterId.value) {
     ElMessage.warning('请先选择学期')
@@ -148,7 +158,11 @@ async function handleRefreshSnapshot() {
   }
   overviewLoading.value = true
   try {
-    await refreshTeacherStatistics({ semesterId: dashSemesterId.value })
+    if (isAdmin.value) {
+      await refreshAdminStatistics({ semesterId: dashSemesterId.value })
+    } else {
+      await refreshTeacherStatistics({ semesterId: dashSemesterId.value })
+    }
     ElMessage.success('统计快照已刷新')
     await Promise.all([loadDashboard(), loadDashboardOverview()])
   } catch {
@@ -389,8 +403,8 @@ onMounted(() => {
     <el-card class="teacher-dashboard__section dash-overview">
       <template #header>
         <span class="section-title">档案数据概览</span>
-        <span v-if="dashboardData?.scopeName" class="dash-overview__scope">
-          统计范围：{{ dashboardData.scopeName }}
+        <span v-if="!isAdmin && teacherDash?.scopeName" class="dash-overview__scope">
+          统计范围：{{ teacherDash.scopeName }}
         </span>
         <div class="dash-overview__tools">
           <el-select
@@ -425,9 +439,9 @@ onMounted(() => {
               }}</span>
             </div>
             <div class="dash-overview__kpi">
-              <span class="dash-overview__label">已提交</span>
+              <span class="dash-overview__label">{{ isAdmin ? '档案数' : '已提交' }}</span>
               <span class="dash-overview__value mc-num">{{
-                dashboardData.submittedCount ?? '—'
+                (isAdmin ? adminDash?.archiveCount : teacherDash?.submittedCount) ?? '—'
               }}</span>
             </div>
             <div class="dash-overview__kpi">
@@ -442,15 +456,21 @@ onMounted(() => {
                 dashboardData.approvedCount ?? '—'
               }}</span>
             </div>
-            <div class="dash-overview__kpi">
+            <div v-if="!isAdmin" class="dash-overview__kpi">
               <span class="dash-overview__label">被退回</span>
               <span class="dash-overview__value mc-num">{{
-                dashboardData.rejectedCount ?? '—'
+                teacherDash?.rejectedCount ?? '—'
               }}</span>
+            </div>
+            <div v-if="isAdmin" class="dash-overview__kpi">
+              <span class="dash-overview__label">奖项数</span>
+              <span class="dash-overview__value mc-num">{{ adminDash?.awardCount ?? '—' }}</span>
             </div>
             <div class="dash-overview__kpi">
               <span class="dash-overview__label">平均绩点</span>
-              <span class="dash-overview__value mc-num">{{ dashboardData.averageGpa ?? '—' }}</span>
+              <span class="dash-overview__value mc-num">{{
+                (isAdmin ? adminDash?.avgGpa : teacherDash?.averageGpa) ?? '—'
+              }}</span>
             </div>
           </div>
           <div v-if="dashboardData.dimensionAvgScores?.length" class="dash-overview__dims">

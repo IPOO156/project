@@ -17,6 +17,7 @@ import {
   getExportJob,
   getTeacherExportJobs,
   getTeacherExportTemplates,
+  submitAdminArchiveExport,
   submitArchiveExport,
 } from '@/shared/api/teacher'
 import { usePollingTask } from '@/shared/composables/usePollingTask'
@@ -27,6 +28,8 @@ import ResearchExportDialog from './components/ResearchExportDialog.vue'
 
 // 以下四项能力按后端权限码判定（原先统一挂在 super_admin 上，而该角色不存在 → 对所有人生效为 false）
 const { hasPermission } = useTeacherAuthz()
+/** 是否管理员：管理员调 /admin/exports/archives 走全校范围，教师调 /teacher/exports 走学院范围 */
+const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
 /** 研究数据导出（/admin/exports/research）：export:research */
 const canExportResearch = computed(() => hasPermission('export:research'))
 /** 成绩导入面板：grade:import */
@@ -44,6 +47,7 @@ const filters = reactive({
   collegeId: undefined as number | undefined,
   majorId: undefined as number | undefined,
   classId: undefined as number | undefined,
+  grade: undefined as string | undefined,
   status: '',
   dateRange: [] as string[],
 })
@@ -181,12 +185,21 @@ async function handleExport(fileType: 'pdf' | 'xlsx') {
           : undefined
   const selectedTemplate = templates.value.find((t) => t.templateId === selectedTemplateId.value)
   try {
-    const res = await submitArchiveExport({
-      scopeType,
-      scopeId,
-      fileType: selectedTemplate?.exportType ?? fileType,
-      templateId: selectedTemplate?.templateId,
-    })
+    // 管理员走 /admin/exports/archives（支持学校级范围等教师端没有的参数），教师走 /teacher/exports
+    const res = isAdmin.value
+      ? await submitAdminArchiveExport({
+          scopeType,
+          scopeId,
+          grade: filters.scope === '年级' ? filters.grade : undefined,
+          fileType: selectedTemplate?.exportType ?? fileType,
+          templateId: selectedTemplate?.templateId,
+        })
+      : await submitArchiveExport({
+          scopeType,
+          scopeId,
+          fileType: selectedTemplate?.exportType ?? fileType,
+          templateId: selectedTemplate?.templateId,
+        })
     ElMessage.success(
       `导出任务已创建（任务 ID: ${res.jobId}），预计 ${res.estimatedSeconds ?? 60} 秒完成`,
     )

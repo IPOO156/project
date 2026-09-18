@@ -49,7 +49,7 @@ const teacherRoutes: RouteRecordRaw[] = [
     path: 'messages',
     name: 'TeacherMessageCenter',
     component: () => import('@/features/teacher/messages/TeacherMessageCenter.vue'),
-    meta: { title: '消息中心', teacher: true },
+    meta: { title: '消息中心', teacher: true, permission: 'messages' },
   },
   {
     path: 'org-management',
@@ -65,7 +65,7 @@ const teacherRoutes: RouteRecordRaw[] = [
   },
   {
     // 审批委托：业务口径为「管理员 → 教师」，教师不可互相委托。
-    // 对应注册表模块 delegation 目前只挂管理员菜单码，教师访问会被守卫拦回教师首页。
+    // 审批委托为教师专属（delegate:manage 仅授给 teacher/counselor），管理员菜单无此入口。
     path: 'delegation',
     name: 'TeacherDelegation',
     component: () => import('@/features/teacher/delegation/DelegationManage.vue'),

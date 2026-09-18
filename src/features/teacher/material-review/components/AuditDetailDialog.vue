@@ -23,7 +23,21 @@ import {
   getAuditRejectTemplates,
   rejectAuditTask,
 } from '@/shared/api/teacher'
-import { AUDIT_ACTIONS, AUDIT_DETAIL_LABELS } from '@/shared/constants/dict'
+import {
+  APPLICATION_TYPE_MAP,
+  AUDIT_ACTIONS,
+  AUDIT_DETAIL_LABELS,
+  AWARD_LEVELS,
+  CERTIFICATE_TYPES,
+  COMPETITION_TYPES,
+  INDUSTRY_TYPES,
+  ORGANIZATION_LEVELS,
+  PROJECT_LEVELS,
+  RESEARCH_TYPES,
+  ROLE_OPTIONS,
+  SCHOLARSHIP_GRADES,
+  SCHOLARSHIP_LEVELS,
+} from '@/shared/constants/dict'
 import { formatDateTime } from '@/shared/utils/time'
 
 const props = defineProps<{
@@ -31,11 +45,33 @@ const props = defineProps<{
   taskId: number | null
   query?: AuditPendingQuery
 }>()
+
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'processed'): void
   (e: 'openTask', taskId: number): void
 }>()
+
+/** 填报内容字段 → 枚举字典（用于 displayValue 翻译原始枚举码） */
+const DETAIL_ENUM_MAP: Record<string, readonly { label: string; value: string }[]> = {
+  competitionType: COMPETITION_TYPES,
+  awardLevel: AWARD_LEVELS,
+  projectLevel: PROJECT_LEVELS,
+  participantRole: ROLE_OPTIONS,
+  scholarshipGrade: SCHOLARSHIP_GRADES,
+  scholarshipLevel: SCHOLARSHIP_LEVELS,
+  researchType: RESEARCH_TYPES,
+  projectType: RESEARCH_TYPES,
+  certType: CERTIFICATE_TYPES,
+  organizationLevel: ORGANIZATION_LEVELS,
+  industryType: INDUSTRY_TYPES,
+  companyType: [
+    { label: '创业实践', value: '创业实践' },
+    { label: '创业计划', value: '创业计划' },
+    { label: '实体注册', value: '实体注册' },
+    { label: '其他', value: '其他' },
+  ],
+}
 
 const loading = ref(false)
 const detail = ref<AuditPendingDetail | null>(null)
@@ -87,7 +123,13 @@ function detailEntries(): { key: string; label: string; value: unknown }[] {
   const map = detail.value?.detail ?? {}
   const skip = new Set(['id', 'status', 'semesterId', 'submitTime', 'applicantId'])
   return Object.entries(map)
-    .filter(([k]) => !skip.has(k) && !isInBaseInfo(k))
+    .filter(([k, v]) => {
+      if (skip.has(k)) return false
+      if (isInBaseInfo(k)) return false
+      // 跳过后端返回的空 Label 字段（如 competitionTypeLabel=null），避免前端 fallback 到原始 key
+      if (k.endsWith('Label') && (v == null || v === '')) return false
+      return true
+    })
     .map(([k, v]) => ({ key: k, label: fieldLabel(k), value: v }))
 }
 
@@ -114,9 +156,59 @@ function fieldLabel(key: string): string {
   return AUDIT_DETAIL_LABELS[key] ?? key
 }
 
-function displayValue(value: unknown): string {
+/**
+ * 枚举码 → 中文标签：优先查 DETAIL_ENUM_MAP，再查 APPLICATION_TYPE_MAP
+ * 支持：字符串枚举（national）、数字索引枚举（1/2/3）、以及后端复合 key（academic_competition → competition）
+ */
+function translateEnum(key: string, val: unknown): string | null {
+  if (val == null || val === '') return null
+  const strVal = String(val)
+  const numVal = Number(val)
+
+  // 1) 先查 DETAIL_ENUM_MAP 中的字典（按字符串或数字索引都支持）
+  const dict = DETAIL_ENUM_MAP[key]
+  if (dict) {
+    // 字符串匹配
+    const found = dict.find((o) => String(o.value) === strVal || o.label === strVal)
+    if (found) return found.label
+    // 数字索引兜底（后端返回 1/2/3 而字典 value 是 national/provincial 时）
+    if (!Number.isNaN(numVal) && numVal >= 1 && numVal <= dict.length) {
+      const indexed = dict[numVal - 1]
+      if (indexed && String(indexed.value) !== strVal) return indexed.label
+    }
+  }
+
+  // 2) 再查 APPLICATION_TYPE_MAP —— 包含后端复合 key（academic_competition → 学科竞赛）
+  const appTypeKeyMap: Record<string, string> = {
+    academic_competition: 'competition',
+    academic_research: 'research',
+    innovation_entrepreneurship: 'innovation',
+    social_practice: 'socialPractice',
+    honor_certificate: 'certificate',
+    training_project: 'training',
+    // 直接 key 也能命中
+    competition: 'competition',
+    innovation: 'innovation',
+    research: 'research',
+    scholarship: 'scholarship',
+    certificate: 'certificate',
+    internship: 'internship',
+    organization: 'organization',
+    training: 'training',
+  }
+  const mappedKey = appTypeKeyMap[strVal] ?? strVal
+  const appType = APPLICATION_TYPE_MAP[mappedKey] ?? APPLICATION_TYPE_MAP[strVal]
+  if (appType) return appType
+
+  return null
+}
+
+function displayValue(key: string, value: unknown): string {
   if (value == null || value === '') return '-'
   if (typeof value === 'object') return JSON.stringify(value)
+  // 枚举翻译优先于原始值
+  const translated = translateEnum(key, value)
+  if (translated) return translated
   return String(value)
 }
 
@@ -242,7 +334,11 @@ function updateVisible(value: boolean) {
         <!-- 顶部摘要 -->
         <div class="audit-detail__summary">
           <div class="audit-detail__summary-head">
-            <span class="audit-detail__type-tag">{{ detail.archiveType || detail.type }}</span>
+            <span class="audit-detail__type-tag">{{
+              translateEnum('archiveType', detail.archiveType || detail.type) ||
+              detail.archiveType ||
+              detail.type
+            }}</span>
             <h3 class="audit-detail__title">{{ detail.title }}</h3>
           </div>
           <el-descriptions :column="2" size="small" border class="audit-detail__desc">
@@ -301,7 +397,7 @@ function updateVisible(value: boolean) {
               :key="item.key"
               :label="item.label"
             >
-              {{ displayValue(item.value) }}
+              {{ displayValue(item.key, item.value) }}
             </el-descriptions-item>
           </el-descriptions>
         </div>

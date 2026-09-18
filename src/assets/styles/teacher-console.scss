@@ -11,7 +11,10 @@
 //   - 辅色：琥珀金 #d4a574（眉标/指示条/强调，克制使用）
 //   - 冷调浅蓝底 + 发丝分割线 + 柔和双层阴影（Soft UI Evolution 质感）
 //   - 页头标题用无衬线加粗，传递清晰、可信的质感
-//   教师端固定浅色：无论全局主题明暗，始终渲染为浅色深海蓝。
+//
+// 暗夜模式：html.dark #app .layout--teacher 块（文件末尾）
+//   基础 bg/text/border/fill 变量与学生端 themes.css dark 完全一致（深蓝黑基调）
+//   品牌色（深海蓝/琥珀金）各有深色变体，在深蓝黑基调上保持辨识度
 // =============================================================================
 
 #app .layout--teacher {
@@ -520,6 +523,179 @@
     }
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    .el-card,
+    .stat-card,
+    .mc-card,
+    .mc-skeleton::after {
+      transition: none;
+      animation: none;
+    }
+  }
+}
+
+// =============================================================================
+// 暗夜模式 —— 与学生端 themes.css dark 完全同基调（深蓝黑）
+//
+// 关键决策：
+//   基础 bg/text/border/fill 变量必须和 themes.css [data-theme='dark'] 完全一致
+//   （不能放任 Element Plus 的 html.dark 默认值生效，那是中性深灰 #0a0a0a，
+//    和学生端的深蓝黑 #0b1120 会色调割裂）
+//   品牌色（深海蓝/琥珀金）给深色变体，在深蓝黑基调上保持辨识度
+// =============================================================================
+
+html.dark #app .layout--teacher {
+  /* ── 品牌色深色变体（深蓝基调提亮 + 琥珀金提亮） ── */
+  --el-color-primary: #4f7ba4;
+  --el-color-primary-light-3: #6895c2;
+  --el-color-primary-light-5: #567fa6;
+  --el-color-primary-light-7: #2d4e70;
+  --el-color-primary-light-8: #1f3a55;
+  --el-color-primary-light-9: #132840;
+  --el-color-primary-dark-2: #85a8cc;
+
+  --mc-accent: #f4c98a;
+  --mc-accent-soft: rgba(244, 201, 138, 0.16);
+  --mc-btn-press: #0d1a2c;
+
+  /* ── 基础变量：与学生端 themes.css dark 完全一致 ── */
+  --el-bg-color-page: #0b1120;
+  --el-bg-color: #0f172a;
+  --el-bg-color-overlay: #1e293b;
+  --el-text-color-primary: #f1f5f9;
+  --el-text-color-regular: #cbd5e1;
+  --el-text-color-secondary: #94a3b8;
+  --el-text-color-placeholder: #64748b;
+  --el-text-color-disabled: #475569;
+  --el-border-color: #334155;
+  --el-border-color-light: #334155;
+  --el-border-color-lighter: #1e293b;
+  --el-fill-color: #1e293b;
+  --el-fill-color-light: #1a2433;
+  --el-fill-color-lighter: #151d2b;
+  --el-fill-color-blank: #0f172a;
+
+  /* ── 按钮：深色模式下去掉顶部白色反光，改深色内阴影 ── */
+  .el-button {
+    &--primary {
+      background-image: linear-gradient(180deg, #5a8ab8 0%, var(--el-color-primary) 100%);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 1px 2px rgba(0, 0, 0, 0.4),
+        0 4px 10px -4px rgba(0, 0, 0, 0.5);
+
+      &:hover,
+      &:focus {
+        background-image: linear-gradient(180deg, #6a9acd 0%, var(--el-color-primary-dark-2) 100%);
+      }
+
+      &:active {
+        background-image: linear-gradient(
+          180deg,
+          var(--el-color-primary) 0%,
+          var(--mc-btn-press) 100%
+        );
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+      }
+    }
+  }
+
+  /* ── 卡片：深色柔和阴影 ── */
+  .mc-card,
+  .el-card {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      0 1px 2px rgba(0, 0, 0, 0.3),
+      0 6px 16px -8px rgba(0, 0, 0, 0.4);
+  }
+
+  /* ── 页头标题渐变：深色模式下改亮色 → 更亮 ── */
+  .mc-page-head__title {
+    background: linear-gradient(
+      120deg,
+      var(--el-color-primary-dark-2) 0%,
+      var(--el-color-primary-light-3) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  /* ── KPI 卡 hover：深色模式下琥珀金边框提亮 ── */
+  .stat-card,
+  .mc-card {
+    &:hover {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  /* ── 表格：深色模式下表头用深海蓝暗底 ── */
+  .el-table {
+    --el-table-header-bg-color: #152238;
+    --el-table-row-hover-bg-color: rgba(79, 123, 164, 0.12);
+  }
+
+  /* ── 侧边栏：继承深色背景 + 深蓝分隔线 ── */
+  .sidebar {
+    background-color: var(--el-bg-color);
+    border-right-color: var(--el-border-color-lighter);
+  }
+
+  /* ── 标签栏：深色胶囊 ── */
+  .nav-tabs__surface {
+    background: var(--el-bg-color) !important;
+    border-color: var(--el-border-color) !important;
+  }
+  .nav-tabs__item:hover .nav-tabs__surface {
+    background: var(--el-fill-color-light) !important;
+    border-color: var(--el-color-primary-light-7) !important;
+  }
+  .nav-tabs__item.is-active .nav-tabs__surface {
+    background: var(--el-color-primary-light-9) !important;
+    border-color: var(--el-color-primary-light-5) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  /* ── 内容区径向高光：深色模式下用更深的色调 ── */
+  .layout__content {
+    background-color: var(--el-bg-color-page);
+    background-image:
+      radial-gradient(circle at 12% -8%, rgba(79, 123, 164, 0.08), transparent 42%),
+      radial-gradient(circle at 88% 108%, rgba(244, 201, 138, 0.05), transparent 40%);
+  }
+
+  /* ── 骨架屏 shimmer：深色模式下用半透明深色扫光 ── */
+  .mc-skeleton {
+    &::after {
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    }
+  }
+
+  /* ── 筛选栏：深色模式下边框更明显 ── */
+  .mc-filter-bar {
+    background: var(--el-bg-color);
+    border-color: var(--el-border-color);
+
+    .el-select__wrapper,
+    .el-input__wrapper {
+      box-shadow: 0 0 0 1px var(--el-border-color) inset;
+
+      &.is-focus {
+        box-shadow:
+          0 0 0 1px var(--el-color-primary) inset,
+          0 0 0 3px rgba(79, 123, 164, 0.15);
+      }
+    }
+  }
+
+  /* ── 空状态图标容器 ── */
+  .mc-empty__icon {
+    background: var(--el-color-primary-light-9);
+    border-color: var(--el-color-primary-light-7);
+  }
+
+  /* ── 深色模式下禁止 skeleton shimmer 动画（尊重系统偏好） ── */
   @media (prefers-reduced-motion: reduce) {
     .el-card,
     .stat-card,

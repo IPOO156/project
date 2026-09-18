@@ -238,6 +238,23 @@ export function submitArchiveExport(payload: ArchiveExportPayload): Promise<Arch
   return request.post('/teacher/exports', payload)
 }
 
+/**
+ * 管理员端一键导出档案（POST /admin/exports/archives）
+ * 与教师端接口的差异：支持 school 级范围、档案状态筛选、sections 定制、用途标记
+ * 仅 archive:export 权限用户可调用
+ */
+export function submitAdminArchiveExport(
+  payload: ArchiveExportPayload & {
+    grade?: string
+    sections?: string[]
+    archiveStatus?: number
+    purpose?: string
+    includeMetadata?: boolean
+  },
+): Promise<ArchiveExportResult> {
+  return request.post('/admin/exports/archives', payload)
+}
+
 /** 管理端导出任务单条查询（/admin/exports/{jobId}，教师端无单条等价接口，仅管理员用） */
 export function getExportJob(jobId: number): Promise<ExportJobItem> {
   return request.get(`/admin/exports/${jobId}`)
@@ -730,12 +747,24 @@ export function getStatisticsHeatmap(params: StatisticsQuery): Promise<HeatmapSt
   return request.get('/teacher/statistics/heatmap', { params })
 }
 
+/** 管理端成果热力图（GET /admin/statistics/heatmap，返回全校范围数据） */
+export function getAdminStatisticsHeatmap(params: StatisticsQuery): Promise<HeatmapStatistics> {
+  return request.get('/admin/statistics/heatmap', { params })
+}
+
 /** 教师端统计快照刷新（POST /teacher/statistics/refresh） */
 export function refreshTeacherStatistics(
   payload: TeacherSnapshotRefreshPayload,
 ): Promise<TeacherSnapshotRefresh> {
   // 后端以 @RequestParam 接收 semesterId，需走 query 而非 body
   return request.post('/teacher/statistics/refresh', null, { params: payload })
+}
+
+/** 管理端统计快照刷新（POST /admin/statistics/refresh） */
+export function refreshAdminStatistics(
+  payload: TeacherSnapshotRefreshPayload,
+): Promise<TeacherSnapshotRefresh> {
+  return request.post('/admin/statistics/refresh', null, { params: payload })
 }
 
 /* ===================== 教师端-工作台（GET /teacher/dashboard）===================== */

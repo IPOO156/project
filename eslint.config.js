@@ -16,6 +16,10 @@ export default antfu({
     'antfu/if-newline': 'off',
   },
   ignores: [
+    // 测试产物
+    'login-result.json',
+    '*.result.json',
+    'dist/**',
     // 参考手册、文档与修改记录中的代码片段不参与 ESLint 校验
     'claude.md',
     '开发手册.md',
@@ -26,5 +30,7 @@ export default antfu({
     '.cursor/**',
     // Husky 钩子脚本由 Husky 管理，不参与 ESLint 校验
     '.husky/**',
+    // Node 依赖
+    'node_modules/**',
   ],
 }).append(eslintConfigPrettier)

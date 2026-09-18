@@ -8,7 +8,9 @@
  */
 
 // ── 1. 外部依赖导入 ──
-import { ref } from 'vue'
+import { computed } from 'vue'
+
+import { useTabRoute } from '@/shared/composables/useTabRoute'
 
 import DictManagement from '../dict-management/DictManagement.vue'
 import RoleManagement from '../role-management/RoleManagement.vue'
@@ -17,20 +19,12 @@ import SemesterManagement from '../semester-management/SemesterManagement.vue'
 // ── 2. 类型/接口定义 ──
 type SystemTabName = 'dict' | 'role' | 'semester'
 
-// ── 3. Props & Emits（顶层页面，无）──
-
-// ── 4. Store / Composable（无）──
-
-// ── 5. 响应式数据 ──
-const activeTab = ref<SystemTabName>('dict')
-
-// ── 6. Computed（无）──
-
-// ── 7. Watch（无）──
-
-// ── 8. 生命周期（无）──
-
-// ── 9. 方法函数（无）──
+// ── 5. 响应式数据（通过 useTabRoute 与 URL ?tab=xxx 双向同步） ──
+const allTabKeys: SystemTabName[] = ['dict', 'role', 'semester']
+const { activeTab } = useTabRoute(
+  computed(() => allTabKeys),
+  'dict',
+)
 </script>
 
 <template>

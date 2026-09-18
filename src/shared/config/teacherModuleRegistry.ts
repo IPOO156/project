@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  Bell,
   Building2,
   Calculator,
   ClipboardCheck,
@@ -61,8 +62,8 @@ export const ANY_CODE = '*'
  * 即「改造前能看到的，改造后在数据缺失时至少还能看到」，只减不增，不放开新模块。
  */
 export const ROLE_BASELINE_MODULES: Record<string, string[]> = {
-  teacher: ['teacher-dashboard', 'archive-view', 'export-center', 'log-view', 'heat-map'],
-  counselor: ['teacher-dashboard', 'material-review', 'log-view', 'heat-map'],
+  teacher: ['teacher-dashboard', 'archive-view', 'export-center', 'heat-map'],
+  counselor: ['teacher-dashboard', 'material-review', 'heat-map'],
 }
 
 /**
@@ -117,6 +118,17 @@ export const teacherModules: TeacherModule[] = [
     menuItems: [{ label: '首页', icon: LayoutDashboard, path: '/teacher/dashboard' }],
   },
   {
+    id: 'messages',
+    label: '消息中心',
+    icon: Bell,
+    order: 15,
+    routePrefix: '/teacher/messages',
+    // 消息中心为通用入口：审批提醒、系统通知、导出完成等，任何已登录角色可见
+    permissions: ['dashboard:view', ADMIN_MENU_CODE],
+    description: '查看系统通知、审批提醒、导出完成消息',
+    menuItems: [{ label: '消息中心', icon: Bell, path: '/teacher/messages' }],
+  },
+  {
     id: 'archive-view',
     label: '档案查看',
     icon: Eye,
@@ -155,19 +167,13 @@ export const teacherModules: TeacherModule[] = [
     order: 33,
     routePrefix: '/teacher/delegation',
     /*
-     * 业务口径：审批委托只能「管理员 → 教师」，教师之间不可互相委托，
-     * 故本条只对管理端开放，不挂 delegate:manage。
-     *
-     * 注意后端现状与业务口径不一致（已列入待后端处理清单）：
-     *   1) 种子 seed_teachers.sql 把 delegate:manage(id=36) 授予了 teacher(3) 与 counselor(4)，
-     *      却未授予 admin(2) —— 与「仅管理员可委托」正好相反；
-     *   2) TeacherDelegationController 的 Javadoc 标注权限码 delegate:manage，
-     *      但代码未做任何权限码校验，/teacher/** 在 SecurityConfig 中仅要求登录，
-     *      因此任何登录用户都能对该接口创建/取消自己的委托（后端安全缺口）。
-     * 后端修正为「仅管理员可调用、仅可委托给教师」后，本条改用其专属权限码。
+     * 业务口径（与后端 TeacherDelegationService 对齐）：
+     * 审批委托为教师专属——教师可将自己名下的审批职责临时委托给其他教师。
+     * 管理员不通过本模块指派审核人，而是在「审批流程配置」模块配置各审批节点的审核员。
+     * 后端 TeacherDelegationService 校验 delegate:manage 权限码，V35 仅授给 teacher/counselor。
      */
-    permissions: [ADMIN_MENU_CODE],
-    description: '管理员将审批职责临时委托给教师',
+    permissions: ['delegate:manage'],
+    description: '教师将名下审批职责临时委托给其他教师',
     menuItems: [{ label: '审批委托', icon: Handshake, path: '/teacher/delegation' }],
   },
   {
@@ -187,8 +193,8 @@ export const teacherModules: TeacherModule[] = [
     icon: History,
     order: 40,
     routePrefix: '/teacher/log-view',
-    // 管理员持 log:view / log:audit；教师端 GET /teacher/logs 无权限码，过渡期通配放行
-    permissions: ['log:view', 'log:audit', ANY_CODE],
+    // 仅管理员可查看（持 log:view / log:audit），教师/辅导员无此权限
+    permissions: ['log:view', 'log:audit'],
     description: '系统操作日志',
     menuItems: [{ label: '日志查看', icon: History, path: '/teacher/log-view' }],
   },
@@ -247,7 +253,7 @@ export const teacherModules: TeacherModule[] = [
     // 该页含字典/角色/学期三个 Tab，持有任一子管理码即可进入
     permissions: ['system:role:manage', 'dictionary:manage', 'semester:manage', 'org:manage'],
     description: '字典/角色/学期统一管理',
-    menuItems: [{ label: '系统管理', icon: Settings, path: '/teacher/system-management' }],
+    menuItems: [{ label: '系统管理', icon: Settings, path: '/teacher/system-management?tab=dict' }],
   },
   {
     // 原「角色选择」「账号管理」两个一级菜单合并（两组都在调 listUsers / createUser，
@@ -307,10 +313,11 @@ export const teacherModules: TeacherModule[] = [
     description: '维护学校/学院/专业/班级层级架构',
     menuItems: [{ label: '组织架构', icon: Building2, path: '/teacher/org-management' }],
   },
-  // ── 以下两个模块未注册：后端暂无对应监控接口，页面为写死的假数据 ──
-  // 'system-maintenance'（系统维护：硬件/软件）与 'info-security'（信息安全：网络/数据）
-  // 路由与页面文件保留（teacher-routes.ts + features/teacher/system-maintenance|info-security），
-  // 待后端提供监控接口后再在此注册。
+  // ── 以下两个模块刻意不注册：后端 V5.7 接口文档（ringg）与前端 shared/api/ 均无任何
+  //    运维/监控/安全接口，4 个页面（HardwareMaintenance / SoftwareMaintenance /
+  //    NetworkSecurity / DataSecurity）为 100% 写死的假数据，不属于「学生档案管理系统」
+  //    的业务域；路由与 .vue 文件保留（teacher-routes.ts + features/teacher/*），
+  //    后端补齐接口后再在此注册启用。
 ]
 
 /**
