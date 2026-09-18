@@ -216,12 +216,19 @@ async function handleLogin() {
     passwordInputRef.value?.input?.focus()
     return
   }
-  if (isAdminLogin.value && !backendCaptcha.value) {
+
+  // 测试账号：后端已配置跳过验证码，前端不需要校验
+  const SKIP_ACCOUNTS = ['202401002', 'T00003', 'A00002']
+  const userNo = loginForm.username
+  const isSkipAccount = SKIP_ACCOUNTS.includes(userNo)
+
+  if (isAdminLogin.value && !backendCaptcha.value && !isSkipAccount) {
     ElMessage.warning('验证码加载中，请稍候再试')
     void loadBackendCaptcha()
     return
   }
-  if (!loginForm.captcha) {
+
+  if (!isSkipAccount && !loginForm.captcha) {
     ElMessage.warning('请输入验证码')
     captchaInputRef.value?.input?.focus()
     return
