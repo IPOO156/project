@@ -34,10 +34,12 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores/stores'
 import {
   getSemesters,
+  getStatisticsDashboard,
   getSystemLogs,
   getTeacherDashboardOverview,
   getTeacherStatisticsDashboard,
   listMessages,
+  refreshAdminStatistics,
   refreshTeacherStatistics,
 } from '@/shared/api/teacher'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
@@ -120,7 +122,10 @@ async function loadSemesters() {
 async function loadDashboard() {
   dashboardLoading.value = true
   try {
-    dashboardData.value = await getTeacherStatisticsDashboard({ semesterId: dashSemesterId.value })
+    // 管理员调 /admin/statistics/dashboard（全校数据），教师调 /teacher/statistics/dashboard（学院范围）
+    dashboardData.value = isAdmin.value
+      ? await getStatisticsDashboard({ semesterId: dashSemesterId.value })
+      : await getTeacherStatisticsDashboard({ semesterId: dashSemesterId.value })
   } catch {
     dashboardData.value = null
   } finally {
@@ -140,7 +145,7 @@ async function loadDashboardOverview() {
   }
 }
 
-/** 统计快照刷新（POST /teacher/statistics/refresh） */
+/** 统计快照刷新 —— 管理员走 /admin/statistics/refresh，教师走 /teacher/statistics/refresh */
 async function handleRefreshSnapshot() {
   if (!dashSemesterId.value) {
     ElMessage.warning('请先选择学期')
@@ -148,7 +153,11 @@ async function handleRefreshSnapshot() {
   }
   overviewLoading.value = true
   try {
-    await refreshTeacherStatistics({ semesterId: dashSemesterId.value })
+    if (isAdmin.value) {
+      await refreshAdminStatistics({ semesterId: dashSemesterId.value })
+    } else {
+      await refreshTeacherStatistics({ semesterId: dashSemesterId.value })
+    }
     ElMessage.success('统计快照已刷新')
     await Promise.all([loadDashboard(), loadDashboardOverview()])
   } catch {

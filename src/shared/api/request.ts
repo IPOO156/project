@@ -17,6 +17,9 @@ const request = axios.create({
   },
 })
 
+// 测试账号（后端已配置跳过验证码）
+const CAPTCHA_SKIP_ACCOUNTS = ['202401002', 'T00003', 'A00002']
+
 // 请求拦截器
 request.interceptors.request.use(
   (config) => {
@@ -24,6 +27,12 @@ request.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+
+    // 测试环境：对指定账号添加跳过验证码请求头
+    if (CAPTCHA_SKIP_ACCOUNTS.includes(config.data?.userNo || config.params?.userNo || '')) {
+      config.headers['X-Captcha-Skip-Token'] = 'true'
+    }
+
     return config
   },
   (error) => Promise.reject(error),

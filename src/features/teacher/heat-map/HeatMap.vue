@@ -9,8 +9,12 @@ import type { HeatmapStatistics, SemesterItem } from '@/shared/types/teacher'
 import { ArrowDownAZ, Flame, Search, Sigma } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref } from 'vue'
-import { getSemesters, getStatisticsHeatmap } from '@/shared/api/teacher'
+import { getAdminStatisticsHeatmap, getSemesters, getStatisticsHeatmap } from '@/shared/api/teacher'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
+
+const { hasPermission } = useTeacherAuthz()
+const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
 
 const semesters = ref<SemesterItem[]>([])
 const loadingSemesters = ref(false)
@@ -71,7 +75,9 @@ function drillOrgId() {
 async function load() {
   loading.value = true
   try {
-    heatmap.value = await getStatisticsHeatmap({
+    // 管理员调 /admin/statistics/heatmap（全校数据），教师调 /teacher/statistics/heatmap（学院范围）
+    const fn = isAdmin.value ? getAdminStatisticsHeatmap : getStatisticsHeatmap
+    heatmap.value = await fn({
       semesterId: filters.semesterId,
       orgType: filters.orgType,
       orgId: drillOrgId(),

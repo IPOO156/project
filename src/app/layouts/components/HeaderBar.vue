@@ -101,9 +101,9 @@ async function switchToStudent() {
         </el-button>
       </el-badge>
 
-      <!-- 主题切换：仅学生端显示；教师端控制台固定日间（teacher-console.scss 强制） -->
+      <!-- 主题切换：三端统一支持（teacher-console.scss 已配套 dark 变体，
+           与学生端 themes.css 同深蓝黑基调，无割裂） -->
       <el-tooltip
-        v-if="!isTeacher"
         :content="themeStore.isDark ? '切换至日间模式' : '切换至夜间模式'"
         placement="bottom"
       >
