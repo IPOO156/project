@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRoute } from 'vue-router'
 import PaperList from './PaperList.vue'
 import ScientificProjectList from './ScientificProjectList.vue'
 import SoftwareCopyrightList from './SoftwareCopyrightList.vue'
 
-const activeTab = ref<'project' | 'copyright' | 'paper'>('project')
+// 支持 ?sub=project|copyright|paper 定位子页签（消息中心"编辑"跳转 sourcePathOf 携带，
+// 见 2026-08-31 修改记录）；无效值回退默认「科研项目」。
+const route = useRoute()
+const subKey = typeof route.query.sub === 'string' ? route.query.sub : ''
+const activeTab = ref<'project' | 'copyright' | 'paper'>(
+  subKey === 'copyright' || subKey === 'paper' ? subKey : 'project',
+)
 </script>
 
 <template>
@@ -34,7 +41,9 @@ const activeTab = ref<'project' | 'copyright' | 'paper'>('project')
   display: flex;
   flex-direction: column;
   gap: 16px;
+  user-select: none;
 
+  // el-alert 内容段落默认边距过大，Element Plus 未提供相关 props，需通过 :deep() 覆盖内部类名。
   &__alert :deep(p) {
     margin: 4px 0;
     font-size: 13px;

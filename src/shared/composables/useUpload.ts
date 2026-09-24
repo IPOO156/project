@@ -17,7 +17,7 @@ export function useUpload(options: UploadOptions = {}) {
   const uploadedUrls = ref<string[]>([])
 
   const defaultOptions: UploadOptions = {
-    url: '/api/upload',
+    url: '/common/upload',
     maxSize: 10,
     accept: ['.jpg', '.png', '.pdf', '.doc', '.docx'],
     multiple: false,
@@ -33,26 +33,27 @@ export function useUpload(options: UploadOptions = {}) {
 
     const formData = new FormData()
     formData.append('file', file)
+    formData.append('type', 'evidence')
+    formData.append('module', 'archive')
 
     uploading.value = true
     progress.value = 0
 
     try {
-      const res = await request.post(mergedOptions.url!, formData, {
+      const res = (await request.post(mergedOptions.url!, formData, {
         onUploadProgress: (e) => {
           if (e.total) {
             progress.value = Math.round((e.loaded / e.total) * 100)
           }
         },
-      })
-      const url = res.data?.url ?? res.data
+      })) as any
+      // 后端返回 { fileId, fileName, fileUrl, objectKey, fileSize, fileType }
+      const url = res.fileUrl ?? res.url ?? res
       uploadedUrls.value.push(url)
       return url
-    }
-    catch {
+    } catch {
       return null
-    }
-    finally {
+    } finally {
       uploading.value = false
       progress.value = 0
     }

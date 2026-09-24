@@ -24,7 +24,9 @@ withDefaults(defineProps<Props>(), {
 
 <template>
   <div class="empty-state" :class="{ 'empty-state--compact': compact }">
-    <FileSearch :size="compact ? 40 : 56" class="empty-state__icon" />
+    <div class="empty-state__icon-wrap">
+      <FileSearch :size="compact ? 40 : 56" class="empty-state__icon" />
+    </div>
     <p class="empty-state__text">{{ text }}</p>
     <div v-if="$slots.default" class="empty-state__action">
       <slot />
@@ -43,6 +45,16 @@ withDefaults(defineProps<Props>(), {
 
   &--compact {
     padding: $spacing-xl;
+  }
+
+  &__icon-wrap {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(139, 99, 64, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   &__icon {

@@ -1,23 +1,40 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+import { isModuleAllowed } from '@/shared/config/teacherModuleRegistry'
+import { getToken } from '@/shared/utils/token'
+import teacherRoutes from './teacher-routes'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../../features/auth/Login.vue'),
+    component: () => import('@/features/auth/Login.vue'),
     meta: { title: '登录', noLayout: true },
   },
   {
     path: '/',
-    component: () => import('../layouts/DefaultLayout.vue'),
+    component: () => import('@/app/layouts/DefaultLayout.vue'),
     redirect: '/dashboard',
     children: [
       {
         path: 'dashboard',
         name: 'Dashboard',
-        component: () => import('../../features/dashboard/Dashboard.vue'),
-        meta: { title: '首页' },
+        component: () => import('@/features/dashboard/Dashboard.vue'),
+        meta: { title: '首页', affix: true },
+      },
+      {
+        path: 'growth-timeline',
+        name: 'GrowthTimeline',
+        component: () => import('@/features/growth-timeline/GrowthTimeline.vue'),
+        meta: { title: '成长时间轴', fullBleed: true },
+      },
+      // ─── AI 助手 ───
+      {
+        path: 'ai-chat',
+        name: 'AIChat',
+        component: () => import('@/features/ai-chat/AIChat.vue'),
+        meta: { title: 'AI 助手', fullBleed: true },
       },
       // ─── 个人中心 ───
       {
@@ -27,93 +44,74 @@ const routes: RouteRecordRaw[] = [
           {
             path: 'edit-password',
             name: 'EditPassword',
-            component: () => import('../../features/profile/EditPassword.vue'),
+            component: () => import('@/features/profile/EditPassword.vue'),
             meta: { title: '修改密码' },
           },
           {
             path: 'info',
             name: 'ProfileInfo',
-            component: () => import('../../features/profile/ProfileInfo.vue'),
-            meta: { title: '个人档案信息' },
-          },
-          {
-            path: 'timeline',
-            name: 'Timeline',
-            component: () => import('../../features/profile/Timeline.vue'),
-            meta: { title: '成长时间轴' },
+            component: () => import('@/features/profile/ProfileInfo.vue'),
+            meta: { title: '档案概览' },
           },
           {
             path: 'career-plan',
             name: 'CareerPlan',
-            component: () => import('../../features/profile/CareerPlan.vue'),
-            meta: { title: '职业规划' },
+            component: () => import('@/features/profile/CareerPlan.vue'),
+            meta: { title: '成长发展' },
           },
         ],
       },
       // ─── 各类申报板块 ───
       {
         path: 'applications',
-        redirect: '/applications/competition',
         children: [
           {
+            path: '',
+            name: 'ApplicationsHub',
+            component: () => import('@/features/applications/ApplicationHub.vue'),
+            // 本页用 ?tab=xxx 切换 10 个申报子模块（见同文件的 redirect 子项），
+            // singleTab 让它们共用顶栏一个标签（useTabs 据此判定），避免每切一个子模块裂一个标签。
+            meta: { title: '个人档案信息申报', singleTab: true },
+          },
+          {
             path: 'competition',
-            name: 'Competition',
-            component: () => import('../../features/applications/competition/CompetitionList.vue'),
-            meta: { title: '学科竞赛' },
+            redirect: '/applications?tab=competition',
           },
           {
             path: 'innovation',
-            name: 'Innovation',
-            component: () => import('../../features/applications/innovation/InnovationList.vue'),
-            meta: { title: '创新创业' },
+            redirect: '/applications?tab=innovation',
           },
           {
             path: 'research',
-            name: 'AcademicResearch',
-            component: () => import('../../features/applications/research/ResearchList.vue'),
-            meta: { title: '学术研究' },
+            redirect: '/applications?tab=research',
           },
           {
             path: 'scholarship',
-            name: 'Scholarship',
-            component: () => import('../../features/applications/scholarship/ScholarshipList.vue'),
-            meta: { title: '奖学金' },
+            redirect: '/applications?tab=scholarship',
           },
           {
             path: 'certificate',
-            name: 'HonorCertificate',
-            component: () => import('../../features/applications/certificate/CertificateList.vue'),
-            meta: { title: '荣誉证书' },
+            redirect: '/applications?tab=certificate',
           },
           {
             path: 'internship',
-            name: 'Internship',
-            component: () => import('../../features/applications/internship/InternshipList.vue'),
-            meta: { title: '实习经历' },
+            redirect: '/applications?tab=internship',
           },
           {
             path: 'organization',
-            name: 'OrganizationExp',
-            component: () => import('../../features/applications/organization/OrganizationList.vue'),
-            meta: { title: '组织履历' },
+            redirect: '/applications?tab=organization',
           },
           {
             path: 'training',
-            name: 'TrainingProject',
-            component: () => import('../../features/applications/training/TrainingList.vue'),
-            meta: { title: '实训项目' },
+            redirect: '/applications?tab=training',
           },
           {
             path: 'social-practice',
-            name: 'SocialPractice',
-            component: () => import('../../features/applications/social-practice/SocialPracticeList.vue'),
-            meta: { title: '社会实践' },
+            redirect: '/applications?tab=social-practice',
           },
           {
             path: 'book-report',
-            name: 'BookReport',
-            component: () => import('../../features/applications/book-report/BookReportList.vue'),
-            meta: { title: '图书心得' },
+            redirect: '/applications?tab=book-report',
           },
         ],
       },
@@ -122,50 +120,75 @@ const routes: RouteRecordRaw[] = [
         path: 'awards',
         children: [
           {
+            // 奖项总览已并入「我的申报 - 奖项看板」，此处重定向避免悬空路由
             path: '',
-            name: 'AwardOverview',
-            component: () => import('../../features/awards/AwardOverview.vue'),
-            meta: { title: '奖项总览' },
+            redirect: '/approval/award-review',
           },
           {
             path: 'competition-star',
             name: 'CompetitionStar',
-            component: () => import('../../features/awards/competition-star/CompetitionStarList.vue'),
+            component: () => import('@/features/awards/competition-star/CompetitionStarList.vue'),
             meta: { title: '竞赛之星报名' },
           },
           {
             path: 'scientific-star',
             name: 'ScientificStar',
-            component: () => import('../../features/awards/scientific-star/ScientificStarList.vue'),
+            component: () => import('@/features/awards/scientific-star/ScientificStarList.vue'),
             meta: { title: '科研之星报名' },
           },
           {
             path: 'innovation-star',
             name: 'InnovationStar',
-            component: () => import('../../features/awards/innovation-star/InnovationStarList.vue'),
+            component: () => import('@/features/awards/innovation-star/InnovationStarList.vue'),
             meta: { title: '双创之星报名' },
           },
         ],
       },
-      // ─── 审批与记录 ───
+      // ─── 消息中心 ───
+      {
+        path: 'messages',
+        children: [
+          {
+            path: '',
+            name: 'MessageCenter',
+            component: () => import('@/features/messages/MessageCenter.vue'),
+            meta: { title: '消息中心' },
+          },
+          {
+            path: 'activities',
+            name: 'MessageActivities',
+            component: () => import('@/features/messages/activities/ActivityList.vue'),
+            meta: { title: '全部动态' },
+          },
+        ],
+      },
+      // ─── 我的申报 ───
       {
         path: 'approval',
         children: [
           {
             path: 'pending',
             name: 'ApprovalPending',
-            component: () => import('../../features/approval/PendingApproval.vue'),
-            meta: { title: '待审批信息' },
+            component: () => import('@/features/approval/PendingApproval.vue'),
+            meta: { title: '申报看板' },
           },
           {
-            path: 'records',
-            name: 'SubmissionRecords',
-            component: () => import('../../features/submission-records/SubmissionRecords.vue'),
-            meta: { title: '提交记录' },
+            path: 'award-review',
+            name: 'AwardReview',
+            component: () => import('@/features/approval/AwardReview.vue'),
+            meta: { title: '奖项看板' },
           },
         ],
       },
     ],
+  },
+  // ─── 教师端路由 ───
+  {
+    path: '/teacher',
+    component: () => import('@/app/layouts/DefaultLayout.vue'),
+    redirect: '/teacher/dashboard',
+    meta: { teacher: true },
+    children: teacherRoutes,
   },
 ]
 
@@ -174,18 +197,82 @@ const router = createRouter({
   routes,
 })
 
+/**
+ * /auth/me 身份缓存（teacher_me）缺失时的补拉标记。
+ * 教师端菜单与模块授权全部依赖 permissions，缓存丢失会导致侧边栏为空，
+ * 故每次会话首次进入时补拉一次；仅一次，避免接口异常时每次跳转都等待网络。
+ */
+let meRecovered = false
+
 // 路由守卫
-router.beforeEach((to, _from, next) => {
-  const token = localStorage.getItem('token')
+router.beforeEach(async (to, _from, next) => {
+  const token = getToken()
+
   if (to.name !== 'Login' && !token) {
     next({ name: 'Login' })
+    return
   }
-  else if (to.name === 'Login' && token) {
+
+  if (to.name === 'Login' && token) {
     next({ path: '/dashboard' })
+    return
   }
-  else {
-    next()
+
+  // 教师端不允许访问学生端首页，重定向回教师首页
+  if (to.path === '/dashboard') {
+    const userCache = localStorage.getItem('user_info_cache')
+    if (userCache) {
+      try {
+        const info = JSON.parse(userCache)
+        if (info.loginType === 'teacher') {
+          next({ path: '/teacher/dashboard' })
+          return
+        }
+      } catch {
+        // 解析失败按学生端处理
+      }
+    }
   }
+
+  // 教师端路由需 teacher 登录类型 + 模块权限校验
+  if (to.meta?.teacher) {
+    const userCache = localStorage.getItem('user_info_cache')
+    if (userCache) {
+      let loginType: string | undefined
+      try {
+        loginType = JSON.parse(userCache).loginType
+      } catch {
+        next({ path: '/login' })
+        return
+      }
+      if (loginType !== 'teacher') {
+        next({ path: '/dashboard' })
+        return
+      }
+      // 模块权限校验：直接输入 URL 绕过菜单时重定向回教师首页。
+      // meta.permission 为模块 id（对应 teacherModuleRegistry 的 id），
+      // 判定依据是 /auth/me 的 permissionCode，不再是前端角色枚举。
+      const moduleId = to.meta?.permission
+      if (typeof moduleId === 'string' && moduleId) {
+        const { me, refresh } = useTeacherMe()
+        if (!me.value && !meRecovered) {
+          meRecovered = true
+          await refresh()
+        }
+        // 与侧边栏菜单同源判定：持 admin 角色直通（镜像后端 AdminAuthService），
+        // 否则按 module 声明的权限码（any-of）判定。
+        if (!isModuleAllowed(moduleId, me.value?.permissions ?? [], me.value?.roles ?? [])) {
+          next({ path: '/teacher/dashboard' })
+          return
+        }
+      }
+    } else {
+      next({ path: '/login' })
+      return
+    }
+  }
+
+  next()
 })
 
 export default router

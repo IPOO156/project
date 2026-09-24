@@ -1,0 +1,558 @@
+<script setup lang="ts">
+import type {
+  Activity,
+  ApplicationType,
+  SubmissionFilters,
+  SubmissionRecord,
+} from '@/shared/types/types'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Filter, Pencil, Search, Trash2, Undo2, X } from 'lucide-vue-next'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useActivityStore, useSubmissionStore } from '@/app/stores/stores'
+import { sourcePathOf } from '@/shared/api/submission'
+import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
+import StatusTag from '@/shared/ui/StatusTag.vue'
+import ActivityCenterHeader from '../components/ActivityCenterHeader.vue'
+
+/**
+ * 动态中心页面（学生端）
+ * 整合「动态记录」与「报名记录」；报名记录操作列按后端 6.1 can_edit/can_delete/can_withdraw
+ * 开关展示 查看/编辑/删除/撤回（6.3 编辑跳转来源页、6.4 删除、6.5 撤回）。
+ */
+
+type TabKey = 'activity' | 'submission'
+
+const router = useRouter()
+const activityStore = useActivityStore()
+const submissionStore = useSubmissionStore()
+
+const activeTab = ref<TabKey>('activity')
+
+// ─── 动态记录 ───
+const activityKeyword = ref('')
+const activityStatus = ref('')
+const activityPageNum = ref(1)
+const activityPageSize = ref(10)
+
+// ─── 报名记录 ───
+const submissionKeyword = ref('')
+const submissionType = ref<ApplicationType | ''>('')
+const submissionStatus = ref('')
+const submissionPageNum = ref(1)
+const submissionPageSize = ref(10)
+
+// ─── 表格逐行刷入动画触发 ───
+const activityTableKey = ref(0)
+const submissionTableKey = ref(0)
+
+function bumpActivityAnimation() {
+  activityTableKey.value++
+}
+
+function bumpSubmissionAnimation() {
+  submissionTableKey.value++
+}
+
+watch(
+  () => activityStore.loading,
+  (loading) => {
+    if (!loading) {
+      bumpActivityAnimation()
+    }
+  },
+)
+
+watch(
+  () => submissionStore.loading,
+  (loading) => {
+    if (!loading) {
+      bumpSubmissionAnimation()
+    }
+  },
+)
+
+watch(activeTab, (tab) => {
+  if (tab === 'activity' && !activityStore.loading) {
+    bumpActivityAnimation()
+  } else if (tab === 'submission' && !submissionStore.loading) {
+    bumpSubmissionAnimation()
+  }
+})
+
+watch(
+  [activityPageNum, activityPageSize],
+  () => {
+    if (activeTab.value === 'activity') {
+      bumpActivityAnimation()
+    }
+  },
+  { flush: 'post' },
+)
+
+watch(
+  [submissionPageNum, submissionPageSize],
+  () => {
+    if (activeTab.value === 'submission') {
+      bumpSubmissionAnimation()
+    }
+  },
+  { flush: 'post' },
+)
+
+// 状态筛选含「草稿」：草稿自动保存（isDraft=1）会把记录落库为 status=0（草稿），
+// 此前硬编码剔除 draft 导致全为草稿的记录在状态筛选时选任何状态都筛不出（0 条）。
+const statusOptions = computed(() =>
+  Object.entries(APPLICATION_STATUS).map(([value, config]) => ({ value, label: config.label })),
+)
+
+const typeOptions = computed(() =>
+  Object.entries(APPLICATION_TYPE_MAP).map(([value, label]) => ({ value, label })),
+)
+
+const activityPaginated = computed(() => {
+  const start = (activityPageNum.value - 1) * activityPageSize.value
+  return activityStore.filteredActivities.slice(start, start + activityPageSize.value)
+})
+
+const submissionPaginated = computed(() => {
+  const start = (submissionPageNum.value - 1) * submissionPageSize.value
+  return submissionStore.filteredRecords.slice(start, start + submissionPageSize.value)
+})
+
+function handleActivitySearch() {
+  activityPageNum.value = 1
+  const filters: any = {}
+  if (activityKeyword.value) filters.keyword = activityKeyword.value
+  if (activityStatus.value) filters.status = activityStatus.value
+  activityStore.fetchActivities(filters)
+}
+
+function handleActivityReset() {
+  activityKeyword.value = ''
+  activityStatus.value = ''
+  activityPageNum.value = 1
+  activityStore.fetchActivities()
+}
+
+function handleSubmissionSearch() {
+  submissionPageNum.value = 1
+  const filters: SubmissionFilters = {}
+  if (submissionKeyword.value) filters.keyword = submissionKeyword.value
+  if (submissionType.value) filters.type = submissionType.value
+  if (submissionStatus.value) filters.status = submissionStatus.value
+  submissionStore.fetchRecords(filters)
+}
+
+function handleSubmissionReset() {
+  submissionKeyword.value = ''
+  submissionType.value = ''
+  submissionStatus.value = ''
+  submissionPageNum.value = 1
+  submissionStore.fetchRecords()
+}
+
+function handleActivitySizeChange(size: number) {
+  activityPageSize.value = size
+  activityPageNum.value = 1
+}
+
+function handleSubmissionSizeChange(size: number) {
+  submissionPageSize.value = size
+  submissionPageNum.value = 1
+}
+
+function viewSubmission(path: string) {
+  router.push(path)
+}
+
+/** 编辑：跳转来源申报/奖项页，并带 ?edit=<id>，目标页 useApplicationPage 自动进入该记录编辑态 */
+function editSubmission(row: SubmissionRecord) {
+  router.push(sourcePathOf(row.type, row.id))
+}
+
+async function handleDeleteSubmission(row: SubmissionRecord) {
+  try {
+    await ElMessageBox.confirm(`确定要删除"${row.title}"吗？删除后不可恢复。`, '删除确认', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await submissionStore.deleteSubmission(row.id)
+    ElMessage.success('已删除')
+  } catch {
+    // 用户取消；删除失败由全局拦截器统一提示，本地记录保留
+  }
+}
+
+async function handleWithdrawSubmission(row: SubmissionRecord) {
+  try {
+    await ElMessageBox.confirm(`确定要撤回"${row.title}"吗？撤回后状态将变为草稿。`, '撤回确认', {
+      confirmButtonText: '撤回',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await submissionStore.withdrawRecord(row.id)
+    ElMessage.success('已撤回')
+  } catch {
+    // 用户取消
+  }
+}
+
+/**
+ * 撤回操作：以后端 6.1 返回的 canWithdraw 开关为准（false 强制隐藏），
+ * 未返回开关（本地/临时记录）时回退"待审批"状态判断；
+ * 撤回成功后 store 本地将 status 置为 withdrawn，按钮随之隐藏。
+ */
+function canWithdrawSubmission(row: SubmissionRecord): boolean {
+  return row.status === 'pending' && row.canWithdraw !== false
+}
+
+/**
+ * 编辑操作：以后端 6.1 返回的 canEdit 开关为准（false 强制隐藏），
+ * 未返回开关（本地/临时记录）时回退状态判断——已通过的记录不可再编辑。
+ * 已撤回（withdrawn）记录同样不可编辑：撤回 = 撤销本次申报，仅保留查看/删除。
+ */
+function canEditSubmission(row: SubmissionRecord): boolean {
+  if (row.status === 'withdrawn') return false
+  return row.canEdit !== undefined ? row.canEdit : row.status !== 'approved'
+}
+
+/**
+ * 删除操作：以后端 6.1 返回的 canDelete 开关为准（false 强制隐藏），
+ * 未返回开关（本地/临时记录）时回退状态判断——已通过的记录不可删除。
+ * 已撤回（withdrawn）记录允许删除（撤回后仅可查看/删除，不可编辑）。
+ */
+function canDeleteSubmission(row: SubmissionRecord): boolean {
+  if (row.status === 'withdrawn') return true
+  return row.canDelete !== undefined ? row.canDelete : row.status !== 'approved'
+}
+
+function formatSemester(semester: string) {
+  return semester.replace(/-(\d)$/g, '第$1学期').replace(/-/g, '-')
+}
+
+onMounted(() => {
+  activityStore.fetchActivities()
+  submissionStore.fetchRecords()
+})
+</script>
+
+<template>
+  <PageContainer class="activity-center">
+    <ActivityCenterHeader
+      v-model:active-tab="activeTab"
+      :activity-count="activityStore.activities.length"
+      :submission-count="submissionStore.records.length"
+    />
+
+    <!-- 动态记录（学生只读） -->
+    <section v-if="activeTab === 'activity'" class="center-panel" aria-labelledby="activity-tab">
+      <div class="panel-toolbar">
+        <div class="panel-toolbar__filters">
+          <div class="mc-input-wrap">
+            <Search :size="16" class="mc-input-wrap__icon" />
+            <el-input
+              v-model="activityKeyword"
+              placeholder="搜索动态内容"
+              clearable
+              @keyup.enter="handleActivitySearch"
+              @clear="handleActivitySearch"
+            />
+          </div>
+          <span class="filter-label">状态：</span>
+          <el-select
+            v-model="activityStatus"
+            placeholder="全部"
+            clearable
+            class="mc-select"
+            @change="handleActivitySearch"
+          >
+            <el-option
+              v-for="opt in statusOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
+          <el-button type="primary" size="default" @click="handleActivitySearch">
+            <Filter :size="14" style="margin-right: 4px" />筛选
+          </el-button>
+          <el-button @click="handleActivityReset">
+            <X :size="14" style="margin-right: 4px" />重置
+          </el-button>
+        </div>
+      </div>
+
+      <div v-loading="activityStore.loading" class="mc-card">
+        <el-table
+          :key="activityTableKey"
+          :data="activityPaginated"
+          class="mc-table mc-table--staggered"
+          style="width: 100%"
+        >
+          <el-table-column type="index" label="序号" width="64" align="center" />
+          <el-table-column prop="text" label="动态内容" min-width="360" show-overflow-tooltip />
+          <el-table-column label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <StatusTag :status="(row as Activity).status" size="small" />
+            </template>
+          </el-table-column>
+          <el-table-column label="时间" width="160" align="center">
+            <template #default="{ row }">
+              <span class="mc-time">{{ (row as Activity).time }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div v-if="activityPaginated.length > 0" class="mc-pagination">
+          <el-pagination
+            v-model:current-page="activityPageNum"
+            v-model:page-size="activityPageSize"
+            :total="activityStore.filteredActivities.length"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next, jumper"
+            background
+            @current-change="activityPageNum = $event"
+            @size-change="handleActivitySizeChange"
+          />
+        </div>
+        <el-empty v-else-if="!activityStore.loading" description="暂无动态记录" class="mc-empty" />
+      </div>
+    </section>
+
+    <!-- 报名记录 -->
+    <section v-else class="center-panel" aria-labelledby="submission-tab">
+      <div class="panel-toolbar">
+        <div class="panel-toolbar__filters">
+          <div class="mc-input-wrap">
+            <Search :size="16" class="mc-input-wrap__icon" />
+            <el-input
+              v-model="submissionKeyword"
+              placeholder="搜索名称或类型"
+              clearable
+              @keyup.enter="handleSubmissionSearch"
+              @clear="handleSubmissionSearch"
+            />
+          </div>
+          <span class="filter-label">类型：</span>
+          <el-select
+            v-model="submissionType"
+            placeholder="全部"
+            clearable
+            class="mc-select"
+            @change="handleSubmissionSearch"
+          >
+            <el-option
+              v-for="opt in typeOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
+          <span class="filter-label">状态：</span>
+          <el-select
+            v-model="submissionStatus"
+            placeholder="全部"
+            clearable
+            class="mc-select"
+            @change="handleSubmissionSearch"
+          >
+            <el-option
+              v-for="opt in statusOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
+          <el-button type="primary" size="default" @click="handleSubmissionSearch">
+            <Filter :size="14" style="margin-right: 4px" />筛选
+          </el-button>
+          <el-button @click="handleSubmissionReset">
+            <X :size="14" style="margin-right: 4px" />重置
+          </el-button>
+        </div>
+      </div>
+
+      <div v-loading="submissionStore.loading" class="mc-card">
+        <el-table
+          :key="submissionTableKey"
+          :data="submissionPaginated"
+          class="mc-table mc-table--staggered"
+          style="width: 100%"
+        >
+          <el-table-column type="index" label="序号" width="64" align="center" />
+          <el-table-column prop="title" label="名称" min-width="220" show-overflow-tooltip />
+          <el-table-column label="类型" width="130" align="center">
+            <template #default="{ row }">
+              <span class="mc-time">{{ (row as SubmissionRecord).typeLabel }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="提交时间" width="120" align="center">
+            <template #default="{ row }">
+              <span class="mc-time">{{ (row as SubmissionRecord).submitDate }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="学期" width="120" align="center">
+            <template #default="{ row }">
+              <span class="mc-time">{{ formatSemester((row as SubmissionRecord).semester) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" width="110" align="center">
+            <template #default="{ row }">
+              <StatusTag :status="(row as SubmissionRecord).status" size="small" />
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="300" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button
+                type="primary"
+                link
+                :icon="Search"
+                size="small"
+                @click="viewSubmission((row as SubmissionRecord).sourcePath)"
+              >
+                查看
+              </el-button>
+              <el-button
+                v-if="canEditSubmission(row as SubmissionRecord)"
+                type="primary"
+                link
+                size="small"
+                :icon="Pencil"
+                @click="editSubmission(row as SubmissionRecord)"
+              >
+                编辑
+              </el-button>
+              <el-button
+                v-if="canDeleteSubmission(row as SubmissionRecord)"
+                type="danger"
+                link
+                size="small"
+                :icon="Trash2"
+                @click="handleDeleteSubmission(row as SubmissionRecord)"
+              >
+                删除
+              </el-button>
+              <el-button
+                v-if="canWithdrawSubmission(row as SubmissionRecord)"
+                type="warning"
+                link
+                size="small"
+                :icon="Undo2"
+                @click="handleWithdrawSubmission(row as SubmissionRecord)"
+              >
+                撤回
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div v-if="submissionPaginated.length > 0" class="mc-pagination">
+          <el-pagination
+            v-model:current-page="submissionPageNum"
+            v-model:page-size="submissionPageSize"
+            :total="submissionStore.filteredRecords.length"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next, jumper"
+            background
+            @current-change="submissionPageNum = $event"
+            @size-change="handleSubmissionSizeChange"
+          />
+        </div>
+        <el-empty
+          v-else-if="!submissionStore.loading"
+          description="暂无报名记录"
+          class="mc-empty"
+        />
+      </div>
+    </section>
+  </PageContainer>
+</template>
+
+<style scoped lang="scss">
+@use '../styles/theme' as *;
+
+.activity-center {
+  @include message-theme-vars;
+
+  font-family: $mc-font-body;
+  color: var(--mc-text);
+  user-select: none;
+}
+
+.panel-toolbar {
+  @include mc-fade-in(0.1s);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  margin-bottom: 20px;
+
+  &__filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+}
+
+.mc-input-wrap {
+  @include mc-input-wrap(240px);
+}
+
+.filter-label {
+  font-size: 13px;
+  color: var(--mc-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mc-select {
+  @include mc-select(150px);
+}
+
+.mc-card {
+  @include mc-card;
+  @include mc-fade-in(0.1s);
+}
+
+.mc-pagination {
+  @include mc-pagination;
+}
+
+.mc-empty {
+  @include mc-empty;
+}
+
+.mc-table {
+  :deep(.el-table) {
+    @include mc-table;
+  }
+
+  &--staggered {
+    --mc-row-duration: 0.54s;
+    --mc-row-delay: 0.05s;
+    --mc-row-offset: -28px;
+
+    :deep(.el-table__row) {
+      --_duration: var(--mc-row-duration, 0.6s);
+      --_delay: var(--mc-row-delay, 0.08s);
+      --_easing: var(--mc-row-easing, #{$ease-emphasized});
+
+      opacity: 0;
+      will-change: transform, opacity;
+      animation: table-row-brush var(--_duration) var(--_easing) both;
+    }
+
+    @for $i from 1 through 50 {
+      :deep(.el-table__body .el-table__row:nth-child(#{$i})) {
+        animation-delay: calc((#{$i} - 1) * var(--_delay));
+      }
+    }
+  }
+}
+</style>
