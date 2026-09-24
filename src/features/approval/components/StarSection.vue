@@ -6,7 +6,7 @@ import { Award, CheckCircle, Clock, XCircle } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAwardReviewStore } from '@/app/stores/stores'
 import StatusTag from '@/shared/ui/StatusTag.vue'
-import { canEditStar, filterStarRecords } from '../composables/useStarMockData'
+import { canEditStar, filterStarRecords } from '../composables/starRecords'
 import StarDialog from './StarDialog.vue'
 
 const awardReviewStore = useAwardReviewStore()

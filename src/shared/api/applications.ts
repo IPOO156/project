@@ -1,44 +1,8 @@
 import request from './request'
 
-/** 申报通用字段（所有申报类型均可包含，字段与后端一致） */
-export interface ApplicationCommonFields {
-  semesterId: number
-  isDraft?: number
-  evidenceFileIds?: number[]
-  participantRole?: 'leader' | 'member' | 'solo'
-  certificateNo?: string
-  issuingUnit?: string
-  validUntil?: string
-}
-
-/** 提交申报响应（POST /applications/{type}） */
-export interface SubmitApplicationResult {
-  archiveId: number
-  status: number
-  statusLabel: string
-  currentVersion: number
-  submitCount: number
-}
-
 /**
- * 提交/保存申报（按 type 对接对应接口）
- * 学科竞赛 POST /applications/competition
- * 奖学金   POST /applications/scholarship
- * 创新创业 POST /applications/innovation
- * 学术研究 POST /applications/research
- * 荣誉证书 POST /applications/certificate
- * 实习经历 POST /applications/internship
- * 组织履历 POST /applications/organization
- * 实训项目 POST /applications/training
+ * 自动保存草稿（PUT /applications/{archiveId}/autosave）
  */
-export function submitApplication(
-  type: string,
-  payload: ApplicationCommonFields & Record<string, any>,
-): Promise<SubmitApplicationResult> {
-  return request.post(`/applications/${type}`, payload)
-}
-
-/** 自动保存草稿（PUT /applications/{archiveId}/autosave） */
 export function autosaveApplication(
   archiveId: number,
   payload: Record<string, any>,
@@ -73,33 +37,6 @@ export function duplicateCheck(payload: {
   suggestion: string
 }> {
   return request.post('/applications/duplicate-check', payload)
-}
-
-/* ===================== 社会实践 ===================== */
-
-export function submitPractice(
-  payload: ApplicationCommonFields & {
-    activityName: string
-    practiceLocation?: string
-    practiceUnit?: string
-    startDate: string
-    endDate: string
-    volunteerHours?: number
-  },
-): Promise<SubmitApplicationResult> {
-  return submitApplication('practice', payload)
-}
-
-/* ===================== 图书心得 ===================== */
-
-export function submitBookReview(
-  payload: ApplicationCommonFields & {
-    bookName: string
-    readMonth: string
-    reviewContent: string
-  },
-): Promise<SubmitApplicationResult> {
-  return submitApplication('book-review', payload)
 }
 
 /* ===================== 版本历史 ===================== */
@@ -153,108 +90,7 @@ export function getApplicationGuide(type: string): Promise<{
   return request.get(`/applications/${type}/guide`)
 }
 
-/* ===================== 学科竞赛 ===================== */
-
-export function submitCompetition(
-  payload: ApplicationCommonFields & {
-    competitionName: string
-    competitionType: string
-    awardLevel: string
-    obtainedTime: string
-  },
-): Promise<SubmitApplicationResult> {
-  return submitApplication('competition', payload)
-}
-
-/* ===================== 奖学金 ===================== */
-
-export function submitScholarship(
-  payload: ApplicationCommonFields & {
-    scholarshipName: string
-    scholarshipCategory: string
-    awardLevel: string
-    obtainedTime: string
-  },
-): Promise<SubmitApplicationResult> {
-  return submitApplication('scholarship', payload)
-}
-
-/* ===================== 创新创业 ===================== */
-
-export function submitInnovation(
-  payload: ApplicationCommonFields & {
-    companyName: string
-    industryType: string
-    projectType: string
-    registeredTime: string
-  },
-): Promise<SubmitApplicationResult> {
-  return submitApplication('innovation', payload)
-}
-
-/* ===================== 学术研究 ===================== */
-
-export function submitResearch(
-  payload: ApplicationCommonFields & {
-    projectName: string
-    projectLevel: string
-    projectType: string
-    startDate: string
-    endDate: string
-  },
-): Promise<SubmitApplicationResult> {
-  return submitApplication('research', payload)
-}
-
-/* ===================== 荣誉证书 ===================== */
-
-export function submitCertificate(
-  payload: ApplicationCommonFields & {
-    certificateType: string
-    certificateName: string
-    obtainedTime: string
-  },
-): Promise<SubmitApplicationResult> {
-  return submitApplication('certificate', payload)
-}
-
-/* ===================== 实习经历 ===================== */
-
-export function submitInternship(
-  payload: ApplicationCommonFields & {
-    companyName: string
-    location?: string
-    position?: string
-    startDate: string
-    endDate: string
-  },
-): Promise<SubmitApplicationResult> {
-  return submitApplication('internship', payload)
-}
-
-/* ===================== 组织履历 ===================== */
-
-export function submitOrganization(
-  payload: ApplicationCommonFields & {
-    orgLevel?: string
-    department?: string
-    positionTitle?: string
-    startDate: string
-    endDate: string
-  },
-): Promise<SubmitApplicationResult> {
-  return submitApplication('organization', payload)
-}
-
-/* ===================== 实训项目 ===================== */
-
-export function submitTraining(
-  payload: ApplicationCommonFields & {
-    projectName: string
-    projectContent?: string
-    startDate: string
-    endDate: string
-  },
-): Promise<SubmitApplicationResult> {
-  return submitApplication('training', payload)
-}
+// 各类申报的提交入口统一走 shared/api/submission.ts 的 submitApplication(data)：
+// 它按类型契约（APPLICATION_CONTRACTS）做字段重命名与枚举归一化后再 POST /applications/{type}。
+// 本文件此前另有一套 submitApplication(type, payload) + 11 个 submitXxx 包装，与前者重名且
+// 字段未做归一化（直接透传会因驼峰/枚举不匹配被后端拒绝），且全项目零引用，已移除。

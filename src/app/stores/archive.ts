@@ -2,7 +2,7 @@ import type { Award, Grade, Interest, ProfileDimension, TimelineNode } from '@/s
 import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getAwards, getDimensions, getGrades, getTimelineEvents } from '@/shared/api/archive'
+import { getDimensions, getTimelineEvents } from '@/shared/api/archive'
 import {
   deleteInterest as apiDeleteInterest,
   updateInterests as apiUpdateInterests,
@@ -13,7 +13,7 @@ import { useUserStore } from './user'
 /**
  * 档案信息流转 Store
  * 集中管理个人档案数据（画像、兴趣、成绩、奖项、时间线）
- * 优先对接后端 /profile/info 与 /profile/growth-timeline，接口异常时回退本地 Mock。
+ * 优先对接后端 /profile/info 与 /profile/growth-timeline，接口异常时展示空态（不注入编造数据）。
  */
 export const useArchiveStore = defineStore('archive', () => {
   const interests = ref<Interest[]>([])
@@ -45,7 +45,7 @@ export const useArchiveStore = defineStore('archive', () => {
         applyProfileInfo(profile)
         lastArchiveFetchAt = Date.now()
       } catch {
-        await fetchArchiveMock()
+        await fetchArchiveFallback()
       } finally {
         loading.value = false
       }
@@ -158,19 +158,17 @@ export const useArchiveStore = defineStore('archive', () => {
     }
   }
 
-  // 兴趣标签已切到后端真实接口（/profile/info + PUT/DELETE /profile/interests），无独立 Mock 回填
-  async function fetchArchiveMock() {
+  /**
+   * /profile/info 失败时的兜底：只清理状态、展示空态，不注入编造成绩/奖项
+   * （编造记录会被用户误认为自己的真实档案）。维度画像另有独立真实接口 /archive/dimensions 可兜底。
+   */
+  async function fetchArchiveFallback() {
+    grades.value = []
+    awards.value = []
     try {
-      const [gradeData, awardData, dimensionData] = await Promise.all([
-        getGrades(),
-        getAwards(),
-        getDimensions(),
-      ])
-      grades.value = gradeData
-      awards.value = awardData
-      dimensions.value = dimensionData
+      dimensions.value = await getDimensions()
     } catch {
-      /* 全部失败静默 */
+      dimensions.value = []
     }
   }
 

@@ -6,7 +6,7 @@ import type { TeacherDelegationItem } from '@/shared/types/teacher'
  *   - GET  /teacher/delegations            委托列表
  *   - POST /teacher/delegations            新建委托
  *   - PUT  /teacher/delegations/{id}/cancel 取消委托
- * 被委托人下拉使用 /admin/users?roleId=3（教师端暂无「教师列表」接口，见后端缺口清单）。
+ * 被委托人下拉使用 GET /teacher/delegations/candidates（后端专用候选人接口）。
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, RefreshCw, Search, XCircle } from 'lucide-vue-next'
@@ -15,8 +15,8 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import {
   cancelTeacherDelegation,
   createTeacherDelegation,
+  listTeacherDelegationCandidates,
   listTeacherDelegations,
-  listUsers,
 } from '@/shared/api/teacher'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 
@@ -108,10 +108,11 @@ const scopes = computed(() =>
     .map((s) => ({ scopeId: s.scopeId, scopeName: s.scopeName ?? '' })),
 )
 
-async function loadDelegatees() {
+async function loadDelegatees(keyword?: string) {
   delegateeLoading.value = true
   try {
-    const res = await listUsers({ roleId: 3, status: 1, per_page: 100 })
+    // 教师身份访问 /admin/users 会 403，必须走教师端专用候选人接口
+    const res = await listTeacherDelegationCandidates({ keyword })
     delegatees.value = (res?.list ?? []).map((u) => ({
       userId: u.userId,
       name: u.name,

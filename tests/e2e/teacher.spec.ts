@@ -1,195 +1,77 @@
-/**
- * 教师端 E2E 测试
- * 测试账号：T00003 / 123456
- */
+import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
+import { ACCOUNTS, collectPageErrors, login } from './helpers/login'
 
 test.describe('教师端登录', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+  test('登录成功后进入教师首页', async ({ page }) => {
+    // 注意：教师走「管理员登录」Tab —— 登录页没有「教师登录」Tab
+    await login(page, 'admin', ACCOUNTS.teacher)
+
+    await expect(page).toHaveURL(/\/teacher\/dashboard/)
+    await expect(page.locator('.sidebar__el-menu .el-menu-item').first()).toBeVisible()
   })
 
-  test('登录成功', async ({ page }) => {
-    // 输入账号
-    await page.locator('input[placeholder*="工号"]').fill('T00003')
-    // 输入密码
-    await page.locator('input[placeholder*="密码"]').fill('123456')
-    // 点击登录
-    await page.locator('button:has-text("登录")').click()
-    // 等待跳转到首页
-    await expect(page).toHaveURL(/\/teacher/)
-    // 验证用户信息显示
-    await expect(page.locator('.user-name')).toBeVisible()
-  })
+  test('密码错误时停留登录页并给出提示', async ({ page }) => {
+    await page.goto('/login')
+    await page.locator('button.login__tab', { hasText: '管理员登录' }).click()
 
-  test('登录失败 - 密码错误', async ({ page }) => {
-    await page.locator('input[placeholder*="工号"]').fill('T00003')
-    await page.locator('input[placeholder*="密码"]').fill('wrongpassword')
-    await page.locator('button:has-text("登录")').click()
-    // 验证错误提示
-    await expect(page.locator('.error-message')).toBeVisible()
+    const form = page.locator('.login__form')
+    await form.locator('input.el-input__inner').first().fill(ACCOUNTS.teacher.userNo)
+    await form.locator('input[type="password"]').first().fill('wrong-password')
+    await page.locator('button.login__btn').click()
+
+    // 用 .first()：一次失败可能弹出多条提示，不加会触发 strict mode 报错
+    await expect(page.locator('.el-message--error').first()).toBeVisible()
+    await expect(page).toHaveURL(/\/login/)
   })
 })
 
-test.describe('教师端首页', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/teacher')
-    // 登录
-    await page.locator('input[placeholder*="工号"]').fill('T00003')
-    await page.locator('input[placeholder*="密码"]').fill('123456')
-    await page.locator('button:has-text("登录")').click()
-    await page.waitForURL(/\/teacher/)
+/**
+ * 核心页冒烟。
+ *
+ * 整个 describe 共用一次登录（beforeAll 里建页）而非每个用例重登：
+ * 联调后端走 natapp 免费隧道，有每分钟连接数限流，重复登录会显著提高
+ * 触发限流的概率（表现为接口空 body 500）。代价是放弃了用例间的状态隔离，
+ * 对「页面能否打开」这类冒烟断言可以接受。
+ */
+test.describe('教师端核心页冒烟', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  const PAGES = [
+    { path: '/teacher/dashboard', name: '首页' },
+    // ⚠️ 本页当前只验「能打开、无 JS 报错」，不验数据。
+    // 原因：该页调的是管理端 /admin/archives 等端点，教师身份一律 403，
+    // 页面稳定显示「覆盖学生 0 人 / 档案总数 0 份」。这是已知缺陷，
+    // 详见 docs/2026-09-23-三端接口与假数据审计报告.md §七-4②。
+    // 待前端改接 GET /teacher/students 后，再补数据断言。
+    { path: '/teacher/archive-view', name: '档案查看（数据待修复）' },
+    { path: '/teacher/material-review/pending', name: '材料审核' },
+    { path: '/teacher/delegation', name: '审批委托' },
+    { path: '/teacher/messages', name: '消息中心' },
+  ]
+
+  let page: Page
+  let pageErrors: string[]
+
+  test.beforeAll(async ({ browser }) => {
+    page = await browser.newPage()
+    pageErrors = collectPageErrors(page)
+    await login(page, 'admin', ACCOUNTS.teacher)
   })
 
-  test('首页显示正常', async ({ page }) => {
-    // 验证导航菜单显示
-    await expect(page.locator('.teacher-menu')).toBeVisible()
-    // 验证工作台信息
-    await expect(page.locator('.dashboard-summary')).toBeVisible()
+  test.afterAll(async () => {
+    await page.close()
   })
 
-  test('查看教学任务', async ({ page }) => {
-    // 点击教学任务
-    await page.locator('.nav-item:has-text("教学任务")').click()
-    await expect(page).toHaveURL(/.*teacher\/teaching-tasks/)
+  for (const item of PAGES) {
+    test(`${item.name}（${item.path}）可正常打开`, async () => {
+      await page.goto(item.path)
 
-    // 验证任务列表显示
-    await expect(page.locator('.task-list')).toBeVisible()
-    // 验证至少有一条任务记录
-    const rows = await page.locator('table tbody tr').count()
-    expect(rows).toBeGreaterThan(0)
-  })
-})
+      await expect(page).toHaveURL(new RegExp(`${item.path.replace(/\//g, '\\/')}$`))
+      await expect(page.locator('.layout')).toBeVisible()
+      await expect(page.locator('.sidebar__el-menu .el-menu-item').first()).toBeVisible()
 
-test.describe('教师端学生管理', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/teacher')
-    // 登录
-    await page.locator('input[placeholder*="工号"]').fill('T00003')
-    await page.locator('input[placeholder*="密码"]').fill('123456')
-    await page.locator('button:has-text("登录")').click()
-    await page.waitForURL(/\/teacher/)
-  })
-
-  test('查看学生列表', async ({ page }) => {
-    // 点击学生管理
-    await page.locator('.nav-item:has-text("学生管理")').click()
-    await expect(page).toHaveURL(/.*teacher\/students/)
-
-    // 验证学生列表显示
-    await expect(page.locator('.student-table')).toBeVisible()
-    // 验证至少有一个学生
-    const rows = await page.locator('.student-table tbody tr').count()
-    expect(rows).toBeGreaterThan(0)
-  })
-
-  test('按专业/班级筛选学生', async ({ page }) => {
-    await page.locator('.nav-item:has-text("学生管理")').click()
-    await page.waitForURL(/.*teacher\/students/)
-
-    // 选择专业
-    await page.locator('select[name="major"]').selectOption('计算机科学与技术')
-    // 选择班级
-    await page.locator('select[name="class"]').selectOption('计算机2201班')
-    // 点击查询
-    await page.locator('button:has-text("查询")').click()
-
-    // 验证筛选后的结果
-    await expect(page.locator('.student-table')).toBeVisible()
-  })
-
-  test('查看学生详情', async ({ page }) => {
-    await page.locator('.nav-item:has-text("学生管理")').click()
-    await page.waitForURL(/.*teacher\/students/)
-
-    // 点击第一个学生
-    await page.locator('.student-table tbody tr').first().click()
-
-    // 验证学生详情显示
-    await expect(page.locator('.student-detail')).toBeVisible()
-  })
-})
-
-test.describe('教师端成绩管理', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/teacher')
-    // 登录
-    await page.locator('input[placeholder*="工号"]').fill('T00003')
-    await page.locator('input[placeholder*="密码"]').fill('123456')
-    await page.locator('button:has-text("登录")').click()
-    await page.waitForURL(/\/teacher/)
-  })
-
-  test('录入成绩', async ({ page }) => {
-    // 点击成绩管理
-    await page.locator('.nav-item:has-text("成绩录入")').click()
-    await expect(page).toHaveURL(/.*teacher\/grades/)
-
-    // 点击新增成绩
-    await page.locator('button:has-text("新增")').click()
-
-    // 填写成绩表单
-    await page.locator('select[name="course"]').selectOption('高等数学')
-    await page.locator('input[name="studentId"]').fill('202401002')
-    await page.locator('input[name="score"]').fill('85')
-    await page.locator('input[name="semester"]').fill('2023-2024-1')
-
-    // 提交成绩
-    await page.locator('button:has-text("确定")').click()
-
-    // 验证录入成功提示
-    await expect(page.locator('.toast-success')).toBeVisible()
-  })
-
-  test('查看成绩统计', async ({ page }) => {
-    await page.locator('.nav-item:has-text("成绩统计")').click()
-    await expect(page).toHaveURL(/.*teacher\/grade-statistics/)
-
-    // 验证统计图表显示
-    await expect(page.locator('.grade-chart')).toBeVisible()
-    // 验证统计表格显示
-    await expect(page.locator('.stat-table')).toBeVisible()
-  })
-})
-
-test.describe('教师端教学评价', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/teacher')
-    // 登录
-    await page.locator('input[placeholder*="工号"]').fill('T00003')
-    await page.locator('input[placeholder*="密码"]').fill('123456')
-    await page.locator('button:has-text("登录")').click()
-    await page.waitForURL(/\/teacher/)
-  })
-
-  test('查看评价统计', async ({ page }) => {
-    // 点击教学评价
-    await page.locator('.nav-item:has-text("教学评价")').click()
-    await expect(page).toHaveURL(/.*teacher\/evaluation/)
-
-    // 验证评价数据展示
-    await expect(page.locator('.evaluation-summary')).toBeVisible()
-    // 验证评价列表
-    await expect(page.locator('.evaluation-list')).toBeVisible()
-  })
-})
-
-test.describe('教师端退出登录', () => {
-  test('正常退出登录', async ({ page }) => {
-    await page.goto('/teacher')
-    // 登录
-    await page.locator('input[placeholder*="工号"]').fill('T00003')
-    await page.locator('input[placeholder*="密码"]').fill('123456')
-    await page.locator('button:has-text("登录")').click()
-    await page.waitForURL(/\/teacher/)
-
-    // 点击退出
-    await page.locator('.user-menu').click()
-    await page.locator('.user-menu:has-text("退出登录")').click()
-
-    // 验证跳转到登录页
-    await expect(page).toHaveURL('/')
-    // 验证输入框被清空
-    await expect(page.locator('input[placeholder*="工号"]').inputValue()).toBe('')
-  })
+      expect(pageErrors, `${item.path} 出现未捕获异常`).toEqual([])
+    })
+  }
 })
