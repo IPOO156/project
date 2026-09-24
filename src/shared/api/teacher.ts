@@ -119,6 +119,7 @@ import type {
   TeacherDashboardOverview,
   TeacherDelegationCancelPayload,
   TeacherDelegationCancelResult,
+  TeacherDelegationCandidateResult,
   TeacherDelegationCreatePayload,
   TeacherDelegationCreateResult,
   TeacherDelegationListResult,
@@ -719,6 +720,17 @@ export function cancelTeacherDelegation(
   payload: TeacherDelegationCancelPayload,
 ): Promise<TeacherDelegationCancelResult> {
   return request.put(`/teacher/delegations/${delegationId}/cancel`, payload)
+}
+
+/**
+ * 可委托教师列表（GET /teacher/delegations/candidates）
+ * 委托页「被委托人」下拉的数据源：同校、持有可审批角色且启用中的教师，不含当前登录人本人。
+ */
+export function listTeacherDelegationCandidates(params?: {
+  keyword?: string
+  collegeId?: number
+}): Promise<TeacherDelegationCandidateResult> {
+  return request.get('/teacher/delegations/candidates', { params })
 }
 
 /* ===================== 统计看板 ===================== */

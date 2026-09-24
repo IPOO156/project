@@ -2,7 +2,7 @@ import type { GrowthExperience, GrowthExperienceInput } from '../timeline-consta
 import { computed, ref } from 'vue'
 import { addTimelineEvent, deleteTimelineEvent } from '@/shared/api/archive'
 import { getGrowthTimeline } from '@/shared/api/student'
-import { inferSemester, INITIAL_EXPERIENCES, mapTimelineEventType } from '../timeline-constants'
+import { inferSemester, mapTimelineEventType } from '../timeline-constants'
 import { useGrowthDataSources } from './useGrowthDataSources'
 
 function sortExperiencesByDate(list: GrowthExperience[]): GrowthExperience[] {
@@ -26,14 +26,14 @@ function mapBackendEvent(e: Record<string, any>): GrowthExperience {
 }
 
 export function useGrowthTimeline() {
-  const experiences = ref<GrowthExperience[]>(sortExperiencesByDate(INITIAL_EXPERIENCES))
+  const experiences = ref<GrowthExperience[]>([])
   const selectedId = ref<string | null>(null)
   const formVisible = ref(false)
   const { sync, autoSync, setAutoSync, isSyncing } = useGrowthDataSources()
 
   // 本地新增（含从其他模块同步）的经历，与后端时间轴事件合并展示
   const localExperiences = ref<GrowthExperience[]>([])
-  // 后端时间轴事件；后端不可用时为空，页面回退到本地初始经历
+  // 后端时间轴事件；后端不可用时为空，页面展示空态
   const backendExperiences = ref<GrowthExperience[]>([])
   const backendLoaded = ref(false)
 
@@ -54,18 +54,19 @@ export function useGrowthTimeline() {
   }
 
   function rebuildExperiences() {
-    const base = backendLoaded.value ? backendExperiences.value : INITIAL_EXPERIENCES
+    // 后端时间轴为唯一数据源；后端不可用时只展示本地新增经历，不注入示例数据
+    const base = backendLoaded.value ? backendExperiences.value : []
     experiences.value = sortExperiencesByDate([...base, ...localExperiences.value])
   }
 
-  /** 页面加载时拉取成长时间轴；失败时保留现有本地数据行为 */
+  /** 页面加载时拉取成长时间轴；失败时保留本地新增经历 */
   async function loadBackendTimeline() {
     try {
       const data = await getGrowthTimeline()
       backendExperiences.value = (data.timeline ?? []).map(mapBackendEvent)
       backendLoaded.value = true
     } catch {
-      // 后端不可用：保留现有本地数据行为（初始示例经历 + 本地新增经历）
+      // 后端不可用：仅保留本地新增经历，展示空态而非编造记录
       backendLoaded.value = false
     } finally {
       rebuildExperiences()

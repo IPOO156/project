@@ -1,12 +1,6 @@
-import type { Award, Grade, ProfileDimension, TimelineNode } from '@/shared/types/types'
+import type { ProfileDimension, TimelineNode } from '@/shared/types/types'
 import request from './request'
 import { getGrowthTimeline } from './student'
-
-let idCounter = 100
-
-function nextId(): string {
-  return String(++idCounter)
-}
 
 /* ===================== 成长时间轴（文档 4.2.x） ===================== */
 
@@ -100,106 +94,6 @@ export function updateTimelineEvent(
  */
 export function deleteTimelineEvent(id: number | string): Promise<void> {
   return request.delete(`/profile/growth-timeline/${id}`)
-}
-
-/**
- * 获取成绩列表
- * 后端就绪后替换为：return request.get<Grade[]>('/archive/grades')
- */
-export function getGrades(): Promise<Grade[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        {
-          id: '1',
-          semester: '2022-2023-1',
-          courseName: '高等数学',
-          score: 85,
-          gpa: 3.2,
-          credits: 5,
-        },
-        {
-          id: '2',
-          semester: '2022-2023-2',
-          courseName: '线性代数',
-          score: 87,
-          gpa: 3.4,
-          credits: 4,
-        },
-        {
-          id: '3',
-          semester: '2023-2024-1',
-          courseName: '数据结构',
-          score: 90,
-          gpa: 3.6,
-          credits: 5,
-        },
-        {
-          id: '4',
-          semester: '2023-2024-2',
-          courseName: '操作系统',
-          score: 91,
-          gpa: 3.8,
-          credits: 4,
-        },
-      ])
-    }, 300)
-  })
-}
-
-/**
- * 获取奖项列表
- * 后端就绪后替换为：return request.get<Award[]>('/archive/awards')
- */
-export function getAwards(): Promise<Award[]> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        {
-          id: '1',
-          name: '全国大学生数学建模竞赛',
-          level: 'provincial',
-          type: 'competition',
-          date: '2025-09',
-          prize: '二等奖',
-        },
-        {
-          id: '2',
-          name: '校级优秀学生干部',
-          level: 'school',
-          type: 'other',
-          date: '2025-06',
-          prize: '优秀干部',
-        },
-        {
-          id: '3',
-          name: 'ACM 程序设计竞赛',
-          level: 'school',
-          type: 'competition',
-          date: '2025-05',
-          prize: '一等奖',
-        },
-      ])
-    }, 300)
-  })
-}
-
-export function addAward(data: Omit<Award, 'id'>): Promise<Award> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve({ ...data, id: nextId() }), 200)
-  })
-}
-
-export function updateAward(id: string, data: Partial<Award>): Promise<Award> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve({ ...data, id } as Award), 200)
-  })
-}
-
-export function deleteAward(_id: string): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(), 200)
-  })
 }
 
 /**

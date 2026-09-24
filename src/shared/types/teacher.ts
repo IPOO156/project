@@ -1444,6 +1444,24 @@ export interface TeacherDelegationCancelResult {
   cancelledAt: string | null
 }
 
+/** 可委托教师（GET /teacher/delegations/candidates 列表项） */
+export interface TeacherDelegationCandidate {
+  userId: number
+  name: string
+  userNo: string
+  /** 职称，缺失为 null */
+  title: string | null
+  collegeId: number | null
+  collegeName: string | null
+  /** 持有的可审批角色名称，如 ["教师","辅导员"] */
+  roleNames: string[] | null
+}
+
+export interface TeacherDelegationCandidateResult {
+  list: TeacherDelegationCandidate[]
+  total: number | null
+}
+
 /* ===================== 表单自定义（/admin/form-templates）===================== */
 
 /** 表单字段静态选项（select/radio/checkbox 用，后端结构为 {value,label}） */

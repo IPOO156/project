@@ -1,12 +1,7 @@
 import type { Activity, ActivityFilters } from '@/shared/types/types'
-import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import {
-  deleteActivity as apiDelete,
-  updateActivity as apiUpdate,
-  getActivities,
-} from '@/shared/api/activity'
+import { getActivities } from '@/shared/api/activity'
 
 /**
  * 最近动态 Store
@@ -51,48 +46,16 @@ export const useActivityStore = defineStore('activity', () => {
     }
   }
 
-  async function updateActivity(id: string, payload: Partial<Omit<Activity, 'id'>>): Promise<void> {
-    const target = activities.value.find((i) => i.id === id)
-    if (!target) return
-
-    if (target.status === 'approved') {
-      ElMessage.warning('已通过审核的记录不可修改')
-      return
-    }
-
-    await apiUpdate(id, payload)
-    const idx = activities.value.findIndex((i) => i.id === id)
-    if (idx >= 0) {
-      activities.value[idx] = { ...target, ...payload }
-    }
-    const fIdx = filteredActivities.value.findIndex((i) => i.id === id)
-    if (fIdx >= 0) {
-      filteredActivities.value[fIdx] = { ...filteredActivities.value[fIdx], ...payload }
-    }
-    ElMessage.success('动态已更新')
-  }
-
-  async function deleteActivity(id: string): Promise<void> {
-    const target = activities.value.find((i) => i.id === id)
-    if (!target) return
-
-    if (target.status === 'approved') {
-      ElMessage.warning('已通过审核的记录不可删除')
-      return
-    }
-
-    await apiDelete(id)
-    activities.value = activities.value.filter((i) => i.id !== id)
-    filteredActivities.value = filteredActivities.value.filter((i) => i.id !== id)
-    ElMessage.success('动态已删除')
-  }
+  // 编辑 / 删除动态：本 Store 的 Activity 视图模型不含记录真实类别（archive/award/...），
+  // 无法推导出 activities.ts 所需的 type 路径变量；此前由 shared/api/activity.ts 用
+  // 固定 `?type=archive` 兜底，路径形态错误必然 404 且被 catch 吞掉。
+  // 该类操作请直接调用 @/shared/api/activities 的 updateActivity / deleteActivity（按记录类别传 type），
+  // 例如 app/stores/submission.ts:131 的写法。
 
   return {
     activities,
     filteredActivities,
     loading,
     fetchActivities,
-    updateActivity,
-    deleteActivity,
   }
 })

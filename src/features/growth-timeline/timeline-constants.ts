@@ -43,69 +43,6 @@ export const SEMESTER_RINGS: SemesterRing[] = [
   { level: 8, label: '大四下', code: '2026-2027-2', color: '#a88560' },
 ]
 
-export const INITIAL_EXPERIENCES: GrowthExperience[] = [
-  {
-    id: '1',
-    title: '第一粒种子',
-    date: '2023-09-15',
-    semester: '2023-2024-1',
-    description: '高中毕业后的暑假，读到了一本改变认知的书，埋下了好奇的种子。',
-    tags: ['阅读', '认知'],
-    skills: [
-      { name: '好奇心', growth: 90 },
-      { name: '阅读', growth: 50 },
-    ],
-  },
-  {
-    id: '2',
-    title: '图书馆的冬天与夏天',
-    date: '2024-03-10',
-    semester: '2023-2024-2',
-    description: '大一下学期几乎住在了图书馆，广泛阅读哲学、心理学、经济学。',
-    tags: ['阅读', '跨学科'],
-    skills: [
-      { name: '跨学科思维', growth: 75 },
-      { name: '阅读量', growth: 80 },
-    ],
-  },
-  {
-    id: '3',
-    title: '第一次竞赛获奖',
-    date: '2024-11-20',
-    semester: '2024-2025-1',
-    description: '参加校级程序设计竞赛获得二等奖，找到了技术热情。',
-    tags: ['竞赛', '技术'],
-    skills: [
-      { name: '编程', growth: 70 },
-      { name: '团队协作', growth: 60 },
-    ],
-  },
-  {
-    id: '4',
-    title: '暑期社会实践',
-    date: '2025-07-05',
-    semester: '2024-2025-2',
-    description: '参与乡村支教项目，学会了与不同背景的人沟通。',
-    tags: ['实践', '公益'],
-    skills: [
-      { name: '沟通能力', growth: 80 },
-      { name: '责任心', growth: 85 },
-    ],
-  },
-  {
-    id: '5',
-    title: '科研项目立项',
-    date: '2025-10-12',
-    semester: '2025-2026-1',
-    description: '加入导师课题组，开始接触学术研究和论文写作。',
-    tags: ['科研', '学术'],
-    skills: [
-      { name: '研究能力', growth: 65 },
-      { name: '写作', growth: 55 },
-    ],
-  },
-]
-
 export function inferSemester(dateStr: string): string {
   const date = new Date(dateStr)
   const year = date.getFullYear()
