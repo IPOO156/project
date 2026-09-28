@@ -29,6 +29,31 @@ import {
 export const ADMIN_ROLE_CODE = 'admin'
 
 /**
+ * 学生角色码（GET /auth/login 与 /auth/me 的 roles 元素，对应 roles.code）。
+ *
+ * 登录入口鉴权的判据：学生登录页签只接受持本码的账号，其余页签一律拒绝本码。
+ * 后端目前**不接收登录入口信息**（POST /auth/login 请求体只有 userNo/password/captcha*），
+ * 因此无法在服务端拒绝错配，前端这层是唯一的一道（详见 Login.vue 的 handleLogin）。
+ */
+export const STUDENT_ROLE_CODE = 'student'
+
+/**
+ * 教师端（含管理员）可登录角色码。
+ *
+ * 与 ROLE_BASELINE_MODULES 的键同源：能进教师端的角色 = teacher / counselor / admin。
+ * 注意这是**登录入口**的判据，与模块级授权是两回事 —— 后者仍以 /auth/me 的
+ * permissionCode 为准（见 useTeacherAuthz），本常量只用来回答「这个账号能不能从这个页签进」。
+ */
+export const TEACHER_SIDE_ROLE_CODES: readonly string[] = [ADMIN_ROLE_CODE, 'teacher', 'counselor']
+
+/** 账号角色是否匹配所选登录入口（student 页签 / 教师端页签） */
+export function isRoleMatchedLoginTab(roles: string[], tab: 'student' | 'admin'): boolean {
+  return tab === 'student'
+    ? roles.includes(STUDENT_ROLE_CODE)
+    : roles.some((r) => TEACHER_SIDE_ROLE_CODES.includes(r))
+}
+
+/**
  * 过渡代理码：管理员菜单码（permissions.code = system:manage）。
  *
  * 上面 ADMIN_ROLE_CODE 的直通已覆盖管理员场景，本码在当前阶段是冗余兜底

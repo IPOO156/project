@@ -32,7 +32,11 @@ export const useArchiveStore = defineStore('archive', () => {
   let lastTimelineFetchAt = 0
   const CACHE_TTL_MS = 60_000
 
-  /** 从后端 /profile/info 拉取画像数据（失败回退 Mock） */
+  /**
+   * 从后端 /profile/info 拉取画像数据。
+   * 失败时走 fetchArchiveFallback：清空成绩/奖项、改取 /archive/dimensions，
+   * 不注入任何编造数据（详见该函数注释）。
+   */
   async function fetchArchive(force = false): Promise<void> {
     if (pendingFetch) return pendingFetch
     if (!force && Date.now() - lastArchiveFetchAt < CACHE_TTL_MS && dimensions.value.length > 0) {

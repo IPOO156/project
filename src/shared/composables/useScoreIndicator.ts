@@ -12,6 +12,7 @@ export interface IndicatorItem {
   label: string
   score: number
   maxScore: number
+  /** 该维度权重 = 维度满分 / Σ维度满分。后端未给出满分时为 0（不编造） */
   weight: number
   remark?: string
 }
@@ -32,11 +33,23 @@ export function useScoreIndicator() {
     try {
       const data = await getProfileScores()
       indicatorCalculationId.value = data?.calculationId ?? null
-      indicators.value = (data?.list ?? []).map((d: any) => ({
+      const list = data?.list ?? []
+      /**
+       * 维度权重 = 维度满分 / Σ维度满分。
+       *
+       * 后端口径（2026-09-28 用 /profile/scores/{id}/details 的**指标级**权重实证）：
+       * 指标级 weight 之和为 1、rawScore 为 0-100，维度得分 = Σ(weight × rawScore)，
+       * 于是维度满分 targetScore = Σ(该维度指标权重) × 100 —— 实测 0.5/0.3/0.2 → 50/30/20，Σ=100，
+       * 与 targetsScore 完全吻合。故按满分占比反推即可得到真权重，不需要后端额外补字段；
+       * 此前用 `score / targetScore`（即得分率）冒充权重，使「权重」列与「得分率」列数字恒等（§5.2）。
+       */
+      const totalTargetScore = list.reduce((sum: number, d: any) => sum + (d.targetScore ?? 0), 0)
+      indicators.value = list.map((d: any) => ({
         label: d.dimensionName,
         score: d.score,
-        maxScore: d.targetScore || 100,
-        weight: d.targetScore ? d.score / d.targetScore : 0,
+        // 不编造满分：后端未给出时按 0 处理（此前写死 100，会让「加权总分」的满分数值虚高）
+        maxScore: d.targetScore ?? 0,
+        weight: totalTargetScore > 0 ? (d.targetScore ?? 0) / totalTargetScore : 0,
         remark: `当前 ${d.score} / 目标 ${d.targetScore}，差距 ${d.gap}${d.unit || '分'}`,
       }))
     } catch {

@@ -16,6 +16,9 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: () => import('@/app/layouts/DefaultLayout.vue'),
     redirect: '/dashboard',
+    // 学生端路由组标记：供守卫拦截非学生登录（如教师用 URL 直接打开学生页）。
+    // 与下方 /teacher 的 meta.teacher 对称，声明在父路由上、由子路由继承。
+    meta: { student: true },
     children: [
       {
         path: 'dashboard',
@@ -218,18 +221,27 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
-  // 教师端不允许访问学生端首页，重定向回教师首页
-  if (to.path === '/dashboard') {
+  // 学生端路由需 student 登录类型（与下方教师端守卫对称）。
+  //
+  // 此前只守了 to.path === '/dashboard' 一条：教师/管理员登录后手动敲 URL 仍能打开
+  // /profile/info、/applications 等其余学生页，在教师外壳里渲染出学生内容。
+  // 现改为按路由组的 meta.student 判定，覆盖学生端全部路由。
+  if (to.meta?.student) {
     const userCache = localStorage.getItem('user_info_cache')
     if (userCache) {
+      let loginType: string | undefined
       try {
-        const info = JSON.parse(userCache)
-        if (info.loginType === 'teacher') {
-          next({ path: '/teacher/dashboard' })
-          return
-        }
+        loginType = JSON.parse(userCache).loginType
       } catch {
-        // 解析失败按学生端处理
+        // 解析失败按学生端处理（与改造前一致）
+        loginType = undefined
+      }
+      // 只在**明确**是教师端账号时重定向。不可写成 `!== 'student'` 一律重定向：
+      // loginType 缺失时会被送往 /teacher/dashboard，而教师端守卫见 loginType 非 teacher
+      // 又会送回 /dashboard，两端守卫互相重定向形成死循环。
+      if (loginType === 'teacher') {
+        next({ path: '/teacher/dashboard' })
+        return
       }
     }
   }

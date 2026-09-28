@@ -4,6 +4,10 @@ dist
 .DS_Store
 *.log
 
+# Playwright 测试产物（playwright.config.ts 在仓库根目录，报告与结果输出到根目录）
+playwright-report/
+test-results/
+
 # TypeScript composite project emit artifacts
 vite.config.js
 vite.config.d.ts
