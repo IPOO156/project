@@ -112,11 +112,23 @@ const profileDimensions = computed(() => {
 
 const hasProfileDimensions = computed(() => profileDimensions.value.length > 0)
 
+/**
+ * 有环比基线的维度 → 对比学期名。
+ *
+ * 判据取 `comparedSemesterId != null`（id 是权威键，学期名仅用于展示）：
+ * 后端在无上期数据时返回 `comparedSemesterId: null`、`comparedSemesterName: null`，
+ * 但 `radarChart.previous` 仍是 `[0,0,0]` 而非 null。若拿它直接相减，会得到
+ * 「较上阶段 +20分」这种**前端编造出来的趋势**（把「没有上期数据」当成了「上期考 0 分」）。
+ * 这与 app/stores/archive.ts 中「无环比数据时 previous 与 current 相同（前端不编造趋势）」
+ * 的既有口径一致 —— store 层做了防护，此处这条路径此前绕过了它。
+ *
+ * 待后端补 `deltaAvailable` 或让 previous 在无数据时返回 null 后，可改用该显式开关。
+ */
 const comparedSemesterMap = computed(() => {
   const map = new Map<string, string>()
   for (const ind of homeStore.data?.indicators ?? []) {
-    if (ind.dimensionName && ind.comparedSemesterName) {
-      map.set(ind.dimensionName, ind.comparedSemesterName)
+    if (ind.dimensionName && ind.comparedSemesterId != null) {
+      map.set(ind.dimensionName, ind.comparedSemesterName ?? '上阶段')
     }
   }
   return map
@@ -135,21 +147,36 @@ const indicatorMeta = computed(() => {
 const profileSummary = computed(() => {
   const comparedMap = comparedSemesterMap.value
   return profileDimensions.value.map((item) => {
-    const deltaFromPrevious = item.current - item.previous
+    // 无环比基线时不产出任何环比文案与颜色，模板据此不渲染该区域（前端不编造趋势）
     const comparedSemesterName = comparedMap.get(item.label)
+    const hasBaseline = comparedSemesterName != null
+    const deltaFromPrevious = hasBaseline ? item.current - item.previous : 0
     return {
       label: item.label,
       current: item.current,
       target: item.target,
       previous: item.previous,
+      hasBaseline,
       deltaFromPrevious,
-      deltaLabel: comparedSemesterName ? `较${comparedSemesterName}学期` : '较上阶段',
+      deltaLabel: hasBaseline ? `较${comparedSemesterName}学期` : '',
       gapToTarget: item.target - item.current,
-      deltaClass: deltaFromPrevious >= 0 ? 'is-up' : 'is-down',
-      deltaSign: deltaFromPrevious >= 0 ? '+' : '',
+      // 持平时既非上升也非下降，不再套用 is-up 的绿色（此前 +0 会被渲染成上升态）
+      deltaClass: deltaFromPrevious > 0 ? 'is-up' : deltaFromPrevious < 0 ? 'is-down' : 'is-flat',
+      deltaSign: deltaFromPrevious > 0 ? '+' : '',
     }
   })
 })
+
+/**
+ * 是否存在任一维度的环比基线。
+ * 为 false 时雷达不绘制「上一阶段」系列 —— previous 此时是后端填的 [0,0,0]，
+ * 画出来就是一条贴在圆心的假基线（与「较上阶段 +20分」同源，见 comparedSemesterMap）。
+ */
+const hasAnyComparison = computed(() => profileSummary.value.some((item) => item.hasBaseline))
+
+const radarLegend = computed(() =>
+  hasAnyComparison.value ? ['当前画像', '目标值', '上一阶段'] : ['当前画像', '目标值'],
+)
 
 const radarTextColor = computed(() => (themeStore.isDark ? '#94a3b8' : '#334155'))
 const radarAxisColor = computed(() => (themeStore.isDark ? '#334155' : 'rgba(148, 163, 184, 0.18)'))
@@ -186,7 +213,7 @@ const radarOption = computed(() => {
         color: radarTextColor.value,
         fontSize: 12,
       },
-      data: ['当前画像', '目标值', '上一阶段'],
+      data: radarLegend.value,
     },
     radar: {
       radius: '62%',
@@ -251,20 +278,25 @@ const radarOption = computed(() => {
               color: '#94a3b8',
             },
           },
-          {
-            value: profileDimensions.value.map((item) => item.previous),
-            name: '上一阶段',
-            lineStyle: {
-              color: '#a855f7',
-              width: 2,
-            },
-            areaStyle: {
-              color: 'rgba(168, 85, 247, 0.08)',
-            },
-            itemStyle: {
-              color: '#a855f7',
-            },
-          },
+          // 无环比基线时不追加该系列（否则画出一条全 0 的假基线）
+          ...(hasAnyComparison.value
+            ? [
+                {
+                  value: profileDimensions.value.map((item) => item.previous),
+                  name: '上一阶段',
+                  lineStyle: {
+                    color: '#a855f7',
+                    width: 2,
+                  },
+                  areaStyle: {
+                    color: 'rgba(168, 85, 247, 0.08)',
+                  },
+                  itemStyle: {
+                    color: '#a855f7',
+                  },
+                },
+              ]
+            : []),
         ],
       },
     ],
@@ -354,9 +386,14 @@ onMounted(() => {
                   </div>
                 </div>
                 <div class="radar-metric__meta">
-                  <span class="radar-metric__delta" :class="item.deltaClass">
+                  <span
+                    v-if="item.hasBaseline"
+                    class="radar-metric__delta"
+                    :class="item.deltaClass"
+                  >
                     {{ item.deltaLabel }} {{ item.deltaSign }}{{ item.deltaFromPrevious }}分
                   </span>
+                  <span v-else class="radar-metric__delta is-flat">暂无环比数据</span>
                   <span class="radar-metric__gap">距目标 {{ item.gapToTarget }}分</span>
                 </div>
               </div>
@@ -556,6 +593,11 @@ onMounted(() => {
 
 .radar-metric__delta.is-down {
   color: #dc2626;
+}
+
+/* 持平 / 无环比基线：沿用父级 --el-text-color-secondary，不套用涨跌色 */
+.radar-metric__delta.is-flat {
+  color: var(--el-text-color-secondary);
 }
 
 .activities {

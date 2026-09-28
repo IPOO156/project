@@ -21,7 +21,10 @@ export const useReviewStore = defineStore('review', () => {
   const CACHE_TTL_MS = 60_000
   const pendingByType = new Map<string, Promise<ReviewRecord[]>>()
 
-  /** 加载全部审核记录（对接 GET /activities，接口异常回退 Mock） */
+  /**
+   * 加载全部审核记录（对接 GET /activities）。
+   * 接口异常时不兜底假数据：错误向上抛出，提示由 request 拦截器统一给出（§3.4）。
+   */
   async function fetchAll(filters?: ReviewFilters, force = false): Promise<ReviewRecord[]> {
     if (pendingFetch) return pendingFetch
     const isFiltered = !!(filters?.keyword || filters?.status)
