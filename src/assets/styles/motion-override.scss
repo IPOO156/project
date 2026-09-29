@@ -1,0 +1,51 @@
+/* =============================================================
+ * 项目动画强制启用
+ *
+ * 背景：用户系统开启 prefers-reduced-motion: reduce 时，浏览器 UA 行为会
+ * 让所有 CSS 动画/过渡直接进入终态，即便子组件没有写兜底。
+ *
+ * 实施方案：
+ *  - main.ts 在入口无条件设置 <html data-allow-motion='true'>
+ *  - 此文件负责在 prefers-reduced-motion: reduce 媒体查询内用
+ *    `animation` 简写配合 !important 强制覆盖浏览器 UA 抑制
+ *  - 子组件内的 @media (prefers-reduced-motion: reduce) 兜底已全部删除
+ *    （统一在此管理）
+ *
+ * 行为：所有用户都强制看到完整动画
+ * ============================================================= */
+
+/* 全局 keyframe 定义（子组件可安全引用，无 Vue scoped hash） */
+@keyframes gt-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(34px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 当系统开启 reduced-motion 时强制覆盖浏览器 UA 抑制
+   注意：
+   - 不要强制 opacity/transform !important，否则会锁死 keyframe 的 to 帧
+   - motion-override 的覆盖必须依赖 visible class，仅在 IO 触发后才生效 */
+@media (prefers-reduced-motion: reduce) {
+  .growth-node.visible .growth-card,
+  .growth-node.visible .ring-marker {
+    animation: gt-card-enter 0.85s cubic-bezier(0.16, 1, 0.3, 1) var(--stagger-delay, 0s) both !important;
+  }
+
+  .growth-card.visible .card-skill-fill {
+    transition:
+      width 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .hero-rings__title,
+  .hero-rings__desc,
+  .hero-rings__scroll {
+    animation-duration: 0.85s !important;
+  }
+}

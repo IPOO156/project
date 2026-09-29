@@ -12,7 +12,7 @@ export const useAppStore = defineStore('app', () => {
   const sidebarCollapsed = ref(false)
   const isMobile = ref(false)
   const pageLoading = ref(false)
-  const breadcrumbList = ref<{ label: string, path?: string }[]>([])
+  const breadcrumbList = ref<{ label: string; path?: string }[]>([])
 
   // getters
   const isSidebarCollapsed = computed(() => sidebarCollapsed.value)
@@ -26,7 +26,7 @@ export const useAppStore = defineStore('app', () => {
     sidebarCollapsed.value = val
   }
 
-  function setBreadcrumb(list: { label: string, path?: string }[]) {
+  function setBreadcrumb(list: { label: string; path?: string }[]) {
     breadcrumbList.value = list
   }
 
@@ -39,13 +39,11 @@ export const useAppStore = defineStore('app', () => {
    * 仅在浏览器环境执行，避免 SSR 报 window is not defined
    */
   function bindResponsive() {
-    if (typeof window === 'undefined')
-      return
+    if (typeof window === 'undefined') return
     const mql = window.matchMedia('(max-width: 991px)')
     const update = (e: MediaQueryListEvent | MediaQueryList) => {
       isMobile.value = e.matches
-      if (e.matches)
-        sidebarCollapsed.value = true
+      if (e.matches) sidebarCollapsed.value = true
     }
     update(mql)
     mql.addEventListener('change', update)

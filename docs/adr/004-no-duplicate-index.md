@@ -12,15 +12,15 @@
 
 将所有 barrel 文件重命名为描述性名称：
 
-| 原路径 | 新路径 |
-| ------ | ------ |
-| `src/app/router/index.ts` | `src/app/router/routes.ts` |
-| `src/app/stores/index.ts` | `src/app/stores/stores.ts` |
-| `src/shared/api/index.ts` | `src/shared/api/api.ts` |
+| 原路径                            | 新路径                                  |
+| --------------------------------- | --------------------------------------- |
+| `src/app/router/index.ts`         | `src/app/router/routes.ts`              |
+| `src/app/stores/index.ts`         | `src/app/stores/stores.ts`              |
+| `src/shared/api/index.ts`         | `src/shared/api/api.ts`                 |
 | `src/shared/composables/index.ts` | `src/shared/composables/composables.ts` |
-| `src/shared/constants/index.ts` | `src/shared/constants/constants.ts` |
-| `src/shared/types/index.ts` | `src/shared/types/types.ts` |
-| `src/shared/utils/index.ts` | `src/shared/utils/utils.ts` |
+| `src/shared/constants/index.ts`   | `src/shared/constants/constants.ts`     |
+| `src/shared/types/index.ts`       | `src/shared/types/types.ts`             |
+| `src/shared/utils/index.ts`       | `src/shared/utils/utils.ts`             |
 
 ## 理由
 
