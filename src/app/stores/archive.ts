@@ -24,6 +24,14 @@ export const useArchiveStore = defineStore('archive', () => {
   /** GET /profile/info 原始响应（学籍/联系/自我评价等字段供页面直接消费） */
   const profileData = ref<any>(null)
   const loading = ref(false)
+  /**
+   * /profile/info 是否**加载失败**（区别于「后端确实没有数据」）。
+   *
+   * 两者必须分开：失败时 grades/awards 被兜底清空，页面若照常渲染就会把「没拿到数据」
+   * 显示成「平均绩点 0.00 / 获奖总数 0」——学生读到的是自己考了 0 分，而非加载失败（§3.4）。
+   * 页面据此显示占位符与重试入口，而不是 0。
+   */
+  const loadFailed = ref(false)
 
   // ── 去重：pending 防并发重入，lastFetchedAt 防跨页冗余 ──
   let pendingFetch: Promise<void> | null = null
@@ -48,7 +56,10 @@ export const useArchiveStore = defineStore('archive', () => {
         const profile = await getProfileInfo()
         applyProfileInfo(profile)
         lastArchiveFetchAt = Date.now()
+        loadFailed.value = false
       } catch {
+        // 置位后再兜底：兜底会把 grades/awards 清空，页面需要靠该标记区分「空」与「失败」
+        loadFailed.value = true
         await fetchArchiveFallback()
       } finally {
         loading.value = false
@@ -283,6 +294,7 @@ export const useArchiveStore = defineStore('archive', () => {
     timelineEvents,
     profileData,
     loading,
+    loadFailed,
     fetchArchive,
     fetchTimeline,
     syncFromSubmissions,
