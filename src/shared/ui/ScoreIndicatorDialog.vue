@@ -9,7 +9,7 @@
 import type { CommonIndicator } from '@/shared/api/common'
 import type { IndicatorItem } from '@/shared/composables/useScoreIndicator'
 import { ElMessage } from 'element-plus'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { getIndicators } from '@/shared/api/common'
 import { getProfileScores, getScoreCalculationDetails } from '@/shared/api/student'
 
@@ -56,15 +56,30 @@ const detailLoading = ref(false)
 const calcDetail = ref<CalcDetail | null>(null)
 const detailTitle = ref('')
 
-/** 计算总分 */
-function calcTotal(items: IndicatorItem[]): number {
-  return items.reduce((sum, item) => sum + item.score * item.weight, 0)
+/**
+ * 加权总分 / 满分。
+ *
+ * 为什么是直接按维度得分、而不再乘一次权重（2026-09-28 实证）：
+ * 后端的维度得分本身就是加权结果 —— 指标级 weight 之和为 1、rawScore 为 0-100，
+ * 维度得分 = Σ(weight × rawScore)，维度满分 targetScore = Σ(该维度指标权重) × 100。
+ * 也就是「得分」已经乘过权重了，对维度再乘一次权重会**重复加权**：
+ * 李四 = 20×0.5 + 10×0.3 + 0×0.2 = 13 分（错），而正确值是 Σ得分 = 30 分（满分 Σ满分 = 100）。
+ * 此前分母还被伪权重污染，算出 11.3 / 30.0，两个数都不对。
+ */
+function calcWeightedTotal(items: IndicatorItem[]): number {
+  return items.reduce((sum, item) => sum + item.score, 0)
 }
 
-/** 计算满分 */
-function calcMaxTotal(items: IndicatorItem[]): number {
-  return items.reduce((sum, item) => sum + item.maxScore * item.weight, 0)
+function calcWeightedMaxTotal(items: IndicatorItem[]): number {
+  return items.reduce((sum, item) => sum + item.maxScore, 0)
 }
+
+/** 加权总分展示文案；满分缺失（后端未给出）时不做除法，显示占位符 */
+const weightedTotalText = computed(() => {
+  const max = calcWeightedMaxTotal(props.indicators)
+  if (!max) return '--'
+  return `${calcWeightedTotal(props.indicators).toFixed(1)} / ${max.toFixed(1)}`
+})
 
 /** 格式化百分比 */
 function formatPercent(score: number, maxScore: number): string {
@@ -233,10 +248,7 @@ watch(
 
           <div v-if="indicators.length > 0" class="score-indicator__total">
             <span class="score-indicator__total-label">加权总分</span>
-            <span class="score-indicator__total-value">
-              {{ calcTotal(indicators).toFixed(1) }}
-              / {{ calcMaxTotal(indicators).toFixed(1) }}
-            </span>
+            <span class="score-indicator__total-value">{{ weightedTotalText }}</span>
           </div>
         </div>
 

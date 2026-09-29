@@ -15,6 +15,7 @@ import {
   updatePoliticalStatus,
   updateStudentStatus,
 } from '@/shared/api/student'
+import { calcAggregateScore } from '@/shared/utils/score'
 import AvatarUploader from './components/AvatarUploader.vue'
 import AwardsPanel from './components/AwardsPanel.vue'
 import CompletenessBar from './components/CompletenessBar.vue'
@@ -87,11 +88,21 @@ const DIMENSION_COLORS_DARK = ['#60a5fa', '#34d399', '#f0b87b', '#a78bfa', '#fbb
 
 const dimensions = computed(() => {
   const palette = themeStore.isDark ? DIMENSION_COLORS_DARK : DIMENSION_COLORS_LIGHT
-  return archiveStore.dimensions.map((d, index) => ({
-    label: d.label,
-    score: d.current,
-    color: palette[index % palette.length],
-  }))
+  return archiveStore.dimensions.map((d, index) => {
+    // 各维度满分不同（如 50/30/20），进度条须按「得分率」绘制才可横向比较：
+    // 直接拿原始分当百分比会把 20/50 和 20/100 画成一样长。
+    // 满分为 0 或缺失时不做除法（不编造得分率），仅退化为显示原始分。
+    const hasTarget = d.target > 0
+    return {
+      label: d.label,
+      score: d.current,
+      maxScore: d.target,
+      percent: hasTarget ? Math.min(100, Math.round((d.current / d.target) * 100)) : 0,
+      // 分值文案在此预拼，避免模板内写分支（§2.2）
+      scoreText: hasTarget ? `${d.current} / ${d.target} 分` : `${d.current} 分`,
+      color: palette[index % palette.length],
+    }
+  })
 })
 
 const avgGpa = computed(() => {
@@ -101,10 +112,11 @@ const avgGpa = computed(() => {
 
 const totalCourses = computed(() => gradeSummary.value.reduce((s, g) => s + g.courses, 0))
 
-const dimAvg = computed(() => {
-  if (!dimensions.value.length) return 0
-  return Math.round(dimensions.value.reduce((s, d) => s + d.score, 0) / dimensions.value.length)
-})
+// 无评分计算结果时返回 null（模板显占位符）：显示 0 会让学生误读为「本次得分就是 0 分」，
+// 而实际含义是「尚无计算结果」。口径与空值语义统一在 shared/utils/score.ts。
+const dimAvg = computed<number | null>(() =>
+  calcAggregateScore(dimensions.value.map((d) => ({ score: d.score, maxScore: d.maxScore }))),
+)
 
 // ── 基本资料编辑 ──
 // 学籍字段（学号/年级/专业/班级/姓名）属学术身份信息，仅只读展示，不进入编辑表单；
@@ -273,7 +285,7 @@ async function handleExportResume() {
         <div class="stat-card__inner">
           <div>
             <p class="stat-card__label">综合评分</p>
-            <p class="stat-card__value">{{ dimAvg }}</p>
+            <p class="stat-card__value">{{ dimAvg ?? '--' }}</p>
           </div>
           <div class="stat-card__icon stat-card__icon--score">
             <Lightbulb :size="20" />

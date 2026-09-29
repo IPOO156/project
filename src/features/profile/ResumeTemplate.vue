@@ -4,6 +4,7 @@ import type { Award, Grade, Interest, ProfileDimension, UserInfo } from '@/share
 import { computed, ref } from 'vue'
 import { useDict } from '@/shared/composables/composables'
 import { INTEREST_LEVEL } from '@/shared/constants/dict'
+import { calcAggregateScore } from '@/shared/utils/score'
 
 interface ResumeData {
   userInfo: Partial<UserInfo>
@@ -50,12 +51,14 @@ const bestGpa = computed(() => {
   return Math.max(...gradeSummary.value.map((g) => g.gpa)).toFixed(2)
 })
 
-const dimAvg = computed(() => {
-  if (!props.data.dimensions.length) return 0
-  return Math.round(
-    props.data.dimensions.reduce((s, d) => s + d.current, 0) / props.data.dimensions.length,
-  )
-})
+// 口径统一在 shared/utils/score.ts。简历正文是一句完整的话，无法显示占位符，
+// 故无法计算时按原行为退化为 0（此处不引入新的空值语义，见该文件的口径说明）
+const dimAvg = computed(
+  () =>
+    calcAggregateScore(
+      props.data.dimensions.map((d) => ({ score: d.current, maxScore: d.target })),
+    ) ?? 0,
+)
 
 /** 将 submission 按类型分组，过滤有意义的活动 */
 const _u_experienceGroups = computed(() => {

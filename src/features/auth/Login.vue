@@ -13,6 +13,7 @@ import {
 } from '@/shared/api/teacher'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { useThemeRipple } from '@/shared/composables/useThemeRipple'
+import { isRoleMatchedLoginTab } from '@/shared/config/teacherModuleRegistry'
 import { setRefreshToken } from '@/shared/utils/token'
 import { validatePasswordStrength } from '@/shared/utils/validatePassword'
 import LoginBackground from './components/LoginBackground.vue'
@@ -246,6 +247,22 @@ async function handleLogin() {
       captchaCode: loginForm.captcha,
       rememberMe: loginForm.remember,
     })
+    // ── 登录入口与账号角色必须匹配 ──
+    // 必须在写 token **之前**校验：一旦落下 token，路由守卫就会放行，页面已经切走了。
+    // 后端 POST /auth/login 目前不接收登录入口信息，无法在服务端拒绝错配，
+    // 前端这层是当前唯一的拦截点（待后端补 loginType 入参后可省去本段）。
+    if (!isRoleMatchedLoginTab(res.user.roles ?? [], loginType.value)) {
+      loading.value = false
+      // 已弹过一次图形验证码，失败后换一张，避免用户重试时用的是已消费的 key
+      refreshCaptcha()
+      ElMessage.warning(
+        loginType.value === 'student'
+          ? '该账号不是学生账号，请改用管理员登录'
+          : '该账号不是管理端账号，请改用学生登录',
+      )
+      return
+    }
+
     // token 存储遵循「记住我」：默认仅当前会话（sessionStorage），勾选记住我才持久化
     userStore.setToken(res.accessToken, loginForm.remember)
     setRefreshToken(res.refreshToken ?? '', loginForm.remember)
