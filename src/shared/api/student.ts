@@ -37,6 +37,13 @@ export interface HomeDashboard {
     current: number[]
     target: number[]
     previous: number[]
+    /**
+     * 是否存在上阶段（对比学期）数据，由当前学期评分的 compared_semester_id 推导。
+     * 为 false 时 `previous` 全为「对齐维度用的补位 0」，**不代表该维度真实得分为 0**，
+     * 禁止用 `current - previous` 计算环比（会得出虚高的「较上阶段 +N 分」）。
+     * @JsonInclude(NON_NULL)：早期后端未下发时该字段整体缺省，按 false 处理。
+     */
+    hasPrevious?: boolean
   }
   dataCompleteness: { rate: number; missingItems: string[] }
   quickEntries: Array<{ name: string; icon: string; path: string; recent: boolean }>
@@ -113,6 +120,14 @@ export interface ProfileInfo {
     rankInClass: number
     rankInMajor: number
   }>
+  /**
+   * 累计学分加权绩点（各学期 gpa 按 total_credit 加权 / 累计总学分）。
+   * 后端提供时为绩点的**唯一权威口径**，前端不得再按学期简单平均算第二份。
+   * 无学期成绩时为 null。
+   */
+  overallGpa: number | null
+  /** 累计平均分（各学期 averageScore 按 total_credit 加权）；无学期成绩时为 null */
+  overallAverageScore: number | null
   personalAwards: Array<{
     category: string
     totalCount: number
@@ -141,11 +156,17 @@ export function getProfileScores(semesterId?: number): Promise<{
   calculatedAt: string
   ruleVersion: number
   calculationId: number
+  /** 综合评分 = Σ各维度得分（0-100）；无评分记录时为 null */
+  totalScore: number | null
+  /** 综合评分满分 = Σ各维度目标分；无评分记录时为 null */
+  maxTotalScore: number | null
   list: Array<{
     dimensionCode: string
     dimensionName: string
     score: number
     targetScore: number
+    /** 维度权重（0-1）= 该维度下指标权重之和 = targetScore / 100。后端权威值，优先于前端推算 */
+    weight: number | null
     gap: number
     change?: string
     comparedSemesterId?: number

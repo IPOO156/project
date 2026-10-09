@@ -157,6 +157,13 @@ export function getCaptcha(): Promise<CaptchaResponse> {
   return request.get('/auth/captcha')
 }
 
+/**
+ * 登录（学生端与教师/管理端共用）。
+ *
+ * 免验证码请求头 `X-Captcha-Skip-Token` 不在此处拼装 —— 由 request.ts 的请求拦截器
+ * 统一按 body/params 里的 userNo 命中白名单后注入。曾在此重复实现一份，两份白名单
+ * 与密钥各自维护、易发散（§2.6/§5.2）。
+ */
 export function teacherLogin(payload: LoginPayload): Promise<LoginResponse> {
   return request.post('/auth/login', payload)
 }

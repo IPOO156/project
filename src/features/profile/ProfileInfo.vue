@@ -111,13 +111,19 @@ const dimensions = computed(() => {
 })
 
 /**
- * 平均绩点。加载失败时返回占位符 —— 失败会把 grades 兜底清空，
+ * 平均绩点（累计学分加权）。取值一律用后端 `/profile/info` 的 `overallGpa`。
+ *
+ * 此前前端按「各学期 gpa 的算术平均」自算一份，与后端的「按 total_credit 加权」口径不同，
+ * 同一学生同一时点会出现两个数字（后端 3.62 / 前端 3.55）。现以后端为唯一权威口径，
+ * 前端不再推算第二份（§2.7 字段映射统一、§5.2 禁止重复实现）。
+ *
+ * 加载失败与「无学期成绩」都返回占位符 —— 失败时 grades 被兜底清空，
  * 若照常算出 '0.00'，学生读到的「我绩点是 0」比「没加载出来」严重得多（§3.4）。
  */
 const avgGpa = computed(() => {
   if (archiveStore.loadFailed) return '--'
-  if (!gradeSummary.value.length) return '0.00'
-  return (gradeSummary.value.reduce((s, g) => s + g.gpa, 0) / gradeSummary.value.length).toFixed(2)
+  const gpa = archiveStore.profileData?.overallGpa
+  return typeof gpa === 'number' ? gpa.toFixed(2) : '--'
 })
 
 /** 课程总数；加载失败时同上，显示占位符而非 0 */
@@ -223,6 +229,8 @@ const { exportArchivePDF } = useArchiveExport()
 const resumeData = computed(() => ({
   userInfo: userStore.userInfo ?? {},
   avatar: userStore.avatar,
+  // 累计绩点带下去给简历正文，避免简历里再本地推算一份（见 ResumeTemplate 的 avgGpa）
+  overallGpa: archiveStore.profileData?.overallGpa ?? null,
   grades: archiveStore.grades,
   awards: archiveStore.awards,
   interests: archiveStore.interests,

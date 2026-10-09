@@ -20,6 +20,10 @@ interface Props {
   loading?: boolean
   /** 画像分数计算说明 ID（GET /profile/scores 响应中的 calculationId），缺失时弹窗内自行获取 */
   calculationId?: number | null
+  /** 综合评分（后端 /profile/scores 的 totalScore）；给定时优先于按 indicators 求和 */
+  totalScore?: number | null
+  /** 综合评分满分（后端 /profile/scores 的 maxTotalScore）；给定时优先于按 indicators 求和 */
+  maxTotalScore?: number | null
 }
 
 const props = defineProps<Props>()
@@ -74,11 +78,18 @@ function calcWeightedMaxTotal(items: IndicatorItem[]): number {
   return items.reduce((sum, item) => sum + item.maxScore, 0)
 }
 
-/** 加权总分展示文案；满分缺失（后端未给出）时不做除法，显示占位符 */
+/**
+ * 加权总分展示文案；满分缺失（后端未给出）时不做除法，显示占位符。
+ *
+ * 分子分母优先取后端 `totalScore` / `maxTotalScore`（同一份响应的权威值）；
+ * 仅当调用方未传（老调用点）时才退回按 indicators 求和 —— 两者在当前后端下数值相同，
+ * 但求和是前端复算，后端若改口径不会同步（§2.7）。
+ */
 const weightedTotalText = computed(() => {
-  const max = calcWeightedMaxTotal(props.indicators)
+  const max = props.maxTotalScore ?? calcWeightedMaxTotal(props.indicators)
+  const total = props.totalScore ?? calcWeightedTotal(props.indicators)
   if (!max) return '--'
-  return `${calcWeightedTotal(props.indicators).toFixed(1)} / ${max.toFixed(1)}`
+  return `${total.toFixed(1)} / ${max.toFixed(1)}`
 })
 
 /** 格式化百分比 */
