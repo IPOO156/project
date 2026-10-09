@@ -36,7 +36,6 @@ request.interceptors.request.use(
     const userNo = config.data?.userNo || config.params?.userNo
     if (userNo && CAPTCHA_SKIP_SECRET && CAPTCHA_SKIP_ACCOUNTS.includes(String(userNo))) {
       config.headers['X-Captcha-Skip-Token'] = CAPTCHA_SKIP_SECRET
-      console.warn('[Skip Captcha] Adding X-Captcha-Skip-Token for user:', userNo)
     }
 
     return config

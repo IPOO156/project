@@ -41,19 +41,28 @@ const {
   indicatorLoading,
   indicatorTitle,
   indicatorCalculationId,
+  indicatorTotalScore,
+  indicatorMaxTotalScore,
   openIndicator,
   closeIndicator,
 } = useScoreIndicator()
 
 // ── 从 store 派生展示数据（数据由 API 层填充 store） ──
 
-// 学期均绩：所有课程按学分加权平均 GPA
-const overallGpa = computed(() => {
-  const grades = archiveStore.grades
-  const totalCredits = grades.reduce((s, g) => s + g.credits, 0)
-  if (totalCredits === 0) return '0.00'
-  const weighted = grades.reduce((s, g) => s + g.gpa * g.credits, 0)
-  return (weighted / totalCredits).toFixed(2)
+/**
+ * 学期均绩：两个取数口均为后端权威值，前端不再本地按学分加权自算。
+ * 1. `/home/dashboard` 的 `currentGpa`（当前学期口径）；
+ * 2. 缺失时退到 `/profile/info` 的 `overallGpa`（累计学分加权口径）。
+ *
+ * 此前第三层兜底是本地「Σ(gpa×credits)/Σcredits」，与后端 overallGpa 算法相同却是第四处实现；
+ * 同一学生同一时点出现多个绩点数字即源于此类重复实现（§5.2）。两者都没有时显示「--」（§3.4）。
+ */
+const semesterGpa = computed<number | string>(() => {
+  const homeGpa = homeStore.data?.currentGpa
+  if (typeof homeGpa === 'number') return homeGpa
+  const profileGpa = archiveStore.profileData?.overallGpa
+  if (typeof profileGpa === 'number') return profileGpa
+  return '--'
 })
 
 // 统计卡片：优先使用 /home/dashboard 数据，缺失时回退本地 store；本地也无数据则显示「--」
@@ -87,7 +96,7 @@ const statsCards = computed(() => {
     },
     {
       label: '学期均绩',
-      value: home?.currentGpa ?? (archiveStore.grades.length > 0 ? overallGpa.value : '--'),
+      value: semesterGpa.value,
       icon: TrendingUp,
       color: '#d4a574',
       path: '/profile/info',
@@ -122,7 +131,9 @@ const hasProfileDimensions = computed(() => profileDimensions.value.length > 0)
  * 这与 app/stores/archive.ts 中「无环比数据时 previous 与 current 相同（前端不编造趋势）」
  * 的既有口径一致 —— store 层做了防护，此处这条路径此前绕过了它。
  *
- * 待后端补 `deltaAvailable` 或让 previous 在无数据时返回 null 后，可改用该显式开关。
+ * 后端已在 `radarChart` 下发显式开关 `hasPrevious`（见 3.1 雷达图环比口径），
+ * 该开关为 boolean 时即为**权威判据**（见 hasPreviousFromApi）；
+ * 本 Map 退为「取对比学期名做文案」的用途，不再单独决定有无基线。
  */
 const comparedSemesterMap = computed(() => {
   const map = new Map<string, string>()
@@ -132,6 +143,15 @@ const comparedSemesterMap = computed(() => {
     }
   }
   return map
+})
+
+/**
+ * 后端权威的「有无上阶段」开关。仅当它确实是 boolean 时返回值，否则返回 null 表示
+ * 后端未下发该字段（老版本），由调用方退回按对比学期名推断。
+ */
+const hasPreviousFromApi = computed<boolean | null>(() => {
+  const v = homeStore.data?.radarChart?.hasPrevious
+  return typeof v === 'boolean' ? v : null
 })
 
 const indicatorMeta = computed(() => {
@@ -146,10 +166,12 @@ const indicatorMeta = computed(() => {
 
 const profileSummary = computed(() => {
   const comparedMap = comparedSemesterMap.value
+  const apiHasPrevious = hasPreviousFromApi.value
   return profileDimensions.value.map((item) => {
-    // 无环比基线时不产出任何环比文案与颜色，模板据此不渲染该区域（前端不编造趋势）
+    // 无环比基线时不产出任何环比文案与颜色，模板据此不渲染该区域（前端不编造趋势）。
+    // 后端给了显式开关就以它为准；开关缺省（老后端）时才退回「对比学期名是否存在」。
     const comparedSemesterName = comparedMap.get(item.label)
-    const hasBaseline = comparedSemesterName != null
+    const hasBaseline = apiHasPrevious ?? comparedSemesterName != null
     const deltaFromPrevious = hasBaseline ? item.current - item.previous : 0
     return {
       label: item.label,
@@ -158,7 +180,8 @@ const profileSummary = computed(() => {
       previous: item.previous,
       hasBaseline,
       deltaFromPrevious,
-      deltaLabel: hasBaseline ? `较${comparedSemesterName}学期` : '',
+      // 开关为 true 但某维度没给对比学期名时退回通用文案，避免拼出「较undefined学期」
+      deltaLabel: hasBaseline ? `较${comparedSemesterName ?? '上阶段'}学期` : '',
       gapToTarget: item.target - item.current,
       // 持平时既非上升也非下降，不再套用 is-up 的绿色（此前 +0 会被渲染成上升态）
       deltaClass: deltaFromPrevious > 0 ? 'is-up' : deltaFromPrevious < 0 ? 'is-down' : 'is-flat',
@@ -448,6 +471,8 @@ onMounted(() => {
       :title="indicatorTitle"
       :indicators="scoreIndicators"
       :calculation-id="indicatorCalculationId"
+      :total-score="indicatorTotalScore"
+      :max-total-score="indicatorMaxTotalScore"
       @close="closeIndicator"
     />
   </div>

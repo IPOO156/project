@@ -55,6 +55,8 @@ const {
   indicatorLoading,
   indicatorTitle,
   indicatorCalculationId,
+  indicatorTotalScore,
+  indicatorMaxTotalScore,
   openIndicator,
   closeIndicator,
 } = useScoreIndicator()
@@ -116,6 +118,8 @@ function openCalcDetail(label: string) {
       :indicators="indicators"
       :loading="indicatorLoading"
       :calculation-id="indicatorCalculationId"
+      :total-score="indicatorTotalScore"
+      :max-total-score="indicatorMaxTotalScore"
       @close="closeIndicator"
     />
   </el-card>
