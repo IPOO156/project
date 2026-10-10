@@ -52,12 +52,17 @@ onMounted(() => {
 const interests = computed(() => archiveStore.interests)
 /** 个人奖项：只读展示 /profile/info 的 personalAwards 类别汇总（方案一，后端无 CRUD，不做手动增删改） */
 const personalAwards = computed(() => archiveStore.profileData?.personalAwards ?? [])
-/** 获奖总数 = 各类别 totalCount 之和（后端按类别聚合，不再用列表行数） */
-const totalAwardCount = computed(() =>
-  personalAwards.value.reduce(
-    (sum: number, a: { totalCount?: number }) => sum + (a.totalCount ?? 0),
-    0,
-  ),
+/**
+ * 获奖总数 = 各类别 totalCount 之和（后端按类别聚合，不再用列表行数）。
+ * 加载失败时返回占位符：0 会在失败时与「确实没有获奖」混淆。
+ */
+const totalAwardCount = computed<number | string>(() =>
+  archiveStore.loadFailed
+    ? '--'
+    : personalAwards.value.reduce(
+        (sum: number, a: { totalCount?: number }) => sum + (a.totalCount ?? 0),
+        0,
+      ),
 )
 
 const gradeSummary = computed(() => {
@@ -105,12 +110,31 @@ const dimensions = computed(() => {
   })
 })
 
+/**
+ * 平均绩点（累计学分加权）。取值一律用后端 `/profile/info` 的 `overallGpa`。
+ *
+ * 此前前端按「各学期 gpa 的算术平均」自算一份，与后端的「按 total_credit 加权」口径不同，
+ * 同一学生同一时点会出现两个数字（后端 3.62 / 前端 3.55）。现以后端为唯一权威口径，
+ * 前端不再推算第二份（§2.7 字段映射统一、§5.2 禁止重复实现）。
+ *
+ * 加载失败与「无学期成绩」都返回占位符 —— 失败时 grades 被兜底清空，
+ * 若照常算出 '0.00'，学生读到的「我绩点是 0」比「没加载出来」严重得多（§3.4）。
+ */
 const avgGpa = computed(() => {
-  if (!gradeSummary.value.length) return '0.00'
-  return (gradeSummary.value.reduce((s, g) => s + g.gpa, 0) / gradeSummary.value.length).toFixed(2)
+  if (archiveStore.loadFailed) return '--'
+  const gpa = archiveStore.profileData?.overallGpa
+  return typeof gpa === 'number' ? gpa.toFixed(2) : '--'
 })
 
-const totalCourses = computed(() => gradeSummary.value.reduce((s, g) => s + g.courses, 0))
+/** 课程总数；加载失败时同上，显示占位符而非 0 */
+const totalCourses = computed<number | string>(() =>
+  archiveStore.loadFailed ? '--' : gradeSummary.value.reduce((s, g) => s + g.courses, 0),
+)
+
+/** 加载失败后重试：带 force 绕过 store 的 60s 缓存，否则会直接返回而不会重新请求 */
+function handleRetryArchive() {
+  void archiveStore.fetchArchive(true)
+}
 
 // 无评分计算结果时返回 null（模板显占位符）：显示 0 会让学生误读为「本次得分就是 0 分」，
 // 而实际含义是「尚无计算结果」。口径与空值语义统一在 shared/utils/score.ts。
@@ -205,6 +229,8 @@ const { exportArchivePDF } = useArchiveExport()
 const resumeData = computed(() => ({
   userInfo: userStore.userInfo ?? {},
   avatar: userStore.avatar,
+  // 累计绩点带下去给简历正文，避免简历里再本地推算一份（见 ResumeTemplate 的 avgGpa）
+  overallGpa: archiveStore.profileData?.overallGpa ?? null,
   grades: archiveStore.grades,
   awards: archiveStore.awards,
   interests: archiveStore.interests,
@@ -384,7 +410,11 @@ async function handleExportResume() {
           </el-row>
         </el-form>
       </el-card>
-      <DimensionPanel :dimensions="dimensions" />
+      <DimensionPanel
+        :dimensions="dimensions"
+        :load-failed="archiveStore.loadFailed"
+        @retry="handleRetryArchive"
+      />
     </div>
 
     <div class="row-2col">

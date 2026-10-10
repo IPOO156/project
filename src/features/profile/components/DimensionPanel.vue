@@ -17,6 +17,17 @@ const props = defineProps<{
     scoreText: string
     color: string
   }>
+  /**
+   * 父级 /profile/info 是否加载失败。
+   * 空数据有两种成因，文案必须分开：加载失败（重试即可）vs 后端确实没有评分计算结果
+   * （需管理员触发重算）。若都写成后者，会在网络异常时把学生支使去找管理员（§3.4）。
+   */
+  loadFailed?: boolean
+}>()
+
+const emit = defineEmits<{
+  /** 加载失败时由父级重试拉取（数据源在父级，组件保持纯展示） */
+  retry: []
 }>()
 
 // 口径与空值语义统一在 shared/utils/score.ts（null = 尚无计算结果，不显示 0 分）
@@ -28,12 +39,24 @@ const avgScore = computed<number | null>(() =>
 // 此时卡片不能只留一个空壳（此前整块空白、且标题栏误显「综合评分 0分」）
 const hasDimensions = computed(() => props.dimensions.length > 0)
 
+// 空态文案按成因分开（见 props.loadFailed 注释）
+const emptyDescription = computed(() =>
+  props.loadFailed
+    ? '画像数据加载失败，请检查网络后重试'
+    : '暂无画像评分数据，请联系管理员完成评分计算',
+)
+
+/** 无评分结果时标题栏的文案，同样按成因分开 */
+const emptyTagText = computed(() => (props.loadFailed ? '加载失败' : '暂无评分'))
+
 const {
   indicators,
   indicatorVisible,
   indicatorLoading,
   indicatorTitle,
   indicatorCalculationId,
+  indicatorTotalScore,
+  indicatorMaxTotalScore,
   openIndicator,
   closeIndicator,
 } = useScoreIndicator()
@@ -52,15 +75,19 @@ function openCalcDetail(label: string) {
           <span>多维度画像</span>
         </div>
         <span v-if="avgScore !== null" class="card-header__tag">综合评分 {{ avgScore }}分</span>
-        <span v-else class="card-header__tag">暂无评分</span>
+        <span v-else class="card-header__tag">{{ emptyTagText }}</span>
       </div>
     </template>
     <el-empty
       v-if="!hasDimensions"
       class="dimension-panel__empty"
-      description="暂无画像评分数据，请联系管理员完成评分计算"
+      :description="emptyDescription"
       :image-size="60"
-    />
+    >
+      <el-button v-if="loadFailed" type="primary" plain size="small" @click="emit('retry')">
+        重新加载
+      </el-button>
+    </el-empty>
     <div v-else class="dimension-list">
       <div v-for="dim in dimensions" :key="dim.label" class="dimension-item">
         <div class="dimension-item__head">
@@ -91,6 +118,8 @@ function openCalcDetail(label: string) {
       :indicators="indicators"
       :loading="indicatorLoading"
       :calculation-id="indicatorCalculationId"
+      :total-score="indicatorTotalScore"
+      :max-total-score="indicatorMaxTotalScore"
       @close="closeIndicator"
     />
   </el-card>

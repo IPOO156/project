@@ -9,6 +9,8 @@ import { calcAggregateScore } from '@/shared/utils/score'
 interface ResumeData {
   userInfo: Partial<UserInfo>
   avatar?: string
+  /** 后端 /profile/info 的累计学分加权绩点；缺失时退回按学期简单平均（见 avgGpa） */
+  overallGpa?: number | null
   grades: Grade[]
   awards: Award[]
   interests: Interest[]
@@ -41,7 +43,15 @@ const gradeSummary = computed(() => {
     }))
 })
 
+/**
+ * 平均绩点：优先用后端 /profile/info 的 overallGpa（累计学分加权）。
+ *
+ * 兜底保留「各学期 gpa 算术平均」仅为兼容后端未下发该字段的老响应；
+ * 简历正文是一句完整的话，无法显示占位符，故不像 ProfileInfo.vue 那样退化为「--」
+ * （与本文件 dimAvg 的处理一致）。
+ */
 const avgGpa = computed(() => {
+  if (typeof props.data.overallGpa === 'number') return props.data.overallGpa.toFixed(2)
   if (!gradeSummary.value.length) return '0.00'
   return (gradeSummary.value.reduce((s, g) => s + g.gpa, 0) / gradeSummary.value.length).toFixed(2)
 })
