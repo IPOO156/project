@@ -202,9 +202,9 @@ function handleDeleteAction(action: any) {
 function handleDeleteMilestone(milestone: any) {
   if (props.planId == null) return
   const planId = props.planId
-  confirmDelete('确定删除该里程碑吗？', milestone.id, () =>
-    deleteCareerMilestone(planId, milestone.id),
-  )
+  confirmDelete('确定删除该里程碑吗？', milestone.id, async () => {
+    await deleteCareerMilestone(planId, milestone.id)
+  })
 }
 
 async function toggleMilestone(milestone: any, checked: string | number | boolean) {
