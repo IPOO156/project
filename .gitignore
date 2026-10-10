@@ -4,6 +4,10 @@ dist
 .DS_Store
 *.log
 
+# Playwright 测试产物（playwright.config.ts 在仓库根目录，报告与结果输出到根目录）
+playwright-report/
+test-results/
+
 # TypeScript composite project emit artifacts
 vite.config.js
 vite.config.d.ts
@@ -13,5 +17,8 @@ package-lock.json
 
 # Cursor AI 配置目录（本地规则，不入库）
 .cursor/
+
+# Trae AI 配置目录（本地规则，不入库）
+.trae/
 
 # package.json 由开发者维护，正常入库（保留）
