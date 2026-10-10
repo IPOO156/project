@@ -59,6 +59,8 @@ const itemDialogVisible = ref(false)
 const itemIsEdit = ref(false)
 const itemEditingId = ref<number | null>(null)
 const saving = ref(false)
+/** 正在删除的字典项 id（行内按钮 Loading；不复用列表态，避免整张表转圈） */
+const deletingItemId = ref<number | null>(null)
 const itemForm = reactive({
   dictValue: '',
   label: '',
@@ -234,6 +236,7 @@ async function handleItemDelete(row: DictItemVO) {
   } catch {
     return
   }
+  deletingItemId.value = row.id
   try {
     await deleteDictItem(row.id)
     ElMessage.success('删除成功')
@@ -241,6 +244,8 @@ async function handleItemDelete(row: DictItemVO) {
     void loadItems()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingItemId.value = null
   }
 }
 
@@ -398,6 +403,8 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
                 text
                 type="danger"
                 size="small"
+                :loading="deletingItemId === (row as DictItemVO).id"
+                :disabled="deletingItemId !== null"
                 @click="handleItemDelete(row as DictItemVO)"
               >
                 删除

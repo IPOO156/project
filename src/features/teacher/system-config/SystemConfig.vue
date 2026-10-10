@@ -84,6 +84,7 @@ async function handleSaveSetting() {
 
 // ── 公告管理 ──
 const announcementLoading = ref(false)
+const deletingId = ref<number | null>(null)
 const announcements = ref<AnnouncementItem[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -229,12 +230,15 @@ async function handleDeleteAnnouncement(item: AnnouncementItem) {
   } catch {
     return
   }
+  deletingId.value = item.announcementId
   try {
     await deleteAnnouncement(item.announcementId)
     ElMessage.success('公告已删除')
     await loadAnnouncements()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -361,6 +365,8 @@ onMounted(() => {
                     type="danger"
                     size="small"
                     :icon="Trash2"
+                    :loading="deletingId === (row as AnnouncementItem).announcementId"
+                    :disabled="deletingId !== null"
                     @click="handleDeleteAnnouncement(row as AnnouncementItem)"
                   >
                     删除

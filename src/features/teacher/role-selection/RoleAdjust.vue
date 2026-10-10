@@ -85,6 +85,7 @@ function currentRoleOf(row: UserListItem): string {
 
 // ── 调整职位弹窗 ──
 const roleDialogVisible = ref(false)
+const roleSaving = ref(false)
 const targetRole = ref('teacher')
 const currentUser = ref<UserListItem | null>(null)
 
@@ -96,6 +97,7 @@ function openRoleDialog(row: UserListItem) {
 
 async function handleSaveRole() {
   if (!currentUser.value) return
+  roleSaving.value = true
   try {
     await updateUserRoles(currentUser.value.userId, ROLE_IDS[targetRole.value])
     ElMessage.success(`已将「${currentUser.value.name}」调整为${ROLE_LABELS[targetRole.value]}`)
@@ -103,6 +105,8 @@ async function handleSaveRole() {
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    roleSaving.value = false
   }
 }
 
@@ -110,6 +114,7 @@ async function handleSaveRole() {
 const { me } = useTeacherMe()
 const scopeDialogVisible = ref(false)
 const scopeLoading = ref(false)
+const scopeSaving = ref(false)
 const scopeUser = ref<UserListItem | null>(null)
 const scopeForm = reactive({
   collegeIds: [] as number[],
@@ -154,12 +159,15 @@ async function handleSaveScope() {
     ...scopeForm.majorIds.map((id) => ({ scopeType: 3, scopeId: id })),
     ...scopeForm.classIds.map((id) => ({ scopeType: 4, scopeId: id })),
   ]
+  scopeSaving.value = true
   try {
     await updateUserScopes(scopeUser.value.userId, scopes)
     ElMessage.success('数据范围已更新')
     scopeDialogVisible.value = false
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    scopeSaving.value = false
   }
 }
 
@@ -278,7 +286,14 @@ onMounted(() => void load())
       </el-form>
       <template #footer>
         <el-button @click="roleDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveRole">确认调整</el-button>
+        <el-button
+          type="primary"
+          :loading="roleSaving"
+          :disabled="roleSaving"
+          @click="handleSaveRole"
+        >
+          确认调整
+        </el-button>
       </template>
     </el-dialog>
 
@@ -343,7 +358,14 @@ onMounted(() => void load())
       </el-form>
       <template #footer>
         <el-button @click="scopeDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveScope">保存</el-button>
+        <el-button
+          type="primary"
+          :loading="scopeSaving"
+          :disabled="scopeSaving"
+          @click="handleSaveScope"
+        >
+          保存
+        </el-button>
       </template>
     </el-dialog>
   </div>

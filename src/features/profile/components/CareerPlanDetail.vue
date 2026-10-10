@@ -50,6 +50,9 @@ const { getColor, getLabel } = useDict(APPLICATION_STATUS)
 const loading = ref(false)
 const detail = ref<any>(null)
 
+// ─── 目标 / 行动 / 里程碑行内删除 Loading（记录正在删除的行 id，防连点） ───
+const deletingId = ref<number | null>(null)
+
 const statusKey = computed(() => STATUS_KEY_MAP[detail.value?.status] ?? 'draft')
 const statusType = computed(() => (getColor(statusKey.value) as TagProps['type']) ?? 'info')
 const statusLabel = computed(() => detail.value?.statusLabel || getLabel(statusKey.value))
@@ -157,7 +160,7 @@ async function handlePreview() {
   }
 }
 
-async function confirmDelete(message: string, action: () => Promise<unknown>) {
+async function confirmDelete(message: string, id: number, action: () => Promise<unknown>) {
   if (props.planId == null) return
   try {
     await ElMessageBox.confirm(message, '删除确认', {
@@ -168,19 +171,22 @@ async function confirmDelete(message: string, action: () => Promise<unknown>) {
   } catch {
     return
   }
+  deletingId.value = id
   try {
     await action()
     ElMessage.success('已删除')
     await reload()
   } catch {
     // 接口失败已由请求拦截器统一提示
+  } finally {
+    deletingId.value = null
   }
 }
 
 function handleDeleteGoal(goal: any) {
   if (props.planId == null) return
   const planId = props.planId
-  confirmDelete('确定删除该目标吗？其下行动与里程碑将被一并删除。', async () => {
+  confirmDelete('确定删除该目标吗？其下行动与里程碑将被一并删除。', goal.id, async () => {
     await deleteCareerGoal(planId, goal.id)
   })
 }
@@ -188,7 +194,7 @@ function handleDeleteGoal(goal: any) {
 function handleDeleteAction(action: any) {
   if (props.planId == null) return
   const planId = props.planId
-  confirmDelete('确定删除该行动吗？其下里程碑将被一并删除。', async () => {
+  confirmDelete('确定删除该行动吗？其下里程碑将被一并删除。', action.id, async () => {
     await deleteCareerAction(planId, action.id)
   })
 }
@@ -196,7 +202,9 @@ function handleDeleteAction(action: any) {
 function handleDeleteMilestone(milestone: any) {
   if (props.planId == null) return
   const planId = props.planId
-  confirmDelete('确定删除该里程碑吗？', () => deleteCareerMilestone(planId, milestone.id))
+  confirmDelete('确定删除该里程碑吗？', milestone.id, () =>
+    deleteCareerMilestone(planId, milestone.id),
+  )
 }
 
 async function toggleMilestone(milestone: any, checked: string | number | boolean) {
@@ -291,9 +299,16 @@ function handleClose() {
                 <el-button link type="primary" size="small" @click="openGoalDialog(goal)"
                   >编辑</el-button
                 >
-                <el-button link type="danger" size="small" @click="handleDeleteGoal(goal)"
-                  >删除</el-button
+                <el-button
+                  link
+                  type="danger"
+                  size="small"
+                  :loading="deletingId === goal.id"
+                  :disabled="deletingId !== null"
+                  @click="handleDeleteGoal(goal)"
                 >
+                  删除
+                </el-button>
               </div>
             </div>
             <p v-if="goal.goalDesc" class="goal__desc">{{ goal.goalDesc }}</p>
@@ -336,9 +351,16 @@ function handleClose() {
                     <el-button link type="success" size="small" @click="openUploadDialog(action)"
                       >上传成果</el-button
                     >
-                    <el-button link type="danger" size="small" @click="handleDeleteAction(action)"
-                      >删除</el-button
+                    <el-button
+                      link
+                      type="danger"
+                      size="small"
+                      :loading="deletingId === action.id"
+                      :disabled="deletingId !== null"
+                      @click="handleDeleteAction(action)"
                     >
+                      删除
+                    </el-button>
                   </div>
                 </div>
                 <p v-if="action.actionDesc" class="action__desc">{{ action.actionDesc }}</p>
@@ -396,9 +418,12 @@ function handleClose() {
                         link
                         type="danger"
                         size="small"
+                        :loading="deletingId === milestone.id"
+                        :disabled="deletingId !== null"
                         @click="handleDeleteMilestone(milestone)"
-                        >删除</el-button
                       >
+                        删除
+                      </el-button>
                     </span>
                   </div>
                 </div>

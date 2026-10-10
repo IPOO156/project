@@ -9,6 +9,8 @@ const archiveStore = useArchiveStore()
 
 const selfEvaluation = ref('')
 const editing = ref(false)
+/** 保存提交中（防连点重复提交） */
+const saving = ref(false)
 
 function startEdit() {
   selfEvaluation.value = archiveStore.profileData?.selfEvaluation ?? ''
@@ -21,6 +23,7 @@ function cancel() {
 
 /** 全量更新自我评价（PUT /profile/self-evaluation，4.1.6；传空字符串表示清空） */
 async function save() {
+  saving.value = true
   try {
     await updateSelfEvaluation(selfEvaluation.value ?? '')
     editing.value = false
@@ -29,6 +32,8 @@ async function save() {
     ElMessage.success('自我评价已保存')
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    saving.value = false
   }
 }
 </script>
@@ -43,7 +48,9 @@ async function save() {
         >
         <div v-else class="edit-actions">
           <el-button size="small" @click="cancel">取消</el-button
-          ><el-button size="small" type="primary" @click="save">保存</el-button>
+          ><el-button size="small" type="primary" :loading="saving" :disabled="saving" @click="save"
+            >保存</el-button
+          >
         </div>
       </div>
     </template>

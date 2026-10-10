@@ -37,6 +37,7 @@ function typeLabel(type: string) {
 
 const loading = ref(false)
 const saving = ref(false)
+const deletingId = ref<number | null>(null)
 const list = ref<ApprovalFlowMapping[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -162,12 +163,15 @@ async function handleDelete(row: ApprovalFlowMapping) {
   } catch {
     return
   }
+  deletingId.value = row.id
   try {
     await deleteApprovalFlowMapping(row.id)
     ElMessage.success('删除成功')
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -250,6 +254,8 @@ function handleClosed() {
               type="danger"
               size="small"
               :icon="Trash2"
+              :loading="deletingId === (row as ApprovalFlowMapping).id"
+              :disabled="deletingId !== null"
               @click="handleDelete(row as ApprovalFlowMapping)"
             >
               删除

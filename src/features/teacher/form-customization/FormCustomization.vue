@@ -107,6 +107,7 @@ function handleReset() {
 // ── 新建 / 编辑 ──
 const dialogVisible = ref(false)
 const saving = ref(false)
+const deletingId = ref<number | null>(null)
 const loadingDetail = ref(false)
 const editingId = ref(0)
 
@@ -290,12 +291,15 @@ async function handleDelete(item: FormTemplateItem) {
   } catch {
     return
   }
+  deletingId.value = item.id
   try {
     await deleteFormTemplate(item.id)
     ElMessage.success('模板已删除')
     await loadList()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -411,6 +415,8 @@ onMounted(() => void loadList())
                 type="danger"
                 size="small"
                 :icon="Trash2"
+                :loading="deletingId === (row as FormTemplateItem).id"
+                :disabled="deletingId !== null"
                 @click="handleDelete(row as FormTemplateItem)"
               >
                 删除

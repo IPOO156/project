@@ -35,6 +35,7 @@ const filter = reactive<{ status: number | '' }>({ status: '' })
 // ── 新增/编辑弹窗 ──
 const dialogVisible = ref(false)
 const saving = ref(false)
+const deletingId = ref<number | null>(null)
 const isEdit = ref(false)
 const editingId = ref<number | null>(null)
 const form = reactive({
@@ -165,12 +166,15 @@ async function handleDelete(row: RoleListItem) {
   } catch {
     return
   }
+  deletingId.value = row.roleId
   try {
     await deleteRole(row.roleId)
     ElMessage.success('删除成功')
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -265,6 +269,8 @@ function openPermissionAssign(row: RoleListItem) {
                   text
                   type="danger"
                   size="small"
+                  :loading="deletingId === (row as RoleListItem).roleId"
+                  :disabled="deletingId !== null"
                   @click="handleDelete(row as RoleListItem)"
                 >
                   删除

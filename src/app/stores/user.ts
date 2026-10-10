@@ -51,7 +51,8 @@ export const useUserStore = defineStore('user', () => {
   const token = ref(getToken())
   const userInfo = ref<UserInfo | null>(loadUserInfoCache())
 
-  // 头像本地缓存（接口未就绪前使用 Base64 本地存储）
+  // 头像本地缓存：上传接口（POST /common/upload/avatar）成功返回 OSS URL 后写入本地，
+  // 上传失败时回退展示已选 Base64，避免刷新后头像丢失
   const cachedAvatar = ref<string | undefined>(readAvatarCache())
 
   // getters
