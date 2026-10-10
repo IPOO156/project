@@ -263,12 +263,26 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">字典管理</h2>
-        <p class="mc-page-head__desc">维护系统字典类型及其字典项，支撑下拉选项与枚举映射。</p>
+        <p class="mc-page-head__desc">维护系统字典类型及其字典项。（当前口径见下方说明）</p>
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="typeLoading" @click="loadTypes">刷新</el-button>
       </div>
     </div>
+
+    <!--
+      字典口径说明：前端各页面的下拉与枚举展示取自 src/shared/constants/dict.ts 的
+      前端常量（useDict(map) 接收的是本地常量表），并未读取后端字典接口；
+      后端字典表目前仅由本页自身读写。故此处增改字典项不会改变任何页面的下拉/标签。
+      待前后端统一字典来源（前端改读接口或后端以下发常量为准）后删除本提示。
+    -->
+    <el-alert
+      class="dict-management__notice"
+      type="info"
+      :closable="false"
+      show-icon
+      title="字典与页面展示暂未打通：本页维护的是后端字典表，而页面上的下拉选项与状态标签取自前端固定常量。因此在这里新增/修改字典项不会改变其他页面的显示，只作为后台字典台账。"
+    />
 
     <div class="mc-filter-bar">
       <el-form inline @submit.prevent="handleTypeSearch">
@@ -469,6 +483,10 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
 
 <style scoped lang="scss">
 .dict-management {
+  &__notice {
+    margin-bottom: $spacing-lg;
+  }
+
   &__total {
     font-size: 13px;
     color: var(--el-text-color-secondary);

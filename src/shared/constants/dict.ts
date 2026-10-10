@@ -212,11 +212,88 @@ export const LOG_MODULES: Record<string, string> = {
   export: '导出',
 }
 
+/**
+ * 定时任务运行类型（scheduled_tasks.run_type，与后端 ScheduledTaskConfigRunTypeEnum 逐值对应）
+ */
+export const SCHEDULED_RUN_TYPES: Record<number, string> = {
+  1: '定时自动',
+  2: '手动触发',
+}
+
+export const SCHEDULED_RUN_TYPE_OPTIONS: { value: number; label: string }[] = Object.entries(
+  SCHEDULED_RUN_TYPES,
+).map(([value, label]) => ({ value: Number(value), label }))
+
+/**
+ * 定时任务分组（scheduled_tasks.task_group，与后端 ScheduledTaskConfigTaskGroupEnum 对应）。
+ * 该字段是自由文本（后端只校验长度 1-50），此处为约定分组，新增时可自填。
+ */
+export const SCHEDULED_TASK_GROUPS: Record<string, string> = {
+  system: '系统',
+  data: '数据',
+  notification: '通知',
+  cleanup: '清理',
+}
+
+export const SCHEDULED_TASK_GROUP_OPTIONS: { value: string; label: string }[] = Object.entries(
+  SCHEDULED_TASK_GROUPS,
+).map(([value, label]) => ({ value, label: `${label}（${value}）` }))
+
 // 通用启用/禁用状态（管理端字典项/角色/学期启停使用，对应后端 status：1 启用 / 0 禁用）
 export const COMMON_STATUS: Record<number, { label: string; tag: 'success' | 'danger' }> = {
   1: { label: '启用', tag: 'success' },
   0: { label: '禁用', tag: 'danger' },
 }
+
+/**
+ * 角色级别（roles.level，与后端 RoleLevelEnum 逐值对应）。
+ *
+ * ⚠️ 语义是**身份类别**，不是「权限高低」：权限来自 role_permissions 下发的
+ * 权限码（见角色管理的「权限分配」），level 只决定两件事 ——
+ *   1. 登录入口：AccountRoleResolver.primaryLevel 取**最小** level 作为主要身份，
+ *      AuthService 以 primaryLevel == 1 判定「学生账号」，只能走学生端登录页签；
+ *   2. 角色主要性排序：level 越小越「主要」（多角色时决定首页/入口）。
+ * 后端 createRole 的默认值为 7（自定义），且校验 level ≥ 1
+ * （RoleManageService.validateLevel 拒绝 < 1），故 0=系统 不可由管理端设置。
+ */
+export const ROLE_LEVELS: Record<number, string> = {
+  0: '系统',
+  1: '学生',
+  2: '教师',
+  3: '辅导员',
+  4: '系主任',
+  5: '院长',
+  6: '校长',
+  7: '自定义',
+}
+
+/** 角色级别下拉选项（可选范围 1-7，0=系统 为后端内部角色，见上表注释） */
+export const ROLE_LEVEL_OPTIONS: { value: number; label: string }[] = Object.entries(ROLE_LEVELS)
+  .map(([value, label]) => ({ value: Number(value), label: `${label}（${value}）` }))
+  .filter((o) => o.value >= 1)
+
+/**
+ * 导出类型（export_operation_logs.export_type / export_jobs.export_type）。
+ *
+ * 取值与中文名均照抄后端常量表，非前端编造：
+ *   - 前三个来自 AdminExportTemplateService.EXPORT_TYPE_LABELS 与
+ *     TeacherExportService.EXPORT_TYPE_LABELS（两处一致）；
+ *   - archive_research 来自 AdminExportService.EXPORT_TYPE_RESEARCH
+ *     （研究数据导出，唯一会写 isAnonymized=1 的类型）。
+ * 后端导出日志接口只回 exportType 英文码、不回 label，故在字典层统一转中文。
+ */
+export const EXPORT_TYPES: Record<string, string> = {
+  student_archive: '学生成长档案',
+  career_plan: '职业规划',
+  resume: '个人简历',
+  archive_research: '研究数据导出',
+}
+
+/** 导出日志筛选用选项（value 为后端 export_type 原值，label 同上表；空值为「全部」） */
+export const EXPORT_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: '全部' },
+  ...Object.entries(EXPORT_TYPES).map(([value, label]) => ({ value, label })),
+]
 
 // 审核业务类型（/teacher/audits 的 type，与后端 approvableType 归一化值对应）
 export const AUDIT_BUSINESS_TYPES: Record<string, string> = {

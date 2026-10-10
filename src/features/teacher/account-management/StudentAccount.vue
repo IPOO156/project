@@ -2,9 +2,10 @@
 /**
  * StudentAccount - 学生账号管理
  *
- * 对接后端 /admin/users（roleId=1 学生），支持按关键词/状态筛选与分页；
+ * 对接后端 /admin/users（roleId=1 学生），支持按关键词/年级/状态筛选与分页；
  * 重置密码对接 PUT /admin/users/{id}/password/reset，
  * 启停账号对接 PUT /admin/users/{id}/status。
+ * 年级下拉取自 GET /admin/classes 的 grade 去重（后端 grade 过滤即按班级年级匹配）。
  */
 import type { UserDetail, UserListItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -13,6 +14,7 @@ import { onMounted, reactive, ref } from 'vue'
 
 import {
   getUserDetail,
+  listClasses,
   listUsers,
   resetUserPassword,
   updateUser,
@@ -25,7 +27,20 @@ const total = ref(0)
 const page = ref(1)
 const perPage = ref(10)
 
-const search = reactive({ keyword: '', status: '' })
+const search = reactive({ keyword: '', status: '', grade: '' })
+
+/** 年级选项：来自班级列表（grade 为入学年份字符串） */
+const grades = ref<string[]>([])
+
+async function loadGrades() {
+  try {
+    const res = await listClasses({ page: 1, per_page: 200 })
+    const distinct = new Set((res.list ?? []).map((c) => (c.grade ?? '').trim()).filter(Boolean))
+    grades.value = [...distinct].sort((a, b) => b.localeCompare(a))
+  } catch {
+    grades.value = []
+  }
+}
 
 async function load() {
   loading.value = true
@@ -33,6 +48,7 @@ async function load() {
     const res = await listUsers({
       roleId: 1,
       keyword: search.keyword || undefined,
+      grade: search.grade || undefined,
       status: search.status === '' ? undefined : Number(search.status),
       page: page.value,
       per_page: perPage.value,
@@ -55,6 +71,7 @@ function handleSearch() {
 function handleReset() {
   search.keyword = ''
   search.status = ''
+  search.grade = ''
   page.value = 1
   void load()
 }
@@ -170,7 +187,10 @@ async function handleSaveEdit() {
   }
 }
 
-onMounted(() => void load())
+onMounted(() => {
+  void loadGrades()
+  void load()
+})
 </script>
 
 <template>
@@ -179,7 +199,10 @@ onMounted(() => void load())
       <div class="mc-page-head__left">
         <p class="mc-page-head__eyebrow">账号管理 · Students</p>
         <h2 class="mc-page-head__title">学生账号管理</h2>
-        <p class="mc-page-head__desc">查看学生账号，重置密码与启停账号。</p>
+        <p class="mc-page-head__desc">
+          查看学生账号，重置密码与启停账号。学生账号在「新增账号」中逐个创建（需选择班级）；
+          批量导入学生暂未提供（后端无导入接口）。
+        </p>
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="handleReset">刷新</el-button>
@@ -196,6 +219,11 @@ onMounted(() => void load())
             style="width: 180px"
             @keyup.enter="handleSearch"
           />
+        </el-form-item>
+        <el-form-item label="年级">
+          <el-select v-model="search.grade" placeholder="全部年级" clearable style="width: 140px">
+            <el-option v-for="g in grades" :key="g" :label="`${g}级`" :value="g" />
+          </el-select>
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="search.status" placeholder="全部状态" clearable style="width: 140px">

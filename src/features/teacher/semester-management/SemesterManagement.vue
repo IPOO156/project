@@ -13,7 +13,7 @@ import type {
   SemesterSavePayload,
 } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, FileUp, Plus, RefreshCw, Search, Upload } from 'lucide-vue-next'
+import { ClipboardCheck, Download, FileUp, Plus, RefreshCw, Search, Upload } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref } from 'vue'
 import {
@@ -249,10 +249,10 @@ async function handleSubmitImport() {
   }
 }
 
-// 查看最近一次导入结果
+// 查看本次会话最近一次批量导入的结果（无结果时按钮已置灰，此处为兜底守卫）
 function openImportResult() {
   if (!importResult.value) {
-    ElMessage.info('暂无导入结果，请先执行导入')
+    ElMessage.info('本次会话尚无导入结果，请先导入学期')
     return
   }
   resultDialogVisible.value = true
@@ -273,6 +273,15 @@ function openImportResult() {
         <el-button type="primary" :icon="FileUp" @click="importDialogVisible = true">
           导入学期
         </el-button>
+        <!--
+          「导入结果」是**页面级**的（本次会话最近一次批量导入的统计），不是某一行的属性，
+          原先挂在每行操作列会让人以为是该行的导入结果（点击后提示「请先执行导入」）。
+          后端无导入历史接口（无「按批次查导入记录」的端点），故此处只保留本次会话结果，
+          且无结果时按钮置灰，不再给出点了必然提示的入口。
+        -->
+        <el-button :icon="ClipboardCheck" :disabled="!importResult" @click="openImportResult">
+          本次导入结果
+        </el-button>
       </div>
     </div>
 
@@ -292,7 +301,7 @@ function openImportResult() {
           <el-button type="primary" :icon="Search" :loading="loading" @click="handleSearch">
             查询
           </el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button @click="handleReset">重置筛选</el-button>
         </el-form-item>
       </el-form>
     </div>
@@ -360,9 +369,6 @@ function openImportResult() {
                   @click="handleToggleStatus(row as SemesterListItem)"
                 >
                   {{ row.status === 1 ? '禁用' : '启用' }}
-                </el-button>
-                <el-button text type="primary" size="small" @click="openImportResult">
-                  导入结果
                 </el-button>
               </div>
             </template>
@@ -459,7 +465,7 @@ function openImportResult() {
     </el-dialog>
 
     <!-- 导入结果弹窗 -->
-    <el-dialog v-model="resultDialogVisible" title="学期导入结果" width="640px">
+    <el-dialog v-model="resultDialogVisible" title="本次导入结果" width="640px">
       <template v-if="importResult">
         <el-descriptions :column="3" border>
           <el-descriptions-item label="总记录">{{ importResult.totalCount }}</el-descriptions-item>

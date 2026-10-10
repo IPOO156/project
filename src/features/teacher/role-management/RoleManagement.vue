@@ -11,7 +11,8 @@ import { Plus, RefreshCw, Search, ShieldCheck } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 
 import { createRole, deleteRole, listRoles, updateRole } from '@/shared/api/teacher'
-import { COMMON_STATUS } from '@/shared/constants/dict'
+import { COMMON_STATUS, ROLE_LEVEL_OPTIONS, ROLE_LEVELS } from '@/shared/constants/dict'
+import { formatDateTime } from '@/shared/utils/time'
 import PermissionDrawer from './components/PermissionDrawer.vue'
 
 // ── 2. 类型/接口定义 ──
@@ -41,7 +42,10 @@ const editingId = ref<number | null>(null)
 const form = reactive({
   roleName: '',
   roleCode: '',
-  level: 1,
+  // 默认 7（自定义），与后端 createRole 的 DEFAULT_LEVEL 一致。
+  // 不能默认 1：level=1 会被 AccountRoleResolver.isStudentRole 判为**学生角色**，
+  // 该角色下的账号将被当作学生（只能从学生端登录）。
+  level: 7,
   description: '',
   status: 1,
 })
@@ -111,7 +115,7 @@ function openCreate() {
   editingId.value = null
   form.roleName = ''
   form.roleCode = ''
-  form.level = 1
+  form.level = 7
   form.description = ''
   form.status = 1
   dialogVisible.value = true
@@ -122,10 +126,16 @@ function openEdit(row: RoleListItem) {
   editingId.value = row.roleId
   form.roleName = row.roleName
   form.roleCode = row.roleCode
-  form.level = row.level ?? 1
+  form.level = row.level ?? 7
   form.description = row.description ?? ''
   form.status = row.status ?? 1
   dialogVisible.value = true
+}
+
+/** 级别展示：角色管理列表「级别」列用，中文名见 constants/dict.ts 的 ROLE_LEVELS */
+function levelLabel(level: number | null | undefined): string {
+  if (level == null) return '-'
+  return `${ROLE_LEVELS[level] ?? '未知'}（${level}）`
 }
 
 async function handleSave() {
@@ -226,10 +236,11 @@ function openPermissionAssign(row: RoleListItem) {
     <div class="mc-card">
       <div class="mc-card__body">
         <el-table v-loading="loading" :data="list" stripe style="width: 100%">
+          <el-table-column prop="roleId" label="角色ID" width="72" align="center" />
           <el-table-column prop="roleName" label="角色名称" min-width="100" />
           <el-table-column prop="roleCode" label="角色编码" min-width="90" />
-          <el-table-column label="级别" width="60" align="center">
-            <template #default="{ row }">{{ row.level ?? '-' }}</template>
+          <el-table-column label="级别" width="120" align="center">
+            <template #default="{ row }">{{ levelLabel(row.level) }}</template>
           </el-table-column>
           <el-table-column label="状态" width="72">
             <template #default="{ row }">
@@ -247,8 +258,8 @@ function openPermissionAssign(row: RoleListItem) {
           <el-table-column prop="description" label="描述" min-width="110" show-overflow-tooltip>
             <template #default="{ row }">{{ row.description ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="创建时间" min-width="120">
-            <template #default="{ row }">{{ row.createdAt ?? '-' }}</template>
+          <el-table-column label="创建时间" min-width="140">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="230" align="center">
             <template #default="{ row }">
@@ -300,9 +311,29 @@ function openPermissionAssign(row: RoleListItem) {
         <el-form-item label="角色编码" required>
           <el-input v-model="form.roleCode" placeholder="如：counselor" />
         </el-form-item>
+        <el-form-item label="编码说明">
+          <span class="role-management__hint">
+            角色编码是系统内部标识（后端按码判定业务，如 admin=管理员、student=学生、
+            teacher=教师、counselor=辅导员）。自定义角色可自拟英文小写编码；
+            已投入使用的角色不建议改码，改码会影响依赖该码的登录入口与业务判定。
+          </span>
+        </el-form-item>
         <el-form-item label="级别">
-          <el-input-number v-model="form.level" :min="1" style="width: 160px" />
-          <span class="role-management__hint">数值越小权限层级越高</span>
+          <el-select v-model="form.level" style="width: 180px">
+            <el-option
+              v-for="lv in ROLE_LEVEL_OPTIONS"
+              :key="lv.value"
+              :label="lv.label"
+              :value="lv.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="级别说明">
+          <span class="role-management__hint">
+            级别表示角色身份类别，不代表权限大小（权限在「权限分配」里配置）。
+            1=学生：该角色的账号只能从学生端登录；2=教师及以下为管理端。 新增自定义角色请保持默认的
+            7（自定义）。
+          </span>
         </el-form-item>
         <el-form-item label="描述">
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="角色描述" />
