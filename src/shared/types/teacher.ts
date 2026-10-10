@@ -1600,6 +1600,82 @@ export interface ScheduledTaskStatusResult {
   statusLabel: string
 }
 
+/** 14.3.1 可用处理器（GET /admin/scheduled-tasks/handlers） */
+export interface ScheduledTaskHandlerMeta {
+  /** 处理器约定的任务编码（可作为新建任务的 taskCode 预填值） */
+  taskCode: string
+  /** Bean 名 —— 创建任务的 taskHandler 必须传该值 */
+  handler: string
+  name: string
+  description: string | null
+}
+
+/** 14.3 创建定时任务请求（POST /admin/scheduled-tasks） */
+export interface ScheduledTaskCreatePayload {
+  taskName: string
+  taskCode: string
+  taskGroup: string
+  cronExpression: string
+  taskHandler: string
+  taskParams?: Record<string, unknown> | null
+  description?: string
+  runType?: number
+  maxRetries?: number
+  retryDelaySec?: number
+  timeoutSec?: number
+  status?: number
+}
+
+/** 14.5 更新定时任务请求（PUT /admin/scheduled-tasks/{id}，字段均可选） */
+export type ScheduledTaskUpdatePayload = Partial<
+  Omit<ScheduledTaskCreatePayload, 'status'> & { taskParams: Record<string, unknown> | null }
+>
+
+/** 14.4 定时任务详情（14.3 / 14.5 响应复用） */
+export interface ScheduledTaskDetail {
+  taskId: number
+  schoolId: number | null
+  taskName: string
+  taskCode: string
+  taskGroup: string | null
+  cronExpression: string | null
+  taskHandler: string | null
+  taskParams: unknown
+  description: string | null
+  /** 1 = 系统内置（禁止删除；taskCode / taskHandler 不可改） */
+  isSystem: number | null
+  runType: number | null
+  runTypeLabel: string | null
+  maxRetries: number | null
+  retryDelaySec: number | null
+  timeoutSec: number | null
+  lastRunAt: string | null
+  lastRunStatus: number | null
+  lastRunStatusLabel: string | null
+  nextRunAt: string | null
+  status: number | null
+  statusLabel: string | null
+  createdBy: number | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+/** 14.6 删除定时任务响应 */
+export interface ScheduledTaskDeleteResult {
+  taskId: number
+  deletedAt: string
+}
+
+/** 14.7 手动触发响应 */
+export interface ScheduledTaskTriggerResult {
+  taskId: number
+  taskName: string
+  runType: number | null
+  runTypeLabel: string | null
+  triggeredAt: string
+  executeId: string
+}
+
 /* ===================== 教师端-待审核任务（/teacher/audits）===================== */
 
 /** 审核业务类型：archive 档案申报 / award 奖项报名 / career_plan 职业规划 */

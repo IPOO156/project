@@ -126,6 +126,12 @@ defineExpose({ openCreate, openEdit })
           inactive-text="禁用"
         />
       </el-form-item>
+      <el-form-item label="学生人数">
+        <span class="class-edit-dialog__tip">
+          无需填写：班级人数不是录入项，由学生账号/档案的班级归属统计得出。
+          本班现有学生请在「账号与角色 → 学生账号」中按班级查看。
+        </span>
+      </el-form-item>
     </el-form>
     <template #footer>
       <el-button :disabled="saving" @click="visible = false">取消</el-button>

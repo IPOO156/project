@@ -230,6 +230,17 @@ function formatGrade(grade: string | null | undefined): string {
   return /^\d{4}$/.test(value) ? `${value}级` : value
 }
 
+/**
+ * 「学生人数」列的口径说明。
+ *
+ * ⚠️ 该值来自后端 clazz.student_count 字段 —— 实测其后端**只在建班时写入 0**，
+ * 之后没有任何维护逻辑（无实时统计接口、无更新路径），因此该列恒为 0，
+ * 不代表真实人数。真实人数需按学生档案的班级归属统计（后端待补）。
+ * 在此显式标注，避免被当成真实统计值使用；后端补齐维护后本说明与本列即可直接生效。
+ */
+const STUDENT_COUNT_HINT =
+  '该人数由系统按学生档案的班级归属统计，当前后端尚未实现统计逻辑（建班后恒为 0），暂不代表真实人数。新增班级时无需填写人数。'
+
 function formatStudentCount(count: number | null | undefined): string {
   return count == null ? '-' : String(count)
 }
@@ -366,7 +377,12 @@ onMounted(() => void loadSchools())
             <el-table-column label="入学年级" width="110" align="center">
               <template #default="{ row }">{{ formatGrade(row.grade) }}</template>
             </el-table-column>
-            <el-table-column label="学生人数" width="100" align="center">
+            <el-table-column label="学生人数" width="110" align="center">
+              <template #header>
+                <el-tooltip :content="STUDENT_COUNT_HINT" placement="top">
+                  <span class="org-management__th-help">学生人数</span>
+                </el-tooltip>
+              </template>
               <template #default="{ row }">{{ formatStudentCount(row.studentCount) }}</template>
             </el-table-column>
             <el-table-column label="状态" width="90" align="center">
@@ -497,6 +513,12 @@ onMounted(() => void loadSchools())
 .org-management {
   &__filter-select {
     width: 190px;
+  }
+
+  /* 表头带口径说明的列（如「学生人数」），用虚线下划提示可悬停查看 */
+  &__th-help {
+    border-bottom: 1px dashed var(--el-border-color);
+    cursor: help;
   }
 
   &__head-left {

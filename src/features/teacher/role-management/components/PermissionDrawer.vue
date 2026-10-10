@@ -137,14 +137,18 @@ function handleClosed() {
     @closed="handleClosed"
   >
     <div v-loading="loading" class="perm-drawer">
-      <div class="perm-drawer__hint">勾选右侧权限后点击「保存分配」，将全量覆盖该角色的权限。</div>
+      <div class="perm-drawer__hint">
+        勾选右侧权限后点击「保存分配」，将全量覆盖该角色的权限。 权限码（如
+        log:view）决定该角色登录后左侧引导栏能看到哪些模块，以及对应页面的可访问性。
+      </div>
 
       <div class="perm-drawer__cols">
         <div class="perm-drawer__col perm-drawer__col--assigned">
           <div class="perm-drawer__col-title">已分配权限（{{ checkedPermissions.length }}）</div>
           <ul v-if="checkedPermissions.length" class="perm-drawer__list">
             <li v-for="p in checkedPermissions" :key="p.permissionId" class="perm-drawer__item">
-              {{ p.permissionName }}
+              <span>{{ p.permissionName }}</span>
+              <span class="perm-drawer__code">{{ p.permissionCode }}</span>
             </li>
           </ul>
           <el-empty v-else description="暂未分配权限" :image-size="56" />
@@ -168,7 +172,8 @@ function handleClosed() {
               :value="p.permissionId"
               class="perm-drawer__group-item"
             >
-              {{ p.permissionName }}
+              <span>{{ p.permissionName }}</span>
+              <span class="perm-drawer__code">{{ p.permissionCode }}</span>
             </el-checkbox>
           </el-checkbox-group>
         </div>
@@ -246,6 +251,13 @@ function handleClosed() {
     padding: 4px 0;
     font-size: 13px;
     color: var(--el-text-color-regular);
+  }
+
+  /* 权限码：与权限名称同显，用于和接口文档/代码里的权限码对照 */
+  &__code {
+    margin-left: 6px;
+    font-size: 12px;
+    color: var(--el-text-color-secondary);
   }
 
   &__group {

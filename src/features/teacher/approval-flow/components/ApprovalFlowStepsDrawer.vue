@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ApprovalFlowStep } from '@/shared/types/teacher'
+import type { ApprovalFlowStep, RoleListItem } from '@/shared/types/teacher'
 /**
  * ApprovalFlowStepsDrawer - 审批流程步骤管理（抽屉）
  * 对接后端：GET /admin/approval-flows/{flowId}/steps（列表）、
@@ -8,8 +8,8 @@ import type { ApprovalFlowStep } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Save } from 'lucide-vue-next'
 
-import { reactive, ref, watch } from 'vue'
-import { listApprovalFlowSteps, saveApprovalFlowSteps } from '@/shared/api/teacher'
+import { computed, reactive, ref, watch } from 'vue'
+import { listApprovalFlowSteps, listRoles, saveApprovalFlowSteps } from '@/shared/api/teacher'
 
 const props = defineProps<{
   visible: boolean
@@ -38,12 +38,38 @@ const loading = ref(false)
 const saving = ref(false)
 const steps = ref<ApprovalFlowStep[]>([])
 
+/**
+ * 审批角色候选（GET /admin/roles）。
+ *
+ * 「审批角色ID」填的是 roles.id（内部主键），界面上原本没有任何地方展示该 id，
+ * 用户无从得知填几 —— 故改为按角色名选择，提交时取 roleId。
+ * 角色管理列表已同步增加「角色ID」列，便于对照排错。
+ */
+const roles = ref<RoleListItem[]>([])
+async function loadRoles() {
+  try {
+    const res = await listRoles({ page: 1, per_page: 200 })
+    roles.value = res.list ?? []
+  } catch {
+    roles.value = []
+  }
+}
+
+/** 角色 id → 显示名（角色名（编码）），未命中退回 id 本身，不隐藏信息 */
+function roleLabel(roleId: number | null | undefined): string {
+  if (roleId == null) return '-'
+  const role = roles.value.find((r) => r.roleId === roleId)
+  return role ? `${role.roleName}（${role.roleCode}）` : `角色 ID ${roleId}`
+}
+
 const stepDialogVisible = ref(false)
 const editingIndex = ref(-1)
+/** roleId：0 为「未选择」哨兵（ApprovalFlowStep.roleId 在后端为必填 number，故不引入 null） */
+const UNSET_ROLE_ID = 0
 const stepForm = reactive<ApprovalFlowStep>({
   stepNo: 1,
   stepName: '',
-  roleId: 1,
+  roleId: UNSET_ROLE_ID,
   scopeType: 2,
   scopeRule: 'student_major',
   autoAssign: 1,
@@ -55,10 +81,25 @@ const stepForm = reactive<ApprovalFlowStep>({
   rejectToStep: null,
 })
 
+/** 角色下拉选项；编辑历史步骤时若其 roleId 不在当前角色列表内，追加一条回显项（不隐藏信息） */
+const roleOptions = computed<{ value: number; label: string }[]>(() => {
+  const options = roles.value.map((r) => ({
+    value: r.roleId,
+    label: `${r.roleName}（${r.roleCode}）`,
+  }))
+  if (stepForm.roleId != null && !options.some((o) => o.value === stepForm.roleId)) {
+    options.push({ value: stepForm.roleId, label: `角色 ID ${stepForm.roleId}（已不存在）` })
+  }
+  return options
+})
+
 watch(
   () => props.visible,
   (v) => {
-    if (v) void loadSteps()
+    if (v) {
+      void loadSteps()
+      void loadRoles()
+    }
   },
 )
 
@@ -78,7 +119,7 @@ function openAddStep() {
   Object.assign(stepForm, {
     stepNo: steps.value.length + 1,
     stepName: '',
-    roleId: 1,
+    roleId: UNSET_ROLE_ID,
     scopeType: 2,
     scopeRule: 'student_major',
     autoAssign: 1,
@@ -112,6 +153,10 @@ function handleRemoveStep(index: number) {
 function handleSaveStep() {
   if (!stepForm.stepName.trim()) {
     ElMessage.warning('请填写步骤名称')
+    return
+  }
+  if (!stepForm.roleId) {
+    ElMessage.warning('请选择审批角色')
     return
   }
   if (stepForm.rejectAction === 'return' && stepForm.rejectToStep == null) {
@@ -168,8 +213,8 @@ function handleClosed() {
       <el-table v-if="steps.length" :data="steps" stripe max-height="460" style="width: 100%">
         <el-table-column prop="stepNo" label="序号" width="56" align="center" />
         <el-table-column prop="stepName" label="步骤名称" min-width="120" show-overflow-tooltip />
-        <el-table-column label="审批角色" width="80" align="center">
-          <template #default="{ row }">{{ row.roleId }}</template>
+        <el-table-column label="审批角色" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">{{ roleLabel(row.roleId) }}</template>
         </el-table-column>
         <el-table-column label="范围" width="70" align="center">
           <template #default="{ row }">{{ scopeTypeLabel(row.scopeType) }}</template>
@@ -212,9 +257,16 @@ function handleClosed() {
         <el-form-item label="步骤名称" required>
           <el-input v-model="stepForm.stepName" placeholder="如：学院初审" />
         </el-form-item>
-        <el-form-item label="审批角色ID" required>
-          <el-input-number v-model="stepForm.roleId" :min="1" style="width: 160px" />
-          <span class="flow-steps__hint">对应系统角色 ID</span>
+        <el-form-item label="审批角色" required>
+          <el-select v-model="stepForm.roleId" placeholder="选择由哪个角色审批" style="width: 100%">
+            <el-option v-for="r in roleOptions" :key="r.value" :label="r.label" :value="r.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="角色说明">
+          <span class="flow-steps__hint">
+            该步骤由所选角色的用户审批，提交时保存其角色 ID（roles.id）； 角色 ID 可在「系统管理 →
+            角色管理」列表的「角色ID」列查看。
+          </span>
         </el-form-item>
         <el-form-item label="范围类型">
           <el-select v-model="stepForm.scopeType" style="width: 160px">

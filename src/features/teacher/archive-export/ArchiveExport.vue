@@ -17,6 +17,7 @@ import { Download, FileDown, FlaskConical, Trash2 } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import {
   deleteTeacherExportJob,
+  downloadFile,
   getExportJob,
   getTeacherExportJobs,
   getTeacherExportTemplates,
@@ -26,6 +27,8 @@ import {
 import { usePollingTask } from '@/shared/composables/usePollingTask'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
+import { EXPORT_TYPES } from '@/shared/constants/dict'
+import { formatDateTime } from '@/shared/utils/time'
 import GradeImportPanel from './components/GradeImportPanel.vue'
 import ResearchExportDialog from './components/ResearchExportDialog.vue'
 
@@ -158,6 +161,8 @@ const researchDialogVisible = ref(false)
 const submittingArchive = ref(false)
 /** 正在删除的导出任务 id（行内按钮 Loading；不复用列表 tasksLoading，否则整表会转圈） */
 const deletingJobId = ref<number | null>(null)
+/** 正在下载的导出任务 id（同上，行内按钮独立 Loading） */
+const downloadingJobId = ref<number | null>(null)
 
 /** 弹窗创建任务成功：入列表并启动进度轮询 */
 function handleResearchCreated(job: TeacherExportJob) {
@@ -225,6 +230,48 @@ async function handleDeleteExport(row: TeacherExportJob) {
     /* 拦截器已提示 */
   } finally {
     deletingJobId.value = null
+  }
+}
+
+/** 从后端返回的下载地址中取出 fileId（形如 .../common/files/{fileId}/download），取不到返回 null */
+function extractFileId(url: string | null | undefined): number | null {
+  const matched = url ? /\/common\/files\/(\d+)\/download/.exec(url) : null
+  return matched?.[1] ? Number(matched[1]) : null
+}
+
+/** 下载链接是否已过期（后端 download_expire_at 已过时下载会被拒，界面上先给出结论） */
+function isExpired(expireAt: string | null | undefined): boolean {
+  return !!expireAt && new Date(expireAt).getTime() < Date.now()
+}
+
+/** 导出内容展示：优先模板名，其次导出类型中文名，最后原样回显后端码 */
+function contentLabel(row: TeacherExportJob): string {
+  return row.templateName ?? EXPORT_TYPES[row.exportType] ?? row.exportType
+}
+
+/**
+ * 下载导出文件。
+ *
+ * ⚠️ 后端返回的 downloadUrl 指向鉴权端点 /common/files/{fileId}/download，
+ * 用 `<a :href>` 直链不会带 Authorization 头（实测无 token 返回 401 未登录），
+ * 故此处只取其中的 fileId，改为经 downloadFile 带 Bearer 取 blob 保存。
+ * 同时 downloadUrl 里的主机名是**任务创建时**的服务端地址（隧道会变），
+ * 直接使用旧主机同样会失败，因此只取路径、不取主机。
+ */
+async function handleDownload(row: TeacherExportJob) {
+  const fileId = extractFileId(row.downloadUrl)
+  if (fileId == null) {
+    ElMessage.warning('该记录暂无可用下载文件')
+    return
+  }
+  downloadingJobId.value = row.exportJobId
+  try {
+    await downloadFile(fileId)
+    ElMessage.success('下载已开始')
+  } catch {
+    ElMessage.error('下载失败，链接可能已过期，请重新导出')
+  } finally {
+    downloadingJobId.value = null
   }
 }
 
@@ -371,7 +418,7 @@ onUnmounted(() => {
           <el-table-column prop="exportJobId" label="任务ID" width="80" />
           <el-table-column label="导出内容" width="160">
             <template #default="{ row }">
-              {{ row.templateName || row.exportType }}
+              {{ contentLabel(row as TeacherExportJob) }}
             </template>
           </el-table-column>
           <el-table-column label="状态" width="100">
@@ -392,15 +439,28 @@ onUnmounted(() => {
               />
             </template>
           </el-table-column>
-          <el-table-column prop="createdAt" label="创建时间" width="170" />
+          <el-table-column label="创建时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
           <el-table-column label="下载" width="240" align="center">
             <template #default="{ row }">
               <template v-if="row.downloadUrl">
-                <a :href="row.downloadUrl" target="_blank" class="archive-export__download">下载</a>
+                <el-button
+                  v-if="!isExpired(row.expireAt)"
+                  text
+                  type="primary"
+                  size="small"
+                  :icon="Download"
+                  :loading="downloadingJobId === row.exportJobId"
+                  :disabled="downloadingJobId !== null"
+                  @click="handleDownload(row as TeacherExportJob)"
+                  >下载</el-button
+                >
+                <span v-else class="archive-export__expired">链接已过期</span>
                 <p class="archive-export__expire-hint">
                   {{
                     row.expireAt
-                      ? `链接有时效，请尽快下载（有效期至 ${row.expireAt}）`
+                      ? `有效期至 ${formatDateTime(row.expireAt)}`
                       : '链接有时效，请尽快下载'
                   }}
                 </p>
@@ -462,13 +522,9 @@ onUnmounted(() => {
     color: var(--el-text-color-secondary);
     flex-shrink: 0;
   }
-  &__download {
-    color: var(--el-color-primary);
-    text-decoration: none;
+  &__expired {
+    color: var(--el-text-color-placeholder);
     font-size: 13px;
-    &:hover {
-      text-decoration: underline;
-    }
   }
   &__nodata {
     color: var(--el-text-color-placeholder);

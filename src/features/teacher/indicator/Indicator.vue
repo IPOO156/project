@@ -5,7 +5,12 @@ import type { TableInstance } from 'element-plus'
  * 对接后端 /admin/indicators（树 + 增删改 + 启停 + 发布 + 批量状态）、
  * /admin/indicators/rule-versions（规则版本列表与快照修补）。
  */
-import type { AdminIndicatorTree, IndicatorNode, IndicatorPayload } from '@/shared/types/teacher'
+import type {
+  AdminIndicatorTree,
+  IndicatorNode,
+  IndicatorPayload,
+  SemesterItem,
+} from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Check, History, Plus, RefreshCw, Rocket, X } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
@@ -14,6 +19,7 @@ import {
   createIndicator,
   deleteIndicator,
   getAdminIndicatorTree,
+  getSemesters,
   publishIndicators,
   updateIndicator,
   updateIndicatorsStatusBatch,
@@ -140,11 +146,45 @@ async function handleToggleStatus(row: IndicatorNode) {
   }
 }
 
+/**
+ * 发布规则版本。
+ *
+ * ⚠️ 后端 POST /admin/indicators/publish 的请求体是 @Valid @RequestBody，
+ * versionName 必填（@NotBlank）。原实现不带请求体直接 post，被框架判为
+ * HttpMessageNotReadableException → 400 / 10003「请求数据格式错误」，
+ * 页面上表现为「点发布就报错」。故改为先弹窗收集版本名称（必填）与归属学期（可选）
+ * 再提交，字段名与后端 IndicatorPublishRequest 一致。
+ */
+const publishDialogVisible = ref(false)
+const semesters = ref<SemesterItem[]>([])
+const publishForm = reactive({
+  versionName: '',
+  semesterId: undefined as number | undefined,
+})
+
+async function openPublish() {
+  publishForm.versionName = ''
+  publishForm.semesterId = undefined
+  publishDialogVisible.value = true
+  // 学期为可选项（不选则后端取当前学期），加载失败不阻塞发布
+  try {
+    semesters.value = await getSemesters()
+  } catch {
+    semesters.value = []
+  }
+}
+
 async function handlePublish() {
+  const versionName = publishForm.versionName.trim()
+  if (!versionName) {
+    ElMessage.warning('请填写版本名称')
+    return
+  }
   publishing.value = true
   try {
-    await publishIndicators()
-    ElMessage.success('发布成功')
+    const res = await publishIndicators({ versionName, semesterId: publishForm.semesterId })
+    ElMessage.success(`发布成功（版本 ${res.version}）`)
+    publishDialogVisible.value = false
     void load()
   } catch {
     /* 拦截器已提示 */
@@ -222,7 +262,7 @@ onMounted(() => void load())
           :icon="Rocket"
           :loading="publishing"
           :disabled="publishing"
-          @click="handlePublish"
+          @click="openPublish"
         >
           发布
         </el-button>
@@ -325,6 +365,52 @@ onMounted(() => void load())
       </template>
     </el-dialog>
 
+    <el-dialog v-model="publishDialogVisible" title="发布指标规则版本" width="480px">
+      <el-form label-width="90px">
+        <el-form-item label="版本名称" required>
+          <el-input
+            v-model="publishForm.versionName"
+            placeholder="如：2026春-第1版"
+            maxlength="100"
+          />
+        </el-form-item>
+        <el-form-item label="归属学期">
+          <el-select
+            v-model="publishForm.semesterId"
+            placeholder="不选则取当前学期"
+            clearable
+            style="width: 100%"
+          >
+            <el-option v-for="s in semesters" :key="s.value" :label="s.label" :value="s.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="发布说明">
+          <span class="indicator-page__publish-hint">
+            发布后当前草稿树将打包为一个新规则版本；一级指标权重之和须为 1，否则后端拒绝发布。
+          </span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="publishDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="publishing"
+          :disabled="publishing"
+          @click="handlePublish"
+          >确定发布</el-button
+        >
+      </template>
+    </el-dialog>
+
     <IndicatorVersionsDrawer v-model:visible="versionsDrawerVisible" />
   </div>
 </template>
+
+<style scoped lang="scss">
+/* 发布弹窗内对发布前置条件（权重校验、打包草稿）的说明文案，弱化显示 */
+.indicator-page__publish-hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+</style>

@@ -95,9 +95,15 @@ import type {
   RoleListItem,
   RolePermissionsResult,
   RoleSavePayload,
+  ScheduledTaskCreatePayload,
+  ScheduledTaskDeleteResult,
+  ScheduledTaskDetail,
+  ScheduledTaskHandlerMeta,
   ScheduledTaskItem,
   ScheduledTaskStatusPayload,
   ScheduledTaskStatusResult,
+  ScheduledTaskTriggerResult,
+  ScheduledTaskUpdatePayload,
   ScopeConfigItem,
   ScoreRecalculatePayload,
   ScoreRecalculateResult,
@@ -416,8 +422,23 @@ export function updateIndicatorStatus(id: number, status: number): Promise<void>
   return request.patch(`/admin/indicators/${id}/status`, { status })
 }
 
-export function publishIndicators(): Promise<void> {
-  return request.post('/admin/indicators/publish')
+/**
+ * 发布指标规则版本请求体（POST /admin/indicators/publish）。
+ * 后端 IndicatorPublishRequest 要求 versionName 必填（@NotBlank），
+ * 不传体或字段缺失会被框架判为请求体不可读 → 400 10003「请求数据格式错误」。
+ */
+export interface IndicatorPublishPayload {
+  /** 版本名称，如 "2026春-第1版"（必填，≤100 字符） */
+  versionName: string
+  /** 归属学期 id，不传则后端取该校当前学期 */
+  semesterId?: number
+}
+
+export function publishIndicators(payload: IndicatorPublishPayload): Promise<{
+  version: number
+  createdAt: string
+}> {
+  return request.post('/admin/indicators/publish', payload)
 }
 
 /* ===================== 通用下拉 ===================== */
@@ -521,8 +542,20 @@ export function deleteFile(fileId: number): Promise<void> {
   return request.delete(`/common/files/${fileId}`)
 }
 
-/** 下载文件（后端 302 重定向到 OSS 签名 URL，绕过统一拦截器以 blob 接收） */
-export async function downloadFile(fileId: number, fileName = '下载文件'): Promise<void> {
+/**
+ * 下载文件（后端 302 重定向到 OSS 签名 URL，绕过统一拦截器以 blob 接收）。
+ *
+ * ⚠️ 必须走本函数，不能用 `<a href="{downloadUrl}">` 直链：
+ * `/common/files/{fileId}/download` 是**鉴权端点**（无 token 返回 401 未登录，
+ * 见 CommonService.downloadFile 的权限与有效期校验），浏览器直链不会携带
+ * Authorization 头，必然下载失败。此处以 axios 带 Bearer 取回 blob 再触发本地保存。
+ *
+ * 文件名：省略 fileName 时优先解析响应头 `Content-Disposition` —— 后端经
+ * OssFileService.getFileUrl(objectKey, originalName) 生成的签名 URL 会带上真实
+ * 文件名（中文走 filename*=UTF-8'' 通道），比前端猜扩展名可靠；两者都取不到时
+ * 退回「下载文件」。
+ */
+export async function downloadFile(fileId: number, fileName?: string): Promise<void> {
   const { default: axios } = await import('axios')
   const res = await axios.get(`/api/v1/common/files/${fileId}/download`, {
     responseType: 'blob',
@@ -532,11 +565,33 @@ export async function downloadFile(fileId: number, fileName = '下载文件'): P
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = fileName
+  link.download = fileName ?? resolveFileName(res.headers) ?? '下载文件'
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
+}
+
+/**
+ * 从响应头解析下载文件名：依次尝试 RFC 5987 的 `filename*=UTF-8''<pct-encoded>`
+ * 与普通 `filename="..."`，均无则返回 null（由调用方兜底）。
+ */
+function resolveFileName(headers: unknown): string | null {
+  const record = headers as Record<string, unknown> | undefined
+  const raw = record?.['content-disposition']
+  if (typeof raw !== 'string') {
+    return null
+  }
+  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(raw)
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1])
+    } catch {
+      return null
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(raw)
+  return plain?.[1] ?? null
 }
 
 /* ===================== 成绩导入（/admin/grades）===================== */
@@ -1077,6 +1132,41 @@ export function updateScheduledTaskStatus(
   payload: ScheduledTaskStatusPayload,
 ): Promise<ScheduledTaskStatusResult> {
   return request.put(`/admin/scheduled-tasks/${taskId}/status`, payload)
+}
+
+/** 14.3.1 可用处理器列表（创建任务时 taskHandler 只能取此列表的 handler 值） */
+export function listScheduledTaskHandlers(): Promise<ScheduledTaskHandlerMeta[]> {
+  return request.get('/admin/scheduled-tasks/handlers')
+}
+
+/** 14.4 任务详情 */
+export function getScheduledTaskDetail(taskId: number): Promise<ScheduledTaskDetail> {
+  return request.get(`/admin/scheduled-tasks/${taskId}`)
+}
+
+/** 14.3 创建自定义任务 */
+export function createScheduledTask(
+  payload: ScheduledTaskCreatePayload,
+): Promise<ScheduledTaskDetail> {
+  return request.post('/admin/scheduled-tasks', payload)
+}
+
+/** 14.5 更新任务配置（系统内置任务的 taskCode / taskHandler 后端会忽略） */
+export function updateScheduledTask(
+  taskId: number,
+  payload: ScheduledTaskUpdatePayload,
+): Promise<ScheduledTaskDetail> {
+  return request.put(`/admin/scheduled-tasks/${taskId}`, payload)
+}
+
+/** 14.6 删除自定义任务（系统内置任务后端拒绝） */
+export function deleteScheduledTask(taskId: number): Promise<ScheduledTaskDeleteResult> {
+  return request.delete(`/admin/scheduled-tasks/${taskId}`)
+}
+
+/** 14.7 立即手动触发执行（任务停用时后端拒绝） */
+export function triggerScheduledTask(taskId: number): Promise<ScheduledTaskTriggerResult> {
+  return request.post(`/admin/scheduled-tasks/${taskId}/trigger`)
 }
 
 /* ===================== 待审核任务（/teacher/audits）===================== */

@@ -9,12 +9,12 @@ import type { ExportLogItem, LoginLogItem, SystemLogItem } from '@/shared/types/
  * 说明：后端 /admin/logs/system 不提供「年级/学院/专业」维度过滤，
  * 教师授权范围由 role_scopes 在后端按登录人决定，前端不额外伪造维度。
  */
-import { RefreshCw, Search } from 'lucide-vue-next'
+import { CircleHelp, RefreshCw, Search } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { getExportLogs, getLoginLogs, getSystemLogs } from '@/shared/api/teacher'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
-import { LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
+import { EXPORT_TYPE_OPTIONS, LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
 import ExportLogTable from './components/ExportLogTable.vue'
 import LoginLogTable from './components/LoginLogTable.vue'
 import LogTable from './components/LogTable.vue'
@@ -66,16 +66,28 @@ const loginPerPage = ref(10)
 const loginLoading = ref(false)
 
 // ── 导出日志：筛选与分页 ──
+/**
+ * 导出类型筛选取后端 export_operation_logs.export_type 的**枚举值**（下拉），
+ * 原先为自由文本输入 —— 用户无从得知要填 student_archive 还是「学生成长档案」，
+ * 填中文必然查不到数据。选项与中文名集中在 constants/dict.ts 的 EXPORT_TYPES。
+ */
 const exportFilters = reactive({
   exportType: '',
   isAnonymized: '' as '' | 1 | 0,
   dateRange: [] as string[],
 })
+/**
+ * 匿名状态：匿名导出仅由「研究数据导出」（archive_research）产生
+ * （研究用途需去标识化），常规档案导出一律非匿名，故该项在实践中是
+ * 「研究数据导出 / 常规导出」的切换开关，界面上给出说明避免误解。
+ */
 const anonymizedOptions = [
   { value: '', label: '全部' },
   { value: 1, label: '匿名' },
   { value: 0, label: '非匿名' },
 ]
+const anonymizedHint =
+  '「匿名」指研究数据导出：导出的记录已去标识化，不含量名信息；常规导出均为非匿名。'
 
 const exportLogs = ref<ExportLogItem[]>([])
 const exportTotal = ref(0)
@@ -321,7 +333,7 @@ function handleRefresh() {
               <el-button type="primary" :icon="Search" :loading="loading" @click="handleSearch">
                 查询
               </el-button>
-              <el-button @click="handleReset">重置</el-button>
+              <el-button @click="handleReset">重置筛选</el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -395,7 +407,7 @@ function handleRefresh() {
               >
                 查询
               </el-button>
-              <el-button @click="handleLoginReset">重置</el-button>
+              <el-button @click="handleLoginReset">重置筛选</el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -432,12 +444,19 @@ function handleRefresh() {
         <div class="mc-filter-bar">
           <el-form inline @submit.prevent="handleExportSearch">
             <el-form-item label="导出类型">
-              <el-input
+              <el-select
                 v-model="exportFilters.exportType"
-                placeholder="请输入导出类型"
+                placeholder="全部类型"
                 clearable
                 style="width: 170px"
-              />
+              >
+                <el-option
+                  v-for="opt in EXPORT_TYPE_OPTIONS"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </el-select>
             </el-form-item>
             <el-form-item label="是否匿名">
               <el-select v-model="exportFilters.isAnonymized" style="width: 120px">
@@ -448,6 +467,9 @@ function handleRefresh() {
                   :value="opt.value"
                 />
               </el-select>
+              <el-tooltip :content="anonymizedHint" placement="top">
+                <el-icon class="log-view__hint-icon"><CircleHelp /></el-icon>
+              </el-tooltip>
             </el-form-item>
             <el-form-item label="时间范围">
               <el-date-picker
@@ -469,7 +491,7 @@ function handleRefresh() {
               >
                 查询
               </el-button>
-              <el-button @click="handleExportReset">重置</el-button>
+              <el-button @click="handleExportReset">重置筛选</el-button>
             </el-form-item>
           </el-form>
         </div>
@@ -519,6 +541,13 @@ function handleRefresh() {
   &__total {
     font-size: 13px;
     color: var(--el-text-color-secondary);
+  }
+
+  /* 「是否匿名」筛选旁的说明图标：解释匿名导出的业务来源（研究数据导出） */
+  &__hint-icon {
+    margin-left: 6px;
+    color: var(--el-text-color-secondary);
+    cursor: help;
   }
 
   &__masked {

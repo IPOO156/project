@@ -23,13 +23,31 @@ const props = defineProps<{
 
 const emit = defineEmits<{ (e: 'update:visible', v: boolean): void }>()
 
+/**
+ * 业务类型 —— 严格对齐后端 ApprovableTypeEnum（Archive / AwardApplication / CareerPlan）。
+ *
+ * ⚠️ 原选项还含 GrowthTimeline（成长时间轴）与 Announcement（公告），但后端提交侧
+ * （ApplicationService.java:753 / AwardService.java:502 / ProfileCareerPlanService.java:267）
+ * 调 ApprovalSubmitService.createOnSubmit 时只传这三个值，映射表按
+ * (school_id + business_type + business_sub_type) 命中 —— 用另外两个值建的映射
+ * **永远匹配不上任何提交**，属死配置。故收窄为枚举三值。
+ */
 const businessTypeOptions = [
   { value: 'Archive', label: '档案' },
-  { value: 'AwardApplication', label: '奖项申报' },
+  { value: 'AwardApplication', label: '奖项报名' },
   { value: 'CareerPlan', label: '职业规划' },
-  { value: 'GrowthTimeline', label: '成长时间轴' },
-  { value: 'Announcement', label: '公告' },
 ]
+
+/**
+ * 子类型取值说明（对应后端传 void 参数 businessSubType）：
+ *   档案 = archives.archive_type（ArchiveTypeEnum 编码，如 academic_competition 学科竞赛）
+ *   奖项 = award_applications.award_type（AwardTypeEnum 编码）
+ *   职业规划 = 恒为 null
+ * 留空即「通用」，与任何子类型匹配不到的提交会回落到 is_default=1 的默认流程。
+ */
+const SUB_TYPE_HINT =
+  '子类型填业务编码：档案填档案类型编码（如 academic_competition=学科竞赛），奖项填奖项类型编码；留空表示通用。\n' +
+  '后端按「学校 + 业务类型 + 子类型」命中本表，命中不到时回落到「默认流程」。'
 
 function typeLabel(type: string) {
   return businessTypeOptions.find((t) => t.value === type)?.label ?? type
@@ -300,6 +318,9 @@ function handleClosed() {
         <el-form-item label="子类型">
           <el-input v-model="form.businessSubType" placeholder="留空表示通用" />
         </el-form-item>
+        <el-form-item label="子类型说明">
+          <span class="flow-mappings__hint">{{ SUB_TYPE_HINT }}</span>
+        </el-form-item>
         <el-form-item label="关联流程" required>
           <el-select v-model="form.flowId" placeholder="请选择流程" style="width: 100%">
             <el-option
@@ -348,6 +369,13 @@ function handleClosed() {
     margin-top: $spacing-lg;
     display: flex;
     justify-content: flex-end;
+  }
+  /* 子类型取值说明（含换行，故用 pre-line 保留 \n 换行） */
+  &__hint {
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-line;
+    color: var(--el-text-color-secondary);
   }
 }
 </style>
