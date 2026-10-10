@@ -59,6 +59,7 @@ const detailFileName = ref('')
 
 const configDialogVisible = ref(false)
 const configSaving = ref(false)
+const deletingConfig = ref(false)
 const configExists = ref(false)
 const configId = ref<number | null>(null)
 const configForm = reactive({
@@ -290,6 +291,7 @@ async function handleDeleteConfig() {
   } catch {
     return
   }
+  deletingConfig.value = true
   try {
     await deleteGradeImportConfig(configId.value)
     ElMessage.success('导入配置已删除')
@@ -298,6 +300,8 @@ async function handleDeleteConfig() {
     resetConfigForm()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingConfig.value = false
   }
 }
 
@@ -589,9 +593,16 @@ function stopDetailPolling() {
       </el-form>
       <template #footer>
         <el-button @click="configDialogVisible = false">取消</el-button>
-        <el-button v-if="configExists" type="danger" plain @click="handleDeleteConfig"
-          >删除配置</el-button
+        <el-button
+          v-if="configExists"
+          type="danger"
+          plain
+          :loading="deletingConfig"
+          :disabled="deletingConfig"
+          @click="handleDeleteConfig"
         >
+          删除配置
+        </el-button>
         <el-button type="primary" :loading="configSaving" @click="handleSaveConfig">保存</el-button>
       </template>
     </el-dialog>

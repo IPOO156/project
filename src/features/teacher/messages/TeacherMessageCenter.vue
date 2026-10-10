@@ -24,6 +24,9 @@ const page = ref(1)
 const perPage = ref(20)
 let keywordTimer = 0
 
+// ─── 行内归档 Loading（记录正在归档的行 id，防连点） ───
+const archivingId = ref<number | null>(null)
+
 const categoryOptions = computed(() => [
   { value: 'all', label: '全部类型' },
   ...Object.entries(NOTIFICATION_CATEGORY).map(([value, meta]) => ({
@@ -101,8 +104,15 @@ async function handleArchive(item: MessageItem) {
     const confirmed = await confirmArchive()
     if (!confirmed) return
   }
-  const ok = await store.archive(item.id)
-  if (ok) ElMessage.success('已归档')
+  archivingId.value = item.id
+  try {
+    const ok = await store.archive(item.id)
+    if (ok) ElMessage.success('已归档')
+  } catch {
+    // 错误提示由 request.ts 的响应拦截器统一给出，这里只需不让异常逃逸
+  } finally {
+    archivingId.value = null
+  }
 }
 
 function confirmArchive(): Promise<boolean> {
@@ -239,6 +249,8 @@ onMounted(() => void loadList())
                 type="warning"
                 size="small"
                 :icon="Archive"
+                :loading="archivingId === (row as MessageItem).id"
+                :disabled="archivingId !== null"
                 @click="handleArchive(row as MessageItem)"
               >
                 归档

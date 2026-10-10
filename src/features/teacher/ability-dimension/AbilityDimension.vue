@@ -18,6 +18,10 @@ import {
 const loading = ref(false)
 const list = ref<AbilityDimensionItem[]>([])
 
+// ─── 弹窗保存 / 行内删除 Loading（与列表 loading 分离，避免整表转圈） ───
+const saving = ref(false)
+const deletingId = ref<number | null>(null)
+
 async function load() {
   loading.value = true
   try {
@@ -65,6 +69,7 @@ async function handleSave() {
     ElMessage.warning('请填写维度名称和编码')
     return
   }
+  saving.value = true
   try {
     if (isEdit.value && editingId.value != null) {
       await updateAbilityDimension(editingId.value, {
@@ -87,6 +92,8 @@ async function handleSave() {
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    saving.value = false
   }
 }
 
@@ -98,12 +105,15 @@ async function handleDelete(row: AbilityDimensionItem) {
   } catch {
     return
   }
+  deletingId.value = row.id
   try {
     await deleteAbilityDimension(row.id)
     ElMessage.success('删除成功')
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -173,6 +183,8 @@ onMounted(() => void load())
                 text
                 type="danger"
                 size="small"
+                :loading="deletingId === (row as AbilityDimensionItem).id"
+                :disabled="deletingId !== null"
                 @click="handleDelete(row as AbilityDimensionItem)"
               >
                 删除
@@ -204,7 +216,9 @@ onMounted(() => void load())
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
+        <el-button type="primary" :loading="saving" :disabled="saving" @click="handleSave"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
   </div>

@@ -2,12 +2,15 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
-import { ORGANIZATION_LEVELS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import { useSemesters } from '@/shared/composables/useSemesters'
+import { ORGANIZATION_LEVELS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
 import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
+
+const { semesterOptions, load: loadSemesters } = useSemesters()
 
 function emptyForm() {
   return {
@@ -58,6 +61,7 @@ async function handleRemove(row: any) {
 
 onMounted(() => {
   page.init()
+  loadSemesters()
 })
 </script>
 
@@ -120,7 +124,7 @@ onMounted(() => {
         <el-form-item label="学期" required>
           <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
             <el-option
-              v-for="s in SEMESTER_OPTIONS"
+              v-for="s in semesterOptions"
               :key="s.value"
               :label="s.label"
               :value="s.value"

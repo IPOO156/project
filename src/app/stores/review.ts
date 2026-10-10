@@ -23,7 +23,8 @@ export const useReviewStore = defineStore('review', () => {
 
   /**
    * 加载全部审核记录（对接 GET /activities）。
-   * 接口异常时不兜底假数据：错误向上抛出，提示由 request 拦截器统一给出（§3.4）。
+   * 底层 getActivities（shared/api/activity）接口异常时内部吞错并返回空数组、不注入假数据，
+   * 故此处失败时列表回退为空态，而非向上抛错。
    */
   async function fetchAll(filters?: ReviewFilters, force = false): Promise<ReviewRecord[]> {
     if (pendingFetch) return pendingFetch

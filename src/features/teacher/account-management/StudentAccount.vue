@@ -74,6 +74,7 @@ function handleSizeChange(size: number) {
 const passwordDialogVisible = ref(false)
 const passwordForm = reactive({ newPassword: '' })
 const currentUser = ref<UserListItem | null>(null)
+const resettingPwd = ref(false)
 
 function openPasswordDialog(row: UserListItem) {
   currentUser.value = row
@@ -87,12 +88,15 @@ async function handleResetPassword() {
     return
   }
   if (!currentUser.value) return
+  resettingPwd.value = true
   try {
     await resetUserPassword(currentUser.value.userId, passwordForm.newPassword)
     ElMessage.success('密码已重置')
     passwordDialogVisible.value = false
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    resettingPwd.value = false
   }
 }
 
@@ -133,6 +137,7 @@ async function openDetail(row: UserListItem) {
 const editDialogVisible = ref(false)
 const editForm = reactive({ name: '', email: '', phone: '' })
 const editUser = ref<UserListItem | null>(null)
+const savingEdit = ref(false)
 
 function openEdit(row: UserListItem) {
   editUser.value = row
@@ -148,6 +153,7 @@ async function handleSaveEdit() {
     return
   }
   if (!editUser.value) return
+  savingEdit.value = true
   try {
     await updateUser(editUser.value.userId, {
       name: editForm.name.trim(),
@@ -159,6 +165,8 @@ async function handleSaveEdit() {
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    savingEdit.value = false
   }
 }
 
@@ -290,7 +298,14 @@ onMounted(() => void load())
       </el-form>
       <template #footer>
         <el-button @click="passwordDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleResetPassword">确认重置</el-button>
+        <el-button
+          type="primary"
+          :loading="resettingPwd"
+          :disabled="resettingPwd"
+          @click="handleResetPassword"
+        >
+          确认重置
+        </el-button>
       </template>
     </el-dialog>
 
@@ -336,7 +351,13 @@ onMounted(() => void load())
       </el-form>
       <template #footer>
         <el-button @click="editDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSaveEdit">保存</el-button>
+        <el-button
+          type="primary"
+          :loading="savingEdit"
+          :disabled="savingEdit"
+          @click="handleSaveEdit"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
   </div>

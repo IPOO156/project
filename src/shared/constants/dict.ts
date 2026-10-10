@@ -34,6 +34,7 @@ function generateSemesterOptions(startYear: number, endYear: number) {
 }
 
 // 学期选项：学年-学期格式，如 2024-2025第一学期
+// 作为 useSemesters 的可用性兜底保留，页面请用 useSemesters()
 export const SEMESTER_OPTIONS = generateSemesterOptions(2022, 2028)
 
 // 本人角色

@@ -147,6 +147,8 @@ const dimAvg = computed<number | null>(() =>
 // 编辑表单保留可更新的联系方式（邮箱/手机号 PUT /profile/contact）与
 // 政治面貌/学生状态（PUT /profile/political-status、/profile/student-status，见接口文档 4.1.5）。
 const isEditing = ref(false)
+/** 基本资料「保存」提交中（最多串行 3 次 PUT，防连点重复提交） */
+const savingEdit = ref(false)
 const formData = ref<Partial<UserInfo> & { politicalStatus?: string; studentStatus?: string }>({})
 /** 学生状态字典编码，枚举值来自接口文档 4.1.5.1（禁止前端自行增改） */
 const STUDENT_STATUS_OPTIONS = [
@@ -190,6 +192,7 @@ async function saveEdit() {
   const a = academicInfo.value
   // 三类保存（联系方式 PUT /profile/contact、政治面貌、学生状态）任一失败即终止流程，
   // 不继续执行后续「已保存」，避免成败提示并存；失败提示由请求拦截器统一给出
+  savingEdit.value = true
   try {
     await userStore.updateUserInfo({
       email: formData.value.email,
@@ -203,6 +206,8 @@ async function saveEdit() {
     }
   } catch {
     return
+  } finally {
+    savingEdit.value = false
   }
   isEditing.value = false
   // 重新拉取 /profile/info，保证展示标签与后端一致
@@ -222,6 +227,7 @@ async function handleAvatarUpload(base64: string) {
 // ── 简历导出 ──
 const resumeRef = ref<InstanceType<typeof ResumeTemplate>>()
 const { exportResumePDF } = useResumeExport()
+const exporting = ref(false)
 
 // ── 档案导出 ──
 const { exportArchivePDF } = useArchiveExport()
@@ -243,14 +249,21 @@ const resumeData = computed(() => ({
 }))
 
 async function handleExportResume() {
-  // 确保数据已加载
-  if (submissionStore.records.length === 0) {
-    await submissionStore.fetchRecords()
+  exporting.value = true
+  try {
+    // 确保数据已加载
+    if (submissionStore.records.length === 0) {
+      await submissionStore.fetchRecords()
+    }
+    if (archiveStore.interests.length === 0) {
+      await archiveStore.fetchArchive()
+    }
+    await exportResumePDF(resumeRef.value ?? null)
+  } catch {
+    // 错误提示由 request.ts 的响应拦截器统一给出，这里只需不让异常逃逸
+  } finally {
+    exporting.value = false
   }
-  if (archiveStore.interests.length === 0) {
-    await archiveStore.fetchArchive()
-  }
-  await exportResumePDF(resumeRef.value ?? null)
 }
 </script>
 
@@ -265,7 +278,12 @@ async function handleExportResume() {
         <el-button type="primary" @click="exportArchivePDF">
           <Download :size="16" style="margin-right: 4px" />导出档案
         </el-button>
-        <el-button type="primary" @click="handleExportResume">
+        <el-button
+          type="primary"
+          :loading="exporting"
+          :disabled="exporting"
+          @click="handleExportResume"
+        >
           <Download :size="16" style="margin-right: 4px" />导出简历 PDF
         </el-button>
       </div>
@@ -336,7 +354,14 @@ async function handleExportResume() {
             >
             <div v-else class="edit-actions">
               <el-button size="small" @click="cancelEdit">取消</el-button
-              ><el-button size="small" type="primary" @click="saveEdit">保存</el-button>
+              ><el-button
+                size="small"
+                type="primary"
+                :loading="savingEdit"
+                :disabled="savingEdit"
+                @click="saveEdit"
+                >保存</el-button
+              >
             </div>
           </div></template
         >

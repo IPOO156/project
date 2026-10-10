@@ -9,7 +9,8 @@ import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import { getAISuggestions } from '@/shared/api/ai-chat'
 import { useDict } from '@/shared/composables/composables'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
-import { APPLICATION_STATUS, SEMESTER_OPTIONS } from '@/shared/constants/dict'
+import { useSemesters } from '@/shared/composables/useSemesters'
+import { APPLICATION_STATUS } from '@/shared/constants/dict'
 import CareerPlanDetail from './components/CareerPlanDetail.vue'
 import CopyCareerPlanDialog from './components/CopyCareerPlanDialog.vue'
 import GrowthRecords from './components/GrowthRecords.vue'
@@ -88,13 +89,23 @@ const filteredRecords = computed(() =>
     : planRecords.value,
 )
 
+/** 记录表空态文案：区分「加载失败」与「确实没有记录」，避免用户误以为自己的记录丢了 */
+const planEmptyText = computed(() =>
+  careerPlanStore.loadError ? '规划记录加载失败，请稍后重试' : '暂无规划记录',
+)
+
 // TODO(待后端契约字段)：计划详情「教师反馈(teacherFeedback)、学生反思(reflection)」
 // 及「完成进度(目标/行动完成数)」尚未在 CareerPlanRecord 契约中定义，暂不展示；
 // 进度仅基于本地已有数据（已填学期数）计算。
 const filledSemesterCount = computed(() => availableSemesters.value.length)
-const totalSemesterCount = SEMESTER_OPTIONS.length
+// 学期下拉与「总学期数」共用同一数据源（useSemesters：后端学期 ∪ 本地生成区间的并集），
+// 避免下拉可选而分母不含、或反之的口径不一致。
+const { semesterOptions, load: loadSemesters } = useSemesters()
+const totalSemesterCount = computed(() => semesterOptions.value.length)
 const planProgressPercent = computed(() =>
-  totalSemesterCount === 0 ? 0 : Math.round((filledSemesterCount.value / totalSemesterCount) * 100),
+  totalSemesterCount.value === 0
+    ? 0
+    : Math.round((filledSemesterCount.value / totalSemesterCount.value) * 100),
 )
 const loading = ref(false)
 const _u_dialogVisible = ref(false)
@@ -168,6 +179,7 @@ function handleRemove(id: string) {
 
 onMounted(() => {
   careerPlanStore.fetchPlans()
+  loadSemesters()
   if (archiveStore.timelineEvents.length === 0) archiveStore.fetchTimeline()
 })
 </script>
@@ -189,7 +201,7 @@ onMounted(() => {
               <el-form-item label="学期" required>
                 <el-select v-model="planForm.semester" placeholder="请选择学期" class="form-w">
                   <el-option
-                    v-for="s in SEMESTER_OPTIONS"
+                    v-for="s in semesterOptions"
                     :key="s.value"
                     :label="s.label"
                     :value="s.value"
@@ -334,6 +346,7 @@ onMounted(() => {
           <el-table
             v-loading="careerPlanStore.loading"
             :data="filteredRecords"
+            :empty-text="planEmptyText"
             stripe
             style="width: 100%"
             size="small"

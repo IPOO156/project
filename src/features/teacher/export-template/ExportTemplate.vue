@@ -20,6 +20,9 @@ import ExportTemplateDetailDrawer from './components/ExportTemplateDetailDrawer.
 
 const loading = ref(false)
 const saving = ref(false)
+const deletingId = ref<number | null>(null)
+/** 正在执行行内动作（设默认/启停）的模板 id —— 二者均为行级写操作，共用一个 ref */
+const actingId = ref<number | null>(null)
 const list = ref<ExportTemplateItem[]>([])
 const total = ref(0)
 const page = ref(1)
@@ -137,27 +140,34 @@ async function handleDelete(row: ExportTemplateItem) {
   } catch {
     return
   }
+  deletingId.value = row.id
   try {
     await deleteExportTemplate(row.id)
     ElMessage.success('删除成功')
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingId.value = null
   }
 }
 
 async function handleSetDefault(row: ExportTemplateItem) {
+  actingId.value = row.id
   try {
     await setDefaultExportTemplate(row.id)
     ElMessage.success('已设为默认模板')
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    actingId.value = null
   }
 }
 
 async function handleToggleStatus(row: ExportTemplateItem) {
   const next = row.status === 1 ? 0 : 1
+  actingId.value = row.id
   try {
     await updateExportTemplateStatus(row.id, next)
     row.status = next
@@ -165,6 +175,8 @@ async function handleToggleStatus(row: ExportTemplateItem) {
     ElMessage.success(next === 1 ? '已启用' : '已禁用')
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    actingId.value = null
   }
 }
 
@@ -260,6 +272,8 @@ onMounted(() => void load())
                   text
                   type="primary"
                   size="small"
+                  :loading="actingId === (row as ExportTemplateItem).id"
+                  :disabled="actingId !== null"
                   @click="handleSetDefault(row as ExportTemplateItem)"
                 >
                   设默认
@@ -268,6 +282,8 @@ onMounted(() => void load())
                   text
                   :type="row.status === 1 ? 'danger' : 'success'"
                   size="small"
+                  :loading="actingId === (row as ExportTemplateItem).id"
+                  :disabled="actingId !== null"
                   @click="handleToggleStatus(row as ExportTemplateItem)"
                 >
                   {{ row.status === 1 ? '禁用' : '启用' }}
@@ -276,6 +292,8 @@ onMounted(() => void load())
                   text
                   type="danger"
                   size="small"
+                  :loading="deletingId === (row as ExportTemplateItem).id"
+                  :disabled="deletingId !== null"
                   @click="handleDelete(row as ExportTemplateItem)"
                 >
                   删除

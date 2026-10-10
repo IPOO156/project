@@ -7,9 +7,12 @@ import type { ExportJobItem, TeacherExportJob, TeacherExportTemplate } from '@/s
  * 替代 admin 版单任务轮询 /admin/exports/{jobId}）、删除（DELETE /teacher/exports/{jobId}）、
  * 导出模板（GET /teacher/exports/templates）。
  * 研究数据导出（/admin/exports/research）无教师端等价接口，保留 admin。
+ * 原「手动添加学期」按钮与弹窗、「选择可导年级」勾选块已移除：
+ * 前者无 @click 从未生效（该职责属 features/teacher/semester-management 学期管理页），
+ * 后者因导出范围没有「年级」选项而不可达、勾选值也从未被提交。
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, FileDown, FlaskConical, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { Download, FileDown, FlaskConical, Trash2 } from 'lucide-vue-next'
 
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import {
@@ -34,10 +37,6 @@ const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:a
 const canExportResearch = computed(() => hasPermission('export:research'))
 /** 成绩导入面板：grade:import */
 const canImportGrade = computed(() => hasPermission('grade:import'))
-/** 手动添加学期：semester:manage */
-const canManageSemester = computed(() => hasPermission('semester:manage'))
-/** 选择可导年级：export:manage（管理端导出配置） */
-const canChooseGrade = computed(() => hasPermission('export:manage'))
 
 /** 组织范围下拉项（学院/专业/班级，来自 /auth/me 的 scopes） */
 const { colleges, majors, classes } = useScopeFilter()
@@ -47,7 +46,6 @@ const filters = reactive({
   collegeId: undefined as number | undefined,
   majorId: undefined as number | undefined,
   classId: undefined as number | undefined,
-  grade: undefined as string | undefined,
   status: '',
   dateRange: [] as string[],
 })
@@ -155,15 +153,11 @@ const researchPolling = usePollingTask<ExportJobItem>({
 
 const statusOptions = ['全部', '已完成', '处理中', '失败']
 
-// ── 超管专属：添加学期 / 可导年级 ──
-const semesterDialogVisible = ref(false)
-const newSemester = ref('')
-const gradeSelection = ref<string[]>([])
-const gradeOptions = ['2024级', '2023级', '2022级', '2021级']
-
 // ── 研究数据导出（/admin/exports/research）：弹窗已拆至 ResearchExportDialog.vue ──
 const researchDialogVisible = ref(false)
 const submittingArchive = ref(false)
+/** 正在删除的导出任务 id（行内按钮 Loading；不复用列表 tasksLoading，否则整表会转圈） */
+const deletingJobId = ref<number | null>(null)
 
 /** 弹窗创建任务成功：入列表并启动进度轮询 */
 function handleResearchCreated(job: TeacherExportJob) {
@@ -190,7 +184,6 @@ async function handleExport(fileType: 'pdf' | 'xlsx') {
       ? await submitAdminArchiveExport({
           scopeType,
           scopeId,
-          grade: filters.scope === '年级' ? filters.grade : undefined,
           fileType: selectedTemplate?.exportType ?? fileType,
           templateId: selectedTemplate?.templateId,
         })
@@ -223,12 +216,15 @@ async function handleDeleteExport(row: TeacherExportJob) {
   } catch {
     return
   }
+  deletingJobId.value = row.exportJobId
   try {
     await deleteTeacherExportJob(row.exportJobId)
     ElMessage.success('已删除导出任务')
     exportTasks.value = exportTasks.value.filter((t) => t.exportJobId !== row.exportJobId)
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingJobId.value = null
   }
 }
 
@@ -316,9 +312,6 @@ onUnmounted(() => {
             style="width: 240px"
           />
         </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search">查询</el-button>
-        </el-form-item>
       </el-form>
     </div>
 
@@ -357,17 +350,7 @@ onUnmounted(() => {
             @click="researchDialogVisible = true"
             >研究数据导出</el-button
           >
-          <template v-if="canManageSemester">
-            <el-button :icon="Plus" @click="semesterDialogVisible = true">手动添加学期</el-button>
-          </template>
         </div>
-      </div>
-      <div v-if="canChooseGrade" class="mc-card__body">
-        <el-form-item label="选择可导年级">
-          <el-checkbox-group v-model="gradeSelection">
-            <el-checkbox v-for="g in gradeOptions" :key="g" :label="g" :value="g" />
-          </el-checkbox-group>
-        </el-form-item>
       </div>
     </div>
 
@@ -432,6 +415,8 @@ onUnmounted(() => {
                 text
                 size="small"
                 :icon="Trash2"
+                :loading="deletingJobId === row.exportJobId"
+                :disabled="deletingJobId !== null"
                 @click="handleDeleteExport(row as TeacherExportJob)"
                 >删除</el-button
               >
@@ -447,18 +432,6 @@ onUnmounted(() => {
     </div>
 
     <GradeImportPanel v-if="canImportGrade" />
-
-    <el-dialog v-model="semesterDialogVisible" title="手动添加学期" width="400px">
-      <el-form>
-        <el-form-item label="学期名称">
-          <el-input v-model="newSemester" placeholder="例如：2026-2027-1" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="semesterDialogVisible = false">取消</el-button>
-        <el-button type="primary">确定</el-button>
-      </template>
-    </el-dialog>
 
     <ResearchExportDialog
       v-model:visible="researchDialogVisible"

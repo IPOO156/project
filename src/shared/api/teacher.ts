@@ -655,6 +655,29 @@ export function getArchiveOverview(params: {
   return request.get('/admin/archives/overview', { params })
 }
 
+/* ===================== 教师端-档案（/teacher/archives）===================== */
+
+/**
+ * 教师端学生档案列表（GET /teacher/archives）。
+ * 查询参数与响应字段与管理端 /admin/archives 完全一致（后端复用同一套 DTO），
+ * 差别仅在鉴权口径：教师按 role_scopes 限定可见学生范围，管理端不限制。
+ */
+export function listTeacherArchives(
+  params: ArchiveAdminQuery,
+): Promise<PageResult<ArchiveAdminListItem>> {
+  return request.get('/teacher/archives', { params })
+}
+
+/** 教师端组织档案汇总（GET /teacher/archives/overview），参数与响应同管理端 */
+export function getTeacherArchiveOverview(params: {
+  semesterId?: number
+  orgType?: number
+  orgId?: number
+  grade?: string
+}): Promise<ArchiveOverviewResult> {
+  return request.get('/teacher/archives/overview', { params })
+}
+
 /* ===================== 教师端-学生档案（/teacher/students）===================== */
 
 /** 学生成长档案总览（GET /teacher/students/{userId}/profile） */

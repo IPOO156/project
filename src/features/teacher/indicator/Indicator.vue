@@ -24,6 +24,12 @@ import IndicatorVersionsDrawer from './components/IndicatorVersionsDrawer.vue'
 const loading = ref(false)
 const tree = ref<AdminIndicatorTree | null>(null)
 
+// ─── 各动作独立 Loading（与列表 loading 分离，避免整表转圈） ───
+const saving = ref(false)
+const publishing = ref(false)
+const batching = ref(false)
+const deletingId = ref<number | null>(null)
+
 async function load() {
   loading.value = true
   try {
@@ -73,6 +79,7 @@ async function handleSave() {
     ElMessage.warning('请填写指标名称和编码')
     return
   }
+  saving.value = true
   try {
     if (isEdit.value && editingId.value != null) {
       await updateIndicator(editingId.value, {
@@ -96,6 +103,8 @@ async function handleSave() {
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    saving.value = false
   }
 }
 
@@ -107,12 +116,15 @@ async function handleDelete(row: IndicatorNode) {
   } catch {
     return
   }
+  deletingId.value = row.id
   try {
     await deleteIndicator(row.id)
     ElMessage.success('删除成功')
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -129,12 +141,15 @@ async function handleToggleStatus(row: IndicatorNode) {
 }
 
 async function handlePublish() {
+  publishing.value = true
   try {
     await publishIndicators()
     ElMessage.success('发布成功')
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    publishing.value = false
   }
 }
 
@@ -152,6 +167,7 @@ async function handleBatchStatus(next: number) {
     ElMessage.warning('请先勾选要操作的指标')
     return
   }
+  batching.value = true
   try {
     const res = await updateIndicatorsStatusBatch({ indicatorIds: ids, status: next })
     ElMessage.success(`已${next === 1 ? '启用' : '禁用'} ${res.affectedCount ?? ids.length} 项指标`)
@@ -159,6 +175,8 @@ async function handleBatchStatus(next: number) {
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    batching.value = false
   }
 }
 
@@ -182,7 +200,8 @@ onMounted(() => void load())
           type="success"
           plain
           :icon="Check"
-          :disabled="!selectedIndicators.length"
+          :loading="batching"
+          :disabled="!selectedIndicators.length || batching"
           @click="handleBatchStatus(1)"
         >
           批量启用
@@ -191,13 +210,22 @@ onMounted(() => void load())
           type="danger"
           plain
           :icon="X"
-          :disabled="!selectedIndicators.length"
+          :loading="batching"
+          :disabled="!selectedIndicators.length || batching"
           @click="handleBatchStatus(0)"
         >
           批量禁用
         </el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate()">新增一级指标</el-button>
-        <el-button type="success" :icon="Rocket" @click="handlePublish">发布</el-button>
+        <el-button
+          type="success"
+          :icon="Rocket"
+          :loading="publishing"
+          :disabled="publishing"
+          @click="handlePublish"
+        >
+          发布
+        </el-button>
       </div>
     </div>
 
@@ -259,6 +287,8 @@ onMounted(() => void load())
                 text
                 type="danger"
                 size="small"
+                :loading="deletingId === (row as IndicatorNode).id"
+                :disabled="deletingId !== null"
                 @click="handleDelete(row as IndicatorNode)"
               >
                 删除
@@ -289,7 +319,9 @@ onMounted(() => void load())
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
+        <el-button type="primary" :loading="saving" :disabled="saving" @click="handleSave"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
