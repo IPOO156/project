@@ -17,6 +17,8 @@ import { getCareerPlans, submitCareerPlan } from '@/shared/api/career-plan'
 export const useCareerPlanStore = defineStore('career-plan', () => {
   const plans = ref<CareerPlanRecord[]>([])
   const loading = ref(false)
+  /** 规划列表加载失败（供页面展示错误空态；不回退示例数据） */
+  const loadError = ref(false)
   /** AI 短板分析结果（null = 尚未分析） */
   const aiAnalysis = ref<CareerAnalysis | null>(null)
 
@@ -32,6 +34,11 @@ export const useCareerPlanStore = defineStore('career-plan', () => {
       try {
         plans.value = await getCareerPlans()
         lastFetchedAt = Date.now()
+        loadError.value = false
+      } catch {
+        // 错误提示由 request.ts 响应拦截器统一给出；这里只置错误态供页面渲染空态，
+        // 且不清空已有数据（刷新失败时保留上一次成功的列表，避免用户看到"记录消失"）。
+        loadError.value = true
       } finally {
         loading.value = false
       }
@@ -58,5 +65,14 @@ export const useCareerPlanStore = defineStore('career-plan', () => {
     aiAnalysis.value = null
   }
 
-  return { plans, loading, aiAnalysis, fetchPlans, submitPlan, setAIAnalysis, clearAIAnalysis }
+  return {
+    plans,
+    loading,
+    loadError,
+    aiAnalysis,
+    fetchPlans,
+    submitPlan,
+    setAIAnalysis,
+    clearAIAnalysis,
+  }
 })

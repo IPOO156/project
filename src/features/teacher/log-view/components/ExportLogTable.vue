@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { ExportLogItem } from '@/shared/types/teacher'
-import dayjs from 'dayjs'
 import { computed } from 'vue'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
+import { EXPORT_TYPES } from '@/shared/constants/dict'
+import { formatDateTime } from '@/shared/utils/time'
 
 interface Props {
   data: ExportLogItem[]
@@ -39,12 +40,15 @@ function maskIp(ip: string | null) {
         .join('.')
 }
 
+/** 导出时间按共享工具格式化为「YYYY-MM-DD HH:mm:ss」（不再直出后端 ISO 串） */
 function formatTime(t: string | null) {
-  return t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
+  return formatDateTime(t, true)
 }
 
+/** 导出类型转中文：后端导出日志接口只回英文码，映射表见 constants/dict.ts 的 EXPORT_TYPES */
 function exportTypeLabel(type: string | null) {
-  return type || '-'
+  if (!type) return '-'
+  return EXPORT_TYPES[type] ?? type
 }
 
 function anonymizedTag(val: number | null): 'success' | 'info' {

@@ -106,7 +106,14 @@ export const useNotificationStore = defineStore('notification', () => {
     const target = notifications.value.find((n) => n.id === id)
     if (!target || target.isRead === 1) return
 
-    if (!isLocalNotification(id)) await apiMarkOne(id)
+    if (!isLocalNotification(id)) {
+      // 失败提示由 request.ts 响应拦截器统一给出；此处吞掉异常并保持本地状态不变
+      try {
+        await apiMarkOne(id)
+      } catch {
+        return
+      }
+    }
     target.isRead = 1
     target.readAt = new Date().toISOString()
     const filtered = filteredNotifications.value.find((n) => n.id === id)
@@ -120,7 +127,12 @@ export const useNotificationStore = defineStore('notification', () => {
     const unreadItems = notifications.value.filter((n) => n.isRead !== 1 && n.isArchived !== 1)
     if (unreadItems.length === 0) return
 
-    await apiMarkAll()
+    try {
+      await apiMarkAll()
+    } catch {
+      // 同上：失败不置本地已读，避免「提示已读、刷新后又变未读」
+      return
+    }
     const now = new Date().toISOString()
     notifications.value.forEach((n) => {
       if (n.isArchived !== 1) {
@@ -154,7 +166,13 @@ export const useNotificationStore = defineStore('notification', () => {
       }
     }
 
-    if (!isLocalNotification(id)) await apiArchive(id)
+    if (!isLocalNotification(id)) {
+      try {
+        await apiArchive(id)
+      } catch {
+        return
+      }
+    }
     target.isArchived = 1
     target.archivedAt = new Date().toISOString()
     const filtered = filteredNotifications.value.find((n) => n.id === id)
@@ -181,7 +199,13 @@ export const useNotificationStore = defineStore('notification', () => {
       }
     }
     const backendIds = ids.filter((n) => !isLocalNotification(n))
-    if (backendIds.length > 0) await Promise.all(backendIds.map((id) => apiArchive(id)))
+    if (backendIds.length > 0) {
+      try {
+        await Promise.all(backendIds.map((id) => apiArchive(id)))
+      } catch {
+        return
+      }
+    }
     const now = new Date().toISOString()
     const idSet = new Set(ids)
     const patch = (list: Notification[]) => {
@@ -201,7 +225,13 @@ export const useNotificationStore = defineStore('notification', () => {
   async function markMultipleAsRead(ids: string[]): Promise<void> {
     if (ids.length === 0) return
     const backendIds = ids.filter((n) => !isLocalNotification(n))
-    if (backendIds.length > 0) await apiBatchRead(backendIds)
+    if (backendIds.length > 0) {
+      try {
+        await apiBatchRead(backendIds)
+      } catch {
+        return
+      }
+    }
     const now = new Date().toISOString()
     const idSet = new Set(ids)
     const patch = (list: Notification[]) => {
@@ -222,7 +252,13 @@ export const useNotificationStore = defineStore('notification', () => {
     const target = notifications.value.find((n) => n.id === id)
     if (!target) return
 
-    if (!isLocalNotification(id)) await apiUnarchive(id)
+    if (!isLocalNotification(id)) {
+      try {
+        await apiUnarchive(id)
+      } catch {
+        return
+      }
+    }
     target.isArchived = 0
     target.archivedAt = null
     const filtered = filteredNotifications.value.find((n) => n.id === id)
@@ -233,7 +269,11 @@ export const useNotificationStore = defineStore('notification', () => {
   }
 
   async function deleteNotification(id: string): Promise<void> {
-    await apiDelete(id)
+    try {
+      await apiDelete(id)
+    } catch {
+      return
+    }
     notifications.value = notifications.value.filter((n) => n.id !== id)
     filteredNotifications.value = filteredNotifications.value.filter((n) => n.id !== id)
     ElMessage.success('已删除')

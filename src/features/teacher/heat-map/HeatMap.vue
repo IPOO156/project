@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { HeatmapStatistics, SemesterItem } from '@/shared/types/teacher'
 /**
- * HeatMap - 成果热力图
- * 对接后端教师端 /teacher/statistics/heatmap（组织 × 学期 指标矩阵，values 为 0-100 归一化值，
- * rawValues 为原始值，maxValue/minValue 为全校原始值范围）。
+ * HeatMap - 成果热力图（管理员与教师共用同一页面，按角色切换端点）
+ * 管理员（isAdmin：持 log:view / log:audit）→ /admin/statistics/heatmap（全校数据，指标含「兴趣」）；
+ * 教师 → /teacher/statistics/heatmap（本人 role_scopes 范围，指标仅 gpa/award/practice/archive）。
+ * 组织 × 学期 指标矩阵，values 为 0-100 归一化值，rawValues 为原始值，maxValue/minValue 为原始值范围。
  * 学期与学院/专业/班级范围来自 /common/semesters + /auth/me scopes。
  */
 import { ArrowDownAZ, Flame, Search, Sigma } from 'lucide-vue-next'
@@ -22,13 +23,35 @@ const loadingSemesters = ref(false)
 /** 组织范围下拉项（学院/专业/班级，来自 /auth/me 的 scopes） */
 const { colleges, majors, classes } = useScopeFilter()
 
-const METRIC_OPTIONS = [
+interface MetricOption {
+  value: string
+  label: string
+  unit: string
+  decimals: number
+  accent: string
+  /** 仅管理端端点支持；教师端后端白名单不含该项，选了会被拒（见 metricOptions） */
+  adminOnly?: boolean
+}
+
+const METRIC_OPTIONS: MetricOption[] = [
   { value: 'gpa', label: '绩点', unit: '', decimals: 2, accent: '#1e3a5f' },
   { value: 'award', label: '获奖', unit: '项', decimals: 0, accent: '#d4a574' },
   { value: 'practice', label: '实践', unit: '次', decimals: 0, accent: '#10b981' },
-  { value: 'interest', label: '兴趣', unit: '项', decimals: 0, accent: '#8b5cf6' },
+  { value: 'interest', label: '兴趣', unit: '项', decimals: 0, accent: '#8b5cf6', adminOnly: true },
   { value: 'archive', label: '档案', unit: '份', decimals: 0, accent: '#3b82f6' },
 ]
+
+/**
+ * 指标下拉按角色过滤 —— 后端两个端点的 metric 白名单不同：
+ * 管理端 /admin/statistics/heatmap 支持 gpa/award/practice/interest/archive，
+ * 教师端 /teacher/statistics/heatmap 仅 gpa/award/practice/archive
+ * （教师端接口文档注明为「子集」，对应 AdminStatisticsService.TEACHER_HEATMAP_METRICS）。
+ * 教师若选中「兴趣」，请求会被后端以 code 10001「metric 仅支持 gpa/award/practice/archive」拒绝，
+ * 故选项跟随端点一起收窄 —— 与 load() 里 isAdmin 选端点的判断保持同一口径。
+ */
+const metricOptions = computed(() =>
+  isAdmin.value ? METRIC_OPTIONS : METRIC_OPTIONS.filter((m) => !m.adminOnly),
+)
 
 const ORG_TYPE_OPTIONS = [
   { value: 2, label: '学院' },
@@ -309,7 +332,7 @@ onMounted(async () => {
               <!-- 自定义下拉内容（圆点+文案）同时需显式 :label，
                    否则收起态 el-select 无法取到 label，会在输入框回退显示 raw value（如 "award"） -->
               <el-option
-                v-for="m in METRIC_OPTIONS"
+                v-for="m in metricOptions"
                 :key="m.value"
                 :value="m.value"
                 :label="m.label"

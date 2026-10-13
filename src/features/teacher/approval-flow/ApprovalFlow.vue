@@ -16,15 +16,23 @@ import {
   listApprovalFlows,
   updateApprovalFlow,
 } from '@/shared/api/teacher'
+import { formatDateTime } from '@/shared/utils/time'
 import ApprovalFlowMappingsDrawer from './components/ApprovalFlowMappingsDrawer.vue'
 import ApprovalFlowStepsDrawer from './components/ApprovalFlowStepsDrawer.vue'
 
+/**
+ * 适用类型选项 —— 严格对齐后端 ApprovableTypeEnum（档案/奖项报名/职业规划三个值）。
+ *
+ * ⚠️ 原选项还包含 GrowthTimeline（成长时间轴）与 Announcement（公告），但后端枚举里
+ * 没有这两个值，且没有任何业务按它们解析流程（写入侧不校验枚举，故存得下却永不生效，
+ * 属「选了等于没选」的死配置）。按「字段必须来自接口文档或后端实际返回」的口径收窄为
+ * 枚举三值。若业务确需为成长时间轴/公告配审批，需后端先扩充 ApprovableTypeEnum 并接入
+ * 流程解析，前端再加回对应选项。
+ */
 const applicableTypeOptions = [
   { value: 'Archive', label: '档案' },
-  { value: 'AwardApplication', label: '奖项申报' },
+  { value: 'AwardApplication', label: '奖项报名' },
   { value: 'CareerPlan', label: '职业规划' },
-  { value: 'GrowthTimeline', label: '成长时间轴' },
-  { value: 'Announcement', label: '公告' },
 ]
 
 function typeLabel(type: string) {
@@ -36,6 +44,10 @@ const list = ref<ApprovalFlowItem[]>([])
 const total = ref(0)
 const page = ref(1)
 const perPage = ref(20)
+
+// ─── 弹窗保存 / 行内删除 Loading（与列表 loading 分离，避免整表转圈） ───
+const saving = ref(false)
+const deletingId = ref<number | null>(null)
 
 async function load() {
   loading.value = true
@@ -95,6 +107,7 @@ async function handleSave() {
     ElMessage.warning('请填写流程名称')
     return
   }
+  saving.value = true
   try {
     const payload = {
       flowName: form.flowName.trim(),
@@ -114,6 +127,8 @@ async function handleSave() {
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    saving.value = false
   }
 }
 
@@ -125,12 +140,15 @@ async function handleDelete(row: ApprovalFlowItem) {
   } catch {
     return
   }
+  deletingId.value = row.id
   try {
     await deleteApprovalFlow(row.id)
     ElMessage.success('删除成功')
     void load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -220,8 +238,8 @@ onMounted(() => void load())
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createdAt" label="创建时间" width="170">
-            <template #default="{ row }">{{ row.createdAt ?? '-' }}</template>
+          <el-table-column label="创建时间" width="150">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="320" align="center">
             <template #default="{ row }">
@@ -262,6 +280,8 @@ onMounted(() => void load())
                 text
                 type="danger"
                 size="small"
+                :loading="deletingId === (row as ApprovalFlowItem).id"
+                :disabled="deletingId !== null"
                 @click="handleDelete(row as ApprovalFlowItem)"
               >
                 删除
@@ -304,6 +324,14 @@ onMounted(() => void load())
         <el-form-item label="适用子类型">
           <el-input v-model="form.applicableSubType" placeholder="留空表示通用" />
         </el-form-item>
+        <el-form-item label="子类型说明">
+          <span class="approval-flow__hint">
+            适用类型 + 子类型是流程的分组标识：同类型同子类型只能有一套流程（构成版本唯一键）。
+            学生提交时实际选用哪套流程由「流程映射」决定 —— 后端按「学校 + 业务类型 + 子类型」
+            命中映射，命中不到才回落到「默认流程」；本页这两个字段不影响是否被选中。
+            不确定时留空即可。
+          </span>
+        </el-form-item>
         <el-form-item label="默认流程">
           <el-switch v-model="form.isDefault" :active-value="1" :inactive-value="0" />
         </el-form-item>
@@ -313,7 +341,9 @@ onMounted(() => void load())
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSave">保存</el-button>
+        <el-button type="primary" :loading="saving" :disabled="saving" @click="handleSave"
+          >保存</el-button
+        >
       </template>
     </el-dialog>
 
@@ -345,7 +375,7 @@ onMounted(() => void load())
               </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="创建时间">{{
-              detail.createdAt ?? '-'
+              formatDateTime(detail.createdAt)
             }}</el-descriptions-item>
           </el-descriptions>
 
@@ -397,6 +427,12 @@ onMounted(() => void load())
     margin-top: $spacing-lg;
     display: flex;
     justify-content: flex-end;
+  }
+  // 弹窗内字段说明文案（适用子类型的语义），弱化显示
+  &__hint {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--el-text-color-secondary);
   }
   &__detail {
     &-section {

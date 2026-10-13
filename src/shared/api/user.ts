@@ -1,4 +1,3 @@
-import type { UserInfo } from '@/shared/types/types'
 import request from './request'
 
 /**
@@ -10,24 +9,6 @@ import request from './request'
  *   - changePassword → PUT /auth/password（原密码 + 新密码 + 确认密码）
  *   - uploadAvatar → POST /common/upload/avatar（multipart，返回 OSS 签名 URL）
  */
-
-/** 获取当前用户信息（本地缓存；完整身份以 /auth/me 为准） */
-export function getUserInfo(): Promise<UserInfo> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // Mock 从 localStorage 恢复（实际由 Login 后写入）
-      const raw = localStorage.getItem('user_info_cache')
-      resolve(raw ? JSON.parse(raw) : ({ id: '', username: '' } as UserInfo))
-    }, 200)
-  })
-}
-
-/** 更新用户资料（本地合并；如需后端持久化待接口就绪） */
-export function updateUserInfo(payload: Partial<UserInfo>): Promise<UserInfo> {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(payload as UserInfo), 200)
-  })
-}
 
 /** 上传头像（Base64 dataURL → File → POST /common/upload/avatar） */
 export async function uploadAvatar(base64: string): Promise<string> {

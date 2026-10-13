@@ -31,6 +31,10 @@ const pageSize = ref(10)
 const batchMode = ref(false)
 const selectedIds = ref<string[]>([])
 
+// ─── 批量操作按钮 Loading（各动作各一个，避免互相转圈） ───
+const batchReading = ref(false)
+const batchArchiving = ref(false)
+
 function toggleSelect(id: string) {
   const idx = selectedIds.value.indexOf(id)
   if (idx > -1) {
@@ -40,16 +44,30 @@ function toggleSelect(id: string) {
   }
 }
 
-function handleBatchRead() {
-  notificationStore.markMultipleAsRead(selectedIds.value)
-  selectedIds.value = []
-  batchMode.value = false
+async function handleBatchRead() {
+  batchReading.value = true
+  try {
+    await notificationStore.markMultipleAsRead(selectedIds.value)
+    selectedIds.value = []
+    batchMode.value = false
+  } catch {
+    // 错误提示由 request.ts 的响应拦截器统一给出，这里只需不让异常逃逸
+  } finally {
+    batchReading.value = false
+  }
 }
 
-function handleBatchArchive() {
-  notificationStore.archiveNotifications(selectedIds.value)
-  selectedIds.value = []
-  batchMode.value = false
+async function handleBatchArchive() {
+  batchArchiving.value = true
+  try {
+    await notificationStore.archiveNotifications(selectedIds.value)
+    selectedIds.value = []
+    batchMode.value = false
+  } catch {
+    // 错误提示由 request.ts 的响应拦截器统一给出，这里只需不让异常逃逸
+  } finally {
+    batchArchiving.value = false
+  }
 }
 
 function handleCancelBatchMode() {
@@ -294,12 +312,18 @@ onMounted(() => {
           <el-button
             size="small"
             type="primary"
-            :disabled="selectedIds.length === 0"
+            :loading="batchReading"
+            :disabled="selectedIds.length === 0 || batchReading"
             @click="handleBatchRead"
           >
             批量已读
           </el-button>
-          <el-button size="small" :disabled="selectedIds.length === 0" @click="handleBatchArchive">
+          <el-button
+            size="small"
+            :loading="batchArchiving"
+            :disabled="selectedIds.length === 0 || batchArchiving"
+            @click="handleBatchArchive"
+          >
             <Archive :size="14" style="margin-right: 4px" />批量归档
           </el-button>
         </template>

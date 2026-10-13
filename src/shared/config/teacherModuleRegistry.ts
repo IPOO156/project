@@ -338,11 +338,13 @@ export const teacherModules: TeacherModule[] = [
     description: '维护学校/学院/专业/班级层级架构',
     menuItems: [{ label: '组织架构', icon: Building2, path: '/teacher/org-management' }],
   },
-  // ── 以下两个模块刻意不注册：后端 V5.7 接口文档（ringg）与前端 shared/api/ 均无任何
-  //    运维/监控/安全接口，4 个页面（HardwareMaintenance / SoftwareMaintenance /
-  //    NetworkSecurity / DataSecurity）为 100% 写死的假数据，不属于「学生档案管理系统」
-  //    的业务域；路由与 .vue 文件保留（teacher-routes.ts + features/teacher/*），
-  //    后端补齐接口后再在此注册启用。
+  // ── 「运维监控 / 信息安全」两个模块不在此注册，且其页面已于 2026-10-10 删除：
+  //    后端 V5.7 接口文档（ringg）与前端 shared/api/ 均无任何运维/监控/安全接口，
+  //    原 4 个页面（硬件维护 / 软件维护 / 网络安全 / 数据安全台账）为 100% 写死的假数据，
+  //    不属于「学生档案管理系统」的业务域。产品口径已定「删页」（原问题清单 B-15），
+  //    故路由（teacher-routes.ts）与 .vue 文件（features/teacher/system-maintenance、
+  //    features/teacher/info-security）一并移除，不留可由 URL 直达的假数据页。
+  //    若后端将来补齐接口，需连同页面与路由一并重新实现后再在此注册。
 ]
 
 /**

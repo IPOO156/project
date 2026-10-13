@@ -24,6 +24,9 @@ const page = ref(1)
 const perPage = ref(20)
 let keywordTimer = 0
 
+// ─── 行内归档 Loading（记录正在归档的行 id，防连点） ───
+const archivingId = ref<number | null>(null)
+
 const categoryOptions = computed(() => [
   { value: 'all', label: '全部类型' },
   ...Object.entries(NOTIFICATION_CATEGORY).map(([value, meta]) => ({
@@ -101,8 +104,15 @@ async function handleArchive(item: MessageItem) {
     const confirmed = await confirmArchive()
     if (!confirmed) return
   }
-  const ok = await store.archive(item.id)
-  if (ok) ElMessage.success('已归档')
+  archivingId.value = item.id
+  try {
+    const ok = await store.archive(item.id)
+    if (ok) ElMessage.success('已归档')
+  } catch {
+    // 错误提示由 request.ts 的响应拦截器统一给出，这里只需不让异常逃逸
+  } finally {
+    archivingId.value = null
+  }
 }
 
 function confirmArchive(): Promise<boolean> {
@@ -140,7 +150,9 @@ onMounted(() => void loadList())
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">消息中心</h2>
         <p class="mc-page-head__desc">
-          接收审核反馈、系统通知与动态提醒。打开详情自动标记为已读，重要消息归档前需二次确认。
+          接收系统通知与定向提醒（如定时任务配置的站内信）。打开详情自动标记为已读，重要消息归档前需二次确认。
+          说明：后端目前只在学生申报提交、公告发布、职业规划反馈等事件上投递消息，
+          尚不会在「有新待办」「审批结果」等时点向教师投递消息。
         </p>
       </div>
     </div>
@@ -239,6 +251,8 @@ onMounted(() => void loadList())
                 type="warning"
                 size="small"
                 :icon="Archive"
+                :loading="archivingId === (row as MessageItem).id"
+                :disabled="archivingId !== null"
                 @click="handleArchive(row as MessageItem)"
               >
                 归档

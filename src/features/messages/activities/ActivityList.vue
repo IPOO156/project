@@ -46,6 +46,11 @@ const submissionPageSize = ref(10)
 const activityTableKey = ref(0)
 const submissionTableKey = ref(0)
 
+// ─── 报名记录行内删除 Loading（记录正在删除的行 id，防连点） ───
+const deletingId = ref<string | null>(null)
+// ─── 报名记录行内撤回 Loading（同删除，记录正在撤回的行 id） ───
+const withdrawingId = ref<string | null>(null)
+
 function bumpActivityAnimation() {
   activityTableKey.value++
 }
@@ -178,10 +183,13 @@ async function handleDeleteSubmission(row: SubmissionRecord) {
       cancelButtonText: '取消',
       type: 'warning',
     })
+    deletingId.value = row.id
     await submissionStore.deleteSubmission(row.id)
     ElMessage.success('已删除')
   } catch {
     // 用户取消；删除失败由全局拦截器统一提示，本地记录保留
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -192,10 +200,18 @@ async function handleWithdrawSubmission(row: SubmissionRecord) {
       cancelButtonText: '取消',
       type: 'warning',
     })
+  } catch {
+    // 用户取消确认框
+    return
+  }
+  withdrawingId.value = row.id
+  try {
     await submissionStore.withdrawRecord(row.id)
     ElMessage.success('已撤回')
   } catch {
-    // 用户取消
+    /* 失败提示由 request.ts 拦截器统一给出 */
+  } finally {
+    withdrawingId.value = null
   }
 }
 
@@ -430,6 +446,8 @@ onMounted(() => {
                 link
                 size="small"
                 :icon="Trash2"
+                :loading="deletingId === (row as SubmissionRecord).id"
+                :disabled="deletingId !== null"
                 @click="handleDeleteSubmission(row as SubmissionRecord)"
               >
                 删除
@@ -440,6 +458,8 @@ onMounted(() => {
                 link
                 size="small"
                 :icon="Undo2"
+                :loading="withdrawingId === (row as SubmissionRecord).id"
+                :disabled="withdrawingId !== null"
                 @click="handleWithdrawSubmission(row as SubmissionRecord)"
               >
                 撤回

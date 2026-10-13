@@ -29,6 +29,11 @@ const interestForm = reactive<{ tagName: string; detailContent: string; proficie
   },
 )
 
+/** 兴趣新增/编辑提交中（防连点重复提交） */
+const saving = ref(false)
+/** 正在删除的兴趣 id（行内按钮 Loading；不复用列表态，避免整块转圈） */
+const deletingId = ref<number | null>(null)
+
 function openAddInterest() {
   editingInterestId.value = null
   interestForm.tagName = ''
@@ -52,6 +57,7 @@ async function saveInterest() {
     ElMessage.warning('请填写完整信息')
     return
   }
+  saving.value = true
   try {
     if (editingInterestId.value !== null)
       await archiveStore.editInterest(editingInterestId.value, { ...interestForm })
@@ -59,13 +65,25 @@ async function saveInterest() {
     interestDialogVisible.value = false
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    saving.value = false
   }
 }
 
-function deleteInterest(id: number) {
-  ElMessageBox.confirm('确定删除该兴趣吗？', '确认', { type: 'warning' })
-    .then(() => archiveStore.removeInterest(id))
-    .catch(() => {})
+async function deleteInterest(id: number) {
+  try {
+    await ElMessageBox.confirm('确定删除该兴趣吗？', '确认', { type: 'warning' })
+  } catch {
+    return
+  }
+  deletingId.value = id
+  try {
+    await archiveStore.removeInterest(id)
+  } catch {
+    /* 拦截器已提示 */
+  } finally {
+    deletingId.value = null
+  }
 }
 </script>
 
@@ -92,7 +110,14 @@ function deleteInterest(id: number) {
           <el-button link type="primary" size="small" @click="openEditInterest(item.id)">
             编辑
           </el-button>
-          <el-button link type="danger" size="small" @click="deleteInterest(item.id)">
+          <el-button
+            link
+            type="danger"
+            size="small"
+            :loading="deletingId === item.id"
+            :disabled="deletingId !== null"
+            @click="deleteInterest(item.id)"
+          >
             删除
           </el-button>
         </div>
@@ -121,7 +146,9 @@ function deleteInterest(id: number) {
     </el-form>
     <template #footer>
       <el-button @click="interestDialogVisible = false">取消</el-button>
-      <el-button type="primary" @click="saveInterest">保存</el-button>
+      <el-button type="primary" :loading="saving" :disabled="saving" @click="saveInterest"
+        >保存</el-button
+      >
     </template>
   </el-dialog>
 </template>

@@ -7,13 +7,17 @@ import type { ExportJobItem, TeacherExportJob, TeacherExportTemplate } from '@/s
  * 替代 admin 版单任务轮询 /admin/exports/{jobId}）、删除（DELETE /teacher/exports/{jobId}）、
  * 导出模板（GET /teacher/exports/templates）。
  * 研究数据导出（/admin/exports/research）无教师端等价接口，保留 admin。
+ * 原「手动添加学期」按钮与弹窗、「选择可导年级」勾选块已移除：
+ * 前者无 @click 从未生效（该职责属 features/teacher/semester-management 学期管理页），
+ * 后者因导出范围没有「年级」选项而不可达、勾选值也从未被提交。
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Download, FileDown, FlaskConical, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { Download, FileDown, FlaskConical, Trash2 } from 'lucide-vue-next'
 
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import {
   deleteTeacherExportJob,
+  downloadFile,
   getExportJob,
   getTeacherExportJobs,
   getTeacherExportTemplates,
@@ -23,6 +27,8 @@ import {
 import { usePollingTask } from '@/shared/composables/usePollingTask'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
+import { EXPORT_TYPES } from '@/shared/constants/dict'
+import { formatDateTime } from '@/shared/utils/time'
 import GradeImportPanel from './components/GradeImportPanel.vue'
 import ResearchExportDialog from './components/ResearchExportDialog.vue'
 
@@ -34,10 +40,6 @@ const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:a
 const canExportResearch = computed(() => hasPermission('export:research'))
 /** 成绩导入面板：grade:import */
 const canImportGrade = computed(() => hasPermission('grade:import'))
-/** 手动添加学期：semester:manage */
-const canManageSemester = computed(() => hasPermission('semester:manage'))
-/** 选择可导年级：export:manage（管理端导出配置） */
-const canChooseGrade = computed(() => hasPermission('export:manage'))
 
 /** 组织范围下拉项（学院/专业/班级，来自 /auth/me 的 scopes） */
 const { colleges, majors, classes } = useScopeFilter()
@@ -47,7 +49,6 @@ const filters = reactive({
   collegeId: undefined as number | undefined,
   majorId: undefined as number | undefined,
   classId: undefined as number | undefined,
-  grade: undefined as string | undefined,
   status: '',
   dateRange: [] as string[],
 })
@@ -155,15 +156,13 @@ const researchPolling = usePollingTask<ExportJobItem>({
 
 const statusOptions = ['全部', '已完成', '处理中', '失败']
 
-// ── 超管专属：添加学期 / 可导年级 ──
-const semesterDialogVisible = ref(false)
-const newSemester = ref('')
-const gradeSelection = ref<string[]>([])
-const gradeOptions = ['2024级', '2023级', '2022级', '2021级']
-
 // ── 研究数据导出（/admin/exports/research）：弹窗已拆至 ResearchExportDialog.vue ──
 const researchDialogVisible = ref(false)
 const submittingArchive = ref(false)
+/** 正在删除的导出任务 id（行内按钮 Loading；不复用列表 tasksLoading，否则整表会转圈） */
+const deletingJobId = ref<number | null>(null)
+/** 正在下载的导出任务 id（同上，行内按钮独立 Loading） */
+const downloadingJobId = ref<number | null>(null)
 
 /** 弹窗创建任务成功：入列表并启动进度轮询 */
 function handleResearchCreated(job: TeacherExportJob) {
@@ -190,7 +189,6 @@ async function handleExport(fileType: 'pdf' | 'xlsx') {
       ? await submitAdminArchiveExport({
           scopeType,
           scopeId,
-          grade: filters.scope === '年级' ? filters.grade : undefined,
           fileType: selectedTemplate?.exportType ?? fileType,
           templateId: selectedTemplate?.templateId,
         })
@@ -223,12 +221,57 @@ async function handleDeleteExport(row: TeacherExportJob) {
   } catch {
     return
   }
+  deletingJobId.value = row.exportJobId
   try {
     await deleteTeacherExportJob(row.exportJobId)
     ElMessage.success('已删除导出任务')
     exportTasks.value = exportTasks.value.filter((t) => t.exportJobId !== row.exportJobId)
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingJobId.value = null
+  }
+}
+
+/** 从后端返回的下载地址中取出 fileId（形如 .../common/files/{fileId}/download），取不到返回 null */
+function extractFileId(url: string | null | undefined): number | null {
+  const matched = url ? /\/common\/files\/(\d+)\/download/.exec(url) : null
+  return matched?.[1] ? Number(matched[1]) : null
+}
+
+/** 下载链接是否已过期（后端 download_expire_at 已过时下载会被拒，界面上先给出结论） */
+function isExpired(expireAt: string | null | undefined): boolean {
+  return !!expireAt && new Date(expireAt).getTime() < Date.now()
+}
+
+/** 导出内容展示：优先模板名，其次导出类型中文名，最后原样回显后端码 */
+function contentLabel(row: TeacherExportJob): string {
+  return row.templateName ?? EXPORT_TYPES[row.exportType] ?? row.exportType
+}
+
+/**
+ * 下载导出文件。
+ *
+ * ⚠️ 后端返回的 downloadUrl 指向鉴权端点 /common/files/{fileId}/download，
+ * 用 `<a :href>` 直链不会带 Authorization 头（实测无 token 返回 401 未登录），
+ * 故此处只取其中的 fileId，改为经 downloadFile 带 Bearer 取 blob 保存。
+ * 同时 downloadUrl 里的主机名是**任务创建时**的服务端地址（隧道会变），
+ * 直接使用旧主机同样会失败，因此只取路径、不取主机。
+ */
+async function handleDownload(row: TeacherExportJob) {
+  const fileId = extractFileId(row.downloadUrl)
+  if (fileId == null) {
+    ElMessage.warning('该记录暂无可用下载文件')
+    return
+  }
+  downloadingJobId.value = row.exportJobId
+  try {
+    await downloadFile(fileId)
+    ElMessage.success('下载已开始')
+  } catch {
+    ElMessage.error('下载失败，链接可能已过期，请重新导出')
+  } finally {
+    downloadingJobId.value = null
   }
 }
 
@@ -316,9 +359,6 @@ onUnmounted(() => {
             style="width: 240px"
           />
         </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :icon="Search">查询</el-button>
-        </el-form-item>
       </el-form>
     </div>
 
@@ -357,17 +397,7 @@ onUnmounted(() => {
             @click="researchDialogVisible = true"
             >研究数据导出</el-button
           >
-          <template v-if="canManageSemester">
-            <el-button :icon="Plus" @click="semesterDialogVisible = true">手动添加学期</el-button>
-          </template>
         </div>
-      </div>
-      <div v-if="canChooseGrade" class="mc-card__body">
-        <el-form-item label="选择可导年级">
-          <el-checkbox-group v-model="gradeSelection">
-            <el-checkbox v-for="g in gradeOptions" :key="g" :label="g" :value="g" />
-          </el-checkbox-group>
-        </el-form-item>
       </div>
     </div>
 
@@ -388,7 +418,7 @@ onUnmounted(() => {
           <el-table-column prop="exportJobId" label="任务ID" width="80" />
           <el-table-column label="导出内容" width="160">
             <template #default="{ row }">
-              {{ row.templateName || row.exportType }}
+              {{ contentLabel(row as TeacherExportJob) }}
             </template>
           </el-table-column>
           <el-table-column label="状态" width="100">
@@ -409,15 +439,28 @@ onUnmounted(() => {
               />
             </template>
           </el-table-column>
-          <el-table-column prop="createdAt" label="创建时间" width="170" />
+          <el-table-column label="创建时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+          </el-table-column>
           <el-table-column label="下载" width="240" align="center">
             <template #default="{ row }">
               <template v-if="row.downloadUrl">
-                <a :href="row.downloadUrl" target="_blank" class="archive-export__download">下载</a>
+                <el-button
+                  v-if="!isExpired(row.expireAt)"
+                  text
+                  type="primary"
+                  size="small"
+                  :icon="Download"
+                  :loading="downloadingJobId === row.exportJobId"
+                  :disabled="downloadingJobId !== null"
+                  @click="handleDownload(row as TeacherExportJob)"
+                  >下载</el-button
+                >
+                <span v-else class="archive-export__expired">链接已过期</span>
                 <p class="archive-export__expire-hint">
                   {{
                     row.expireAt
-                      ? `链接有时效，请尽快下载（有效期至 ${row.expireAt}）`
+                      ? `有效期至 ${formatDateTime(row.expireAt)}`
                       : '链接有时效，请尽快下载'
                   }}
                 </p>
@@ -432,6 +475,8 @@ onUnmounted(() => {
                 text
                 size="small"
                 :icon="Trash2"
+                :loading="deletingJobId === row.exportJobId"
+                :disabled="deletingJobId !== null"
                 @click="handleDeleteExport(row as TeacherExportJob)"
                 >删除</el-button
               >
@@ -447,18 +492,6 @@ onUnmounted(() => {
     </div>
 
     <GradeImportPanel v-if="canImportGrade" />
-
-    <el-dialog v-model="semesterDialogVisible" title="手动添加学期" width="400px">
-      <el-form>
-        <el-form-item label="学期名称">
-          <el-input v-model="newSemester" placeholder="例如：2026-2027-1" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="semesterDialogVisible = false">取消</el-button>
-        <el-button type="primary">确定</el-button>
-      </template>
-    </el-dialog>
 
     <ResearchExportDialog
       v-model:visible="researchDialogVisible"
@@ -489,13 +522,9 @@ onUnmounted(() => {
     color: var(--el-text-color-secondary);
     flex-shrink: 0;
   }
-  &__download {
-    color: var(--el-color-primary);
-    text-decoration: none;
+  &__expired {
+    color: var(--el-text-color-placeholder);
     font-size: 13px;
-    &:hover {
-      text-decoration: underline;
-    }
   }
   &__nodata {
     color: var(--el-text-color-placeholder);

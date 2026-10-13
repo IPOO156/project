@@ -46,12 +46,13 @@ function mapMessage(m: any): Notification {
   }
 }
 
+// 以下写操作（已读 / 归档 / 删除）失败时不再吞错，也不再伪造成功返回值：
+// 异常向上抛给调用方（stores/notification.ts 负责消化，错误提示由 request.ts 响应拦截器统一给出）。
+// 曾用 `.catch(() => ({ isArchived: 1 }))` 之类伪造成功，造成「提示成功、刷新后又回来」的误导。
+
 /** 单个点击已读（PUT /messages/{messageId}/read） */
 export function markAsRead(messageId: string): Promise<void> {
-  return request
-    .put(`/messages/${messageId}/read`)
-    .then(() => undefined)
-    .catch(() => undefined)
+  return request.put(`/messages/${messageId}/read`).then(() => undefined)
 }
 
 /** 全部一键已读（PUT /messages/read-all） */
@@ -59,7 +60,6 @@ export function markAllAsRead(): Promise<{ markedCount: number }> {
   return request
     .put('/messages/read-all')
     .then((res: any) => ({ markedCount: res?.markedCount ?? 0 }))
-    .catch(() => ({ markedCount: 0 }))
 }
 
 /** 选择多个已读（PUT /messages/batch-read） */
@@ -67,37 +67,27 @@ export function batchReadMessages(messageIds: string[]): Promise<{ markedCount: 
   return request
     .put('/messages/batch-read', { messageIds: messageIds.map(Number) })
     .then((res: any) => ({ markedCount: res?.markedCount ?? 0 }))
-    .catch(() => ({ markedCount: 0 }))
 }
 
 /** 归档消息（PUT /messages/{messageId}/archive） */
 export function archiveMessage(
   messageId: string,
 ): Promise<{ messageId: string; isArchived: number; archivedAt: string }> {
-  return request
-    .put(`/messages/${messageId}/archive`)
-    .then((res: any) => ({
-      messageId: String(res?.messageId ?? messageId),
-      isArchived: res?.isArchived ?? 1,
-      archivedAt: res?.archivedAt ?? '',
-    }))
-    .catch(() => ({ messageId, isArchived: 1, archivedAt: '' }))
+  return request.put(`/messages/${messageId}/archive`).then((res: any) => ({
+    messageId: String(res?.messageId ?? messageId),
+    isArchived: res?.isArchived ?? 1,
+    archivedAt: res?.archivedAt ?? '',
+  }))
 }
 
 /** 取消归档消息（PUT /messages/{messageId}/unarchive） */
 export function unarchiveMessage(messageId: string): Promise<void> {
-  return request
-    .put(`/messages/${messageId}/unarchive`)
-    .then(() => undefined)
-    .catch(() => undefined)
+  return request.put(`/messages/${messageId}/unarchive`).then(() => undefined)
 }
 
 /** 删除单条消息（DELETE /messages/{messageId}） */
 export function deleteNotification(messageId: string): Promise<void> {
-  return request
-    .delete(`/messages/${messageId}`)
-    .then(() => undefined)
-    .catch(() => undefined)
+  return request.delete(`/messages/${messageId}`).then(() => undefined)
 }
 
 /** 选择多个删除（DELETE /messages/batch） */
@@ -105,7 +95,6 @@ export function batchDeleteMessages(messageIds: string[]): Promise<{ deletedCoun
   return request
     .delete('/messages/batch', { data: { messageIds: messageIds.map(Number) } })
     .then((res: any) => ({ deletedCount: res?.deletedCount ?? 0 }))
-    .catch(() => ({ deletedCount: 0 }))
 }
 
 /** 获取消息通知设置（GET /messages/settings） */

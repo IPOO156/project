@@ -7,23 +7,6 @@ function nextId(): string {
   return String(++idCounter)
 }
 
-const MOCK_PLANS: CareerPlanRecord[] = [
-  {
-    id: '1',
-    semester: '2023-2024-1',
-    title: '大二学年成长规划',
-    submitDate: '2025-09-15',
-    status: 'pending',
-  },
-  {
-    id: '2',
-    semester: '2022-2023-2',
-    title: '大一学年总结与规划',
-    submitDate: '2025-03-10',
-    status: 'pending',
-  },
-]
-
 /** 职业规划审批状态（career_plans.status 0-4）→ 前端状态 */
 const CAREER_PLAN_STATUS_MAP: Record<number, CareerPlanRecord['status']> = {
   0: 'draft',
@@ -35,7 +18,8 @@ const CAREER_PLAN_STATUS_MAP: Record<number, CareerPlanRecord['status']> = {
 
 /**
  * 获取职业规划列表
- * 对接后端 GET /profile/career-plans，接口异常时回退 Mock。
+ * 对接后端 GET /profile/career-plans。接口异常时不再回退示例数据——
+ * 编造的规划会被学生误认为自己的真实记录，失败由 Store 置错误态、页面展示空态。
  */
 export function getCareerPlans(): Promise<CareerPlanRecord[]> {
   return request
@@ -51,7 +35,6 @@ export function getCareerPlans(): Promise<CareerPlanRecord[]> {
         statusLabel: p.statusLabel,
       })),
     )
-    .catch(() => Promise.resolve([...MOCK_PLANS]))
 }
 
 /** 提交职业规划的载荷（字段与 POST /profile/career-plans 一致，以表单数据为准） */
@@ -67,10 +50,11 @@ export interface SubmitCareerPlanPayload {
 
 /**
  * 提交职业规划
- * 对接后端 POST /profile/career-plans，接口异常时回退 Mock。
+ * 对接后端 POST /profile/career-plans。异常直接向上抛出交由调用方处理（本函数从不回退示例数据）。
  * semester 为业务学期 name，提交前经 getSemesters() 映射为数字 semesterId，禁止 Number() 强制转换。
  */
 export function submitCareerPlan(data: SubmitCareerPlanPayload): Promise<CareerPlanRecord> {
+  // id / submitDate 仅在后端未回传时兜底（后端已回 planId / submittedAt），非示例数据
   const buildRecord = (id: string, res?: any): CareerPlanRecord => ({
     id,
     semester: data.semester,

@@ -138,42 +138,10 @@ const teacherRoutes: RouteRecordRaw[] = [
     component: () => import('@/features/teacher/scheduled-task/ScheduledTask.vue'),
     meta: { title: '定时任务', teacher: true, permission: 'scheduled-task' },
   },
-  {
-    path: 'system-maintenance',
-    redirect: '/teacher/system-maintenance/hardware',
-    children: [
-      {
-        path: 'hardware',
-        name: 'TeacherHardwareMaintenance',
-        component: () => import('@/features/teacher/system-maintenance/HardwareMaintenance.vue'),
-        meta: { title: '硬件维护', teacher: true, permission: 'system-maintenance' },
-      },
-      {
-        path: 'software',
-        name: 'TeacherSoftwareMaintenance',
-        component: () => import('@/features/teacher/system-maintenance/SoftwareMaintenance.vue'),
-        meta: { title: '软件维护', teacher: true, permission: 'system-maintenance' },
-      },
-    ],
-  },
-  {
-    path: 'info-security',
-    redirect: '/teacher/info-security/network',
-    children: [
-      {
-        path: 'network',
-        name: 'TeacherNetworkSecurity',
-        component: () => import('@/features/teacher/info-security/NetworkSecurity.vue'),
-        meta: { title: '网络安全', teacher: true, permission: 'info-security' },
-      },
-      {
-        path: 'data',
-        name: 'TeacherDataSecurity',
-        component: () => import('@/features/teacher/info-security/DataSecurity.vue'),
-        meta: { title: '数据安全', teacher: true, permission: 'info-security' },
-      },
-    ],
-  },
+  /* 硬件维护 / 软件维护 / 网络安全 / 数据安全台账 四条路由已删除：
+   * 后端无任何对应接口，页面 100% 为写死的假数据（原问题清单 B-15）。
+   * 产品口径已定「删页」（2026-10-10），故连带路由与页面一并移除，
+   * 避免注册即可由 URL 直达的假数据页。 */
 
   /* ===================== 旧路径兜底 =====================
    * 页面框架合并后，原一级菜单的 URL 变为 query 形式的 tab。

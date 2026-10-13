@@ -107,6 +107,7 @@ function handleReset() {
 // ── 新建 / 编辑 ──
 const dialogVisible = ref(false)
 const saving = ref(false)
+const deletingId = ref<number | null>(null)
 const loadingDetail = ref(false)
 const editingId = ref(0)
 
@@ -290,12 +291,15 @@ async function handleDelete(item: FormTemplateItem) {
   } catch {
     return
   }
+  deletingId.value = item.id
   try {
     await deleteFormTemplate(item.id)
     ElMessage.success('模板已删除')
     await loadList()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -317,6 +321,20 @@ onMounted(() => void loadList())
         <el-button :icon="Plus" type="primary" @click="openCreate">新建模板</el-button>
       </div>
     </div>
+
+    <!--
+      如实告知当前可用范围：模板/字段能存进后端，但后端除本模块的增删改查外
+      没有任何模块读取表单模板（无实体/接口引用 form_templates，学生端申报页
+      不按模板渲染、提交时也不校验模板字段），故此处调整字段不影响学生实际申报。
+      待后端接入模板消费后删除本提示。
+    -->
+    <el-alert
+      class="form-customization__notice"
+      type="warning"
+      :closable="false"
+      show-icon
+      title="模板尚未接入学生端：目前字段配置只保存在后端配置表中，后端还没有任何模块读取表单模板，学生的申报页面不会按这里的模板渲染，也不会按模板校验提交内容。"
+    />
 
     <div class="mc-filter-bar">
       <el-form inline @submit.prevent>
@@ -411,6 +429,8 @@ onMounted(() => void loadList())
                 type="danger"
                 size="small"
                 :icon="Trash2"
+                :loading="deletingId === (row as FormTemplateItem).id"
+                :disabled="deletingId !== null"
                 @click="handleDelete(row as FormTemplateItem)"
               >
                 删除
@@ -455,7 +475,7 @@ onMounted(() => void loadList())
             <el-form-item label="模板编码" required>
               <el-input
                 v-model="form.code"
-                placeholder="唯一编码，例如 basic_info"
+                placeholder="模板唯一编码，如 basic_info"
                 maxlength="50"
                 :disabled="editingId !== 0"
               />
@@ -513,8 +533,8 @@ onMounted(() => void loadList())
                 />
                 <el-input
                   v-model="field.key"
-                  placeholder="字段标识，如：name"
-                  style="width: 150px"
+                  placeholder="字段名(提交JSON键)，如 name"
+                  style="width: 170px"
                   class="mc-num"
                 />
                 <el-select v-model="field.type" style="width: 120px">
@@ -578,6 +598,10 @@ onMounted(() => void loadList())
 
 <style scoped lang="scss">
 .form-customization {
+  &__notice {
+    margin-bottom: $spacing-lg;
+  }
+
   &__count {
     font-size: 13px;
     color: var(--el-text-color-secondary);

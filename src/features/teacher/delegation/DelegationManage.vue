@@ -237,6 +237,20 @@ onMounted(() => void loadList())
       </div>
     </div>
 
+    <!--
+      委托当前只登记不生效：后端除本模块的增删查与状态定时流转外，没有任何模块读取
+      approval_delegations；审批待办仍按 role_scopes + 审批节点范围下发/放行
+      （AuditTaskService 未引用委托，ApprovalFlowStep.allowDelegate 也未被消费）。
+      如实提示，避免管理员/教师误以为委托后任务已转由他人办理。待后端接入后删除本提示。
+    -->
+    <el-alert
+      class="delegation__notice"
+      type="warning"
+      :closable="false"
+      show-icon
+      title="委托暂不会改变审批流转：委托记录会保存并按时生效/过期，但后端尚未在任务下发与审批放行时读取委托，因此被委托人不会因此看到您的待办、也不能代您审批；管理员端也没有委托列表，无法从管理端查到谁被委托。"
+    />
+
     <div class="mc-filter-bar">
       <el-form inline @submit.prevent>
         <el-form-item label="方向">
@@ -414,6 +428,10 @@ onMounted(() => void loadList())
 
 <style scoped lang="scss">
 .delegation {
+  &__notice {
+    margin-bottom: $spacing-lg;
+  }
+
   &__count {
     font-size: 13px;
     color: var(--el-text-color-secondary);

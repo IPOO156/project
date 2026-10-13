@@ -8,10 +8,13 @@ import type {
 /**
  * ArchiveView - 档案查看 / 档案汇总总览
  * 对接后端：
- * - /admin/archives/overview（组织档案汇总，维度全校/学院/专业/班级 + 下钻）
- * - /admin/archives（学生档案列表，支持组织/状态/学期/关键词筛选）
- * - /admin/archives/{archiveId}（档案详情）
- * 教师端无等价接口，以上三项暂保留 admin（后端缺口见核查报告）。
+ * - /teacher/archives/overview（教师端组织档案汇总，维度全校/学院/专业/班级 + 下钻）
+ * - /teacher/archives（教师端学生档案列表，支持组织/状态/学期/关键词筛选）
+ * 以上两项与管理端 /admin/archives* 的参数、响应字段完全一致，差别仅在鉴权口径
+ * （教师按 role_scopes 限定范围，管理端不限制）。
+ * 仍为 admin 端点、待后端补教师端接口的部分：
+ * - /admin/archives/{archiveId}（档案详情，教师身份会 403，详见 openDetail）
+ * - /admin/statistics/overview（档案汇总统计看板，见 components/StatisticsOverview.vue）
  * 行内「学生档案」按钮进入 /teacher/student-detail/{userId}（教师端 /teacher/students/*）。
  * 学期下拉与学院/专业/班级范围来自 /common/semesters + /auth/me scopes。
  */
@@ -22,9 +25,9 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   getArchiveDetail,
-  getArchiveOverview,
   getSemesters,
-  listArchives,
+  getTeacherArchiveOverview,
+  listTeacherArchives,
 } from '@/shared/api/teacher'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 import StatisticsOverview from './components/StatisticsOverview.vue'
@@ -135,7 +138,7 @@ async function loadOverview() {
     if (dimension.value === '学院') orgId = filters.collegeId
     else if (dimension.value === '专业') orgId = filters.majorId
     else if (dimension.value === '班级') orgId = filters.classId
-    const res = await getArchiveOverview({
+    const res = await getTeacherArchiveOverview({
       semesterId: filters.semesterId,
       orgType,
       orgId,
@@ -163,7 +166,7 @@ async function loadOverview() {
   }
 }
 
-/* ── 档案列表（/admin/archives）── */
+/* ── 档案列表（/teacher/archives）── */
 
 const listLoading = ref(false)
 const list = ref<ArchiveAdminListItem[]>([])
@@ -174,7 +177,7 @@ const perPage = ref(10)
 async function loadList() {
   listLoading.value = true
   try {
-    const res = await listArchives({
+    const res = await listTeacherArchives({
       page: page.value,
       per_page: perPage.value,
       semesterId: filters.semesterId,
@@ -220,7 +223,8 @@ function handleReset() {
   void loadList()
 }
 
-/* ── 档案详情（/admin/archives/{id}）── */
+/* ── 档案详情（/admin/archives/{id}）：教师端暂无等价接口，教师身份调用会 403，
+      待后端补 /teacher/archives/{archiveId} 后改接；此处保留现状（详见文件头注释）── */
 
 const detailDrawerVisible = ref(false)
 const detailLoading = ref(false)

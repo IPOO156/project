@@ -37,14 +37,16 @@ test.describe('教师端登录', () => {
 test.describe('教师端核心页冒烟', () => {
   test.describe.configure({ mode: 'serial' })
 
-  const PAGES = [
+  /** api 为可选的「核心数据接口」断言：必须成功，且必须是教师端端点（防回退到 /admin/* ⇒ 教师 403） */
+  const PAGES: { path: string; name: string; api?: RegExp }[] = [
     { path: '/teacher/dashboard', name: '首页' },
-    // ⚠️ 本页当前只验「能打开、无 JS 报错」，不验数据。
-    // 原因：该页调的是管理端 /admin/archives 等端点，教师身份一律 403，
-    // 页面稳定显示「覆盖学生 0 人 / 档案总数 0 份」。这是已知缺陷，
-    // 详见 docs/2026-09-23-三端接口与假数据审计报告.md §七-4②。
-    // 待前端改接 GET /teacher/students 后，再补数据断言。
-    { path: '/teacher/archive-view', name: '档案查看（数据待修复）' },
+    // 列表与汇总已改接 /teacher/archives、/teacher/archives/overview（按 role_scopes 限域），故断言列表接口 200。
+    // 详情仍调 /admin/archives/{archiveId} ⇒ 教师点「详情」403，待后端补 /teacher/archives/{archiveId}
+    // （见 docs/2026-10-09-后端需处理问题清单.md B-2），故详情暂不纳入断言。
+    { path: '/teacher/archive-view', name: '档案查看', api: /\/teacher\/archives(\?|$)/ },
+    // 评分重算页进页即拉学生候选；候选必须来自 /teacher/archives —— 若退回 /admin/archives，
+    // 教师（仅持 teacher:archive:view）会 403，断言即失败
+    { path: '/teacher/score-recalculate', name: '评分重算', api: /\/teacher\/archives(\?|$)/ },
     { path: '/teacher/material-review/pending', name: '材料审核' },
     { path: '/teacher/delegation', name: '审批委托' },
     { path: '/teacher/messages', name: '消息中心' },
@@ -65,12 +67,23 @@ test.describe('教师端核心页冒烟', () => {
 
   for (const item of PAGES) {
     test(`${item.name}（${item.path}）可正常打开`, async () => {
+      const api = item.api
+      const waitApi = api
+        ? page.waitForResponse((r) => api.test(r.url()) && r.request().method() === 'GET', {
+            timeout: 20_000,
+          })
+        : null
+
       await page.goto(item.path)
 
       await expect(page).toHaveURL(new RegExp(`${item.path.replace(/\//g, '\\/')}$`))
       await expect(page.locator('.layout')).toBeVisible()
       await expect(page.locator('.sidebar__el-menu .el-menu-item').first()).toBeVisible()
 
+      if (waitApi) {
+        // 回退到 /admin/archives 时教师身份得到 403，此断言即失败
+        expect((await waitApi).status(), `${item.name} 核心接口应返回 200`).toBe(200)
+      }
       expect(pageErrors, `${item.path} 出现未捕获异常`).toEqual([])
     })
   }
