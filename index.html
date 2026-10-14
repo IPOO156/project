@@ -4,12 +4,28 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Noto+Serif+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+    <meta
+      name="description"
+      content="学生档鉴未来——学生档案信息管理平台，统一管理荣誉成果、成长轨迹与档案资产"
+    />
+    <!-- 拉丁字体本地化，避免 Google Fonts CDN 阻塞首屏渲染 -->
+    <link rel="stylesheet" href="/fonts/fonts.css" />
+    <!-- Noto Serif SC 中文全字库过大不本地化，异步加载不阻塞渲染 -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap"
+      />
+    </noscript>
     <!-- 静态兜底标题：登录页与首屏挂载前显示。登录页学生/教师共用，故不带端标识；
          进入系统后由 DefaultLayout 按 route.meta.teacher 改写为「<页面名> · 学生/教师档鉴未来」 -->
-    <title>档案管理系统</title>
+    <title>档鉴未来</title>
   </head>
   <body>
     <div id="app"></div>

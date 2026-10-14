@@ -83,7 +83,7 @@ export function submitCareerPlan(data: SubmitCareerPlanPayload): Promise<CareerP
           goals: data.goals,
           evidenceFileIds: data.evidenceFileIds,
           isDraft: 0,
-        } as any)
+        })
         .then((res: any) => buildRecord(String(res.planId ?? nextId()), res)),
     )
 }

@@ -15,6 +15,7 @@ import {
   updatePoliticalStatus,
   updateStudentStatus,
 } from '@/shared/api/student'
+import { STUDENT_STATUS_OPTIONS } from '@/shared/constants/dict'
 import { calcAggregateScore } from '@/shared/utils/score'
 import AvatarUploader from './components/AvatarUploader.vue'
 import AwardsPanel from './components/AwardsPanel.vue'
@@ -150,12 +151,6 @@ const isEditing = ref(false)
 /** 基本资料「保存」提交中（最多串行 3 次 PUT，防连点重复提交） */
 const savingEdit = ref(false)
 const formData = ref<Partial<UserInfo> & { politicalStatus?: string; studentStatus?: string }>({})
-/** 学生状态字典编码，枚举值来自接口文档 4.1.5.1（禁止前端自行增改） */
-const STUDENT_STATUS_OPTIONS = [
-  { value: 'current', label: '在校生' },
-  { value: 'fresh_graduate', label: '应届毕业生' },
-  { value: 'graduated', label: '已毕业' },
-] as const
 const politicalOptions = ref<{ value: string; label: string }[]>([])
 /** /profile/info 中的学籍信息（政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
 const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})

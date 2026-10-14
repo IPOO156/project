@@ -23,7 +23,7 @@ const planForm = reactive({
   title: '',
   content: '',
   requirement: '',
-  goals: [] as any[],
+  goals: [] as Array<Record<string, unknown>>,
   evidenceFileIds: [] as number[],
 })
 const { clearDraft } = useFormDraft('career-plan', planForm)

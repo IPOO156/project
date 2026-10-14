@@ -22,7 +22,7 @@ export function useThemeRipple() {
       border-radius: 50%;
       background: ${rippleColor};
       pointer-events: none;
-      z-index: 9999;
+      z-index: var(--z-ripple);
       transform: scale(0);
       opacity: 0;
       filter: blur(4px);

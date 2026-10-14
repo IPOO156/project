@@ -9,7 +9,7 @@ import { Check, CircleCheck, Clock, Medal, Plus, TrendingUp, X } from 'lucide-vu
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAwardsOverview } from '@/shared/api/awards'
-import { APPLICATION_STATUS } from '@/shared/constants/dict'
+import { APPLICATION_STATUS, STAR_TYPE_LABELS } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
 import PieChart from './components/PieChart.vue'
@@ -44,13 +44,6 @@ const pendingCount = computed(() => overview.value?.pendingReview ?? 0)
 const approvedCount = computed(() => overview.value?.approved ?? 0)
 const newThisSemester = computed(() => overview.value?.newThisSemester ?? 0)
 
-/** 后端 typeDistribution key（下划线）→ 中文名 */
-const STAR_TYPE_LABELS: Record<string, string> = {
-  competition_star: '竞赛之星',
-  research_star: '科研之星',
-  innovation_star: '双创之星',
-}
-
 const typeData = computed(() =>
   Object.entries(overview.value?.typeDistribution ?? {})
     .map(([key, value]) => ({ name: STAR_TYPE_LABELS[key] ?? key, value }))
@@ -70,6 +63,7 @@ const trendData = computed(() =>
     .filter((t) => t.semester),
 )
 
+// 组件特有 UI 配置（含看板卡片跳转路由 path），非通用字典，保留在本组件
 const STAR_TYPES_CONFIG = [
   { key: 'competition_star', label: '竞赛之星', path: '/awards/competition-star' },
   { key: 'research_star', label: '科研之星', path: '/awards/scientific-star' },

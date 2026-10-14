@@ -32,6 +32,7 @@ import {
   getTeacherStudentTimeline,
   getTeacherStudentWeaknesses,
 } from '@/shared/api/teacher'
+import { TEACHER_EVENT_TYPE_OPTIONS } from '@/shared/constants/dict'
 import CareerPlanDialog from './components/CareerPlanDialog.vue'
 import SuggestionDialog from './components/SuggestionDialog.vue'
 
@@ -46,15 +47,6 @@ const weaknesses = ref<TeacherWeaknessItem[]>([])
 
 // ── 成长时间轴 ──
 const eventTypeFilter = ref<number | ''>('')
-const EVENT_TYPE_OPTIONS = [
-  { value: '', label: '全部' },
-  { value: 1, label: '奖项' },
-  { value: 2, label: '成绩' },
-  { value: 3, label: '实践' },
-  { value: 4, label: '职业规划' },
-  { value: 5, label: '短板改进' },
-  { value: 6, label: '能力提升' },
-]
 const filteredTimeline = computed(() => {
   const list = timeline.value?.timeline ?? []
   if (!eventTypeFilter.value) return list
@@ -279,7 +271,11 @@ onMounted(() => void loadAll())
           <div class="mc-card__head">
             <span class="mc-card__title"><GraduationCap :size="15" /> 成长时间轴</span>
             <el-radio-group v-model="eventTypeFilter" size="small">
-              <el-radio-button v-for="o in EVENT_TYPE_OPTIONS" :key="o.label" :value="o.value">
+              <el-radio-button
+                v-for="o in TEACHER_EVENT_TYPE_OPTIONS"
+                :key="o.label"
+                :value="o.value"
+              >
                 {{ o.label }}
               </el-radio-button>
             </el-radio-group>

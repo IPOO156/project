@@ -1,3 +1,4 @@
+import type { ApplicationType } from '@/shared/types/types'
 import { ElMessageBox } from 'element-plus'
 import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
@@ -48,7 +49,8 @@ export function useFormDraft<T extends Record<string, unknown>>(
   const applicationType = options?.type ?? key
   const minDraftFields = options?.minDraftFields
   // 档案类走 /applications/{archiveId}/autosave，奖项之星类走 /awards/{applicationId}/autosave
-  const category = activityCategoryOf(applicationType as any)
+  // applicationType 由各类型页常量传入（对应 ApplicationType）
+  const category = activityCategoryOf(applicationType as ApplicationType)
   let timer: ReturnType<typeof setTimeout> | undefined
   let hasDirtyData = false
 
@@ -56,10 +58,10 @@ export function useFormDraft<T extends Record<string, unknown>>(
     // 空表单不写 localStorage：保存草稿后清空表单会触发深 watcher，不能因此抹掉已存草稿
     if (!isNonEmpty(form)) return
     try {
-      const snapshot = { ...form }
+      const snapshot: Record<string, unknown> = { ...form }
       // 后端记录 id（archiveId/applicationId）由 setRecordId 维护，仅用于 autosave 寻址，不写入本地草稿内容
-      delete (snapshot as any).archiveId
-      delete (snapshot as any).applicationId
+      delete snapshot.archiveId
+      delete snapshot.applicationId
       localStorage.setItem(storageKey, JSON.stringify(snapshot))
     } catch {
       /* ignore */
@@ -68,17 +70,19 @@ export function useFormDraft<T extends Record<string, unknown>>(
 
   /** 当前待自动保存的后端记录 id（档案 archiveId / 奖项 applicationId），无则说明尚未在服务端建过草稿记录 */
   function currentId(): number | null {
-    const raw = category === 'award' ? (form as any).applicationId : (form as any).archiveId
+    const raw = category === 'award' ? form.applicationId : form.archiveId
     const n = Number(raw)
     return Number.isFinite(n) && n > 0 ? n : null
   }
 
   /** 回填/清除后端记录 id：首次建草稿成功后写入，重置表单或切换编辑记录时清除 */
   function setRecordId(id: number | null): void {
+    // 表单类型 T 由各页 emptyForm 决定，后端记录 id 字段未必在其已知键内，按动态键写入
+    const target = form as Record<string, unknown>
     if (category === 'award') {
-      ;(form as any).applicationId = id == null ? undefined : id
+      target.applicationId = id == null ? undefined : id
     } else {
-      ;(form as any).archiveId = id == null ? undefined : id
+      target.archiveId = id == null ? undefined : id
     }
   }
 

@@ -596,7 +596,8 @@ function toEvidenceFileIds(proofMaterials: unknown): number[] {
     if (typeof item === 'number') {
       ids.push(item)
     } else if (item && typeof item === 'object') {
-      const id = (item as any).fileId ?? (item as any).id
+      const fileRef = item as { fileId?: unknown; id?: unknown }
+      const id = fileRef.fileId ?? fileRef.id
       if (typeof id === 'number') ids.push(id)
     }
   }
@@ -655,7 +656,7 @@ export async function buildContractPayload(
   }
 
   for (const [backendKey, frontKey] of Object.entries(contract.mapping)) {
-    const raw = (data as any)[frontKey]
+    const raw = data[frontKey]
     if (raw === undefined || raw === null || raw === '') continue
     if (contract.dateFields.includes(backendKey)) {
       payload[backendKey] = toDateString(raw)
@@ -693,7 +694,7 @@ async function submitResearchStarApplication(
 
   const subPayload: Record<string, any> = {}
   for (const [backendKey, frontKey] of Object.entries(sub.mapping)) {
-    const raw = (data as any)[frontKey]
+    const raw = data[frontKey]
     if (raw === undefined || raw === null || raw === '') continue
     subPayload[backendKey] = sub.dateFields.includes(backendKey) ? toDateString(raw) : raw
   }

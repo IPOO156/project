@@ -1,13 +1,6 @@
 import type { Activity, ActivityFilters } from '@/shared/types/types'
+import { ACTIVITY_FILTER_STATUS_VALUE, APPLICATION_STATUS_CODE_MAP } from '@/shared/constants/dict'
 import request from './request'
-
-const statusMap: Record<number, Activity['status']> = {
-  0: 'draft',
-  1: 'pending',
-  2: 'approved',
-  3: 'rejected',
-  4: 'withdrawn',
-}
 
 /**
  * 获取动态列表
@@ -35,22 +28,14 @@ export function getActivities(filters?: ActivityFilters): Promise<Activity[]> {
         text: item.content || item.title,
         // 后端实测返回下划线字段 submit_time（见 activities.ts 接口注释），驼峰 submitTime 仅为历史兼容别名
         time: ((item.submit_time ?? item.submitTime) || '').replace('T', ' ').slice(0, 16),
-        status: statusMap[item.status] ?? 'submitted',
+        status: (APPLICATION_STATUS_CODE_MAP[item.status] as Activity['status']) ?? 'submitted',
       })),
     )
     .catch(() => [])
 }
 
 function statusValue(status: string): number | undefined {
-  const map: Record<string, number> = {
-    draft: 0,
-    submitted: 1,
-    pending: 1,
-    approved: 2,
-    rejected: 3,
-    withdrawn: 4,
-  }
-  return map[status]
+  return ACTIVITY_FILTER_STATUS_VALUE[status]
 }
 
 // 动态的编辑 / 删除 / 撤回统一由 activities.ts 提供（后端契约为 PUT|DELETE /activities/{type}/{activityId}，

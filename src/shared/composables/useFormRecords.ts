@@ -93,7 +93,8 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
     try {
       const raw = localStorage.getItem(draftStorageKey)
       if (!raw) return null
-      const data = JSON.parse(raw)
+      // JSON.parse 结果为 any，此处显式收窄为键值记录
+      const data = JSON.parse(raw) as Record<string, unknown>
       if (!isNonEmptyDraft(data)) return null
       return {
         id: DRAFT_LOCAL_ID,
@@ -101,7 +102,7 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
         typeLabel: label,
         title: deriveRecordTitle(data) || `${label}草稿`,
         submitDate: '',
-        semester: (data as any).semester || '',
+        semester: (data.semester as string) || '',
         status: 'draft',
         ...data,
       }

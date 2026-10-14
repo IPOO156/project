@@ -184,7 +184,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
 .ai-drawer {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: $z-ai;
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;

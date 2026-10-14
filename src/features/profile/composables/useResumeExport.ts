@@ -1,7 +1,5 @@
 import type { Ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import html2canvas from 'html2canvas'
-import JSPDF from 'jspdf'
 import { h, ref } from 'vue'
 import { previewResumeExport, submitResumeExport } from '@/shared/api/career-plan'
 
@@ -185,6 +183,11 @@ export function useResumeExport() {
     el.style.opacity = '1'
 
     await new Promise((resolve) => setTimeout(resolve, 400))
+
+    const [{ default: html2canvas }, { default: JSPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ])
 
     const canvas = await html2canvas(el, {
       scale: 2,

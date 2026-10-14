@@ -1221,7 +1221,8 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .login {
     &__panel {
-      padding: 8px 16px 28px;
+      order: -1;
+      padding: 72px 16px 12px;
     }
     &__card-inner {
       padding: 30px 22px 24px;

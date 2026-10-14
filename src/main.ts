@@ -1,5 +1,4 @@
-import ElementPlus, { ElMessage } from 'element-plus'
-import zhCn from 'element-plus/es/locale/lang/zh-cn'
+import { ElMessage } from 'element-plus'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 import { initAuthState } from '@/shared/utils/token'
@@ -30,7 +29,6 @@ const app = createApp(App)
 const pinia = createPinia()
 app.use(pinia)
 app.use(router)
-app.use(ElementPlus, { locale: zhCn })
 
 // 注入 router 实例到 tabs store（store 初始化在首次使用时惰性执行，
 // 此时 router 已通过 app.use(router) 注册完毕，无需等待组件渲染）
