@@ -186,7 +186,7 @@ function handleBackdropClick(event: MouseEvent) {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: $z-overlay;
   transition: all 0.3s ease;
 }
 

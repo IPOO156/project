@@ -367,7 +367,8 @@ async function openGuide(row: any) {
         ><span class="card-title">申报记录</span
         ><span class="card-title__count">共 {{ records.length }} 条</span></template
       >
-      <el-table :data="pagedRecords as any" stripe>
+      <!-- pagedRecords 为泛型 T[]，el-table data 要求 DefaultRow[]（Record<PropertyKey, any>），双重断言显式收窄 -->
+      <el-table :data="pagedRecords as unknown as Record<PropertyKey, any>[]" stripe>
         <slot name="columns" />
         <el-table-column label="状态" width="100" align="center"
           ><template #default="{ row }"

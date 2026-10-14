@@ -122,13 +122,15 @@ request.interceptors.response.use(
         if (!hadToken) {
           return Promise.reject(error)
         }
-        if (((error.config as any).refreshCount || 0) < 3) {
+        // axios 拦截器 error 为 any 形态；config 上挂载自定义 refreshCount 记录重试次数
+        const retryConfig = error.config as { refreshCount?: number }
+        if ((retryConfig.refreshCount || 0) < 3) {
           return tryRefreshToken().then((token) => {
             if (!token) {
               forceLogout()
               return Promise.reject(error)
             }
-            ;(error.config as any).refreshCount = ((error.config as any).refreshCount || 0) + 1
+            retryConfig.refreshCount = (retryConfig.refreshCount || 0) + 1
             error.config.headers = {
               ...error.config.headers,
               Authorization: `Bearer ${token}`,

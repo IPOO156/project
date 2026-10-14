@@ -14,6 +14,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 
 import { getSemesters, submitResearchExport } from '@/shared/api/teacher'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
+import { RESEARCH_DATA_TYPE_OPTIONS } from '@/shared/constants/dict'
 
 /** 任务创建成功：父级据此入列表并启动轮询 */
 const emit = defineEmits<{ created: [job: TeacherExportJob] }>()
@@ -50,14 +51,6 @@ const RESEARCH_SCOPE_TYPE: Record<string, number> = {
 }
 
 const RESEARCH_SCOPES = ['全校', '学院', '专业', '班级', '年级']
-
-const DATA_TYPE_OPTIONS = [
-  { value: 'archives', label: '档案' },
-  { value: 'scores', label: '成绩' },
-  { value: 'audits', label: '审核' },
-  { value: 'ai', label: 'AI 分析' },
-  { value: 'career', label: '职业规划' },
-]
 
 /** 导出范围 → 学院/专业/班级下拉显隐（与筛选栏同一套规则，仅维度表不同） */
 const cascade = computed(() => scopeCascade(RESEARCH_SCOPE_TYPE[form.scope]))
@@ -175,7 +168,7 @@ onMounted(() => void loadSemesters())
       <el-form-item label="数据类型" required>
         <el-checkbox-group v-model="form.dataTypes">
           <el-checkbox
-            v-for="t in DATA_TYPE_OPTIONS"
+            v-for="t in RESEARCH_DATA_TYPE_OPTIONS"
             :key="t.value"
             :value="t.value"
             :label="t.value"

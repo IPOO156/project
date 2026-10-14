@@ -13,7 +13,11 @@ import {
   updateCareerMilestone,
 } from '@/shared/api/career-plan'
 import { useDict } from '@/shared/composables/composables'
-import { APPLICATION_STATUS } from '@/shared/constants/dict'
+import {
+  APPLICATION_STATUS,
+  APPLICATION_STATUS_CODE_MAP,
+  CAREER_ACTION_STATUS_OPTIONS,
+} from '@/shared/constants/dict'
 import CareerPlanActionUpload from './CareerPlanActionUpload.vue'
 import CareerPlanEditDialog from './CareerPlanEditDialog.vue'
 import CareerPlanInsights from './CareerPlanInsights.vue'
@@ -31,19 +35,7 @@ const emit = defineEmits<{
 }>()
 
 /** 后端 career_plans.status(0-4) → 前端字典 key */
-const STATUS_KEY_MAP: Record<number, keyof typeof APPLICATION_STATUS> = {
-  0: 'draft',
-  1: 'pending',
-  2: 'approved',
-  3: 'rejected',
-  4: 'withdrawn',
-}
-
-const ACTION_STATUS_OPTIONS = [
-  { label: '未开始', value: 0 },
-  { label: '进行中', value: 1 },
-  { label: '已完成', value: 2 },
-] as const
+const STATUS_KEY_MAP = APPLICATION_STATUS_CODE_MAP
 
 const { getColor, getLabel } = useDict(APPLICATION_STATUS)
 
@@ -131,9 +123,11 @@ async function handleDownload() {
   fileLoading.value = true
   try {
     // downloadCareerPlanFile 声明返回 void，实际响应可携带签名下载链接（downloadUrl）
-    const res = (await downloadCareerPlanFile(props.planId, 'internal')) as any
-    if (res?.downloadUrl) {
-      window.open(res.downloadUrl, '_blank', 'noopener')
+    const res = (await downloadCareerPlanFile(props.planId, 'internal')) as unknown
+    const resObj = typeof res === 'object' && res !== null ? (res as Record<string, unknown>) : null
+    const downloadUrl = resObj?.downloadUrl
+    if (typeof downloadUrl === 'string') {
+      window.open(downloadUrl, '_blank', 'noopener')
     }
   } catch {
     // 接口失败已由请求拦截器统一提示
@@ -318,7 +312,7 @@ function handleClose() {
                       @change="(s) => changeActionStatus(action, s)"
                     >
                       <el-option
-                        v-for="opt in ACTION_STATUS_OPTIONS"
+                        v-for="opt in CAREER_ACTION_STATUS_OPTIONS"
                         :key="opt.value"
                         :label="opt.label"
                         :value="opt.value"

@@ -12,6 +12,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { getAdminStatisticsHeatmap, getSemesters, getStatisticsHeatmap } from '@/shared/api/teacher'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
+import { ORG_TYPE_OPTIONS } from '@/shared/constants/dict'
 
 const { hasPermission } = useTeacherAuthz()
 const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
@@ -22,6 +23,7 @@ const loadingSemesters = ref(false)
 /** 组织范围下拉项（学院/专业/班级，来自 /auth/me 的 scopes） */
 const { colleges, majors, classes } = useScopeFilter()
 
+// 组件特有 UI 配置（含 unit/decimals/accent 等本组件展示字段），非通用字典，保留在本组件
 const METRIC_OPTIONS = [
   { value: 'gpa', label: '绩点', unit: '', decimals: 2, accent: '#1e3a5f' },
   { value: 'award', label: '获奖', unit: '项', decimals: 0, accent: '#d4a574' },
@@ -30,24 +32,16 @@ const METRIC_OPTIONS = [
   { value: 'archive', label: '档案', unit: '份', decimals: 0, accent: '#3b82f6' },
 ]
 
-const ORG_TYPE_OPTIONS = [
-  { value: 2, label: '学院' },
-  { value: 3, label: '专业' },
-  { value: 4, label: '班级' },
-]
-
-const ORG_TYPE_LABEL: Record<number, string> = {
-  2: '学院',
-  3: '专业',
-  4: '班级',
-}
-
 function metricMeta(metric: string) {
   return METRIC_OPTIONS.find((m) => m.value === metric)
 }
 
 function metricLabel(metric: string) {
   return metricMeta(metric)?.label ?? metric
+}
+
+function orgTypeLabel(orgType: number) {
+  return ORG_TYPE_OPTIONS.find((t) => t.value === orgType)?.label
 }
 
 const filters = reactive({
@@ -284,7 +278,7 @@ onMounted(async () => {
         </div>
         <div class="heat-map__head-chip">
           <span class="heat-map__head-chip-label">行维度</span>
-          <span class="heat-map__head-chip-value">{{ ORG_TYPE_LABEL[filters.orgType] }}</span>
+          <span class="heat-map__head-chip-value">{{ orgTypeLabel(filters.orgType) }}</span>
         </div>
         <div class="heat-map__head-chip">
           <span class="heat-map__head-chip-label">学期</span>

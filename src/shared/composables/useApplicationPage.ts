@@ -1,3 +1,4 @@
+import type { ApplicationType } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, reactive, ref, toRaw, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -47,6 +48,8 @@ export function useApplicationPage(
   const effectiveDraftKey = draftKey || type
 
   const form = reactive(emptyForm())
+  // 申报类型 key 由页面常量传入（对应 ApplicationType），activityCategoryOf 参数类型收窄为 ApplicationType
+  const appType = type as ApplicationType
   const submitting = ref(false)
 
   // ── 学期-日期联动 ──
@@ -136,7 +139,7 @@ export function useApplicationPage(
       const title = deriveRecordTitle(data)
       // 奖项报名走 8.1.2 POST /awards/duplicate-check；档案申报走 POST /applications/duplicate-check
       const r: any =
-        activityCategoryOf(type as any) === 'award'
+        activityCategoryOf(appType) === 'award'
           ? await awardDuplicateCheck({
               awardType: type,
               certificateNo: data.certNumber,
@@ -156,7 +159,10 @@ export function useApplicationPage(
             })
       // 奖项(8.x)返回 isDuplicate/duplicateRecords；档案(7.0.1)实测返回 hasDuplicate/similarItems/suggestion，统一归一化读取
       const hasDuplicate = r?.isDuplicate ?? r?.hasDuplicate
-      const duplicateList = (r?.duplicateRecords ?? r?.similarItems ?? []) as any[]
+      const duplicateList = (r?.duplicateRecords ?? r?.similarItems ?? []) as {
+        title: string
+        similarity?: number
+      }[]
       if (hasDuplicate) {
         const items = duplicateList
           .map((d) => `${d.title}${d.similarity != null ? `（相似度 ${d.similarity}%）` : ''}`)
@@ -241,7 +247,7 @@ export function useApplicationPage(
     // 必填项校验：后端对应档案扩展表多为 NOT NULL 字段，空值会被 buildContractPayload 跳过，
     // 直接 POST 会触发后端非空约束 → 409「数据校验失败」。这里在本地拦截并明确提示缺哪个字段。
     const missing = requiredFields.filter((f) => {
-      const v = (form as any)[f.key]
+      const v = (form as Record<string, unknown>)[f.key]
       return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)
     })
     if (missing.length > 0) {
@@ -252,7 +258,7 @@ export function useApplicationPage(
     if (semesterMonthConfig) {
       const { monthField, monthFieldLabel } = semesterMonthConfig
       sanitizeSemesterMonthPair(form, monthField, 'semester')
-      if (!isMonthInSemester((form as any)[monthField], form.semester)) {
+      if (!isMonthInSemester((form as Record<string, unknown>)[monthField], form.semester)) {
         ElMessage.error(`${monthFieldLabel}与学期不匹配，请重新选择`)
         return
       }
@@ -279,7 +285,7 @@ export function useApplicationPage(
   async function handleWithdraw(row: any) {
     try {
       await ElMessageBox.confirm('确定撤回？', '撤回确认', { type: 'warning' })
-      await withdrawActivity(Number(row.id), activityCategoryOf(type as any))
+      await withdrawActivity(Number(row.id), activityCategoryOf(appType))
       updateRecord(row.id, { status: 'withdrawn' })
       ElMessage.success('已撤回')
     } catch {
@@ -295,7 +301,7 @@ export function useApplicationPage(
     setRecordId(isBackendRecord ? Number(row.id) : null)
     if (isBackendRecord) {
       try {
-        const detail = await getActivityDetail(Number(row.id), activityCategoryOf(type as any))
+        const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))
         // 后端业务字段嵌在 detail.detail（后端字段名），按类型逆向映射为前端表单字段后并入 row，
         // 否则 emptyForm() 循环全部落空 → 表单空白（2026-08-31 修复）。
         // 注意不能用 {...row, ...detail} 直接展开：会把 row.status 覆盖成后端数字状态码
@@ -309,7 +315,7 @@ export function useApplicationPage(
       }
     }
     Object.keys(emptyForm()).forEach((key) => {
-      if (key in row) (form as any)[key] = row[key] ?? ''
+      if (key in row) (form as Record<string, unknown>)[key] = row[key] ?? ''
     })
     extendedForm.role = row.role || ''
     extendedForm.certNumber = row.certNumber || ''
@@ -373,7 +379,7 @@ export function useApplicationPage(
     if (!isBackendRecord) return
     detailLoading.value = true
     try {
-      const detail = await getActivityDetail(Number(row.id), activityCategoryOf(type as any))
+      const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))
       // mapDetailToForm 仅映射业务字段（不含 status），避免覆盖行上的前端状态/退回原因
       if (detail) _viewRecord({ ...row, ...mapDetailToForm(type, detail) })
     } catch {

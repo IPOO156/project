@@ -152,7 +152,7 @@ onMounted(() => {
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column label="模块类型" width="120">
           <template #default="{ row }">
-            <DictColumn :value="row.type" :options="typeOptions as any" />
+            <DictColumn :value="row.type" :options="typeOptions" />
           </template>
         </el-table-column>
         <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />

@@ -18,6 +18,7 @@ declare module 'vue' {
     ElCol: typeof import('element-plus/es')['ElCol']
     ElCollapse: typeof import('element-plus/es')['ElCollapse']
     ElCollapseItem: typeof import('element-plus/es')['ElCollapseItem']
+    ElConfigProvider: typeof import('element-plus/es')['ElConfigProvider']
     ElDatePicker: typeof import('element-plus/es')['ElDatePicker']
     ElDescriptions: typeof import('element-plus/es')['ElDescriptions']
     ElDescriptionsItem: typeof import('element-plus/es')['ElDescriptionsItem']
@@ -61,11 +62,6 @@ declare module 'vue' {
     ElUpload: typeof import('element-plus/es')['ElUpload']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    SidebarNav: typeof import('./src/components/layout/SidebarNav.vue')['default']
-    TopBar: typeof import('./src/components/layout/TopBar.vue')['default']
-    UiButton: typeof import('./src/components/ui/UiButton.vue')['default']
-    UiCard: typeof import('./src/components/ui/UiCard.vue')['default']
-    UiTag: typeof import('./src/components/ui/UiTag.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

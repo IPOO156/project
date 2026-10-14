@@ -10,7 +10,7 @@
   --el-bg-color-overlay: #ffffff;
   --el-text-color-primary: #1e293b;
   --el-text-color-secondary: #64748b;
-  --el-text-color-placeholder: #94a3b8;
+  --el-text-color-placeholder: #64748b;
   --el-text-color-disabled: #cbd5e1;
   --el-border-color: #e2e8f0;
   --el-border-color-light: #e2e8f0;
@@ -36,7 +36,7 @@
   --bark-soft: #e3c4a0;
   --bark-mid: #2d5a87;
   --bark-dark: #1e3a5f;
-  --text-light: #94a3b8;
+  --text-light: #64748b;
   --text-mid: #64748b;
   --bg-parchment: #f0f4f8;
 
@@ -60,6 +60,19 @@
   --gt-tooltip-muted: rgba(241, 245, 249, 0.72);
   --gt-halo-gold: rgba(212, 165, 116, 0.28);
   --gt-halo-green: rgba(90, 124, 90, 0.2);
+
+  /* z-index 比例尺（与 variables.scss 同步） */
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+  --z-toast: 100;
+  --z-overlay: 200;
+  --z-ai: 300;
+  --z-ripple: 400;
 }
 
 [data-theme='dark'] {

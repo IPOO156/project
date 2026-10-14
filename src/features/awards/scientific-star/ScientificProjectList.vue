@@ -81,7 +81,7 @@ onMounted(() => {
     :extended-form="page.extendedForm"
     @update:extended-form="
       (field, val) => {
-        ;(page.extendedForm as any)[field] = val
+        ;(page.extendedForm as Record<string, string>)[field] = val
       }
     "
     @save-draft="page.handleSaveDraft"

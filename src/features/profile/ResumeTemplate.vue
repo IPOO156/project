@@ -636,4 +636,15 @@ defineExpose({
   font-size: 8.5pt;
   color: #94a3b8;
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  .resume {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
 </style>

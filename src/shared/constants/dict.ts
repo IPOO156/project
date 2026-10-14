@@ -300,3 +300,96 @@ export const AUDIT_DETAIL_LABELS: Record<string, string> = {
   role: '本人角色',
   title: '标题',
 }
+
+// 学生状态选项（字典编码枚举值来自接口文档 4.1.5.1，禁止前端自行增改）
+export const STUDENT_STATUS_OPTIONS = [
+  { value: 'current', label: '在校生' },
+  { value: 'fresh_graduate', label: '应届毕业生' },
+  { value: 'graduated', label: '已毕业' },
+] as const
+
+// 成长经历标签 → 主题色（成长时间轴卡片类型指示色，按标签包含关系匹配）
+export const GROWTH_TAG_COLORS: Record<string, string> = {
+  竞赛: '#d4a574',
+  科研: '#8b6340',
+  实践: '#a67c52',
+  学业: '#5a7c5a',
+  技术: '#9a8474',
+}
+
+// 申报状态码（后端 0-4）→ APPLICATION_STATUS key
+export const APPLICATION_STATUS_CODE_MAP: Record<number, keyof typeof APPLICATION_STATUS> = {
+  0: 'draft',
+  1: 'pending',
+  2: 'approved',
+  3: 'rejected',
+  4: 'withdrawn',
+}
+
+// 申报审核状态筛选项（审核列表 status 过滤，submitted 即待审核）
+export const REVIEW_STATUS_FILTER_OPTIONS = [
+  { label: '待审核', value: 'submitted' },
+  { label: '已通过', value: 'approved' },
+  { label: '已驳回', value: 'rejected' },
+] as const
+
+// 组织层级（2 学院 / 3 专业 / 4 班级，对应后端 scope 组织类型码）
+export const ORG_TYPE_OPTIONS = [
+  { value: 2, label: '学院' },
+  { value: 3, label: '专业' },
+  { value: 4, label: '班级' },
+] as const
+
+// 职业规划行动项状态
+export const CAREER_ACTION_STATUS_OPTIONS = [
+  { label: '未开始', value: 0 },
+  { label: '进行中', value: 1 },
+  { label: '已完成', value: 2 },
+] as const
+
+// 教师端成长时间轴事件类型筛选（eventType 码，'' 为全部）
+export const TEACHER_EVENT_TYPE_OPTIONS = [
+  { value: '', label: '全部' },
+  { value: 1, label: '奖项' },
+  { value: 2, label: '成绩' },
+  { value: 3, label: '实践' },
+  { value: 4, label: '职业规划' },
+  { value: 5, label: '短板改进' },
+  { value: 6, label: '能力提升' },
+] as const
+
+// 研究数据导出类型（/admin/exports/research 的 dataTypes）
+export const RESEARCH_DATA_TYPE_OPTIONS = [
+  { value: 'archives', label: '档案' },
+  { value: 'scores', label: '成绩' },
+  { value: 'audits', label: '审核' },
+  { value: 'ai', label: 'AI 分析' },
+  { value: 'career', label: '职业规划' },
+] as const
+
+// 教师改进建议类型（≤50 字，此处为常用预设项）
+export const SUGGESTION_TYPE_OPTIONS = [
+  '学习计划',
+  '时间管理',
+  '能力提升',
+  '职业发展',
+  '心理建设',
+  '其他',
+] as const
+
+// 之星类型中文映射（奖项看板 typeDistribution key → 中文名）
+export const STAR_TYPE_LABELS: Record<string, string> = {
+  competition_star: '竞赛之星',
+  research_star: '科研之星',
+  innovation_star: '双创之星',
+}
+
+// 最近动态筛选 status → 后端数值（submitted 与 pending 均映射 1）
+export const ACTIVITY_FILTER_STATUS_VALUE: Record<string, number> = {
+  draft: 0,
+  submitted: 1,
+  pending: 1,
+  approved: 2,
+  rejected: 3,
+  withdrawn: 4,
+}

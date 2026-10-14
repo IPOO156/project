@@ -96,7 +96,7 @@ function handleClick() {
   justify-content: center;
   cursor: pointer;
   user-select: none;
-  z-index: 9999;
+  z-index: $z-ai;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
   transition:
     box-shadow $duration-base $ease-standard,

@@ -2,6 +2,7 @@
 import type { GrowthExperience } from '../timeline-constants'
 import { ElMessageBox } from 'element-plus'
 import { FlaskConical, GraduationCap, HeartHandshake, Trash2, Trophy } from 'lucide-vue-next'
+import { GROWTH_TAG_COLORS } from '@/shared/constants/dict'
 import { getSemesterDisplayLabel } from '../timeline-constants'
 
 interface Props {
@@ -42,14 +43,7 @@ function getTypeIcon(tag: string) {
 }
 
 function getTypeColor(tag: string): string {
-  const colorMap: Record<string, string> = {
-    竞赛: '#d4a574',
-    科研: '#8b6340',
-    实践: '#a67c52',
-    学业: '#5a7c5a',
-    技术: '#9a8474',
-  }
-  for (const [key, color] of Object.entries(colorMap)) {
+  for (const [key, color] of Object.entries(GROWTH_TAG_COLORS)) {
     if (tag?.includes(key)) return color
   }
   return '#8b6340'

@@ -66,6 +66,9 @@ const sceneEyebrow = computed(() =>
     ? 'Student Archive Experience Portal'
     : 'Campus Governance Control Gateway',
 )
+const sceneKicker = computed(() =>
+  props.loginType === 'student' ? '学生档鉴未来' : '教师档鉴未来',
+)
 
 const sceneFeatures = computed(() => {
   const studentFeatures = [
@@ -98,7 +101,7 @@ const floatCards = computed(() => {
         meta: '12 份 · 待确认',
         icon: Award,
         top: '42%',
-        right: '3%',
+        right: '18%',
         depth: 14,
         delay: '1.2s',
       },
@@ -227,7 +230,7 @@ onUnmounted(() => {
 
       <!-- 文字 -->
       <div class="login__hero-copy">
-        <p class="login__hero-kicker">学生档鉴未来</p>
+        <p class="login__hero-kicker">{{ sceneKicker }}</p>
         <h1 class="login__hero-title">
           <span :key="`t-${loginType}`" class="login__hero-title-text">{{ sceneTitle }}</span>
         </h1>
@@ -589,6 +592,8 @@ onUnmounted(() => {
 }
 
 .login__hero-copy {
+  position: relative;
+  z-index: 3;
   margin-bottom: 42px;
 }
 
@@ -612,10 +617,12 @@ onUnmounted(() => {
   animation: fadeUp 1.2s ease both;
   transition: color 0.5s ease;
   min-height: 2.4em;
+  text-wrap: balance;
 }
 
 .login__hero-title-text {
   display: block;
+  text-wrap: balance;
   animation: textSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -959,21 +966,31 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .login__hero {
     min-height: auto;
-    padding: 72px 20px 16px;
+    padding: 20px 20px 16px;
   }
 
   .login__hero-title {
-    font-size: 36px;
+    font-size: 28px;
   }
 
   .login__hero-subtitle {
-    font-size: 15px;
+    font-size: 14px;
+    margin-top: 12px;
   }
 
   .login__brand-mark {
-    width: 88px;
-    height: 88px;
-    margin-bottom: 28px;
+    width: 64px;
+    height: 64px;
+    margin: 16px 0 20px;
+  }
+
+  .login__hero-copy {
+    margin-bottom: 0;
+  }
+
+  .login__feature-grid,
+  .login__hero-footer {
+    display: none;
   }
 
   .login__stats-row {

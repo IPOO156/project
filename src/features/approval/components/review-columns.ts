@@ -9,16 +9,13 @@ import {
   INNOVATION_COMPANY_TYPES,
   ORGANIZATION_LEVELS,
   PROJECT_LEVELS,
+  REVIEW_STATUS_FILTER_OPTIONS,
   SCHOLARSHIP_GRADES,
   SCHOLARSHIP_LEVELS,
 } from '@/shared/constants/dict'
 
-/** 公共状态下拉选项 */
-export const STATUS_FILTER_OPTIONS = [
-  { label: '待审核', value: 'submitted' },
-  { label: '已通过', value: 'approved' },
-  { label: '已驳回', value: 'rejected' },
-] as const
+/** 公共状态下拉选项（定义已收编至 shared/constants/dict，此处保留原导出名兼容既有引用） */
+export const STATUS_FILTER_OPTIONS = REVIEW_STATUS_FILTER_OPTIONS
 
 /** 表格列定义 */
 export interface ColumnDef {

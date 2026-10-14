@@ -22,7 +22,7 @@ $color-info: #64748b;
 // 中性色
 $color-text-primary: #1e293b;
 $color-text-secondary: #64748b;
-$color-text-placeholder: #94a3b8;
+$color-text-placeholder: #64748b;
 $color-bg: #f1f5f9;
 $color-bg-page: #f8fafc;
 $color-border: #e2e8f0;
@@ -76,6 +76,9 @@ $z-modal: 50;
 $z-popover: 60;
 $z-tooltip: 70;
 $z-toast: 100;
+$z-overlay: 200;
+$z-ai: 300;
+$z-ripple: 400;
 
 // 动画 token（ui-ux-pro-max skill §6：150-300ms / transform + opacity）
 $duration-instant: 100ms;

@@ -140,7 +140,7 @@ export const useSubmissionStore = defineStore('submission', () => {
 
   function updateLocalStatus(id: string, newStatus: string) {
     // 撤回语义为撤销申报：撤回后不可再编辑，仅可查看/删除（对应后端撤回置草稿但前端不放开编辑）
-    const patch: Partial<SubmissionRecord> = { status: newStatus as any }
+    const patch: Partial<SubmissionRecord> = { status: newStatus as SubmissionRecord['status'] }
     if (newStatus === 'withdrawn') {
       patch.canEdit = false
       patch.canDelete = true

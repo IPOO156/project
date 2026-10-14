@@ -9,6 +9,7 @@ import { Lightbulb } from 'lucide-vue-next'
 import { computed, reactive, ref, watch } from 'vue'
 
 import { addTeacherImprovementSuggestion } from '@/shared/api/teacher'
+import { SUGGESTION_TYPE_OPTIONS } from '@/shared/constants/dict'
 
 const props = defineProps<{
   modelValue: boolean
@@ -32,8 +33,6 @@ const form = reactive({
   relatedGoalId: undefined as number | undefined,
 })
 const submitting = ref(false)
-
-const SUGGESTION_TYPE_OPTIONS = ['学习计划', '时间管理', '能力提升', '职业发展', '心理建设', '其他']
 
 watch(
   () => props.modelValue,
