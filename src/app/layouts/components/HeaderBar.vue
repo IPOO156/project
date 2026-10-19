@@ -123,13 +123,7 @@ async function switchToStudent() {
         <span class="header__user">
           <el-avatar :size="32" :src="userStore.avatar" :icon="User" />
           <span class="header__user-name">{{ userStore.userName || '用户' }}</span>
-          <el-tag
-            v-if="isTeacher"
-            size="small"
-            type="warning"
-            effect="light"
-            class="header__role-tag"
-          >
+          <el-tag v-if="isTeacher" size="small" type="info" effect="light" class="header__role-tag">
             {{ roleLabel }}
           </el-tag>
         </span>
@@ -140,7 +134,7 @@ async function switchToStudent() {
                 <LayoutDashboard :size="14" /> 首页
               </el-dropdown-item>
               <el-dropdown-item divided @click="switchToStudent">
-                <SwitchCamera :size="14" /> 切换学生端
+                <SwitchCamera :size="14" /> 切换账号
               </el-dropdown-item>
             </template>
             <template v-else>

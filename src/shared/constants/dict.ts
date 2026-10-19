@@ -187,20 +187,59 @@ export const ACTIVITY_STATUS = {
 // 日志操作类型（管理员端日志查看模块使用，LogView 与 LogTable 共用）
 // action 取值对齐后端 audit_logs.action（create/update/delete/audit 等）
 export type LogActionTag = 'success' | 'warning' | 'danger' | 'info' | 'primary'
+/**
+ * 日志操作类型映射（后端 system_logs.action）。
+ * 未收录的码会原样显示，因此后端新增 @AuditLog(action = ...) 时需同步补齐这里，
+ * 避免管理端出现 approve / assign-permissions 这类英文内部码。
+ */
 export const LOG_ACTION_TYPES: Record<string, { label: string; tag: LogActionTag }> = {
   create: { label: '新增', tag: 'success' },
   update: { label: '修改', tag: 'warning' },
   delete: { label: '删除', tag: 'danger' },
   review: { label: '审核', tag: 'primary' },
   audit: { label: '审核', tag: 'primary' },
+  approve: { label: '审批', tag: 'primary' },
+  publish: { label: '发布', tag: 'success' },
+  import: { label: '导入', tag: 'warning' },
+  export: { label: '导出', tag: 'info' },
+  upload: { label: '上传', tag: 'info' },
+  'upload-preview': { label: '上传预览', tag: 'info' },
+  upload_avatar: { label: '更新头像', tag: 'info' },
+  upload_cover: { label: '更新封面', tag: 'info' },
   login: { label: '登录', tag: 'info' },
   logout: { label: '登出', tag: 'info' },
-  export: { label: '导出', tag: 'info' },
+  change_password: { label: '修改密码', tag: 'info' },
+  'reset-password': { label: '重置密码', tag: 'warning' },
+  reset_password: { label: '重置密码', tag: 'warning' },
+  reset_password_confirm: { label: '确认重置', tag: 'info' },
+  'assign-permissions': { label: '分配权限', tag: 'warning' },
+  'update-roles': { label: '调整职位', tag: 'warning' },
+  'update-scopes': { label: '调整范围', tag: 'warning' },
+  'update-setting': { label: '修改配置', tag: 'warning' },
+  'update-status': { label: '修改状态', tag: 'warning' },
+  'batch-status': { label: '批量状态', tag: 'warning' },
+  'set-current': { label: '设为当前', tag: 'warning' },
+  'set-default': { label: '设为默认', tag: 'warning' },
+  recalculate: { label: '重算', tag: 'warning' },
+  trigger: { label: '手动触发', tag: 'warning' },
+  'patch-snapshot': { label: '更新快照', tag: 'warning' },
+  'save-steps': { label: '保存步骤', tag: 'warning' },
+  'create-archives': { label: '建档', tag: 'success' },
+  'create-class': { label: '新增班级', tag: 'success' },
+  'create-major': { label: '新增专业', tag: 'success' },
+  'create-research': { label: '新增科研', tag: 'success' },
+  'update-class': { label: '修改班级', tag: 'warning' },
+  'delete-mapping': { label: '删除映射', tag: 'danger' },
+  'upsert-mapping': { label: '保存映射', tag: 'warning' },
 }
 
-// 日志业务模块映射（后端 system_logs.module）
+/**
+ * 日志业务模块映射（后端 system_logs.module）。
+ * 值来自后端 @AuditLog 注解，新增模块时同步补齐。
+ */
 export const LOG_MODULES: Record<string, string> = {
   archive: '档案',
+  audit: '材料审核',
   award: '奖项',
   indicator: '指标',
   score: '成绩',
@@ -210,6 +249,21 @@ export const LOG_MODULES: Record<string, string> = {
   message: '消息',
   system: '系统',
   export: '导出',
+  ability_dimension: '能力维度',
+  announcement: '公告',
+  'approval-flow': '审批流程',
+  auth: '登录认证',
+  config: '系统配置',
+  dict: '字典',
+  'export-template': '导出模板',
+  file: '文件',
+  'form-template': '表单模板',
+  grade: '成绩',
+  'grade-import-config': '成绩导入',
+  org: '组织架构',
+  role: '角色',
+  'scheduled-task': '定时任务',
+  semester: '学期',
 }
 
 /**
@@ -233,6 +287,7 @@ export const SCHEDULED_TASK_GROUPS: Record<string, string> = {
   data: '数据',
   notification: '通知',
   cleanup: '清理',
+  evaluation: '评分',
 }
 
 export const SCHEDULED_TASK_GROUP_OPTIONS: { value: string; label: string }[] = Object.entries(
