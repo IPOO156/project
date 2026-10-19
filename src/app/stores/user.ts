@@ -127,11 +127,19 @@ export const useUserStore = defineStore('user', () => {
    * （联系信息展示改由档案概览读取 archive store 的 /profile/info.contactInfo）。
    * 接口失败向上抛出，由调用方决定是否提示「已保存」。
    */
-  async function updateUserInfo(partial: Partial<UserInfo>) {
-    await updateProfileContact({
-      email: partial.email || undefined,
-      phone: partial.phone || undefined,
-    })
+  /**
+   * 更新联系信息。后端 PUT /profile/contact 为整体覆盖且六个字段都必填，
+   * 因此这里必须接收完整联系信息，而不是只传邮箱/手机号。
+   */
+  async function updateUserInfo(contact: {
+    email: string
+    phone: string
+    address: string
+    emergencyName: string
+    emergencyRelation: string
+    emergencyPhone: string
+  }) {
+    await updateProfileContact(contact)
   }
 
   async function changePassword(payload: {

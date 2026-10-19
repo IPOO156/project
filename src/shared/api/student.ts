@@ -85,10 +85,17 @@ export interface ProfileInfo {
     birthDate: string
   }
   contactInfo: {
+    /** 本人邮箱；后端 @Sensitive 脱敏返回（如 138****1234），不可直接回填提交 */
     email: string | null
+    /** 本人手机号；后端 @Sensitive 脱敏返回 */
     phone: string | null
     avatar: string | null
-  }
+    address: string | null
+    emergencyName: string | null
+    emergencyRelation: string | null
+    /** 紧急联系人电话；后端 @Sensitive 脱敏返回 */
+    emergencyPhone: string | null
+  } | null
   totalVolunteerHours: number
   dimensionProfile: Array<{
     dimensionCode: string
@@ -215,15 +222,26 @@ export function getDataCompleteness(semesterId?: number): Promise<{
   })
 }
 
-/** 更新联系信息（PUT /profile/contact） */
+/**
+ * 更新联系信息（PUT /profile/contact）。
+ * 后端 ContactUpdateRequest 六个字段均为 @NotNull 且整体覆盖写入，必须一次性提交完整信息；
+ * 只传 email/phone 会被校验拒绝（通讯地址/紧急联系人字段为空）。
+ */
 export function updateProfileContact(payload: {
-  email?: string
-  phone?: string
-  address?: string
+  email: string
+  phone: string
+  address: string
+  emergencyName: string
+  emergencyRelation: string
+  emergencyPhone: string
 }): Promise<{
   email: string | null
   phone: string | null
   avatar: string | null
+  address: string | null
+  emergencyName: string | null
+  emergencyRelation: string | null
+  emergencyPhone: string | null
 }> {
   return request.put('/profile/contact', payload)
 }

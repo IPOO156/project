@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { UserInfo } from '@/shared/types/types'
 import { ElMessage } from 'element-plus'
 import { Download, Edit2, GraduationCap, Info, Lightbulb, Plus } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
@@ -150,7 +149,23 @@ const dimAvg = computed<number | null>(() =>
 const isEditing = ref(false)
 /** 基本资料「保存」提交中（最多串行 3 次 PUT，防连点重复提交） */
 const savingEdit = ref(false)
-const formData = ref<Partial<UserInfo> & { politicalStatus?: string; studentStatus?: string }>({})
+/**
+ * 联系信息编辑表单。
+ * 后端 PUT /profile/contact 六字段整体覆盖且均必填；
+ * 其中邮箱/手机号/紧急联系人电话在 /profile/info 中被服务端脱敏（如 138****1234），
+ * 不能把脱敏值回填提交（过不了 @Email/@Pattern），编辑时需用户重新填写。
+ */
+interface ProfileEditForm {
+  email: string
+  phone: string
+  address: string
+  emergencyName: string
+  emergencyRelation: string
+  emergencyPhone: string
+  politicalStatus?: string
+  studentStatus?: string
+}
+const formData = ref<Partial<ProfileEditForm>>({})
 const politicalOptions = ref<{ value: string; label: string }[]>([])
 /** /profile/info 中的学籍信息（政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
 const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})
@@ -174,9 +189,15 @@ async function loadPoliticalOptions() {
 
 function startEdit() {
   const a = academicInfo.value
+  const c = archiveStore.profileData?.contactInfo
   formData.value = {
-    email: contactEmail.value,
-    phone: contactPhone.value,
+    // 邮箱/手机号/紧急联系人电话均为脱敏值，留空让用户重新填写
+    email: '',
+    phone: '',
+    address: c?.address ?? '',
+    emergencyName: c?.emergencyName ?? '',
+    emergencyRelation: c?.emergencyRelation ?? '',
+    emergencyPhone: '',
     politicalStatus: a.politicalStatus ?? '',
     studentStatus: a.studentStatus ?? '',
   }
@@ -185,13 +206,30 @@ function startEdit() {
 }
 async function saveEdit() {
   const a = academicInfo.value
+  const required: Array<[keyof ProfileEditForm, string]> = [
+    ['email', '联系邮箱'],
+    ['phone', '手机号'],
+    ['address', '通讯地址'],
+    ['emergencyName', '紧急联系人姓名'],
+    ['emergencyRelation', '与紧急联系人关系'],
+    ['emergencyPhone', '紧急联系人电话'],
+  ]
+  const missing = required.find(([key]) => !String(formData.value[key] ?? '').trim())
+  if (missing) {
+    ElMessage.warning(`请填写${missing[1]}`)
+    return
+  }
   // 三类保存（联系方式 PUT /profile/contact、政治面貌、学生状态）任一失败即终止流程，
   // 不继续执行后续「已保存」，避免成败提示并存；失败提示由请求拦截器统一给出
   savingEdit.value = true
   try {
     await userStore.updateUserInfo({
-      email: formData.value.email,
-      phone: formData.value.phone,
+      email: String(formData.value.email ?? '').trim(),
+      phone: String(formData.value.phone ?? '').trim(),
+      address: String(formData.value.address ?? '').trim(),
+      emergencyName: String(formData.value.emergencyName ?? '').trim(),
+      emergencyRelation: String(formData.value.emergencyRelation ?? '').trim(),
+      emergencyPhone: String(formData.value.emergencyPhone ?? '').trim(),
     })
     if (formData.value.politicalStatus && formData.value.politicalStatus !== a.politicalStatus) {
       await updatePoliticalStatus(formData.value.politicalStatus)
@@ -399,15 +437,46 @@ async function handleExportResume() {
           <el-descriptions-item label="联系邮箱">{{ contactEmail || '-' }}</el-descriptions-item>
           <el-descriptions-item label="手机号">{{ contactPhone || '-' }}</el-descriptions-item>
         </el-descriptions>
-        <el-form v-else :model="formData" label-width="70px" class="profile-form">
+        <el-form v-else :model="formData" label-width="100px" class="profile-form">
+          <p class="contact-hint">
+            联系邮箱、手机号、紧急联系人电话在展示时已脱敏；保存前请重新填写这三项。
+          </p>
           <el-row :gutter="12">
             <el-col :span="12"
-              ><el-form-item label="联系邮箱"
-                ><el-input v-model="formData.email" size="small" /></el-form-item
+              ><el-form-item label="联系邮箱" required
+                ><el-input
+                  v-model="formData.email"
+                  size="small"
+                  placeholder="请输入联系邮箱" /></el-form-item
             ></el-col>
             <el-col :span="12"
-              ><el-form-item label="手机号"
-                ><el-input v-model="formData.phone" size="small" /></el-form-item
+              ><el-form-item label="手机号" required
+                ><el-input
+                  v-model="formData.phone"
+                  size="small"
+                  placeholder="请输入手机号" /></el-form-item
+            ></el-col>
+            <el-col :span="24"
+              ><el-form-item label="通讯地址" required
+                ><el-input v-model="formData.address" size="small" /></el-form-item
+            ></el-col>
+            <el-col :span="12"
+              ><el-form-item label="紧急联系人" required
+                ><el-input v-model="formData.emergencyName" size="small" /></el-form-item
+            ></el-col>
+            <el-col :span="12"
+              ><el-form-item label="关系" required
+                ><el-input
+                  v-model="formData.emergencyRelation"
+                  size="small"
+                  placeholder="如：父亲" /></el-form-item
+            ></el-col>
+            <el-col :span="12"
+              ><el-form-item label="紧急联系电话" required
+                ><el-input
+                  v-model="formData.emergencyPhone"
+                  size="small"
+                  placeholder="请输入紧急联系人电话" /></el-form-item
             ></el-col>
             <el-col :span="12"
               ><el-form-item label="政治面貌"
@@ -652,6 +721,12 @@ async function handleExportResume() {
 }
 .profile-form {
   margin-top: 8px;
+}
+.contact-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--el-text-color-secondary);
 }
 .form-w {
   width: 100%;

@@ -1,4 +1,5 @@
 import type { CareerPlanRecord } from '@/shared/types/types'
+import { downloadBlobFile } from '@/shared/utils/download'
 import { getSemesters } from './common'
 import request from './request'
 
@@ -105,12 +106,21 @@ export function getCareerPlanDetail(planId: number): Promise<any> {
   return request.get(`/profile/career-plans/${planId}`)
 }
 
-/** 下载职业规划文件（GET /profile/career-plans/{planId}/download） */
+/**
+ * 下载职业规划文件（GET /profile/career-plans/{planId}/download）
+ * 后端返回 302 重定向到 OSS 签名 URL（不是 JSON 信封），必须按 blob 接收后本地保存；
+ * 按 JSON 解析会被响应拦截器当成业务失败（res.code 不存在）。PDF 生成可能较慢，单独放宽超时。
+ */
 export function downloadCareerPlanFile(
   planId: number,
   purpose: 'internal' | 'external' = 'external',
 ): Promise<void> {
-  return request.get(`/profile/career-plans/${planId}/download`, { params: { purpose } })
+  return downloadBlobFile(
+    `/profile/career-plans/${planId}/download`,
+    `职业规划-${planId}.pdf`,
+    undefined,
+    { params: { purpose }, timeout: 60_000 },
+  )
 }
 
 /** 预览职业规划文件（GET /profile/career-plans/{planId}/preview） */
