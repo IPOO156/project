@@ -39,7 +39,7 @@ jobs:
           # 下载 ossutil64
           wget https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64 -O ossutil64
           chmod +x ossutil64
-          # 配置密钥（强制 V4 签名，bucket 禁止 V1 时必需）
-          ./ossutil64 config -i ${OSS_ACCESS_KEY_ID} -k ${OSS_ACCESS_KEY_SECRET} -e ${OSS_ENDPOINT} --signature-version ossv4
-          # 镜像dist到OSS：sync 支持 --delete 删除远端多余文件（cp 不支持此参数）
-          ./ossutil64 sync dist/ oss://${OSS_BUCKET}/ --delete --force
+          # 全局选项 --signature-version 必须写在子命令前，ossutil 1.7.16 config 子命令本身不接受它
+          ./ossutil64 --signature-version ossv4 config -i ${OSS_ACCESS_KEY_ID} -k ${OSS_ACCESS_KEY_SECRET} -e ${OSS_ENDPOINT}
+          # 用 sync 而不是 cp：cp 不支持 --delete，sync 才是目录镜像语义（删远端多余文件）
+          ./ossutil64 --signature-version ossv4 sync dist/ oss://${OSS_BUCKET}/ --delete --force
