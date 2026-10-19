@@ -41,5 +41,5 @@ jobs:
           chmod +x ossutil64
           # 配置密钥
           ./ossutil64 config -i ${OSS_ACCESS_KEY_ID} -k ${OSS_ACCESS_KEY_SECRET} -e ${OSS_ENDPOINT}
-          # 上传dist目录，--delete 删除oss上旧文件，保持和本地dist一致
-          ./ossutil64 cp -r dist/ oss://${OSS_BUCKET}/ --delete --force
+          # 镜像dist到OSS：sync 支持 --delete 删除远端多余文件（cp 不支持此参数）
+          ./ossutil64 sync dist/ oss://${OSS_BUCKET}/ --delete --force
