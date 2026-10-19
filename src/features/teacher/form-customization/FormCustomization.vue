@@ -7,7 +7,7 @@ import type { FormTemplateDetail, FormTemplateItem } from '@/shared/types/teache
  * 类别固定为 archive（后端仅支持该类别），字段类型支持 input/textarea/number/select/radio/checkbox/date/upload/switch。
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, RefreshCw, Search, SlidersHorizontal, Star, Trash2 } from 'lucide-vue-next'
+import { Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 
 import {
@@ -18,6 +18,9 @@ import {
   setDefaultFormTemplate,
   updateFormTemplate,
 } from '@/shared/api/teacher'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import RowActions from '@/shared/ui/RowActions.vue'
+import { formatDateTime } from '@/shared/utils/time'
 
 /** 字段编辑器（UI 层）——options 用字符串数组，提交时转换为后端 {value,label} 结构 */
 interface FieldEditor {
@@ -330,10 +333,10 @@ onMounted(() => void loadList())
     -->
     <el-alert
       class="form-customization__notice"
-      type="warning"
+      type="info"
       :closable="false"
       show-icon
-      title="模板尚未接入学生端：目前字段配置只保存在后端配置表中，后端还没有任何模块读取表单模板，学生的申报页面不会按这里的模板渲染，也不会按模板校验提交内容。"
+      title="模板配置当前仅保存在后台，学生端申报页暂未按模板渲染，修改不会影响现有申报表单。"
     />
 
     <div class="mc-filter-bar">
@@ -372,7 +375,7 @@ onMounted(() => void loadList())
 
     <div class="mc-card">
       <div class="mc-card__head">
-        <span class="mc-card__title"><SlidersHorizontal :size="15" /> 模板列表</span>
+        <span class="mc-card__title">模板列表</span>
         <span class="form-customization__count">{{ total }} 个</span>
       </div>
       <div class="mc-card__body">
@@ -382,7 +385,8 @@ onMounted(() => void loadList())
               <span class="form-customization__name">{{ row.templateName }}</span>
               <el-tag
                 v-if="row.isDefault === 1"
-                type="warning"
+                type="primary"
+                effect="plain"
                 size="small"
                 class="form-customization__default"
               >
@@ -390,9 +394,9 @@ onMounted(() => void loadList())
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="code" label="编码" width="140">
+          <el-table-column prop="code" label="编码" width="170">
             <template #default="{ row }"
-              ><span class="mc-num">{{ row.code }}</span></template
+              ><span class="mc-num form-customization__code">{{ row.code }}</span></template
             >
           </el-table-column>
           <el-table-column prop="categoryLabel" label="分类" width="100" align="center" />
@@ -408,35 +412,41 @@ onMounted(() => void loadList())
               }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="updatedAt" label="更新时间" width="170" />
-          <el-table-column label="操作" width="230" align="center" fixed="right">
+          <el-table-column label="更新时间" width="145">
+            <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="132" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button text type="primary" size="small" @click="openEdit(row as FormTemplateItem)"
-                >编辑</el-button
-              >
-              <el-button
-                v-if="row.isDefault !== 1"
-                text
-                type="warning"
-                size="small"
-                :icon="Star"
-                @click="handleSetDefault(row as FormTemplateItem)"
-              >
-                默认
-              </el-button>
-              <el-button
-                text
-                type="danger"
-                size="small"
-                :icon="Trash2"
-                :loading="deletingId === (row as FormTemplateItem).id"
-                :disabled="deletingId !== null"
-                @click="handleDelete(row as FormTemplateItem)"
-              >
-                删除
-              </el-button>
+              <RowActions>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openEdit(row as FormTemplateItem)"
+                  >编辑</el-button
+                >
+                <template #more>
+                  <el-dropdown-item
+                    v-if="row.isDefault !== 1"
+                    @click="handleSetDefault(row as FormTemplateItem)"
+                  >
+                    设为默认
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    divided
+                    class="row-actions__danger"
+                    :disabled="deletingId !== null"
+                    @click="handleDelete(row as FormTemplateItem)"
+                  >
+                    {{ deletingId === (row as FormTemplateItem).id ? '删除中…' : '删除' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState text="暂无表单模板" compact />
+          </template>
         </el-table>
         <div class="form-customization__pagination">
           <el-pagination
@@ -450,7 +460,6 @@ onMounted(() => void loadList())
             @size-change="handleSearch"
           />
         </div>
-        <el-empty v-if="!loading && !list.length" description="暂无表单模板" :image-size="72" />
       </div>
     </div>
 
@@ -546,7 +555,7 @@ onMounted(() => void loadList())
                   />
                 </el-select>
                 <el-switch v-model="field.required" active-text="必填" />
-                <el-button text type="danger" :icon="Trash2" @click="removeField(idx)" />
+                <el-button text type="danger" @click="removeField(idx)">删除</el-button>
               </div>
               <div
                 v-if="
@@ -609,6 +618,11 @@ onMounted(() => void loadList())
 
   &__name {
     font-weight: 500;
+  }
+
+  // 模板编码是下划线分隔的长标识，保持单行，避免在字符中间断行
+  &__code {
+    white-space: nowrap;
   }
 
   &__default {

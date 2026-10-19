@@ -178,7 +178,6 @@ onMounted(() => void load())
   <div class="mc-page">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
-        <p class="mc-page-head__eyebrow">管理权限 · Roles</p>
         <h2 class="mc-page-head__title">教师职位调整</h2>
         <p class="mc-page-head__desc">将教师职位调整为管理员、审核员（辅导员）或课任教师。</p>
       </div>
@@ -230,7 +229,7 @@ onMounted(() => void load())
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="180" align="center">
+          <el-table-column label="操作" width="180" align="center" fixed="right">
             <template #default="{ row }">
               <el-button
                 text

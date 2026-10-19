@@ -177,7 +177,6 @@ async function handleAdd() {
   <div class="mc-page">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
-        <p class="mc-page-head__eyebrow">管理权限 · Accounts</p>
         <h2 class="mc-page-head__title">新增账号</h2>
         <p class="mc-page-head__desc">
           添加管理员、审核员（辅导员）、课任教师、学生账号，数据写入后端 /admin/users。

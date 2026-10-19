@@ -28,17 +28,16 @@ interface MetricOption {
   label: string
   unit: string
   decimals: number
-  accent: string
   /** 仅管理端端点支持；教师端后端白名单不含该项，选了会被拒（见 metricOptions） */
   adminOnly?: boolean
 }
 
 const METRIC_OPTIONS: MetricOption[] = [
-  { value: 'gpa', label: '绩点', unit: '', decimals: 2, accent: '#1e3a5f' },
-  { value: 'award', label: '获奖', unit: '项', decimals: 0, accent: '#d4a574' },
-  { value: 'practice', label: '实践', unit: '次', decimals: 0, accent: '#10b981' },
-  { value: 'interest', label: '兴趣', unit: '项', decimals: 0, accent: '#8b5cf6', adminOnly: true },
-  { value: 'archive', label: '档案', unit: '份', decimals: 0, accent: '#3b82f6' },
+  { value: 'gpa', label: '绩点', unit: '', decimals: 2 },
+  { value: 'award', label: '获奖', unit: '项', decimals: 0 },
+  { value: 'practice', label: '实践', unit: '次', decimals: 0 },
+  { value: 'interest', label: '兴趣', unit: '项', decimals: 0, adminOnly: true },
+  { value: 'archive', label: '档案', unit: '份', decimals: 0 },
 ]
 
 /**
@@ -58,12 +57,6 @@ const ORG_TYPE_OPTIONS = [
   { value: 3, label: '专业' },
   { value: 4, label: '班级' },
 ]
-
-const ORG_TYPE_LABEL: Record<number, string> = {
-  2: '学院',
-  3: '专业',
-  4: '班级',
-}
 
 function metricMeta(metric: string) {
   return METRIC_OPTIONS.find((m) => m.value === metric)
@@ -272,12 +265,6 @@ const legendGradient = computed(() => {
   return `linear-gradient(90deg, ${stops})`
 })
 
-/** 页头「学期」chip：契约无统计时间字段，按当前学期筛选标注（默认为全部学期） */
-const semesterChipText = computed(() => {
-  if (filters.semesterId == null) return '全部学期'
-  return semesters.value.find((s) => s.value === filters.semesterId)?.label ?? '全部学期'
-})
-
 onMounted(async () => {
   loadingSemesters.value = true
   try {
@@ -300,119 +287,89 @@ onMounted(async () => {
           以组织为行、学期为列，查看各指标的成果分布（数值按全校该指标最大值归一化到 0-100）。
         </p>
       </div>
-      <div class="mc-page-head__actions heat-map__head-actions">
-        <div class="heat-map__head-chip">
-          <span class="heat-map__head-chip-label">指标</span>
-          <span class="heat-map__head-chip-value">{{ metricLabel(filters.metric) }}</span>
-        </div>
-        <div class="heat-map__head-chip">
-          <span class="heat-map__head-chip-label">行维度</span>
-          <span class="heat-map__head-chip-value">{{ ORG_TYPE_LABEL[filters.orgType] }}</span>
-        </div>
-        <div class="heat-map__head-chip">
-          <span class="heat-map__head-chip-label">学期</span>
-          <span class="heat-map__head-chip-value">{{ semesterChipText }}</span>
-        </div>
-      </div>
     </header>
 
     <!-- 筛选区 -->
-    <section class="mc-card heat-map__filters">
-      <div class="mc-card__head">
-        <span class="mc-card__title">
-          <Flame :size="14" />
-          筛选条件
-        </span>
-      </div>
-      <div class="mc-card__body heat-map__filters-body">
-        <div class="heat-map__filter-group">
-          <p class="heat-map__filter-group-title">指标维度</p>
-          <div class="heat-map__filter-row">
-            <el-select v-model="filters.metric" class="heat-map__select heat-map__select--narrow">
-              <!-- 自定义下拉内容（圆点+文案）同时需显式 :label，
-                   否则收起态 el-select 无法取到 label，会在输入框回退显示 raw value（如 "award"） -->
-              <el-option
-                v-for="m in metricOptions"
-                :key="m.value"
-                :value="m.value"
-                :label="m.label"
-              >
-                <template #default>
-                  <span class="heat-map__metric-option">
-                    <span class="heat-map__metric-dot is-sm" :style="{ background: m.accent }" />
-                    <span>{{ m.label }}</span>
-                  </span>
-                </template>
-              </el-option>
-            </el-select>
-            <el-select v-model="filters.orgType" class="heat-map__select heat-map__select--narrow">
-              <el-option
-                v-for="t in ORG_TYPE_OPTIONS"
-                :key="t.value"
-                :label="t.label"
-                :value="t.value"
-              />
-            </el-select>
-          </div>
-        </div>
-        <div class="heat-map__filter-group">
-          <p class="heat-map__filter-group-title">组织范围</p>
-          <div class="heat-map__filter-row">
-            <el-select
-              v-if="cascade.college"
-              v-model="filters.collegeId"
-              clearable
-              placeholder="全部学院"
-              class="heat-map__select"
-            >
-              <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
-            </el-select>
-            <el-select
-              v-if="cascade.major"
-              v-model="filters.majorId"
-              clearable
-              placeholder="全部专业"
-              class="heat-map__select"
-            >
-              <el-option v-for="m in majors" :key="m.id" :label="m.name" :value="m.id" />
-            </el-select>
-            <el-select
-              v-if="cascade.class"
-              v-model="filters.classId"
-              clearable
-              placeholder="全部班级"
-              class="heat-map__select"
-            >
-              <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
-            </el-select>
-            <el-select
-              v-model="filters.semesterId"
-              clearable
-              placeholder="全部学期"
-              :loading="loadingSemesters"
-              class="heat-map__select"
-            >
-              <el-option v-for="s in semesters" :key="s.value" :label="s.label" :value="s.value" />
-            </el-select>
-            <div class="heat-map__filter-actions">
-              <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <div class="mc-filter-bar">
+      <el-form inline @submit.prevent="handleSearch">
+        <el-form-item label="指标">
+          <el-select v-model="filters.metric" style="width: 140px">
+            <el-option
+              v-for="m in metricOptions"
+              :key="m.value"
+              :label="m.label"
+              :value="m.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="行维度">
+          <el-select v-model="filters.orgType" style="width: 120px">
+            <el-option
+              v-for="t in ORG_TYPE_OPTIONS"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="cascade.college" label="学院">
+          <el-select
+            v-model="filters.collegeId"
+            clearable
+            placeholder="全部学院"
+            style="width: 170px"
+          >
+            <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="cascade.major" label="专业">
+          <el-select
+            v-model="filters.majorId"
+            clearable
+            placeholder="全部专业"
+            style="width: 170px"
+          >
+            <el-option v-for="m in majors" :key="m.id" :label="m.name" :value="m.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="cascade.class" label="班级">
+          <el-select
+            v-model="filters.classId"
+            clearable
+            placeholder="全部班级"
+            style="width: 170px"
+          >
+            <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="学期">
+          <el-select
+            v-model="filters.semesterId"
+            clearable
+            placeholder="全部学期"
+            :loading="loadingSemesters"
+            style="width: 180px"
+          >
+            <el-option v-for="s in semesters" :key="s.value" :label="s.label" :value="s.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
 
     <!-- 概览统计 -->
     <section v-if="hasData" class="heat-map__stats">
-      <article class="heat-map__stat" style="--stat-accent: #d4a574">
+      <article class="heat-map__stat">
         <p class="heat-map__stat-label">最高值</p>
         <p class="heat-map__stat-value mc-num">
           {{ formatRaw(globalStats.maxRaw) }}
           <span class="heat-map__stat-unit">{{ metricMeta(filters.metric)?.unit || '' }}</span>
         </p>
-        <p class="heat-map__stat-foot">全校最高单格原始值</p>
+        <p class="heat-map__stat-foot">全部单格中的最高原始值</p>
       </article>
-      <article class="heat-map__stat" style="--stat-accent: var(--el-color-primary)">
+      <article class="heat-map__stat">
         <p class="heat-map__stat-label">合计</p>
         <p class="heat-map__stat-value mc-num">
           {{ formatRaw(globalStats.totalRaw) }}
@@ -420,7 +377,7 @@ onMounted(async () => {
         </p>
         <p class="heat-map__stat-foot">矩阵内全部原始值求和</p>
       </article>
-      <article class="heat-map__stat" style="--stat-accent: #10b981">
+      <article class="heat-map__stat">
         <p class="heat-map__stat-label">平均热度</p>
         <p class="heat-map__stat-value mc-num">
           {{ globalStats.avgNorm }}
@@ -428,7 +385,7 @@ onMounted(async () => {
         </p>
         <p class="heat-map__stat-foot">按归一化值平均</p>
       </article>
-      <article class="heat-map__stat" style="--stat-accent: #64748b">
+      <article class="heat-map__stat">
         <p class="heat-map__stat-label">单元格</p>
         <p class="heat-map__stat-value mc-num">
           {{ globalStats.cellCount }}
@@ -446,12 +403,6 @@ onMounted(async () => {
         <span class="mc-card__title">
           学期成果分布
           <span v-if="heatmap" class="heat-map__matrix-title-metric">
-            <span
-              class="heat-map__metric-dot"
-              :style="{
-                background: metricMeta(heatmap.metric)?.accent || 'var(--el-color-primary)',
-              }"
-            />
             {{ metricLabel(heatmap.metric) }}
           </span>
         </span>
@@ -539,142 +490,26 @@ onMounted(async () => {
 </template>
 
 <style scoped lang="scss">
-@use 'sass:color';
 @use '@/assets/styles/variables.scss' as *;
 
 .heat-map {
-  /* ── 页头右侧 chip ── */
-  &__head-actions {
-    align-items: stretch;
-  }
-  &__head-chip {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 8px 14px;
-    border-radius: $radius-lg;
-    background: var(--el-bg-color);
-    border: 1px solid var(--el-border-color-lighter);
-    min-width: 96px;
-  }
-  &__head-chip-label {
-    font-size: 11px;
-    color: var(--el-text-color-secondary);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-  &__head-chip-value {
-    margin-top: 2px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--el-color-primary);
-  }
-
-  /* ── 筛选区 ── */
-  &__filters-body {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-lg;
-    padding-top: 14px;
-    padding-bottom: 18px;
-  }
-  &__filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-  }
-  &__filter-group-title {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--el-text-color-secondary);
-  }
-  &__filter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: $spacing-md;
-    align-items: center;
-  }
-  &__filter-actions {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    justify-content: flex-end;
-    grid-column: span 2;
-
-    @media (max-width: 900px) {
-      grid-column: span 1;
-      justify-content: flex-start;
-    }
-  }
-  &__select {
-    width: 100%;
-    &--narrow {
-      max-width: 180px;
-    }
-  }
-
-  /* ── 概览统计（4 张卡）── */
+  /* ── 概览统计：一条汇总栏，避免四张彩色卡片分散注意力 ── */
   &__stats {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: $spacing-lg;
+    gap: 1px;
+    background: var(--el-border-color-lighter);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: $radius-lg;
+    overflow: hidden;
 
     @media (max-width: 1100px) {
       grid-template-columns: repeat(2, 1fr);
     }
   }
   &__stat {
-    position: relative;
-    padding: 16px 20px 14px;
-    border-radius: $radius-lg;
+    padding: 14px 20px;
     background: var(--el-bg-color);
-    border: 1px solid var(--el-border-color-lighter);
-    overflow: hidden;
-    transition:
-      transform 0.25s $ease-standard,
-      border-color 0.25s $ease-standard,
-      box-shadow 0.25s $ease-standard;
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 14px;
-      bottom: 14px;
-      width: 3px;
-      border-radius: 0 3px 3px 0;
-      background: var(--stat-accent, var(--el-color-primary));
-    }
-
-    /* 右上角细微色彩光晕 */
-    &::after {
-      content: '';
-      position: absolute;
-      right: -30px;
-      top: -30px;
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      background: radial-gradient(
-        circle,
-        color-mix(in srgb, var(--stat-accent, var(--el-color-primary)) 18%, transparent),
-        transparent 70%
-      );
-      pointer-events: none;
-    }
-
-    &:hover {
-      transform: translateY(-2px);
-      border-color: color-mix(
-        in srgb,
-        var(--stat-accent, var(--el-color-primary)) 35%,
-        var(--el-border-color-lighter)
-      );
-      box-shadow: 0 4px 14px -6px rgba($color-primary, 0.15);
-    }
   }
   &__stat-label {
     margin: 0;
@@ -683,8 +518,8 @@ onMounted(async () => {
     letter-spacing: 0.04em;
   }
   &__stat-value {
-    margin: 6px 0 4px;
-    font-size: 26px;
+    margin: 4px 0 2px;
+    font-size: 24px;
     font-weight: 700;
     color: var(--el-text-color-primary);
     line-height: 1.15;
@@ -707,30 +542,9 @@ onMounted(async () => {
   /* ── 卡片头部 ── */
   &__matrix-title-metric {
     margin-left: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
     font-size: 12px;
     font-weight: 500;
     color: var(--el-text-color-regular);
-  }
-  &__metric-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
-
-    &.is-sm {
-      width: 7px;
-      height: 7px;
-      box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 14%, transparent);
-    }
-  }
-  &__metric-option {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
   }
 
   /* ── 图例 ── */

@@ -5,7 +5,7 @@
  */
 import type { ExportTemplateItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Eye, Plus, RefreshCw } from 'lucide-vue-next'
+import { Plus, RefreshCw } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 
 import {
@@ -17,6 +17,8 @@ import {
   updateExportTemplate,
   updateExportTemplateStatus,
 } from '@/shared/api/teacher'
+import RowActions from '@/shared/ui/RowActions.vue'
+import { formatDateTime } from '@/shared/utils/time'
 import ExportTemplateDetailDrawer from './components/ExportTemplateDetailDrawer.vue'
 
 const loading = ref(false)
@@ -273,20 +275,21 @@ onMounted(() => void load())
           <el-table-column
             prop="templateName"
             label="模板名称"
-            min-width="130"
+            min-width="180"
             show-overflow-tooltip
           />
           <el-table-column
             prop="templateCode"
             label="模板编码"
-            min-width="140"
+            min-width="150"
             show-overflow-tooltip
           />
-          <el-table-column label="导出类型" min-width="80" show-overflow-tooltip>
+          <el-table-column label="导出类型" width="110" show-overflow-tooltip>
             <template #default="{ row }">{{ row.exportTypeLabel ?? row.exportType }}</template>
           </el-table-column>
           <el-table-column prop="version" label="版本" width="60" align="center" />
-          <el-table-column label="默认" width="60" align="center">
+          <!-- 标签「默认」约 38px + 单元格内边距 24px，60px 会裁掉右侧 -->
+          <el-table-column label="默认" width="76" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.isDefault === 1" type="success" size="small">默认</el-tag>
               <span v-else>-</span>
@@ -299,20 +302,21 @@ onMounted(() => void load())
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createdByName" label="创建人" min-width="60" show-overflow-tooltip>
+          <el-table-column prop="createdByName" label="创建人" width="90" show-overflow-tooltip>
             <template #default="{ row }">{{ row.createdByName ?? '-' }}</template>
           </el-table-column>
-          <el-table-column prop="updatedAt" label="更新时间" min-width="120" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.updatedAt ?? '-' }}</template>
-          </el-table-column>
-          <el-table-column label="操作" min-width="270" align="center">
+          <el-table-column label="更新时间" width="145" show-overflow-tooltip>
             <template #default="{ row }">
-              <div class="export-template__actions">
+              {{ row.updatedAt ? formatDateTime(row.updatedAt) : '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="156" align="center" fixed="right">
+            <template #default="{ row }">
+              <RowActions>
                 <el-button
                   text
                   type="primary"
                   size="small"
-                  :icon="Eye"
                   @click="openDetail(row as ExportTemplateItem)"
                 >
                   详情
@@ -325,38 +329,30 @@ onMounted(() => void load())
                 >
                   编辑
                 </el-button>
-                <el-button
-                  v-if="row.isDefault !== 1"
-                  text
-                  type="primary"
-                  size="small"
-                  :loading="actingId === (row as ExportTemplateItem).id"
-                  :disabled="actingId !== null"
-                  @click="handleSetDefault(row as ExportTemplateItem)"
-                >
-                  设默认
-                </el-button>
-                <el-button
-                  text
-                  :type="row.status === 1 ? 'danger' : 'success'"
-                  size="small"
-                  :loading="actingId === (row as ExportTemplateItem).id"
-                  :disabled="actingId !== null"
-                  @click="handleToggleStatus(row as ExportTemplateItem)"
-                >
-                  {{ row.status === 1 ? '禁用' : '启用' }}
-                </el-button>
-                <el-button
-                  text
-                  type="danger"
-                  size="small"
-                  :loading="deletingId === (row as ExportTemplateItem).id"
-                  :disabled="deletingId !== null"
-                  @click="handleDelete(row as ExportTemplateItem)"
-                >
-                  删除
-                </el-button>
-              </div>
+                <template #more>
+                  <el-dropdown-item
+                    v-if="row.isDefault !== 1"
+                    :disabled="actingId !== null"
+                    @click="handleSetDefault(row as ExportTemplateItem)"
+                  >
+                    {{ actingId === (row as ExportTemplateItem).id ? '设置中…' : '设为默认' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    :disabled="actingId !== null"
+                    @click="handleToggleStatus(row as ExportTemplateItem)"
+                  >
+                    {{ row.status === 1 ? '禁用' : '启用' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    divided
+                    class="row-actions__danger"
+                    :disabled="deletingId !== null"
+                    @click="handleDelete(row as ExportTemplateItem)"
+                  >
+                    {{ deletingId === (row as ExportTemplateItem).id ? '删除中…' : '删除' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
         </el-table>
@@ -447,20 +443,6 @@ onMounted(() => void load())
 
 <style scoped lang="scss">
 .export-template {
-  &__actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    flex-wrap: nowrap;
-    white-space: nowrap;
-
-    // 去掉相邻按钮默认 12px 间距，保证操作按钮一排排布
-    :deep(.el-button + .el-button) {
-      margin-left: 0;
-    }
-  }
-
   &__pagination {
     margin-top: $spacing-lg;
     display: flex;

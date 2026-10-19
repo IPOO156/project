@@ -10,6 +10,7 @@ import { Plus, Save } from 'lucide-vue-next'
 
 import { computed, reactive, ref, watch } from 'vue'
 import { listApprovalFlowSteps, listRoles, saveApprovalFlowSteps } from '@/shared/api/teacher'
+import RowActions from '@/shared/ui/RowActions.vue'
 
 const props = defineProps<{
   visible: boolean
@@ -28,10 +29,31 @@ const scopeTypeOptions = [
   { value: 6, label: '年级' },
 ]
 
-const scopeRuleOptions = ['student_school', 'student_college', 'student_major', 'student_class']
+/**
+ * 范围规则：后端保存的是编码（student_college 等），界面展示中文。
+ * allow-create 仍允许录入自定义编码；未知值原样显示，不丢信息。
+ */
+const scopeRuleOptions = [
+  { value: 'school', label: '本校' },
+  { value: 'student_college', label: '学生所在学院' },
+  { value: 'student_major', label: '学生所在专业' },
+  { value: 'student_class', label: '学生所在班级' },
+]
 
 function scopeTypeLabel(type: number) {
   return scopeTypeOptions.find((t) => t.value === type)?.label ?? String(type)
+}
+
+function scopeRuleLabel(rule: string | null | undefined) {
+  if (!rule) return '-'
+  return scopeRuleOptions.find((r) => r.value === rule)?.label ?? rule
+}
+
+/** 退回动作编码 → 中文；未知值原样显示 */
+function rejectActionLabel(action: string | null | undefined) {
+  if (!action || action === 'end') return '结束'
+  if (action === 'return') return '退回'
+  return action
 }
 
 const loading = ref(false)
@@ -160,7 +182,7 @@ function handleSaveStep() {
     return
   }
   if (stepForm.rejectAction === 'return' && stepForm.rejectToStep == null) {
-    ElMessage.warning('退回动作选择 return 时需填写退回步骤')
+    ElMessage.warning('退回动作选择「退回」时需填写退回步骤')
     return
   }
   const clone: ApprovalFlowStep = { ...stepForm, stepName: stepForm.stepName.trim() }
@@ -219,21 +241,26 @@ function handleClosed() {
         <el-table-column label="范围" width="70" align="center">
           <template #default="{ row }">{{ scopeTypeLabel(row.scopeType) }}</template>
         </el-table-column>
-        <el-table-column prop="scopeRule" label="范围规则" width="130" show-overflow-tooltip />
+        <el-table-column label="范围规则" width="130" show-overflow-tooltip>
+          <template #default="{ row }">{{ scopeRuleLabel(row.scopeRule) }}</template>
+        </el-table-column>
         <el-table-column label="超时(h)" width="70" align="center">
           <template #default="{ row }">{{ row.timeoutHours ?? '-' }}</template>
         </el-table-column>
-        <el-table-column label="退回" width="70" align="center">
-          <template #default="{ row }">{{ row.rejectAction ?? 'end' }}</template>
+        <el-table-column label="退回动作" width="88" align="center">
+          <template #default="{ row }">{{ rejectActionLabel(row.rejectAction) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="110" align="center">
+        <!-- 文字按钮带内边距，110px 下「编辑/删除」会折行；RowActions 收紧间距并禁止换行 -->
+        <el-table-column label="操作" width="120" align="center" fixed="right">
           <template #default="{ $index }">
-            <el-button text type="primary" size="small" @click="openEditStep($index)"
-              >编辑</el-button
-            >
-            <el-button text type="danger" size="small" @click="handleRemoveStep($index)"
-              >删除</el-button
-            >
+            <RowActions :more="false">
+              <el-button text type="primary" size="small" @click="openEditStep($index)"
+                >编辑</el-button
+              >
+              <el-button text type="danger" size="small" @click="handleRemoveStep($index)"
+                >删除</el-button
+              >
+            </RowActions>
           </template>
         </el-table-column>
       </el-table>
@@ -286,7 +313,12 @@ function handleClosed() {
             default-first-option
             style="width: 220px"
           >
-            <el-option v-for="r in scopeRuleOptions" :key="r" :label="r" :value="r" />
+            <el-option
+              v-for="r in scopeRuleOptions"
+              :key="r.value"
+              :label="r.label"
+              :value="r.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="自动分配">
@@ -306,8 +338,8 @@ function handleClosed() {
         </el-form-item>
         <el-form-item label="退回动作">
           <el-select v-model="stepForm.rejectAction" style="width: 160px">
-            <el-option label="结束(end)" value="end" />
-            <el-option label="退回(return)" value="return" />
+            <el-option label="结束（流程终止）" value="end" />
+            <el-option label="退回（退至指定步骤）" value="return" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="stepForm.rejectAction === 'return'" label="退回步骤">

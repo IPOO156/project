@@ -9,7 +9,7 @@ import type { TeacherDelegationItem } from '@/shared/types/teacher'
  * 被委托人下拉使用 GET /teacher/delegations/candidates（后端专用候选人接口）。
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, RefreshCw, Search, XCircle } from 'lucide-vue-next'
+import { Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 
 import {
@@ -19,6 +19,8 @@ import {
   listTeacherDelegations,
 } from '@/shared/api/teacher'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import { formatDateTime } from '@/shared/utils/time'
 
 const { me } = useTeacherMe()
 const myUserId = me.value?.userId
@@ -199,14 +201,22 @@ async function handleCancel(row: TeacherDelegationItem) {
   } catch {
     return
   }
-  const { value } = await ElMessageBox.prompt('请填写取消原因（可选）', '取消委托', {
-    inputValue: '',
-    inputPlaceholder: '取消原因，最多 200 字',
-    inputType: 'textarea',
-    confirmButtonText: '确认',
-    cancelButtonText: '取消',
-  }).catch(() => ({ value: '' }))
-  cancelReason.value = value ?? ''
+  // 取消原因框的「取消」应中止整个取消操作；此前 catch 后仍继续执行，
+  // 会在用户放弃填写原因时照样取消委托。
+  let value = ''
+  try {
+    const res = await ElMessageBox.prompt('请填写取消原因（可选）', '取消委托', {
+      inputValue: '',
+      inputPlaceholder: '取消原因，最多 200 字',
+      inputType: 'textarea',
+      confirmButtonText: '确认',
+      cancelButtonText: '返回',
+    })
+    value = res.value ?? ''
+  } catch {
+    return
+  }
+  cancelReason.value = value
   if (cancelReason.value.length > 200) {
     ElMessage.warning('取消原因不超过 200 字')
     return
@@ -247,10 +257,10 @@ onMounted(() => void loadList())
     -->
     <el-alert
       class="delegation__notice"
-      type="warning"
+      type="info"
       :closable="false"
       show-icon
-      title="委托暂不会改变审批流转：委托记录会保存并按时生效/过期，但后端尚未在任务下发与审批放行时读取委托，因此被委托人不会因此看到您的待办、也不能代您审批；管理员端也没有委托列表，无法从管理端查到谁被委托。"
+      title="当前委托仅作登记记录，不会自动转移待办或审批权限。"
     />
 
     <div class="mc-filter-bar">
@@ -306,10 +316,12 @@ onMounted(() => void loadList())
           <el-table-column prop="scopeName" label="范围详情" min-width="140">
             <template #default="{ row }">{{ row.scopeName ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="有效期" min-width="200">
-            <template #default="{ row }"
-              >{{ row.startTime ?? '-' }} 至 {{ row.endTime ?? '-' }}</template
-            >
+          <el-table-column label="有效期" min-width="220">
+            <template #default="{ row }">
+              <span class="delegation__period">
+                {{ formatDateTime(row.startTime) }} 至 {{ formatDateTime(row.endTime) }}
+              </span>
+            </template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
             <template #default="{ row }">
@@ -319,14 +331,13 @@ onMounted(() => void loadList())
           <el-table-column prop="reason" label="原因" min-width="140">
             <template #default="{ row }">{{ row.reason ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="100" align="center" fixed="right">
+          <el-table-column label="操作" width="90" align="center" fixed="right">
             <template #default="{ row }">
               <el-button
                 v-if="row.status === 0 || row.status === 1"
                 text
                 type="danger"
                 size="small"
-                :icon="XCircle"
                 @click="handleCancel(row as TeacherDelegationItem)"
               >
                 取消
@@ -334,6 +345,9 @@ onMounted(() => void loadList())
               <span v-else class="delegation__nodata">-</span>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState text="暂无委托记录" compact />
+          </template>
         </el-table>
         <div class="delegation__pagination">
           <el-pagination
@@ -347,12 +361,6 @@ onMounted(() => void loadList())
             @size-change="handleSearch"
           />
         </div>
-        <el-empty
-          v-if="!loading && !list.length"
-          class="delegation__empty"
-          description="暂无委托记录"
-          :image-size="72"
-        />
       </div>
     </div>
 
@@ -449,6 +457,11 @@ onMounted(() => void loadList())
     color: var(--el-text-color-placeholder);
   }
 
+  &__period {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
   &__scope-row {
     display: flex;
     gap: $spacing-sm;
@@ -459,10 +472,6 @@ onMounted(() => void loadList())
     display: flex;
     justify-content: flex-end;
     padding-top: $spacing-lg;
-  }
-
-  &__empty {
-    margin-top: $spacing-lg;
   }
 
   &__nodata {

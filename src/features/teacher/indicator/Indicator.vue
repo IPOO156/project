@@ -12,7 +12,7 @@ import type {
   SemesterItem,
 } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Check, History, Plus, RefreshCw, Rocket, X } from 'lucide-vue-next'
+import { Check, ChevronDown, History, Plus, RefreshCw, Rocket, X } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 
 import {
@@ -25,6 +25,7 @@ import {
   updateIndicatorsStatusBatch,
   updateIndicatorStatus,
 } from '@/shared/api/teacher'
+import RowActions from '@/shared/ui/RowActions.vue'
 import IndicatorVersionsDrawer from './components/IndicatorVersionsDrawer.vue'
 
 const loading = ref(false)
@@ -277,36 +278,31 @@ onMounted(() => void load())
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="load">刷新</el-button>
-        <el-button :icon="History" @click="versionsDrawerVisible = true">版本</el-button>
-        <el-button
-          type="success"
-          plain
-          :icon="Check"
-          :loading="batching"
+        <el-button :icon="History" @click="versionsDrawerVisible = true">版本记录</el-button>
+        <el-dropdown
+          trigger="click"
           :disabled="!selectedIndicators.length || batching"
-          @click="handleBatchStatus(1)"
+          @command="(cmd: number) => handleBatchStatus(cmd)"
         >
-          批量启用
-        </el-button>
-        <el-button
-          type="danger"
-          plain
-          :icon="X"
-          :loading="batching"
-          :disabled="!selectedIndicators.length || batching"
-          @click="handleBatchStatus(0)"
-        >
-          批量禁用
-        </el-button>
+          <el-button :loading="batching" :disabled="!selectedIndicators.length || batching">
+            批量操作<ChevronDown :size="14" class="indicator-page__caret" />
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :command="1" :icon="Check">批量启用</el-dropdown-item>
+              <el-dropdown-item :command="0" :icon="X">批量禁用</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-button type="primary" :icon="Plus" @click="openCreate()">新增一级指标</el-button>
         <el-button
-          type="success"
+          plain
           :icon="Rocket"
           :loading="publishing"
           :disabled="publishing"
           @click="openPublish"
         >
-          发布
+          发布规则版本
         </el-button>
       </div>
     </div>
@@ -343,38 +339,35 @@ onMounted(() => void load())
           <el-table-column prop="description" label="说明" min-width="160" show-overflow-tooltip>
             <template #default="{ row }">{{ row.description ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="240" align="center">
+          <el-table-column label="操作" width="176" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button
-                v-if="(row.level ?? 0) < 3"
-                text
-                type="primary"
-                size="small"
-                @click="openCreate(row as IndicatorNode)"
-              >
-                加子项
-              </el-button>
-              <el-button text type="primary" size="small" @click="openEdit(row as IndicatorNode)">
-                编辑
-              </el-button>
-              <el-button
-                text
-                :type="row.status === 1 ? 'danger' : 'success'"
-                size="small"
-                @click="handleToggleStatus(row as IndicatorNode)"
-              >
-                {{ row.status === 1 ? '禁用' : '启用' }}
-              </el-button>
-              <el-button
-                text
-                type="danger"
-                size="small"
-                :loading="deletingId === (row as IndicatorNode).id"
-                :disabled="deletingId !== null"
-                @click="handleDelete(row as IndicatorNode)"
-              >
-                删除
-              </el-button>
+              <RowActions>
+                <el-button
+                  v-if="(row.level ?? 0) < 3"
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openCreate(row as IndicatorNode)"
+                >
+                  加子项
+                </el-button>
+                <el-button text type="primary" size="small" @click="openEdit(row as IndicatorNode)">
+                  编辑
+                </el-button>
+                <template #more>
+                  <el-dropdown-item @click="handleToggleStatus(row as IndicatorNode)">
+                    {{ row.status === 1 ? '禁用' : '启用' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    divided
+                    class="row-actions__danger"
+                    :disabled="deletingId !== null"
+                    @click="handleDelete(row as IndicatorNode)"
+                  >
+                    {{ deletingId === (row as IndicatorNode).id ? '删除中…' : '删除' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
         </el-table>
@@ -462,5 +455,9 @@ onMounted(() => void load())
   font-size: 12px;
   line-height: 1.6;
   color: var(--el-text-color-secondary);
+}
+
+.indicator-page__caret {
+  margin-left: 2px;
 }
 </style>

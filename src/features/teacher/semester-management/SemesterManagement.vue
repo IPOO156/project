@@ -27,6 +27,9 @@ import {
   uploadFile,
 } from '@/shared/api/teacher'
 import { COMMON_STATUS } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import RowActions from '@/shared/ui/RowActions.vue'
+import { formatDateTime } from '@/shared/utils/time'
 
 // ── 2. 类型/接口定义 ──
 type DateRange = [string, string] | null
@@ -263,16 +266,15 @@ function openImportResult() {
   <div class="mc-page semester-management">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
-        <p class="mc-page-head__eyebrow">学期管理 · Semesters</p>
         <h2 class="mc-page-head__title">学期管理</h2>
-        <p class="mc-page-head__desc">维护学期信息，设置当前学期，并支持批量导入学期。</p>
+        <p class="mc-page-head__desc">
+          维护学期名称和起止日期，指定当前学期，也可以通过 Excel 批量导入。
+        </p>
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="load">刷新</el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate">新增学期</el-button>
-        <el-button type="primary" :icon="FileUp" @click="importDialogVisible = true">
-          导入学期
-        </el-button>
+        <el-button plain :icon="FileUp" @click="importDialogVisible = true">导入学期</el-button>
         <!--
           「导入结果」是**页面级**的（本次会话最近一次批量导入的统计），不是某一行的属性，
           原先挂在每行操作列会让人以为是该行的导入结果（点击后提示「请先执行导入」）。
@@ -323,10 +325,15 @@ function openImportResult() {
           <el-table-column label="所属学校" min-width="110">
             <template #default="{ row }">{{ row.schoolName ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="起止日期" width="180">
-            <template #default="{ row }">{{ dateRangeText(row as SemesterListItem) }}</template>
+          <el-table-column label="起止日期" width="200">
+            <template #default="{ row }">
+              <span class="semester-management__date-range">{{
+                dateRangeText(row as SemesterListItem)
+              }}</span>
+            </template>
           </el-table-column>
-          <el-table-column label="当前学期" width="72" align="center">
+          <!-- 4 个汉字 + 单元格内边距需要 84px，72px 会在 1024 宽下折成「当前学 / 期」 -->
+          <el-table-column label="当前学期" width="84" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.isCurrent === 1" type="success" size="small">当前</el-tag>
               <span v-else>-</span>
@@ -339,12 +346,18 @@ function openImportResult() {
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="创建时间" min-width="120">
-            <template #default="{ row }">{{ row.createdAt ?? '-' }}</template>
-          </el-table-column>
-          <el-table-column label="操作" width="260" align="center">
+          <el-table-column label="创建时间" width="145">
             <template #default="{ row }">
-              <div class="semester-management__actions">
+              {{ row.createdAt ? formatDateTime(row.createdAt) : '-' }}
+            </template>
+          </el-table-column>
+          <!--
+            「设为当前」与「编辑」是高频行操作；启用/禁用低频且会改变学期可用状态，
+            收进「更多」避免三个文字按钮在 196px 内折行，同时保留全部操作。
+          -->
+          <el-table-column label="操作" width="180" align="center" fixed="right">
+            <template #default="{ row }">
+              <RowActions>
                 <el-button
                   v-if="row.isCurrent !== 1"
                   text
@@ -362,17 +375,17 @@ function openImportResult() {
                 >
                   编辑
                 </el-button>
-                <el-button
-                  text
-                  :type="row.status === 1 ? 'danger' : 'success'"
-                  size="small"
-                  @click="handleToggleStatus(row as SemesterListItem)"
-                >
-                  {{ row.status === 1 ? '禁用' : '启用' }}
-                </el-button>
-              </div>
+                <template #more>
+                  <el-dropdown-item @click="handleToggleStatus(row as SemesterListItem)">
+                    {{ row.status === 1 ? '禁用' : '启用' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState text="暂无学期数据" compact />
+          </template>
         </el-table>
 
         <div class="semester-management__pagination">
@@ -497,18 +510,9 @@ function openImportResult() {
 
 <style scoped lang="scss">
 .semester-management {
-  &__actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    flex-wrap: nowrap;
+  &__date-range {
     white-space: nowrap;
-
-    // 去掉 Element Plus 相邻按钮默认 12px 间距，保证操作按钮一排排布
-    :deep(.el-button + .el-button) {
-      margin-left: 0;
-    }
+    font-variant-numeric: tabular-nums;
   }
 
   &__total {

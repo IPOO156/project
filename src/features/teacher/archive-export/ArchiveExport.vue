@@ -296,7 +296,6 @@ onUnmounted(() => {
   <div class="mc-page archive-export">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
-        <p class="mc-page-head__eyebrow">档案导出 · Exports</p>
         <h2 class="mc-page-head__title">档案导出</h2>
         <p class="mc-page-head__desc">
           选择导出范围（全校 / 学院 / 专业 / 班级）与导出模板，提交后可在下方记录中下载或删除。
@@ -470,7 +469,7 @@ onUnmounted(() => {
               <span v-else class="archive-export__nodata">-</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="90" align="center">
+          <el-table-column label="操作" width="90" align="center" fixed="right">
             <template #default="{ row }">
               <el-button
                 type="danger"

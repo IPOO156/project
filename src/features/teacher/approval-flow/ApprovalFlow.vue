@@ -6,7 +6,7 @@
  */
 import type { ApprovalFlowDetail, ApprovalFlowItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, RefreshCw, Route, Workflow } from 'lucide-vue-next'
+import { Plus, RefreshCw, Route } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 
 import {
@@ -16,6 +16,7 @@ import {
   listApprovalFlows,
   updateApprovalFlow,
 } from '@/shared/api/teacher'
+import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
 import ApprovalFlowMappingsDrawer from './components/ApprovalFlowMappingsDrawer.vue'
 import ApprovalFlowStepsDrawer from './components/ApprovalFlowStepsDrawer.vue'
@@ -225,7 +226,8 @@ onMounted(() => void load())
             <template #default="{ row }">{{ row.applicableSubType ?? '通用' }}</template>
           </el-table-column>
           <el-table-column prop="version" label="版本" width="70" align="center" />
-          <el-table-column label="默认" width="70" align="center">
+          <!-- 标签「默认」约 38px + 单元格内边距 24px；70px 在窄屏下会被固定列遮住边缘 -->
+          <el-table-column label="默认" width="76" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.isDefault === 1" type="success" size="small">默认</el-tag>
               <span v-else>-</span>
@@ -241,51 +243,42 @@ onMounted(() => void load())
           <el-table-column label="创建时间" width="150">
             <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="320" align="center">
+          <el-table-column label="操作" width="156" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button
-                text
-                type="primary"
-                size="small"
-                @click="openDetail(row as ApprovalFlowItem)"
-              >
-                详情
-              </el-button>
-              <el-button
-                text
-                type="primary"
-                size="small"
-                :icon="Workflow"
-                @click="openSteps(row as ApprovalFlowItem)"
-              >
-                步骤
-              </el-button>
-              <el-button
-                text
-                type="primary"
-                size="small"
-                @click="openEdit(row as ApprovalFlowItem)"
-              >
-                编辑
-              </el-button>
-              <el-button
-                text
-                :type="row.status === 1 ? 'danger' : 'success'"
-                size="small"
-                @click="handleToggleStatus(row as ApprovalFlowItem)"
-              >
-                {{ row.status === 1 ? '禁用' : '启用' }}
-              </el-button>
-              <el-button
-                text
-                type="danger"
-                size="small"
-                :loading="deletingId === (row as ApprovalFlowItem).id"
-                :disabled="deletingId !== null"
-                @click="handleDelete(row as ApprovalFlowItem)"
-              >
-                删除
-              </el-button>
+              <RowActions>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openDetail(row as ApprovalFlowItem)"
+                >
+                  详情
+                </el-button>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openSteps(row as ApprovalFlowItem)"
+                >
+                  步骤
+                </el-button>
+                <template #more>
+                  <el-dropdown-item @click="openEdit(row as ApprovalFlowItem)">
+                    编辑
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleToggleStatus(row as ApprovalFlowItem)">
+                    {{ row.status === 1 ? '禁用' : '启用' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    divided
+                    class="row-actions__danger"
+                    :disabled="deletingId !== null"
+                    @click="handleDelete(row as ApprovalFlowItem)"
+                  >
+                    {{ deletingId === (row as ApprovalFlowItem).id ? '删除中…' : '删除' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
         </el-table>

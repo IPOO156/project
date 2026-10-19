@@ -257,7 +257,7 @@ function handleClosed() {
             <span v-else>即时 ~ 长期</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="130" align="center">
+        <el-table-column label="操作" width="130" align="center" fixed="right">
           <template #default="{ row }">
             <el-button
               text
