@@ -9,6 +9,7 @@ import { getProfileInfo } from '@/shared/api/student'
 import {
   activityCategoryOf,
   ARCHIVE_TYPE_ALIASES,
+  awardTypeCodeOf,
   deriveRecordTitle,
   mapDetailToForm,
   submitApplication,
@@ -141,7 +142,8 @@ export function useApplicationPage(
       const r: any =
         activityCategoryOf(appType) === 'award'
           ? await awardDuplicateCheck({
-              awardType: type,
+              // 后端按 award_type 枚举码严格相等匹配（competition_star / innovation_star / research_star）
+              awardType: awardTypeCodeOf(type),
               certificateNo: data.certNumber,
               title,
               participatedTime:
@@ -153,9 +155,13 @@ export function useApplicationPage(
             })
           : await duplicateCheck({
               archiveType: ARCHIVE_TYPE_ALIASES[type]?.[0] ?? type,
-              certificateNo: data.certNumber,
-              title,
-              obtainedTime: data.acquisitionDate,
+              // 后端 DuplicateCheckRequest 为 { archiveType, fields: Map }，检测字段取自
+              // duplicate_detection_rules.detect_fields，需放在 fields 内；平铺字段会被忽略。
+              fields: {
+                ...(data.certNumber ? { certificateNo: data.certNumber } : {}),
+                ...(data.acquisitionDate ? { obtainTime: data.acquisitionDate } : {}),
+                title,
+              },
             })
       // 奖项(8.x)返回 isDuplicate/duplicateRecords；档案(7.0.1)实测返回 hasDuplicate/similarItems/suggestion，统一归一化读取
       const hasDuplicate = r?.isDuplicate ?? r?.hasDuplicate

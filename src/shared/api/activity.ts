@@ -8,7 +8,9 @@ import request from './request'
  * 不注入示例数据（编造的动态会被用户误认为自己的真实申报记录）。
  */
 export function getActivities(filters?: ActivityFilters): Promise<Activity[]> {
-  const params: Record<string, any> = { page: 1, per_page: 50 }
+  // 后端 /activities 绑定的是 PageParam.perPage（per_page 只影响 JSON 序列化），
+  // 传 per_page 会被忽略并回落默认 20 条。
+  const params: Record<string, any> = { page: 1, perPage: 50 }
   if (filters?.keyword) params.keyword = filters.keyword
   if (filters?.status) params.status = statusValue(filters.status)
 

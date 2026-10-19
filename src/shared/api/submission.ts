@@ -45,6 +45,22 @@ const STAR_TYPES: ApplicationType[] = [
 ]
 
 /**
+ * 前端奖项类型 key → award_applications.award_type 枚举码。
+ * 后端奖项查重按 awardType 与已存记录严格相等过滤；传驼峰 key 永远匹配不到任何记录。
+ */
+const AWARD_TYPE_CODES: Record<string, string> = {
+  competitionStar: 'competition_star',
+  innovationStar: 'innovation_star',
+  scientificProject: 'research_star',
+  softwareCopyright: 'research_star',
+  paper: 'research_star',
+}
+
+export function awardTypeCodeOf(type: string): string {
+  return AWARD_TYPE_CODES[type] ?? type
+}
+
+/**
  * 申报/报名类型 → /activities 的活动分类。
  * 撤回接口 PUT /activities/{id}/withdraw 需携带 type 参数。
  */
@@ -139,8 +155,23 @@ function matchFilters(record: SubmissionRecord, filters?: SubmissionFilters): bo
 export async function getSubmissionRecords(
   filters?: SubmissionFilters,
 ): Promise<SubmissionRecord[]> {
-  const res = await getActivities({ page: 1, per_page: 200 })
-  const all = (res?.list ?? []).map(mapActivityToSubmission)
+  // 筛选在前端完成，因此需拉全量：后端单页上限 100（PageParam @Max），逐页拉取直至 total。
+  // 设 20 页上限（2000 条）防止异常 total 导致无限请求；超出部分在控制台明确告警，不静默截断。
+  const PER_PAGE = 100
+  const MAX_PAGES = 20
+  const items: ActivityListItem[] = []
+  let total = 0
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const res = await getActivities({ page, perPage: PER_PAGE })
+    const list = res?.list ?? []
+    items.push(...list)
+    total = res?.total ?? items.length
+    if (list.length === 0 || items.length >= total) break
+  }
+  if (items.length < total) {
+    console.warn(`[submission] 申报记录共 ${total} 条，仅加载前 ${items.length} 条`)
+  }
+  const all = items.map(mapActivityToSubmission)
   return filters ? all.filter((r) => matchFilters(r, filters)) : all
 }
 
@@ -154,11 +185,9 @@ export async function withdrawSubmission(
   id: string,
   category: ActivityType = 'archive',
 ): Promise<void> {
-  try {
-    await withdrawActivity(Number(id), category)
-  } catch {
-    // 撤回失败：本地状态由 store 兜底更新，不阻断交互
-  }
+  // 撤回失败必须上抛：调用方只有拿到成功结果才能把本地状态改为「已撤回」，
+  // 否则接口失败仍显示已撤回，刷新后记录又变回草稿，属于伪成功。
+  await withdrawActivity(Number(id), category)
 }
 
 /* ===================== 申报/报名契约映射（对齐 7.x 档案申报 / 8.x 奖项报名接口文档） ===================== */
@@ -217,9 +246,10 @@ const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
       competitionName: 'competitionName',
       competitionType: 'competitionType',
       awardLevel: 'awardLevel',
-      obtainedTime: 'awardDate',
+      // 后端 DTO 字段为 obtainTime（ApplicationService 的 CompetitionRequest/... 实测）
+      obtainTime: 'awardDate',
     },
-    dateFields: ['obtainedTime'],
+    dateFields: ['obtainTime'],
   },
   scholarship: {
     endpoint: '/applications/scholarship',
@@ -227,14 +257,14 @@ const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
       scholarshipName: 'awardName',
       scholarshipCategory: 'scholarshipLevel',
       awardLevel: 'scholarshipGrade',
-      obtainedTime: 'acquireDate',
+      obtainTime: 'acquireDate',
     },
-    dateFields: ['obtainedTime'],
+    dateFields: ['obtainTime'],
   },
   certificate: {
     endpoint: '/applications/certificate',
-    mapping: { certificateType: 'certType', certificateName: 'certName', obtainedTime: 'certDate' },
-    dateFields: ['obtainedTime'],
+    mapping: { certificateType: 'certType', certificateName: 'certName', obtainTime: 'certDate' },
+    dateFields: ['obtainTime'],
   },
   innovation: {
     endpoint: '/applications/innovation',
@@ -528,15 +558,18 @@ export function mapDetailToForm(type: string, detail: any): Record<string, any> 
     const v = nested[from]
     if (v != null && v !== '') out[to] = v
   }
-  // 通用取得时间 obtainTime → 扩展表单 acquisitionDate（重复校验 obtainedTime 用）
+  // 通用取得时间 obtainTime → 扩展表单 acquisitionDate（重复校验 obtainTime 用）
   if (nested.obtainTime != null && nested.obtainTime !== '') {
     out.acquisitionDate = nested.obtainTime
   }
-  // 学期：详情在顶层返回 semesterName（列表为 semester_name）
-  if (detail?.semesterName) out.semester = detail.semesterName
-  // 附件：evidenceFiles（file_id/file_name/file_url）→ proofMaterials（UploadUserFile 形状，含自定义 fileId）。
+  // 学期：ActivityDetailResponse 用 @JsonProperty("semester_name")，实际返回下划线字段
+  if (detail?.semester_name ?? detail?.semesterName) {
+    out.semester = detail.semester_name ?? detail.semesterName
+  }
+  // 附件：evidence_files（file_id/file_name/file_url）→ proofMaterials（UploadUserFile 形状，含自定义 fileId）。
   // 无附件时也返回空数组，保证 handleEditClick 回填后 form.proofMaterials 恒为数组（el-upload 需要数组而非 ''）
-  const files = Array.isArray(detail?.evidenceFiles) ? detail.evidenceFiles : []
+  const rawFiles = detail?.evidence_files ?? detail?.evidenceFiles
+  const files = Array.isArray(rawFiles) ? rawFiles : []
   out.proofMaterials = files.map((f: any, idx: number) => ({
     // uid 用大基数 + 索引，避免与 el-upload 自增 uid 冲突
     uid: 1_000_000_000 + idx,
@@ -635,9 +668,9 @@ function appendCommonFields(payload: Record<string, any>, data: Record<string, a
   if (data.certNumber) payload.certificateNo = String(data.certNumber)
   if (data.issuingAuthority) payload.issuingUnit = String(data.issuingAuthority)
   if (data.validityPeriod) payload.validUntil = toDateString(data.validityPeriod)
-  // 取得时间（扩展字段 acquisitionDate）→ 契约字段 obtainedTime；类型已映射 obtainedTime 时不覆盖
-  if (data.acquisitionDate && payload.obtainedTime === undefined) {
-    payload.obtainedTime = toDateString(data.acquisitionDate)
+  // 取得时间（扩展字段 acquisitionDate）→ 契约字段 obtainTime；类型已映射 obtainTime 时不覆盖
+  if (data.acquisitionDate && payload.obtainTime === undefined) {
+    payload.obtainTime = toDateString(data.acquisitionDate)
   }
 }
 

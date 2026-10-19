@@ -174,6 +174,8 @@ interface GuideData {
   typeLabel: string
   title: string
   content: string
+  /** 申报说明（档案类评选说明接口的 applyDesc；奖项类无此字段） */
+  applyDesc?: string
   requirements: Array<{ field: string; label: string; required: boolean; description: string }>
   notes: string[]
   updatedAt: string
@@ -199,12 +201,28 @@ function formatUpdatedAt(value?: string): string {
 
 /** 用 h() 渲染评选说明 VNode（message 渲染于 message box 内，样式见文末非 scoped 样式块） */
 function buildGuideVNode(data: GuideData) {
+  const hasContent = Boolean(data.content || data.applyDesc)
+  const hasRequirements = Boolean(data.requirements?.length)
+  const hasNotes = Boolean(data.notes?.length)
   return h('div', { class: 'message-guide' }, [
     h('div', { class: 'message-guide__title' }, [
       data.title || data.typeLabel || '评选说明',
       data.typeLabel ? h('span', { class: 'message-guide__type' }, data.typeLabel) : null,
     ]),
     data.content ? h('p', { class: 'message-guide__content' }, data.content) : null,
+    data.applyDesc
+      ? h('div', { class: 'message-guide__section' }, [
+          h('div', { class: 'message-guide__section-title' }, '申报说明'),
+          h('p', { class: 'message-guide__content' }, data.applyDesc),
+        ])
+      : null,
+    !hasContent && !hasRequirements && !hasNotes
+      ? h(
+          'p',
+          { class: 'message-guide__empty' },
+          '暂无评选说明，请联系管理员补充该类型的申报配置。',
+        )
+      : null,
     data.requirements?.length
       ? h('div', { class: 'message-guide__section' }, [
           h('div', { class: 'message-guide__section-title' }, '申报要求'),
@@ -567,8 +585,15 @@ async function openGuide(row: any) {
   }
 
   &__content {
+    /* 后端说明字段可能含换行，保留段落结构 */
+    white-space: pre-line;
     margin: 0 0 12px;
     color: var(--el-text-color-regular);
+  }
+
+  &__empty {
+    margin: 4px 0 0;
+    color: var(--el-text-color-secondary);
   }
 
   &__section {
