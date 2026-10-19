@@ -59,5 +59,11 @@ export const useAwardReviewStore = defineStore('award-review', () => {
     ElMessage.success('修改已保存，等待重新审核')
   }
 
-  return { allRecords, loading, fetchAll, resubmit }
+  /** 重置用户级状态（登出/换账号时调用） */
+  function reset(): void {
+    allRecords.value = []
+    loading.value = false
+  }
+
+  return { allRecords, loading, fetchAll, resubmit, reset }
 })

@@ -52,10 +52,24 @@ export const useActivityStore = defineStore('activity', () => {
   // 该类操作请直接调用 @/shared/api/activities 的 updateActivity / deleteActivity（按记录类别传 type），
   // 例如 app/stores/submission.ts:131 的写法。
 
+  /**
+   * 重置用户级状态（登出/换账号时调用）。
+   * 除清空 state 外，复位模块级请求缓存变量（pendingFetch / lastFetchedAt）：
+   * 否则换账号后 60s TTL 内仍会命中上一账号的动态列表缓存。
+   */
+  function reset(): void {
+    pendingFetch = null
+    lastFetchedAt = 0
+    activities.value = []
+    filteredActivities.value = []
+    loading.value = false
+  }
+
   return {
     activities,
     filteredActivities,
     loading,
     fetchActivities,
+    reset,
   }
 })

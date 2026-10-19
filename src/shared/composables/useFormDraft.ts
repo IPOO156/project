@@ -5,8 +5,8 @@ import { onBeforeRouteLeave } from 'vue-router'
 import { autosaveApplication } from '@/shared/api/applications'
 import { autosaveAward } from '@/shared/api/awards'
 import { activityCategoryOf, buildContractPayload, createDraft } from '@/shared/api/submission'
+import { DRAFT_PREFIX } from '@/shared/constants/storageKeys'
 
-const DRAFT_PREFIX = 'form_draft_'
 const DEBOUNCE_MS = 800
 
 function isNonEmpty(data: Record<string, unknown>): boolean {

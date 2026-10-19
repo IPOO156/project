@@ -309,6 +309,21 @@ export const useNotificationStore = defineStore('notification', () => {
     filteredNotifications.value.unshift(newNotification)
   }
 
+  /**
+   * 重置用户级状态（登出/换账号时调用）。
+   * 除清空 state 外，复位模块级请求缓存变量（pendingFetch / lastFullFetchAt）：
+   * 否则换账号后 60s TTL 内仍会把上一账号的消息列表当缓存命中。
+   */
+  function reset(): void {
+    pendingFetch = null
+    lastFullFetchAt = 0
+    notifications.value = []
+    filteredNotifications.value = []
+    loading.value = false
+    loadError.value = false
+    processedIds.value = new Set()
+  }
+
   return {
     notifications,
     filteredNotifications,
@@ -325,5 +340,6 @@ export const useNotificationStore = defineStore('notification', () => {
     unarchiveNotification,
     deleteNotification,
     addNotification,
+    reset,
   }
 })

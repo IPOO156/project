@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { clearUserScopedStorage } from '@/shared/utils/session'
 import {
   clearAuth,
   getRefreshToken,
@@ -79,6 +80,10 @@ function tryRefreshToken(): Promise<string | null> {
 
 function forceLogout() {
   clearAuth()
+  // 强制登出同样需清除用户级本地存储（身份缓存 / 头像 / 教师身份 / 草稿等）。
+  // 分层红线：shared 层不得 import app 层 store，故此处只清存储不打理 store 内存态；
+  // 下方会整页跳转 /login（非登录页时），内存态随页面重载自然消失。
+  clearUserScopedStorage()
   // 已在登录页/根路径时禁止整页跳转：对相同 URL 赋值 location 会触发 reload。
   // 若 401 源是"匿名访问被安全链拒绝"而非"会话过期"，跳转会形成 ~150ms 一次的无休止
   // reload 循环（登录页 /public/statistics 401 曾触发此死循环），故仅非登录页才回跳。

@@ -1,13 +1,12 @@
 import type { CurrentUser } from '@/shared/types/teacher'
 import { ref } from 'vue'
 import { getCurrentUser } from '@/shared/api/teacher'
-
-const STORAGE_KEY = 'teacher_me'
+import { TEACHER_ME_KEY } from '@/shared/constants/storageKeys'
 
 function readCache(): CurrentUser | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(TEACHER_ME_KEY)
     return raw ? (JSON.parse(raw) as CurrentUser) : null
   } catch {
     return null
@@ -28,7 +27,7 @@ export function useTeacherMe() {
       const data = await getCurrentUser()
       me.value = data
       if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+        localStorage.setItem(TEACHER_ME_KEY, JSON.stringify(data))
       }
       return data
     } catch {
@@ -38,7 +37,7 @@ export function useTeacherMe() {
 
   function clear() {
     me.value = null
-    if (typeof window !== 'undefined') localStorage.removeItem(STORAGE_KEY)
+    if (typeof window !== 'undefined') localStorage.removeItem(TEACHER_ME_KEY)
   }
 
   return { me, refresh, clear }
