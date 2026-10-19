@@ -69,7 +69,12 @@ export interface ExportTemplatePayload {
   templateCode: string
   exportType: string
   scopeType?: number
+  /** 1=字段列表模式（必填 fieldsConfig） 2=自由模板模式（必填 templateContent） */
   templateMode?: number
+  /** 字段列表模式配置（数组，元素含 key/name/path/source 等） */
+  fieldsConfig?: unknown
+  /** 自由模板模式的 HTML 内容 */
+  templateContent?: string
   paperSize?: string
   orientation?: number
 }

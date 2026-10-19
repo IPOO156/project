@@ -23,10 +23,12 @@ import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 const { me } = useTeacherMe()
 const myUserId = me.value?.userId
 
+// 后端 direction 只识别 delegator / delegatee 两个字符串（TeacherDelegationService.collectRecords），
+// 数字 1/2 不在识别范围内，会被当作「全部」静默忽略。
 const directionOptions = [
   { value: '', label: '全部方向' },
-  { value: 1, label: '我发出的' },
-  { value: 2, label: '我收到的' },
+  { value: 'delegator', label: '我发出的' },
+  { value: 'delegatee', label: '我收到的' },
 ]
 const statusOptions = [
   { value: '', label: '全部状态' },
@@ -55,7 +57,7 @@ const total = ref(0)
 const page = ref(1)
 const perPage = ref(10)
 const filters = reactive({
-  direction: '' as number | '',
+  direction: '' as 'delegator' | 'delegatee' | '',
   status: '' as number | '',
 })
 
@@ -398,12 +400,16 @@ onMounted(() => void loadList())
           </div>
         </el-form-item>
         <el-form-item label="有效期" required>
+          <!-- 后端 DelegationCreateRequest 使用 yyyy-MM-dd'T'HH:mm:ss[XXX]，不接受毫秒。
+               默认 v-model 绑定 Date 会序列化成 2026-12-10T08:00:00.000Z（带 .000）而解析失败；
+               这里直接产出带时区偏移、无毫秒的字符串。 -->
           <el-date-picker
             v-model="form.timeRange"
             type="datetimerange"
             range-separator="至"
             start-placeholder="开始时间"
             end-placeholder="结束时间"
+            value-format="YYYY-MM-DDTHH:mm:ssZ"
             style="width: 100%"
           />
         </el-form-item>

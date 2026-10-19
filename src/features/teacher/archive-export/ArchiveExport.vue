@@ -184,18 +184,20 @@ async function handleExport(fileType: 'pdf' | 'xlsx') {
           : undefined
   const selectedTemplate = templates.value.find((t) => t.templateId === selectedTemplateId.value)
   try {
-    // 管理员走 /admin/exports/archives（支持学校级范围等教师端没有的参数），教师走 /teacher/exports
+    // 管理员走 /admin/exports/archives（支持学校级范围等教师端没有的参数），教师走 /teacher/exports。
+    // fileType 是「文件格式」只能为 pdf/xlsx（后端校验），模板的 exportType（student_archive 等）是
+    // 「模板内容类型」，必须放到 templateId，不能拿来当 fileType。
     const res = isAdmin.value
       ? await submitAdminArchiveExport({
           scopeType,
           scopeId,
-          fileType: selectedTemplate?.exportType ?? fileType,
+          fileType,
           templateId: selectedTemplate?.templateId,
         })
       : await submitArchiveExport({
           scopeType,
           scopeId,
-          fileType: selectedTemplate?.exportType ?? fileType,
+          fileType,
           templateId: selectedTemplate?.templateId,
         })
     ElMessage.success(

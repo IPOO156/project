@@ -52,38 +52,78 @@ const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editingId = ref<number | null>(null)
 const parentId = ref<number | null>(null)
+/** 当前编辑/新增指标的层级（1/2/3）；父级为二级时新建的是三级指标，必须填 scoringRule */
+const formLevel = ref(1)
 const form = reactive({
   indicatorName: '',
   indicatorCode: '',
   weight: 0,
   description: '',
+  scoringRuleText: '',
 })
 
 function openCreate(parent?: IndicatorNode) {
   isEdit.value = false
   editingId.value = null
   parentId.value = parent?.id ?? null
+  formLevel.value = parent ? (parent.level ?? 0) + 1 : 1
   form.indicatorName = ''
   form.indicatorCode = ''
   form.weight = 0
   form.description = ''
+  form.scoringRuleText = ''
   dialogVisible.value = true
 }
 
 function openEdit(row: IndicatorNode) {
   isEdit.value = true
   editingId.value = row.id
+  formLevel.value = row.level
   form.indicatorName = row.indicatorName
   form.indicatorCode = row.indicatorCode
   form.weight = row.weight
   form.description = row.description ?? ''
+  form.scoringRuleText = row.scoringRule ? JSON.stringify(row.scoringRule, null, 2) : ''
   dialogVisible.value = true
+}
+
+/** 解析计分规则 JSON；非法时提示并返回 undefined */
+function parseScoringRule(): Record<string, unknown> | undefined {
+  const text = form.scoringRuleText.trim()
+  if (!text) return undefined
+  try {
+    const parsed = JSON.parse(text)
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      ElMessage.warning('计分规则必须是 JSON 对象')
+      return undefined
+    }
+    return parsed as Record<string, unknown>
+  } catch {
+    ElMessage.warning('计分规则不是合法的 JSON，请检查格式')
+    return undefined
+  }
 }
 
 async function handleSave() {
   if (!form.indicatorName.trim() || !form.indicatorCode.trim()) {
     ElMessage.warning('请填写指标名称和编码')
     return
+  }
+  // 后端要求三级指标必填 scoringRule（type + source 等，见 ScoringRuleValidator）
+  let scoringRule: Record<string, unknown> | undefined
+  if (formLevel.value === 3) {
+    scoringRule = parseScoringRule()
+    if (!scoringRule) {
+      ElMessage.warning('三级指标需填写计分规则（JSON 对象）')
+      return
+    }
+    if (!scoringRule.type) {
+      ElMessage.warning('计分规则缺少 type 字段')
+      return
+    }
+  } else if (form.scoringRuleText.trim()) {
+    scoringRule = parseScoringRule()
+    if (!scoringRule) return
   }
   saving.value = true
   try {
@@ -92,6 +132,7 @@ async function handleSave() {
         indicatorName: form.indicatorName.trim(),
         weight: form.weight,
         description: form.description || undefined,
+        ...(scoringRule ? { scoringRule } : {}),
       })
       ElMessage.success('更新成功')
     } else {
@@ -101,6 +142,7 @@ async function handleSave() {
         indicatorName: form.indicatorName.trim(),
         weight: form.weight,
         description: form.description || undefined,
+        ...(scoringRule ? { scoringRule } : {}),
       }
       await createIndicator(payload)
       ElMessage.success('创建成功')
@@ -355,6 +397,14 @@ onMounted(() => void load())
         </el-form-item>
         <el-form-item label="说明">
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="指标说明" />
+        </el-form-item>
+        <el-form-item v-if="formLevel === 3" label="计分规则" required>
+          <el-input
+            v-model="form.scoringRuleText"
+            type="textarea"
+            :rows="5"
+            placeholder='JSON 对象，例如 {"type":"AVG","source":"gpa"}（type 支持 AVG/SUM/MAX/WEIGHTED/THRESHOLD/COUNT）'
+          />
         </el-form-item>
       </el-form>
       <template #footer>

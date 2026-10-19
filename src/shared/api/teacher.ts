@@ -154,7 +154,7 @@ import type {
  * 继续使用 /admin/**（如用户/角色/学期/导出模板/组织架构等），后端缺口见核查报告。
  * 教师消息中心独立走 /teacher/messages（DTO 与学生端 /messages 一致）。
  */
-import { getToken } from '@/shared/utils/token'
+import { downloadBlobFile } from '@/shared/utils/download'
 import request from './request'
 
 /* ===================== 认证 ===================== */
@@ -543,12 +543,13 @@ export function deleteFile(fileId: number): Promise<void> {
 }
 
 /**
- * 下载文件（后端 302 重定向到 OSS 签名 URL，绕过统一拦截器以 blob 接收）。
+ * 下载文件（后端 302 重定向到 OSS 签名 URL，以 blob 接收）。
  *
  * ⚠️ 必须走本函数，不能用 `<a href="{downloadUrl}">` 直链：
  * `/common/files/{fileId}/download` 是**鉴权端点**（无 token 返回 401 未登录，
  * 见 CommonService.downloadFile 的权限与有效期校验），浏览器直链不会携带
- * Authorization 头，必然下载失败。此处以 axios 带 Bearer 取回 blob 再触发本地保存。
+ * Authorization 头，必然下载失败。此处经统一 request 实例（自动带 Bearer 与
+ * 401 续期）取回 blob 再触发本地保存。
  *
  * 文件名：省略 fileName 时优先解析响应头 `Content-Disposition` —— 后端经
  * OssFileService.getFileUrl(objectKey, originalName) 生成的签名 URL 会带上真实
@@ -556,42 +557,7 @@ export function deleteFile(fileId: number): Promise<void> {
  * 退回「下载文件」。
  */
 export async function downloadFile(fileId: number, fileName?: string): Promise<void> {
-  const { default: axios } = await import('axios')
-  const res = await axios.get(`/api/v1/common/files/${fileId}/download`, {
-    responseType: 'blob',
-    headers: { Authorization: `Bearer ${getToken()}` },
-  })
-  const blob = new Blob([res.data])
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName ?? resolveFileName(res.headers) ?? '下载文件'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-}
-
-/**
- * 从响应头解析下载文件名：依次尝试 RFC 5987 的 `filename*=UTF-8''<pct-encoded>`
- * 与普通 `filename="..."`，均无则返回 null（由调用方兜底）。
- */
-function resolveFileName(headers: unknown): string | null {
-  const record = headers as Record<string, unknown> | undefined
-  const raw = record?.['content-disposition']
-  if (typeof raw !== 'string') {
-    return null
-  }
-  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(raw)
-  if (utf8?.[1]) {
-    try {
-      return decodeURIComponent(utf8[1])
-    } catch {
-      return null
-    }
-  }
-  const plain = /filename="?([^";]+)"?/i.exec(raw)
-  return plain?.[1] ?? null
+  await downloadBlobFile(`/common/files/${fileId}/download`, '下载文件', fileName)
 }
 
 /* ===================== 成绩导入（/admin/grades）===================== */
@@ -610,22 +576,9 @@ export function getGradeImportDetail(importId: number): Promise<GradeImportDetai
   return request.get(`/admin/grades/imports/${importId}`)
 }
 
-/** 下载成绩导入模板（后端返回 xlsx 二进制，绕过统一拦截器） */
+/** 下载成绩导入模板（后端返回 xlsx 二进制） */
 export async function downloadGradeImportTemplate(): Promise<void> {
-  const { default: axios } = await import('axios')
-  const res = await axios.get('/api/v1/admin/grades/import-template', {
-    responseType: 'blob',
-    headers: { Authorization: `Bearer ${getToken()}` },
-  })
-  const blob = new Blob([res.data])
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = '成绩导入模板.xlsx'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  await downloadBlobFile('/admin/grades/import-template', '成绩导入模板.xlsx')
 }
 
 /* ===================== 成绩导入配置（/admin/grade-import-configs）===================== */
@@ -697,8 +650,13 @@ export function listArchives(params: ArchiveAdminQuery): Promise<PageResult<Arch
   return request.get('/admin/archives', { params })
 }
 
+/**
+ * 档案详情（GET /teacher/archives/{archiveId}）。
+ * 教师与管理端共用同一 DTO，且教师端接口对管理员同样放行；
+ * 不能走 /admin/archives/{id}——教师没有 archive:view 权限，会直接 403。
+ */
 export function getArchiveDetail(archiveId: number): Promise<ArchiveAdminDetail> {
-  return request.get(`/admin/archives/${archiveId}`)
+  return request.get(`/teacher/archives/${archiveId}`)
 }
 
 export function getArchiveOverview(params: {
@@ -737,12 +695,12 @@ export function getTeacherArchiveOverview(params: {
 
 /** 学生成长档案总览（GET /teacher/students/{userId}/profile） */
 export async function getTeacherStudentProfile(userId: number): Promise<TeacherStudentProfile> {
-  // 后端返回 { isInScope, profile: {...} }，此处展开 profile 供页面扁平化使用
-  const res = (await request.get(`/teacher/students/${userId}/profile`)) as unknown as {
-    isInScope?: boolean
-    profile?: TeacherStudentProfile
-  }
-  return { isInScope: res?.isInScope ?? true, ...(res?.profile ?? {}) } as TeacherStudentProfile
+  // 后端 ProfileInfo 使用 @JsonUnwrapped，实际响应是扁平结构：
+  // { isInScope, academicInfo, contactInfo, ... }，没有 profile 包裹层。
+  const res = (await request.get(
+    `/teacher/students/${userId}/profile`,
+  )) as unknown as TeacherStudentProfile | null
+  return { ...(res ?? {}), isInScope: res?.isInScope ?? true } as TeacherStudentProfile
 }
 
 /** 学生成长时间轴（GET /teacher/students/{userId}/growth-timeline） */
@@ -785,7 +743,8 @@ export function addTeacherImprovementSuggestion(
 /* ===================== 教师端-审批委托（/teacher/delegations）===================== */
 
 export function listTeacherDelegations(params: {
-  direction?: number
+  /** delegator（我发出的）/ delegatee（我收到的），后端不识别数字 */
+  direction?: 'delegator' | 'delegatee'
   status?: number
   keyword?: string
   page?: number
@@ -834,9 +793,9 @@ export function getStatisticsDashboard(
   return request.get('/admin/statistics/dashboard', { params })
 }
 
-/** 管理端组织统计看板（/admin/statistics/overview，教师端无等价接口） */
+/** 教师端组织统计看板（GET /teacher/statistics/overview，响应与 admin 版兼容） */
 export function getStatisticsOverview(params: StatisticsQuery): Promise<OrgOverviewStatistics> {
-  return request.get('/admin/statistics/overview', { params })
+  return request.get('/teacher/statistics/overview', { params })
 }
 
 /** 教师端成果热力图（GET /teacher/statistics/heatmap，响应与 admin 版兼容） */
@@ -1022,22 +981,9 @@ export function importSemesters(payload: SemesterImportPayload): Promise<Semeste
   return request.post('/admin/semesters/import', payload)
 }
 
-/** 下载学期导入模板（后端返回 xlsx 二进制，绕过统一拦截器） */
+/** 下载学期导入模板（后端返回 xlsx 二进制） */
 export async function downloadSemesterImportTemplate(): Promise<void> {
-  const { default: axios } = await import('axios')
-  const res = await axios.get('/api/v1/admin/semesters/import-template', {
-    responseType: 'blob',
-    headers: { Authorization: `Bearer ${getToken()}` },
-  })
-  const blob = new Blob([res.data])
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = '学期导入模板.xlsx'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  await downloadBlobFile('/admin/semesters/import-template', '学期导入模板.xlsx')
 }
 
 /* ===================== 表单自定义（/admin/form-templates）===================== */
