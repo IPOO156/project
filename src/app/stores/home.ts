@@ -35,5 +35,17 @@ export const useHomeStore = defineStore('home', () => {
     }
   }
 
-  return { data, loading, fetchDashboard }
+  /**
+   * 重置用户级状态（登出/换账号时调用）。
+   * 除清空 state 外，复位模块级请求缓存变量（pendingFetch / lastFetchedAt）：
+   * 否则换账号后 60s TTL 内仍会命中上一账号的首页看板缓存。
+   */
+  function reset(): void {
+    pendingFetch = null
+    lastFetchedAt = 0
+    data.value = null
+    loading.value = false
+  }
+
+  return { data, loading, fetchDashboard, reset }
 })

@@ -286,6 +286,26 @@ export const useArchiveStore = defineStore('archive', () => {
   // 方案一（只读）：后端无个人奖项 CRUD 接口，奖项由申报/奖项报名审核通过后聚合进
   // /profile/info.personalAwards（类别汇总）。面板只读展示，无新增/编辑/删除。
 
+  /**
+   * 重置用户级状态（登出/换账号时调用）。
+   * 除清空 state 外，必须复位模块级请求缓存变量（pendingFetch / pendingTimeline 与
+   * 两个 lastFetchAt 时间戳）：否则换账号后 60s TTL 内仍会命中上一账号的档案数据。
+   */
+  function reset(): void {
+    pendingFetch = null
+    pendingTimeline = null
+    lastArchiveFetchAt = 0
+    lastTimelineFetchAt = 0
+    interests.value = []
+    grades.value = []
+    awards.value = []
+    dimensions.value = []
+    timelineEvents.value = []
+    profileData.value = null
+    loading.value = false
+    loadFailed.value = false
+  }
+
   return {
     interests,
     grades,
@@ -301,5 +321,6 @@ export const useArchiveStore = defineStore('archive', () => {
     createInterest,
     editInterest,
     removeInterest,
+    reset,
   }
 })

@@ -6,13 +6,9 @@ import { uploadAvatar as apiUpload } from '@/shared/api/common'
 import { updateProfileContact } from '@/shared/api/student'
 import { logout as apiLogout } from '@/shared/api/user'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+import { USER_AVATAR_CACHE_KEY, USER_INFO_CACHE_KEY } from '@/shared/constants/storageKeys'
 import { clearAuth, getToken, setToken as persistToken } from '@/shared/utils/token'
-import { useTabsStore } from './tabs'
-
-/** 身份缓存 key：登录后写入，供标签栏/守卫读取 loginType（端级分流） */
-const USER_INFO_CACHE_KEY = 'user_info_cache'
-
-const AVATAR_CACHE_KEY = 'user_avatar_cache'
+import { resetUserScopedStores } from './sessionReset'
 
 /** 将 base64 data URL 转为 File 对象（头像上传用） */
 function dataUrlToFile(dataUrl: string): File {
@@ -27,7 +23,7 @@ function dataUrlToFile(dataUrl: string): File {
 function readAvatarCache(): string | undefined {
   if (typeof window === 'undefined') return undefined
   try {
-    return localStorage.getItem(AVATAR_CACHE_KEY) || undefined
+    return localStorage.getItem(USER_AVATAR_CACHE_KEY) || undefined
   } catch {
     return undefined
   }
@@ -37,9 +33,9 @@ function writeAvatarCache(avatar: string | undefined) {
   if (typeof window === 'undefined') return
   try {
     if (avatar) {
-      localStorage.setItem(AVATAR_CACHE_KEY, avatar)
+      localStorage.setItem(USER_AVATAR_CACHE_KEY, avatar)
     } else {
-      localStorage.removeItem(AVATAR_CACHE_KEY)
+      localStorage.removeItem(USER_AVATAR_CACHE_KEY)
     }
   } catch {
     // 隐私模式或存储已满时静默失败
@@ -169,19 +165,11 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null
     cachedAvatar.value = undefined
     clearAuth()
-    localStorage.removeItem(AVATAR_CACHE_KEY)
-    // 登出必须清空身份缓存，否则换账号登录会读到上一个账号的 loginType / 权限码：
-    //   - user_info_cache：loginType 决定端级分流
-    //   - teacher_me：/auth/me 的 permissions 决定菜单与页面可访问性
-    localStorage.removeItem(USER_INFO_CACHE_KEY)
+    // 教师身份为模块级 ref，需显式清空（clearUserScopedStorage 只清 localStorage）
     useTeacherMe().clear()
-    // 登出时清理已访问 tab（防止跨账号污染）
-    // tabsStore 必须延迟获取：避免 user store 初始化时 tabs store 未注册
-    try {
-      useTabsStore().clearAll()
-    } catch {
-      // tabs store 未注册（极少数场景）—— 静默降级
-    }
+    // 重置全部用户级业务 store 与用户级本地存储（身份缓存 / 头像 / 草稿 / 撤回标记 / tabs）：
+    // 防止换账号登录后 60s TTL 窗口内命中上一账号的缓存数据，或读到上一账号的 loginType / 权限码。
+    resetUserScopedStores()
   }
 
   return {

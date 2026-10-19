@@ -132,5 +132,19 @@ export const useReviewStore = defineStore('review', () => {
     ElMessage.success('修改已保存，等待重新审核')
   }
 
-  return { allRecords, typeRecords, loading, fetchAll, fetchByType, resubmit }
+  /**
+   * 重置用户级状态（登出/换账号时调用）。
+   * 除清空 state 外，复位模块级请求缓存变量（pendingFetch / lastFullFetchAt / pendingByType）：
+   * 否则换账号后 60s TTL 内仍会命中上一账号的审核记录缓存。
+   */
+  function reset(): void {
+    pendingFetch = null
+    lastFullFetchAt = 0
+    pendingByType.clear()
+    allRecords.value = []
+    typeRecords.value = {}
+    loading.value = false
+  }
+
+  return { allRecords, typeRecords, loading, fetchAll, fetchByType, resubmit, reset }
 })

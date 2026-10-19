@@ -7,6 +7,7 @@ import {
   getSubmissionRecords,
   withdrawSubmission,
 } from '@/shared/api/submission'
+import { SUBMISSION_WITHDRAWN_KEY } from '@/shared/constants/storageKeys'
 
 export const useSubmissionStore = defineStore('submission', () => {
   const records = ref<SubmissionRecord[]>([])
@@ -19,12 +20,11 @@ export const useSubmissionStore = defineStore('submission', () => {
   // 刷新后前端无法从接口区分「已撤回」与「普通草稿」。故本地持久化已撤回 id，
   // 供刷新/重进页面后重拉列表（fetchRecords）时强制保持「已撤回、不可编辑、可删除」态。
   // 注：这是同页 UI 状态恢复（撤回语义标记），非跨页面结构化数据传递，符合 CLAUDE.md 2.11。
-  const WITHDRAWN_KEY = 'submission:withdrawnIds'
   const withdrawnIds = ref<string[]>(loadWithdrawnIds())
 
   function loadWithdrawnIds(): string[] {
     try {
-      const raw = localStorage.getItem(WITHDRAWN_KEY)
+      const raw = localStorage.getItem(SUBMISSION_WITHDRAWN_KEY)
       return raw ? (JSON.parse(raw) as string[]) : []
     } catch {
       return []
@@ -33,7 +33,7 @@ export const useSubmissionStore = defineStore('submission', () => {
 
   function persistWithdrawnIds() {
     try {
-      localStorage.setItem(WITHDRAWN_KEY, JSON.stringify(withdrawnIds.value))
+      localStorage.setItem(SUBMISSION_WITHDRAWN_KEY, JSON.stringify(withdrawnIds.value))
     } catch {
       /* localStorage 不可用（隐私模式等）时退化为会话内标记 */
     }
@@ -163,6 +163,26 @@ export const useSubmissionStore = defineStore('submission', () => {
     return records.value.find((r) => r.id === id)
   }
 
+  /**
+   * 重置用户级状态（登出/换账号时调用）。
+   * 除清空 state 与复位模块级请求缓存变量（pendingFetch / lastFetchedAt）外，
+   * 还需清除持久化的撤回标记：该标记属账号级数据，换账号后残留会误标他人记录。
+   */
+  function reset(): void {
+    pendingFetch = null
+    lastFetchedAt = 0
+    records.value = []
+    filteredRecords.value = []
+    loading.value = false
+    loadError.value = false
+    withdrawnIds.value = []
+    try {
+      localStorage.removeItem(SUBMISSION_WITHDRAWN_KEY)
+    } catch {
+      // localStorage 不可用（隐私模式等）时静默降级
+    }
+  }
+
   return {
     records,
     filteredRecords,
@@ -175,5 +195,6 @@ export const useSubmissionStore = defineStore('submission', () => {
     addRecord,
     removeRecord,
     getRecordById,
+    reset,
   }
 })

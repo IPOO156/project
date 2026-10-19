@@ -65,6 +65,20 @@ export const useCareerPlanStore = defineStore('career-plan', () => {
     aiAnalysis.value = null
   }
 
+  /**
+   * 重置用户级状态（登出/换账号时调用）。
+   * 除清空 state 外，复位模块级请求缓存变量（pendingFetch / lastFetchedAt）：
+   * 否则换账号后 60s TTL 内仍会命中上一账号的规划列表缓存。
+   */
+  function reset(): void {
+    pendingFetch = null
+    lastFetchedAt = 0
+    plans.value = []
+    loading.value = false
+    loadError.value = false
+    aiAnalysis.value = null
+  }
+
   return {
     plans,
     loading,
@@ -74,5 +88,6 @@ export const useCareerPlanStore = defineStore('career-plan', () => {
     submitPlan,
     setAIAnalysis,
     clearAIAnalysis,
+    reset,
   }
 })
