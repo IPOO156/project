@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { Notification, NotificationCategory } from '@/shared/types/types'
-import { Archive, Bell, Bot, Mail, MailOpen, MessageSquare } from 'lucide-vue-next'
+import { Archive, Bell, Bot, ChevronRight, Mail, MailOpen, MessageSquare } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { useThemeStore } from '@/app/stores/stores'
 import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
+import { formatDateTime } from '@/shared/utils/time'
 
 interface Props {
   item: Notification
@@ -80,6 +81,7 @@ function handleCardClick() {
     <div class="message-card__main">
       <div class="message-card__header-row">
         <span class="message-card__category">{{ categoryLabel(item.category) }}</span>
+        <span v-if="item.isRead !== 1" class="message-card__unread">未读</span>
         <h3 class="message-card__title">
           {{ item.title }}
           <el-tag v-if="item.isArchived === 1" size="small" type="info" effect="plain"
@@ -93,16 +95,16 @@ function handleCardClick() {
         <span class="message-card__time">
           <MailOpen v-if="item.isRead === 1" :size="12" />
           <Mail v-else :size="12" />
-          {{ item.createdAt }}
+          {{ formatDateTime(item.createdAt) }}
         </span>
         <span v-if="item.deadline" class="message-card__extra">
-          截止处理：{{ item.deadline }}
+          截止处理：{{ formatDateTime(item.deadline) }}
         </span>
         <span v-if="item.senderName" class="message-card__sender">来自：{{ item.senderName }}</span>
       </div>
 
       <div v-if="item.jumpUrl && item.isArchived !== 1" class="message-card__link-hint">
-        点击查看详情 →
+        查看详情<ChevronRight :size="12" />
       </div>
     </div>
 
@@ -111,6 +113,7 @@ function handleCardClick() {
         <button
           type="button"
           class="action-icon action-icon--read"
+          aria-label="标为已读"
           @click.stop="emit('read', item.id)"
         >
           <MailOpen :size="16" />
@@ -120,6 +123,7 @@ function handleCardClick() {
         <button
           type="button"
           class="action-icon action-icon--archive"
+          aria-label="归档"
           @click.stop="emit('archive', item.id)"
         >
           <Archive :size="16" />
@@ -194,6 +198,16 @@ function handleCardClick() {
     font-size: 11px;
     font-weight: 500;
   }
+  &__unread {
+    flex-shrink: 0;
+    padding: 0 5px;
+    border-radius: 3px;
+    background: rgba(30, 58, 95, 0.08);
+    color: var(--el-color-primary);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 17px;
+  }
   &__title {
     margin: 0;
     font-size: 14px;
@@ -245,10 +259,12 @@ function handleCardClick() {
     border-left: 1px solid var(--mc-border);
   }
   &__link-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
     margin-top: 4px;
     font-size: 12px;
     color: var(--el-color-primary);
-    font-weight: 500;
   }
   &__actions {
     flex-shrink: 0;
@@ -259,8 +275,8 @@ function handleCardClick() {
 }
 
 .action-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
   border: none;
   display: flex;

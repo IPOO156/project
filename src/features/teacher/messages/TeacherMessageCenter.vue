@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { MessageCategory, MessageItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Archive, Check, Eye, Inbox, RefreshCw, Search } from 'lucide-vue-next'
+import { Inbox, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useTeacherMessageStore } from '@/app/stores/stores'
 import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
 
 /**
@@ -89,6 +91,13 @@ function isImportant(item: MessageItem): boolean {
   return item.isImportant === 1
 }
 
+const emptyText = computed(() => {
+  if (keyword.value.trim() || category.value !== 'all') {
+    return '没有符合条件的消息，试试调整筛选条件'
+  }
+  return viewMode.value === 'archived' ? '暂无已归档消息' : '暂无消息，新的通知会显示在这里'
+})
+
 function fmtTime(value: string | null | undefined): string {
   return formatDateTime(value)
 }
@@ -150,9 +159,7 @@ onMounted(() => void loadList())
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">消息中心</h2>
         <p class="mc-page-head__desc">
-          接收系统通知与定向提醒（如定时任务配置的站内信）。打开详情自动标记为已读，重要消息归档前需二次确认。
-          说明：后端目前只在学生申报提交、公告发布、职业规划反馈等事件上投递消息，
-          尚不会在「有新待办」「审批结果」等时点向教师投递消息。
+          查看与账号相关的系统通知和提醒。打开详情后会自动标记为已读，重要消息归档前需要确认。
         </p>
       </div>
     </div>
@@ -201,67 +208,73 @@ onMounted(() => void loadList())
       </div>
       <div class="mc-card__body">
         <el-table v-loading="store.loading" :data="store.list" stripe>
-          <el-table-column label="类型" width="110">
+          <el-table-column label="类型" width="96">
             <template #default="{ row }">
               <el-tag :type="categoryTagType(row as MessageItem)" size="small" effect="light">
                 {{ categoryLabel(row as MessageItem) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="标题 / 内容" min-width="300">
+          <el-table-column label="标题 / 内容" min-width="236">
             <template #default="{ row }">
               <div
                 class="msg-row"
                 :class="{ 'msg-row--unread': (row as MessageItem).isRead !== 1 }"
               >
                 <span class="msg-row__title">
-                  <i v-if="(row as MessageItem).isImportant === 1" class="msg-row__pin">重</i>
+                  <i v-if="(row as MessageItem).isImportant === 1" class="msg-row__pin">重要</i>
                   {{ (row as MessageItem).title }}
                 </span>
                 <span class="msg-row__content">{{ (row as MessageItem).content }}</span>
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="时间" width="150">
-            <template #default="{ row }">{{ fmtTime((row as MessageItem).createdAt) }}</template>
-          </el-table-column>
-          <el-table-column label="操作" width="190" align="center" fixed="right">
+          <el-table-column label="阅读状态" width="84">
             <template #default="{ row }">
-              <el-button
-                text
-                type="primary"
-                size="small"
-                :icon="Eye"
-                @click="openDetail(row as MessageItem)"
+              <span
+                class="msg-status"
+                :class="{ 'msg-status--unread': (row as MessageItem).isRead !== 1 }"
               >
-                详情
-              </el-button>
-              <el-button
-                v-if="(row as MessageItem).isRead !== 1"
-                text
-                size="small"
-                :icon="Check"
-                @click="handleRead(row as MessageItem)"
-              >
-                已读
-              </el-button>
-              <el-button
-                v-if="viewMode === 'inbox'"
-                text
-                type="warning"
-                size="small"
-                :icon="Archive"
-                :loading="archivingId === (row as MessageItem).id"
-                :disabled="archivingId !== null"
-                @click="handleArchive(row as MessageItem)"
-              >
-                归档
-              </el-button>
+                <i class="msg-status__dot" />
+                {{ (row as MessageItem).isRead === 1 ? '已读' : '未读' }}
+              </span>
             </template>
           </el-table-column>
+          <el-table-column label="时间" width="150" class-name="msg-time">
+            <template #default="{ row }">{{ fmtTime((row as MessageItem).createdAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="130" align="center" fixed="right">
+            <template #default="{ row }">
+              <!-- 查看详情是高频操作，保持行内可见；归档与标为已读频次低且可能误触，收进「更多」。 -->
+              <RowActions>
+                <el-button text type="primary" size="small" @click="openDetail(row as MessageItem)">
+                  详情
+                </el-button>
+                <template #more>
+                  <el-dropdown-item
+                    v-if="(row as MessageItem).isRead !== 1"
+                    @click="handleRead(row as MessageItem)"
+                  >
+                    标为已读
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    v-if="viewMode === 'inbox'"
+                    :divided="(row as MessageItem).isRead !== 1"
+                    :disabled="archivingId !== null"
+                    @click="handleArchive(row as MessageItem)"
+                  >
+                    {{ archivingId === (row as MessageItem).id ? '归档中…' : '归档' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
+            </template>
+          </el-table-column>
+          <template #empty>
+            <EmptyState :text="emptyText" compact />
+          </template>
         </el-table>
 
-        <div class="msg-pagination">
+        <div v-if="store.total > 0" class="msg-pagination">
           <el-pagination
             v-model:current-page="page"
             v-model:page-size="perPage"
@@ -322,6 +335,11 @@ onMounted(() => void loadList())
   padding-top: 2px;
 }
 
+// 时间列固定宽度后必须禁止换行，否则窄屏下会折成两行、撑高整张表。
+:deep(.msg-time .cell) {
+  white-space: nowrap;
+}
+
 .msg-count {
   font-size: 13px;
   color: var(--el-text-color-secondary);
@@ -357,15 +375,41 @@ onMounted(() => void loadList())
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 16px;
     height: 16px;
     margin-right: 4px;
-    padding: 0 3px;
+    padding: 0 4px;
     border-radius: 3px;
-    background: $color-danger;
-    color: #fff;
+    background: rgba($color-danger, 0.1);
+    color: $color-danger;
     font-size: 11px;
     font-style: normal;
+    font-weight: 500;
+    vertical-align: 1px;
+  }
+}
+
+.msg-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--el-text-color-placeholder);
+  }
+
+  &--unread {
+    color: var(--el-color-primary);
+    font-weight: 500;
+
+    .msg-status__dot {
+      background: var(--el-color-primary);
+    }
   }
 }
 
