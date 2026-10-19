@@ -19,7 +19,11 @@ function mapBackendEvent(e: Record<string, any>): GrowthExperience {
     date: e.eventAt ?? '',
     semester: e.semesterName || (e.eventAt ? inferSemester(e.eventAt) : ''),
     tags: [mapTimelineEventType(e.eventType), ...(Array.isArray(e.tags) ? e.tags : [])],
-    skills: abilities.map((a: any) => ({ name: a.dimensionName, growth: a.score ?? 0 })),
+    skills: abilities.map((a: any) => ({
+      name: a.dimensionName ?? a.dimensionCode ?? '',
+      growth: a.score ?? 0,
+      dimensionCode: a.dimensionCode ?? undefined,
+    })),
     recordId: e.sourceId != null ? String(e.sourceId) : undefined,
     statusLabel: e.statusLabel || undefined,
   }
@@ -73,22 +77,32 @@ export function useGrowthTimeline() {
     }
   }
 
-  async function addExperience(payload: GrowthExperienceInput) {
+  /**
+   * 保存成长经历。
+   * @param payload 表单提交的经历内容
+   * @param done 回调通知表单是否保存成功：失败时表单保持打开、用户输入不丢失。
+   */
+  async function addExperience(payload: GrowthExperienceInput, done?: (ok: boolean) => void) {
     const semester = inferSemester(payload.date)
+    const localId = `local-${Date.now()}`
     const newExperience: GrowthExperience = {
       ...payload,
-      id: `local-${Date.now()}`,
+      id: localId,
       semester,
       // 有关联来源时同步记录来源 ID，便于详情展示来源关联
       ...(payload.sourceId != null ? { recordId: String(payload.sourceId) } : {}),
     }
+    // 先乐观展示，失败时再撤回，避免接口往返期间列表看起来没反应
     localExperiences.value = [...localExperiences.value, newExperience]
     rebuildExperiences()
 
     // 同步到后端（4.2.1 POST /profile/growth-timeline）。
-    // 后端 create 不强制来源：仅当携带 sourceType 时才要求 sourceId 并做 uk_gt_source 唯一校验；
-    // 未选来源时正常落库（status 默认 0=草稿，列表接口不按状态过滤，刷新仍可见）。
-    // 成功后用真实 id 回填，失败（网络/参数校验）保留本地经历。
+    // 后端要求 sourceId + sourceType 必填（并校验来源存在且归属本人），表单已强制选择。
+    // 能力成长必须传 dimensionCode（后端 abilityData.dimensionCode 必填），
+    // 仅填写名称的自由文本无法落库；此处按已选维度映射为 abilityData。
+    const abilityData = payload.skills
+      .filter((s) => s.dimensionCode)
+      .map((s) => ({ dimensionCode: s.dimensionCode as string, score: s.growth }))
     try {
       const created = await addTimelineEvent({
         // 奖项报名来源归类为奖项事件（eventType=1），其余默认能力提升（eventType=6）
@@ -97,18 +111,24 @@ export function useGrowthTimeline() {
         content: payload.description,
         eventAt: payload.date,
         tags: payload.tags,
+        ...(abilityData.length ? { abilityData } : {}),
         ...(payload.sourceId != null && payload.sourceType
           ? { sourceId: payload.sourceId, sourceType: payload.sourceType }
           : {}),
       })
       if (created?.id != null) {
         localExperiences.value = localExperiences.value.map((e) =>
-          e.id === newExperience.id ? { ...e, id: `backend-${created.id}` } : e,
+          e.id === localId ? { ...e, id: `backend-${created.id}` } : e,
         )
         rebuildExperiences()
       }
+      done?.(true)
     } catch {
-      /* 静默：保持本地经历 */
+      // 保存失败：撤回本地乐观记录，避免「页面上有、刷新后消失」的假成功。
+      // 具体错误信息由 request 拦截器提示。
+      localExperiences.value = localExperiences.value.filter((e) => e.id !== localId)
+      rebuildExperiences()
+      done?.(false)
     }
   }
 
