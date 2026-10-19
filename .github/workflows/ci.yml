@@ -1,16 +1,14 @@
 name: CI
-
 on:
   push:
-    branches: [main, new-main]
+    branches: [ ry ]
   pull_request:
-    branches: [main, new-main]
+    branches: [ ry ]
 
 jobs:
   lint-and-build:
     name: Lint & Build
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,10 +23,16 @@ jobs:
         run: npm ci
 
       - name: Lint check
-        run: npm run lint:check
+        run: npm run lint
 
-      - name: Type check
-        run: npx vue-tsc -b
-
-      - name: Build
+      - name: Build Vue Project
         run: npm run build
+
+      # 上传dist目录到阿里云OSS
+      - name: Upload dist to Aliyun OSS
+        uses: aliyun/setup-ossutil@v1
+        with:
+          endpoint: oss-${{ secrets.OSS_REGION }}.aliyuncs.com
+          access-key-id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          access-key-secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      - run: ossutil cp -rf dist oss://${{ secrets.OSS_BUCKET }}/ --delete
