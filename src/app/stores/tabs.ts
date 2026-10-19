@@ -2,6 +2,7 @@ import type { Component } from 'vue'
 import type { Router } from 'vue-router'
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
+import { USER_INFO_CACHE_KEY } from '@/shared/constants/storageKeys'
 
 /**
  * 已访问页面 tab 状态
@@ -63,7 +64,7 @@ function readStorage(router?: Router): NavTab[] {
     // 教师端不显示学生端首页标签（清除历史残留）
     let isTeacher = false
     try {
-      const userCache = localStorage.getItem('user_info_cache')
+      const userCache = localStorage.getItem(USER_INFO_CACHE_KEY)
       isTeacher = userCache ? JSON.parse(userCache).loginType === 'teacher' : false
     } catch {
       isTeacher = false

@@ -2,6 +2,7 @@ import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { isModuleAllowed } from '@/shared/config/teacherModuleRegistry'
+import { USER_INFO_CACHE_KEY } from '@/shared/constants/storageKeys'
 import { getToken } from '@/shared/utils/token'
 import teacherRoutes from './teacher-routes'
 
@@ -227,7 +228,7 @@ router.beforeEach(async (to, _from, next) => {
   // /profile/info、/applications 等其余学生页，在教师外壳里渲染出学生内容。
   // 现改为按路由组的 meta.student 判定，覆盖学生端全部路由。
   if (to.meta?.student) {
-    const userCache = localStorage.getItem('user_info_cache')
+    const userCache = localStorage.getItem(USER_INFO_CACHE_KEY)
     if (userCache) {
       let loginType: string | undefined
       try {
@@ -248,7 +249,7 @@ router.beforeEach(async (to, _from, next) => {
 
   // 教师端路由需 teacher 登录类型 + 模块权限校验
   if (to.meta?.teacher) {
-    const userCache = localStorage.getItem('user_info_cache')
+    const userCache = localStorage.getItem(USER_INFO_CACHE_KEY)
     if (userCache) {
       let loginType: string | undefined
       try {
