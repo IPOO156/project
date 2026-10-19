@@ -197,7 +197,8 @@ onMounted(() => {
           <!-- 左侧：表单 -->
           <el-card class="gd-card">
             <template #header><span class="card-title">填写规划</span></template>
-            <el-form :model="planForm" label-width="70px" size="default">
+            <!-- 70px 放不下「要求/目标」4 个汉字加斜杠，1024 宽会折行；84px 可保持单行 -->
+            <el-form :model="planForm" label-width="84px" size="default">
               <el-form-item label="学期" required>
                 <el-select v-model="planForm.semester" placeholder="请选择学期" class="form-w">
                   <el-option
@@ -372,7 +373,7 @@ onMounted(() => {
             </el-table-column>
             <!-- TODO(待后端契约字段)：教师反馈(teacherFeedback)、学生反思(reflection) 尚未在
                  CareerPlanRecord 契约中定义，待后端补充后在此新增两列展示 -->
-            <el-table-column label="操作" width="130" align="center">
+            <el-table-column label="操作" width="130" align="center" fixed="right">
               <template #default="{ row }">
                 <el-button link type="primary" size="small" @click="openDetail(row)"
                   >详情</el-button

@@ -367,10 +367,10 @@ onMounted(() => {
     <StatsOverview :cards="statsCards" @card-click="onStatCardClick" />
 
     <el-row :gutter="16" class="dashboard__main">
-      <el-col :span="13" class="dashboard__col">
+      <el-col :span="13" :xs="24" :sm="24" :md="24" :lg="13" class="dashboard__col">
         <el-card class="dashboard__section dashboard__section--radar">
           <template #header>
-            <div class="dashboard__section-header">
+            <div class="dashboard__section-header dashboard__section-header--stacked">
               <span class="section-title">多维度画像评估</span>
               <span class="indicator-meta">
                 规则版本 {{ indicatorMeta.ruleVersion }} · 计算时间
@@ -425,7 +425,7 @@ onMounted(() => {
         </el-card>
       </el-col>
 
-      <el-col :span="11" class="dashboard__col">
+      <el-col :span="11" :xs="24" :sm="24" :md="24" :lg="11" class="dashboard__col">
         <QuickEntries
           :entries="visibleEntries"
           @entry-click="onEntryClick"
@@ -527,6 +527,14 @@ onMounted(() => {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+
+    // 画像卡的规则版本/计算时间较长，和标题并排会把标题挤成两行；
+    // 改为上下两行，标题保持单行，元信息自行换行。
+    &--stacked {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
   }
 }
 
@@ -539,8 +547,10 @@ onMounted(() => {
 .indicator-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   font-size: 12px;
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 
@@ -606,10 +616,16 @@ onMounted(() => {
 .radar-metric__meta {
   margin-top: 8px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+
+  // 环比文字（含学期名）与目标差距都是完整短语，不在短语中间断行
+  > span {
+    white-space: nowrap;
+  }
 }
 
 .radar-metric__delta.is-up {
@@ -685,7 +701,26 @@ onMounted(() => {
   }
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1199px) {
+  // 两栏在 1024 等窄桌面下会压缩快捷入口，导致标题逐字竖排；
+  // 改为上下堆叠，并解除内部卡片的高度约束，让页面自然滚动。
+  .dashboard {
+    height: auto;
+  }
+
+  .dashboard__main {
+    flex: none;
+  }
+
+  .dashboard__col {
+    height: auto;
+
+    &:first-child :deep(.el-card),
+    &:last-child :deep(.el-card) {
+      flex: 0 0 auto;
+    }
+  }
+
   .radar-panel {
     grid-template-columns: 1fr;
   }
