@@ -62,7 +62,9 @@ function openMessages() {
 
 async function handleLogout() {
   await userStore.logout()
-  router.push('/login')
+  // 整页跳转而非 router.push：Pinia 中的档案/申报/消息等业务数据仍驻留内存，
+  // 仅切路由会让下一个登录账号在刷新前读到上一个账号的数据。整页跳转可彻底重置。
+  window.location.replace('/login')
 }
 
 function openSidebar() {
@@ -71,7 +73,7 @@ function openSidebar() {
 
 async function switchToStudent() {
   await userStore.logout()
-  router.push('/login')
+  window.location.replace('/login')
 }
 </script>
 

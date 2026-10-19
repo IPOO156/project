@@ -9,6 +9,7 @@ import type { Ref } from 'vue'
 import { ref } from 'vue'
 import { getActivities } from '@/shared/api/activities'
 import { ARCHIVE_TYPE_ALIASES, deriveRecordTitle, STATUS_MAP } from '@/shared/api/submission'
+import { scopedStorageKey } from '@/shared/utils/storageScope'
 
 /** 本地草稿记录的统一 id（草稿仅本地持久化，无后端草稿接口） */
 export const DRAFT_LOCAL_ID = 'draft-local'
@@ -86,12 +87,14 @@ function isNonEmptyDraft(data: Record<string, unknown>): boolean {
 export function useFormRecords(type: string, draftStorageKey?: string) {
   const label = TYPE_LABELS[type] || type
   const records: Ref<FormRecord[]> = ref([])
+  // 与 useFormDraft 使用同一套按用户隔离的键，避免换账号后读到上一个学生的草稿
+  const resolvedDraftStorageKey = draftStorageKey ? scopedStorageKey(draftStorageKey) : undefined
 
   /** 读取当前类型本地草稿并构造成一条草稿记录（字段一并带上，便于编辑回填） */
   function readLocalDraft(): FormRecord | null {
-    if (!draftStorageKey) return null
+    if (!resolvedDraftStorageKey) return null
     try {
-      const raw = localStorage.getItem(draftStorageKey)
+      const raw = localStorage.getItem(resolvedDraftStorageKey)
       if (!raw) return null
       // JSON.parse 结果为 any，此处显式收窄为键值记录
       const data = JSON.parse(raw) as Record<string, unknown>
@@ -114,8 +117,22 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
   /** 从 GET /activities（6.1）拉取该类型真实申报记录 + 合并本地草稿；拉取失败保持已有列表，不填充假数据 */
   async function loadRecords(): Promise<void> {
     try {
-      const res = await getActivities({ page: 1, per_page: 200 })
-      const list = res?.list ?? []
+      // 后端分页参数是 perPage（@JsonProperty("per_page") 只影响 JSON，不作用于 query 绑定），
+      // 上限 100；此前传 per_page:200 被忽略，只取到默认 20 条。这里分页拉全量。
+      const list: Awaited<ReturnType<typeof getActivities>>['list'] = []
+      const PER_PAGE = 100
+      const MAX_PAGES = 20
+      let total = 0
+      for (let page = 1; page <= MAX_PAGES; page++) {
+        const res = await getActivities({ page, perPage: PER_PAGE })
+        const pageList = res?.list ?? []
+        list.push(...pageList)
+        total = res?.total ?? list.length
+        if (pageList.length === 0 || list.length >= total) break
+      }
+      if (list.length < total) {
+        console.warn(`[useFormRecords] 申报记录共 ${total} 条，仅加载前 ${list.length} 条`)
+      }
       // archive_type 与 type key 可能不一致（如学科竞赛为 academic_competition），按别名兼容匹配。
       // 后端实际字段为下划线（archive_type/submit_time/semester_name），驼峰仅为兼容别名。
       const aliases = ARCHIVE_TYPE_ALIASES[type] ?? []

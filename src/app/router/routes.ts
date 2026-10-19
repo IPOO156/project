@@ -1,7 +1,8 @@
 import type { RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
+import { getCurrentUser } from '@/shared/api/auth'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
-import { isModuleAllowed } from '@/shared/config/teacherModuleRegistry'
+import { isModuleAllowed, isRoleMatchedLoginTab } from '@/shared/config/teacherModuleRegistry'
 import { getToken } from '@/shared/utils/token'
 import teacherRoutes from './teacher-routes'
 
@@ -207,6 +208,71 @@ const router = createRouter({
  */
 let meRecovered = false
 
+type LoginType = 'student' | 'teacher'
+
+/**
+ * 读取身份缓存中的端级类型；缓存缺失或损坏时返回 null（由调用方回源 /auth/me）。
+ * 返回 null 不能直接视为学生或教师，否则守卫会错误放行/死循环。
+ */
+function readCachedLoginType(): LoginType | null {
+  const raw = localStorage.getItem('user_info_cache')
+  if (!raw) return null
+  try {
+    const loginType = JSON.parse(raw).loginType
+    return loginType === 'student' || loginType === 'teacher' ? loginType : null
+  } catch {
+    return null
+  }
+}
+
+// /auth/me 回源去重：缓存丢失时（如手动清理 localStorage）同一会话只请求一次
+let loginTypeResolve: Promise<LoginType | null> | null = null
+
+/**
+ * 解析当前登录账号属于学生端还是教师端。
+ * 身份缓存存在时直接使用；缓存缺失时用 /auth/me 的 roles 回源并补写最小缓存，
+ * 避免"有 token 但无缓存"时学生端守卫 fail-open，让教师账号渲染学生页面。
+ */
+function resolveLoginType(): Promise<LoginType | null> {
+  const cached = readCachedLoginType()
+  if (cached) return Promise.resolve(cached)
+  if (!loginTypeResolve) {
+    loginTypeResolve = getCurrentUser()
+      .then((me) => {
+        const roles = me.roles ?? []
+        const type: LoginType | null = isRoleMatchedLoginTab(roles, 'admin')
+          ? 'teacher'
+          : isRoleMatchedLoginTab(roles, 'student')
+            ? 'student'
+            : null
+        if (type) {
+          try {
+            localStorage.setItem(
+              'user_info_cache',
+              JSON.stringify({
+                id: String(me.userId),
+                username: me.userNo,
+                realName: me.name,
+                email: me.email ?? '',
+                phone: me.phone ?? '',
+                avatar: me.avatar ?? undefined,
+                loginType: type,
+              }),
+            )
+          } catch {
+            // 隐私模式写缓存失败：本次仍按解析结果分流，不阻断导航
+          }
+        }
+        return type
+      })
+      .catch(() => null)
+      .finally(() => {
+        loginTypeResolve = null
+      })
+  }
+  return loginTypeResolve
+}
+
 // 路由守卫
 router.beforeEach(async (to, _from, next) => {
   const token = getToken()
@@ -227,60 +293,46 @@ router.beforeEach(async (to, _from, next) => {
   // /profile/info、/applications 等其余学生页，在教师外壳里渲染出学生内容。
   // 现改为按路由组的 meta.student 判定，覆盖学生端全部路由。
   if (to.meta?.student) {
-    const userCache = localStorage.getItem('user_info_cache')
-    if (userCache) {
-      let loginType: string | undefined
-      try {
-        loginType = JSON.parse(userCache).loginType
-      } catch {
-        // 解析失败按学生端处理（与改造前一致）
-        loginType = undefined
-      }
-      // 只在**明确**是教师端账号时重定向。不可写成 `!== 'student'` 一律重定向：
-      // loginType 缺失时会被送往 /teacher/dashboard，而教师端守卫见 loginType 非 teacher
-      // 又会送回 /dashboard，两端守卫互相重定向形成死循环。
-      if (loginType === 'teacher') {
-        next({ path: '/teacher/dashboard' })
-        return
-      }
+    const loginType = await resolveLoginType()
+    // 缓存缺失时回源 /auth/me 判定；无法判定（令牌失效或角色异常）不进学生页，
+    // 避免教师/管理员账号在缓存被清理后渲染学生端页面。
+    if (loginType === null) {
+      next({ name: 'Login' })
+      return
+    }
+    if (loginType === 'teacher') {
+      next({ path: '/teacher/dashboard' })
+      return
     }
   }
 
   // 教师端路由需 teacher 登录类型 + 模块权限校验
   if (to.meta?.teacher) {
-    const userCache = localStorage.getItem('user_info_cache')
-    if (userCache) {
-      let loginType: string | undefined
-      try {
-        loginType = JSON.parse(userCache).loginType
-      } catch {
-        next({ path: '/login' })
-        return
-      }
-      if (loginType !== 'teacher') {
-        next({ path: '/dashboard' })
-        return
-      }
-      // 模块权限校验：直接输入 URL 绕过菜单时重定向回教师首页。
-      // meta.permission 为模块 id（对应 teacherModuleRegistry 的 id），
-      // 判定依据是 /auth/me 的 permissionCode，不再是前端角色枚举。
-      const moduleId = to.meta?.permission
-      if (typeof moduleId === 'string' && moduleId) {
-        const { me, refresh } = useTeacherMe()
-        if (!me.value && !meRecovered) {
-          meRecovered = true
-          await refresh()
-        }
-        // 与侧边栏菜单同源判定：持 admin 角色直通（镜像后端 AdminAuthService），
-        // 否则按 module 声明的权限码（any-of）判定。
-        if (!isModuleAllowed(moduleId, me.value?.permissions ?? [], me.value?.roles ?? [])) {
-          next({ path: '/teacher/dashboard' })
-          return
-        }
-      }
-    } else {
-      next({ path: '/login' })
+    const loginType = await resolveLoginType()
+    if (loginType === null) {
+      next({ name: 'Login' })
       return
+    }
+    if (loginType !== 'teacher') {
+      next({ path: '/dashboard' })
+      return
+    }
+    // 模块权限校验：直接输入 URL 绕过菜单时重定向回教师首页。
+    // meta.permission 为模块 id（对应 teacherModuleRegistry 的 id），
+    // 判定依据是 /auth/me 的 permissionCode，不再是前端角色枚举。
+    const moduleId = to.meta?.permission
+    if (typeof moduleId === 'string' && moduleId) {
+      const { me, refresh } = useTeacherMe()
+      if (!me.value && !meRecovered) {
+        meRecovered = true
+        await refresh()
+      }
+      // 与侧边栏菜单同源判定：持 admin 角色直通（镜像后端 AdminAuthService），
+      // 否则按 module 声明的权限码（any-of）判定。
+      if (!isModuleAllowed(moduleId, me.value?.permissions ?? [], me.value?.roles ?? [])) {
+        next({ path: '/teacher/dashboard' })
+        return
+      }
     }
   }
 

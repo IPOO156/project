@@ -246,11 +246,13 @@ async function handleLogin() {
       captchaKey,
       captchaCode: loginForm.captcha,
       rememberMe: loginForm.remember,
+      // 管理端页签同时承载教师与管理员账号，后端统一按 admin 入口校验。
+      loginType: loginType.value,
     })
     // ── 登录入口与账号角色必须匹配 ──
     // 必须在写 token **之前**校验：一旦落下 token，路由守卫就会放行，页面已经切走了。
-    // 后端 POST /auth/login 目前不接收登录入口信息，无法在服务端拒绝错配，
-    // 前端这层是当前唯一的拦截点（待后端补 loginType 入参后可省去本段）。
+    // 服务端已接收 loginType 并在签发令牌前拦截错配；这里保留兜底提示，
+    // 防止旧版后端或异常响应绕过入口校验。
     if (!isRoleMatchedLoginTab(res.user.roles ?? [], loginType.value)) {
       loading.value = false
       // 已弹过一次图形验证码，失败后换一张，避免用户重试时用的是已消费的 key

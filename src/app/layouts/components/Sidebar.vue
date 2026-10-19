@@ -71,7 +71,8 @@ function handleMenuSelect(index: string) {
 
 async function handleSwitchToStudent() {
   await userStore.logout()
-  router.push('/login')
+  // 整页跳转，确保内存中的上一个账号业务数据被清空（见 HeaderBar.handleLogout）
+  window.location.replace('/login')
 }
 </script>
 
