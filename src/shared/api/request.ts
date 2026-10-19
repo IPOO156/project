@@ -77,8 +77,26 @@ function tryRefreshToken(): Promise<string | null> {
   return refreshPromise
 }
 
+/**
+ * 强制登出时的本地清理。
+ * user store 的主动登出会清理这些缓存；但令牌过期/刷新失败走这里时此前只清了 token，
+ * 残留的 user_info_cache / teacher_me 会让下一个登录账号读到上一个账号的 loginType
+ * 与权限码（路由守卫据此分流），必须一并清除。
+ */
+function clearAuthCaches() {
+  try {
+    localStorage.removeItem('user_info_cache')
+    localStorage.removeItem('teacher_me')
+    localStorage.removeItem('user_avatar_cache')
+    sessionStorage.removeItem('app:visited-tabs')
+  } catch {
+    /* 隐私模式下存储不可用时忽略 */
+  }
+}
+
 function forceLogout() {
   clearAuth()
+  clearAuthCaches()
   // 已在登录页/根路径时禁止整页跳转：对相同 URL 赋值 location 会触发 reload。
   // 若 401 源是"匿名访问被安全链拒绝"而非"会话过期"，跳转会形成 ~150ms 一次的无休止
   // reload 循环（登录页 /public/statistics 401 曾触发此死循环），故仅非登录页才回跳。
@@ -99,6 +117,11 @@ function isBusiness401(url = '') {
 // 响应拦截器
 request.interceptors.response.use(
   (response) => {
+    // 文件下载（responseType=blob）没有业务信封：直接返回完整响应，
+    // 由调用方读取 blob 与 Content-Disposition；错误响应仍走下方 error 分支。
+    if (response.config.responseType === 'blob') {
+      return response
+    }
     const res = response.data
     if (res.code !== 0 && res.code !== 200) {
       ElMessage.error(res.message || '请求失败')
@@ -116,7 +139,11 @@ request.interceptors.response.use(
       // 但后端白名单尚未放行的 /public/**），并非"令牌过期"：一律下抛交由调用方 catch
       // 静默处理，禁止走刷新/登出——否则登录页对这类 401 的 forceLogout 会整页 reload，
       // 形成无休止刷新死循环。
-      if (status === 401 && !isBusiness401(url)) {
+      //
+      // /auth/refresh 自身返回 401 说明 refreshToken 已失效，不能再走刷新流程：
+      // 否则内部的 tryRefreshToken() 会返回仍在等待本请求的 refreshPromise，
+      // 形成 Promise 循环依赖，请求永不结算、页面 Loading 卡死且不会登出。
+      if (status === 401 && !isBusiness401(url) && !url?.includes('/auth/refresh')) {
         const hadToken = Boolean(error.config?.headers?.Authorization)
         if (!hadToken) {
           return Promise.reject(error)
