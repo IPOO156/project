@@ -223,7 +223,13 @@ export function sendAIMessage(
   createdAt: string
   suggestedActions?: Array<{ label: string; jumpUrl: string; actionType: string }>
 }> {
-  return request.post(`/ai/conversations/${conversationId}/messages`, { content })
+  // 同步等待大模型生成：后端 DeepSeek 超时 60s（DeepSeekProperties.timeoutMs），
+  // 全局 15s 会先中断并提示「请求超时」，因此单次调用放宽到 65s。
+  return request.post(
+    `/ai/conversations/${conversationId}/messages`,
+    { content },
+    { timeout: 65_000 },
+  )
 }
 
 /** 重新生成 AI 消息（POST /ai/conversations/{conversationId}/messages/{messageId}/regenerate） */
@@ -242,7 +248,12 @@ export function regenerateAIMessage(
   isRetry: boolean
   createdAt: string
 }> {
-  return request.post(`/ai/conversations/${conversationId}/messages/${messageId}/regenerate`)
+  // 同 sendAIMessage：重新生成同样同步等待模型返回，沿用 65s 超时
+  return request.post(
+    `/ai/conversations/${conversationId}/messages/${messageId}/regenerate`,
+    null,
+    { timeout: 65_000 },
+  )
 }
 
 /** 获取 AI 辅助建议（GET /ai/suggestions，按来源记录查询改进建议） */
