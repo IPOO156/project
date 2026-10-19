@@ -81,7 +81,7 @@ function anonymizedLabel(val: number | null) {
         </el-tag>
       </template>
     </el-table-column>
-    <el-table-column label="导出时间" width="170" sortable>
+    <el-table-column label="导出时间" width="170" class-name="log-time" sortable>
       <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
     </el-table-column>
     <el-table-column label="IP" width="130">
@@ -91,3 +91,9 @@ function anonymizedLabel(val: number | null) {
     </el-table-column>
   </el-table>
 </template>
+
+<style scoped lang="scss">
+:deep(.log-time .cell) {
+  white-space: nowrap;
+}
+</style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AuditPendingItem, AuditPendingQuery } from '@/shared/types/teacher'
 import { ElMessage } from 'element-plus'
-import { CheckCheck, RefreshCw, Search, ShieldCheck } from 'lucide-vue-next'
+import { CheckCheck, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { batchApproveAuditTasks, listAuditPending } from '@/shared/api/teacher'
 import { AUDIT_BUSINESS_TYPES } from '@/shared/constants/dict'
@@ -230,7 +230,7 @@ onMounted(() => void loadList())
           @selection-change="onSelectionChange"
         >
           <el-table-column type="selection" width="44" />
-          <el-table-column label="申报内容" min-width="240">
+          <el-table-column label="申报内容" min-width="220">
             <template #default="{ row }">
               <div class="audit-title">
                 <el-tag size="small" type="info" effect="plain" class="audit-title__tag">
@@ -240,7 +240,7 @@ onMounted(() => void loadList())
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="申请人" width="150">
+          <el-table-column label="申请人" width="130">
             <template #default="{ row }">
               <div class="audit-applicant">
                 <span>{{ (row as AuditPendingItem).applicantName }}</span>
@@ -248,18 +248,22 @@ onMounted(() => void loadList())
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="班级 / 专业" min-width="170">
+          <el-table-column label="班级 / 专业" min-width="185">
             <template #default="{ row }">
-              <span>{{ (row as AuditPendingItem).className ?? '-' }}</span>
-              <span class="audit-applicant__no">{{ (row as AuditPendingItem).majorName }}</span>
+              <div class="audit-class">
+                <span class="audit-class__name">{{
+                  (row as AuditPendingItem).className ?? '-'
+                }}</span>
+                <span class="audit-applicant__no">{{ (row as AuditPendingItem).majorName }}</span>
+              </div>
             </template>
           </el-table-column>
-          <el-table-column label="学期" width="130">
+          <el-table-column label="学期" width="120">
             <template #default="{ row }">{{
               (row as AuditPendingItem).semesterName ?? '-'
             }}</template>
           </el-table-column>
-          <el-table-column label="提交时间" width="140">
+          <el-table-column label="提交时间" width="155" class-name="audit-time">
             <template #default="{ row }">{{ submitTime(row as AuditPendingItem) }}</template>
           </el-table-column>
           <el-table-column label="状态" width="90" align="center">
@@ -269,7 +273,7 @@ onMounted(() => void loadList())
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="重复" width="76" align="center">
+          <el-table-column label="重复" width="70" align="center">
             <template #default="{ row }">
               <el-tag
                 v-if="(row as AuditPendingItem).duplicateCheckStatus === 1"
@@ -288,7 +292,6 @@ onMounted(() => void loadList())
                 text
                 type="primary"
                 size="small"
-                :icon="ShieldCheck"
                 @click="openDetail(row as AuditPendingItem)"
               >
                 审核
@@ -378,6 +381,23 @@ onMounted(() => void loadList())
     font-size: 12px;
     color: var(--el-text-color-placeholder);
   }
+}
+
+// 班级与专业分两行、各自省略，避免「软件工程2024级1班软件工程」在单词中间折行。
+.audit-class {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
+
+  &__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+:deep(.audit-time .cell) {
+  white-space: nowrap;
 }
 
 .audit-nodata {

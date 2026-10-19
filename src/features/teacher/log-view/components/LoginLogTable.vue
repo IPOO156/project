@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { LoginLogItem } from '@/shared/types/teacher'
-import dayjs from 'dayjs'
 import { computed } from 'vue'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
+import { formatDateTime } from '@/shared/utils/time'
 
 interface Props {
   data: LoginLogItem[]
@@ -40,7 +40,7 @@ function maskIp(ip: string | null) {
 }
 
 function formatTime(t: string | null) {
-  return t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
+  return formatDateTime(t, true)
 }
 
 function loginTypeLabel(type: number | null) {
@@ -83,11 +83,17 @@ function loginStatusLabel(status: number | null) {
         </el-tag>
       </template>
     </el-table-column>
-    <el-table-column label="登录时间" width="170" sortable>
+    <el-table-column label="登录时间" width="170" class-name="log-time" sortable>
       <template #default="{ row }">{{ formatTime(row.loginAt) }}</template>
     </el-table-column>
-    <el-table-column label="退出时间" width="170">
+    <el-table-column label="退出时间" width="170" class-name="log-time">
       <template #default="{ row }">{{ formatTime(row.logoutAt) }}</template>
     </el-table-column>
   </el-table>
 </template>
+
+<style scoped lang="scss">
+:deep(.log-time .cell) {
+  white-space: nowrap;
+}
+</style>

@@ -4,6 +4,7 @@ import { RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { listAuditHistory } from '@/shared/api/teacher'
 import { AUDIT_ACTIONS, AUDIT_BUSINESS_TYPES } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
 import { formatDateTime } from '@/shared/utils/time'
 
 /**
@@ -189,7 +190,9 @@ onMounted(() => void loadList())
           </el-table-column>
           <el-table-column label="备注" min-width="200">
             <template #default="{ row }">
-              <span class="history-comment">{{ (row as AuditHistoryItem).comment ?? '-' }}</span>
+              <span class="history-comment" :title="(row as AuditHistoryItem).comment ?? ''">
+                {{ (row as AuditHistoryItem).comment ?? '-' }}
+              </span>
             </template>
           </el-table-column>
           <el-table-column label="处理时间" width="160">
@@ -197,6 +200,9 @@ onMounted(() => void loadList())
               {{ formatDateTime((row as AuditHistoryItem).auditedAt) }}
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState text="暂无审核记录" compact />
+          </template>
         </el-table>
 
         <div class="history-pagination">

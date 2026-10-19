@@ -9,7 +9,7 @@
 // ── 1. 外部依赖导入 ──
 import type { DictItemVO, DictTypeItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { List, Plus, RefreshCw, Search } from 'lucide-vue-next'
+import { Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import {
@@ -20,6 +20,8 @@ import {
   updateDictItem,
 } from '@/shared/api/teacher'
 import { COMMON_STATUS } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import { formatDateTime } from '@/shared/utils/time'
 
 // ── 2. 类型接口 ──
 // 字典类型/字典项 DTO 均来自 @/shared/types/teacher，此处复用，无需本地新增类型。
@@ -263,7 +265,7 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">字典管理</h2>
-        <p class="mc-page-head__desc">维护系统字典类型及其字典项。（当前口径见下方说明）</p>
+        <p class="mc-page-head__desc">维护系统字典类型和字典项，用于后台统一维护业务取值。</p>
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="typeLoading" @click="loadTypes">刷新</el-button>
@@ -281,7 +283,7 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
       type="info"
       :closable="false"
       show-icon
-      title="字典与页面展示暂未打通：本页维护的是后端字典表，而页面上的下拉选项与状态标签取自前端固定常量。因此在这里新增/修改字典项不会改变其他页面的显示，只作为后台字典台账。"
+      title="本页字典项目前仅用于后台台账，修改后不会改变其他页面的下拉选项和状态标签。"
     />
 
     <div class="mc-filter-bar">
@@ -331,22 +333,26 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createdAt" label="创建时间" width="170">
-            <template #default="{ row }">{{ row.createdAt ?? '-' }}</template>
+          <el-table-column label="创建时间" width="145">
+            <template #default="{ row }">
+              {{ row.createdAt ? formatDateTime(row.createdAt) : '-' }}
+            </template>
           </el-table-column>
-          <el-table-column label="操作" width="110" align="center">
+          <el-table-column label="操作" width="100" align="center">
             <template #default="{ row }">
               <el-button
                 text
                 type="primary"
                 size="small"
-                :icon="List"
                 @click="openItemsDrawer(row as DictTypeItem)"
               >
                 字典项
               </el-button>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState text="暂无字典类型" compact />
+          </template>
         </el-table>
 
         <div v-if="typeTotal > 0" class="dict-management__pagination">
@@ -395,9 +401,9 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
         </div>
 
         <el-table :data="itemList" stripe size="small" style="width: 100%">
-          <el-table-column prop="dictValue" label="字典值" min-width="150" show-overflow-tooltip />
-          <el-table-column prop="label" label="显示名称" min-width="150" show-overflow-tooltip />
-          <el-table-column prop="sort" label="排序" width="80" align="center" />
+          <el-table-column prop="dictValue" label="字典值" min-width="130" show-overflow-tooltip />
+          <el-table-column prop="label" label="显示名称" min-width="130" show-overflow-tooltip />
+          <el-table-column prop="sort" label="排序" width="70" align="center" />
           <el-table-column label="状态" width="80">
             <template #default="{ row }">
               <el-tag :type="statusTag(row.status)" size="small">
@@ -405,10 +411,12 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createdAt" label="创建时间" width="160">
-            <template #default="{ row }">{{ row.createdAt ?? '-' }}</template>
+          <el-table-column label="创建时间" width="140">
+            <template #default="{ row }">
+              {{ row.createdAt ? formatDateTime(row.createdAt) : '-' }}
+            </template>
           </el-table-column>
-          <el-table-column label="操作" width="120" align="center">
+          <el-table-column label="操作" width="110" align="center">
             <template #default="{ row }">
               <el-button text type="primary" size="small" @click="openItemEdit(row as DictItemVO)">
                 编辑

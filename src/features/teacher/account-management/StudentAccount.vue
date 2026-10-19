@@ -20,6 +20,9 @@ import {
   updateUser,
   updateUserStatus,
 } from '@/shared/api/teacher'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import RowActions from '@/shared/ui/RowActions.vue'
+import { formatDateTime } from '@/shared/utils/time'
 
 const loading = ref(false)
 const users = ref<UserListItem[]>([])
@@ -197,15 +200,13 @@ onMounted(() => {
   <div class="mc-page student-account">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
-        <p class="mc-page-head__eyebrow">账号管理 · Students</p>
         <h2 class="mc-page-head__title">学生账号管理</h2>
         <p class="mc-page-head__desc">
-          查看学生账号，重置密码与启停账号。学生账号在「新增账号」中逐个创建（需选择班级）；
-          批量导入学生暂未提供（后端无导入接口）。
+          查看学生账号信息，处理密码重置与账号启停。学生账号由管理员统一创建并分配班级。
         </p>
       </div>
       <div class="mc-page-head__actions">
-        <el-button :icon="RefreshCw" :loading="loading" @click="handleReset">刷新</el-button>
+        <el-button :icon="RefreshCw" :loading="loading" @click="load">刷新</el-button>
       </div>
     </div>
 
@@ -263,32 +264,38 @@ onMounted(() => {
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="300" align="center">
+          <el-table-column label="操作" width="180" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button text type="primary" size="small" @click="openDetail(row as UserListItem)">
-                详情
-              </el-button>
-              <el-button text type="primary" size="small" @click="openEdit(row as UserListItem)">
-                编辑
-              </el-button>
-              <el-button
-                text
-                type="primary"
-                size="small"
-                @click="openPasswordDialog(row as UserListItem)"
-              >
-                重置密码
-              </el-button>
-              <el-button
-                text
-                :type="row.status === 1 ? 'danger' : 'success'"
-                size="small"
-                @click="handleToggleStatus(row as UserListItem)"
-              >
-                {{ row.status === 1 ? '禁用' : '启用' }}
-              </el-button>
+              <RowActions>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openDetail(row as UserListItem)"
+                >
+                  详情
+                </el-button>
+                <el-button text type="primary" size="small" @click="openEdit(row as UserListItem)">
+                  编辑
+                </el-button>
+                <template #more>
+                  <el-dropdown-item @click="openPasswordDialog(row as UserListItem)">
+                    重置密码
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    divided
+                    :class="{ 'row-actions__danger': row.status === 1 }"
+                    @click="handleToggleStatus(row as UserListItem)"
+                  >
+                    {{ row.status === 1 ? '禁用账号' : '启用账号' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState text="暂无学生账号" compact />
+          </template>
         </el-table>
 
         <div class="student-account__pagination">
@@ -354,7 +361,7 @@ onMounted(() => {
           {{ detail.roles?.map((r) => r.roleName).join('、') || '-' }}
         </el-descriptions-item>
         <el-descriptions-item label="最后登录" :span="2">
-          {{ detail.lastLoginAt ?? '-' }}
+          {{ detail.lastLoginAt ? formatDateTime(detail.lastLoginAt) : '-' }}
         </el-descriptions-item>
       </el-descriptions>
       <template #footer>

@@ -4,6 +4,8 @@ import { RefreshCw, Search } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 import { listTeacherLogs } from '@/shared/api/teacher'
 import { LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import { toDayRangeBounds } from '@/shared/utils/time'
 import LogTable from './LogTable.vue'
 
 /**
@@ -37,7 +39,7 @@ const loading = ref(false)
 async function load() {
   loading.value = true
   try {
-    const [start, end] = filters.dateRange
+    const { startTime, endTime } = toDayRangeBounds(filters.dateRange)
     const res = await listTeacherLogs({
       page: page.value,
       per_page: perPage.value,
@@ -45,8 +47,8 @@ async function load() {
       module: filters.module || undefined,
       grade: filters.grade.trim() || undefined,
       keyword: filters.keyword.trim() || undefined,
-      startTime: start || undefined,
-      endTime: end || undefined,
+      startTime,
+      endTime,
     })
     logs.value = res.list ?? []
     total.value = res.total ?? logs.value.length
@@ -128,7 +130,7 @@ onMounted(() => void load())
             range-separator="至"
             start-placeholder="开始时间"
             end-placeholder="结束时间"
-            value-format="YYYY-MM-DDTHH:mm:ss"
+            value-format="YYYY-MM-DD"
             style="width: 250px"
           />
         </el-form-item>
@@ -148,10 +150,8 @@ onMounted(() => void load())
       </div>
       <div class="mc-card__body">
         <div v-loading="loading" class="scoped-log__body">
-          <template v-if="logs.length">
-            <LogTable :data="logs" />
-          </template>
-          <el-empty v-else description="暂无操作记录" />
+          <LogTable v-if="logs.length" :data="logs" />
+          <EmptyState v-else text="暂无操作记录" compact />
         </div>
         <div v-if="total > 0" class="scoped-log__pagination">
           <el-pagination

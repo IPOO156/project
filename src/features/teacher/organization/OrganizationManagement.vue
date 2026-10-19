@@ -17,11 +17,12 @@ import type {
   OrgSchoolItem,
 } from '@/shared/types/teacher'
 import { ElMessage } from 'element-plus'
-import { Pencil, Plus, RefreshCw, Search } from 'lucide-vue-next'
+import { Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 
 import { listClasses, listColleges, listMajors, listSchools } from '@/shared/api/teacher'
 import { COMMON_STATUS } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
 
 import ClassEditDialog from './components/ClassEditDialog.vue'
 import MajorCreateDialog from './components/MajorCreateDialog.vue'
@@ -392,26 +393,22 @@ onMounted(() => void loadSchools())
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="90" align="center">
+            <el-table-column label="操作" width="90" align="center" fixed="right">
               <template #default="{ row }">
                 <el-button
                   text
                   type="primary"
                   size="small"
-                  :icon="Pencil"
                   @click="handleEditClass(row as OrgClassItem)"
                 >
                   编辑
                 </el-button>
               </template>
             </el-table-column>
+            <template #empty>
+              <EmptyState text="当前选择下暂无班级，可点击「新增班级」创建" compact />
+            </template>
           </el-table>
-          <el-empty
-            v-if="!classLoading && !classList.length"
-            class="org-management__empty"
-            description="当前选择下暂无班级，可点击「新增班级」创建"
-            :image-size="72"
-          />
           <div v-if="classTotal > 0" class="org-management__pagination">
             <el-pagination
               v-model:current-page="classPage"
@@ -425,12 +422,7 @@ onMounted(() => void loadSchools())
             />
           </div>
         </template>
-        <el-empty
-          v-else
-          class="org-management__empty"
-          description="请先在上方选择学校 / 学院 / 专业，再查看对应班级"
-          :image-size="88"
-        />
+        <EmptyState v-else text="请先在上方选择学校 / 学院 / 专业，再查看对应班级" />
       </div>
     </div>
 
@@ -475,7 +467,7 @@ onMounted(() => void loadSchools())
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="120" align="center">
+            <el-table-column label="操作" width="120" align="center" fixed="right">
               <template #default="{ row }">
                 <el-button
                   text
@@ -487,20 +479,12 @@ onMounted(() => void loadSchools())
                 </el-button>
               </template>
             </el-table-column>
+            <template #empty>
+              <EmptyState text="当前选择下暂无专业，可点击「新增专业」创建" compact />
+            </template>
           </el-table>
-          <el-empty
-            v-if="!majorsLoading && !majors.length"
-            class="org-management__empty"
-            description="当前选择下暂无专业，可点击「新增专业」创建"
-            :image-size="72"
-          />
         </template>
-        <el-empty
-          v-else
-          class="org-management__empty"
-          description="请先在上方选择学校，查看其下专业"
-          :image-size="88"
-        />
+        <EmptyState v-else text="请先在上方选择学校，查看其下专业" />
       </div>
     </div>
 
@@ -534,10 +518,6 @@ onMounted(() => void loadSchools())
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  &__empty {
-    margin-top: $spacing-lg;
   }
 
   &__pagination {

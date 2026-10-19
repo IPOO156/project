@@ -351,7 +351,7 @@ onMounted(() => void loadAll())
               </el-table-column>
               <el-table-column prop="sourceLabel" label="来源" width="90" align="center" />
               <el-table-column prop="createdAt" label="创建时间" width="170" />
-              <el-table-column label="操作" width="110" align="center">
+              <el-table-column label="操作" width="110" align="center" fixed="right">
                 <template #default="{ row }">
                   <el-button
                     text

@@ -9,10 +9,10 @@ import type { SettingItem } from '@/shared/types/teacher'
  * 教师端无等价接口，属管理端功能，前端在此统一展示。
  */
 import { ElMessage } from 'element-plus'
-import { Settings } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 
 import { listSystemSettings, updateSystemSetting } from '@/shared/api/teacher'
+import EmptyState from '@/shared/ui/EmptyState.vue'
 
 import AnnouncementPanel from './components/AnnouncementPanel.vue'
 
@@ -102,7 +102,7 @@ onMounted(() => {
         <div v-loading="settingsLoading" class="system-config__settings">
           <div v-for="[group, items] in settingsGroups" :key="group" class="mc-card">
             <div class="mc-card__head">
-              <span class="mc-card__title"><Settings :size="15" /> {{ group }}</span>
+              <span class="mc-card__title">{{ group }}</span>
             </div>
             <div class="mc-card__body">
               <div v-for="item in items" :key="item.settingKey" class="system-config__setting">
@@ -113,20 +113,18 @@ onMounted(() => {
                   </p>
                 </div>
                 <div class="system-config__setting-value">
-                  <span class="system-config__setting-text">{{ item.settingValue ?? '-' }}</span>
+                  <span class="system-config__setting-text" :title="item.settingValue ?? ''">
+                    {{ item.settingValue ?? '-' }}
+                  </span>
                   <el-button text type="primary" size="small" @click="openSettingEdit(item)">
                     修改
                   </el-button>
                 </div>
               </div>
-              <el-empty v-if="!items.length" description="该分组暂无配置项" :image-size="56" />
+              <EmptyState v-if="!items.length" text="该分组暂无配置项" compact />
             </div>
           </div>
-          <el-empty
-            v-if="!settings.length && !settingsLoading"
-            description="暂无系统配置"
-            :image-size="72"
-          />
+          <EmptyState v-if="!settings.length && !settingsLoading" text="暂无系统配置" />
         </div>
       </el-tab-pane>
 

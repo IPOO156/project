@@ -19,7 +19,7 @@ import type {
  * 学期下拉与学院/专业/班级范围来自 /common/semesters + /auth/me scopes。
  */
 import { ElMessage } from 'element-plus'
-import { Eye, FileSearch, Filter, RefreshCw, Search, UserRound } from 'lucide-vue-next'
+import { FileSearch, Filter, RefreshCw, Search } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -30,6 +30,8 @@ import {
   listTeacherArchives,
 } from '@/shared/api/teacher'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import { formatDateTime } from '@/shared/utils/time'
 import StatisticsOverview from './components/StatisticsOverview.vue'
 
 defineOptions({ name: 'ArchiveView' })
@@ -525,8 +527,10 @@ onMounted(async () => {
               <span v-else class="archive-view__empty-cell">-</span>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState text="当前筛选范围内暂无汇总数据" compact />
+          </template>
         </el-table>
-        <el-empty v-if="!overviewLoading && !overviewRows.length" description="暂无汇总数据" />
       </div>
     </section>
 
@@ -593,16 +597,17 @@ onMounted(async () => {
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="submittedAt" label="提交时间" width="160">
-            <template #default="{ row }">{{ row.submittedAt ?? '-' }}</template>
+          <el-table-column label="提交时间" width="145">
+            <template #default="{ row }">
+              {{ row.submittedAt ? formatDateTime(row.submittedAt) : '-' }}
+            </template>
           </el-table-column>
-          <el-table-column label="操作" width="170" align="center" fixed="right">
+          <el-table-column label="操作" width="156" align="center" fixed="right">
             <template #default="{ row }">
               <el-button
                 text
                 type="primary"
                 size="small"
-                :icon="UserRound"
                 @click="openStudentArchive(row as ArchiveAdminListItem)"
               >
                 学生档案
@@ -611,7 +616,6 @@ onMounted(async () => {
                 text
                 type="primary"
                 size="small"
-                :icon="Eye"
                 @click="openDetail(row as ArchiveAdminListItem)"
               >
                 详情
@@ -702,10 +706,10 @@ onMounted(async () => {
                 detail.semesterName ?? '-'
               }}</el-descriptions-item>
               <el-descriptions-item label="获得时间">{{
-                detail.obtainedAt ?? '-'
+                detail.obtainedAt ? formatDateTime(detail.obtainedAt) : '-'
               }}</el-descriptions-item>
               <el-descriptions-item label="提交时间">{{
-                detail.submittedAt ?? '-'
+                detail.submittedAt ? formatDateTime(detail.submittedAt) : '-'
               }}</el-descriptions-item>
               <el-descriptions-item label="审核人">{{
                 detail.auditorName ?? '-'
@@ -877,7 +881,6 @@ onMounted(async () => {
     }
 
     &:hover {
-      transform: translateY(-2px);
       border-color: rgba($color-accent, 0.3);
       box-shadow: 0 4px 14px -6px rgba($color-primary, 0.15);
     }

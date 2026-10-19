@@ -12,7 +12,7 @@
  */
 import type { AnnouncementItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Megaphone, Plus, RefreshCw, Trash2 } from 'lucide-vue-next'
+import { Megaphone, Plus, RefreshCw } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 
 import {
@@ -21,6 +21,7 @@ import {
   listAnnouncements,
   updateAnnouncement,
 } from '@/shared/api/teacher'
+import RowActions from '@/shared/ui/RowActions.vue'
 
 const announcementLoading = ref(false)
 const deletingId = ref<number | null>(null)
@@ -259,25 +260,26 @@ onMounted(() => void loadAnnouncements())
           </el-table-column>
           <el-table-column label="操作" width="120" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button
-                text
-                type="primary"
-                size="small"
-                @click="openAnnEdit(row as AnnouncementItem)"
-              >
-                编辑
-              </el-button>
-              <el-button
-                text
-                type="danger"
-                size="small"
-                :icon="Trash2"
-                :loading="deletingId === (row as AnnouncementItem).announcementId"
-                :disabled="deletingId !== null"
-                @click="handleDeleteAnnouncement(row as AnnouncementItem)"
-              >
-                删除
-              </el-button>
+              <RowActions :more="false">
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openAnnEdit(row as AnnouncementItem)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  text
+                  type="danger"
+                  size="small"
+                  :loading="deletingId === (row as AnnouncementItem).announcementId"
+                  :disabled="deletingId !== null"
+                  @click="handleDeleteAnnouncement(row as AnnouncementItem)"
+                >
+                  删除
+                </el-button>
+              </RowActions>
             </template>
           </el-table-column>
         </el-table>

@@ -7,11 +7,13 @@
 // ── 1. 外部依赖导入 ──
 import type { RoleListItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, RefreshCw, Search, ShieldCheck } from 'lucide-vue-next'
+import { Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 
 import { createRole, deleteRole, listRoles, updateRole } from '@/shared/api/teacher'
 import { COMMON_STATUS, ROLE_LEVEL_OPTIONS, ROLE_LEVELS } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
 import PermissionDrawer from './components/PermissionDrawer.vue'
 
@@ -258,17 +260,16 @@ function openPermissionAssign(row: RoleListItem) {
           <el-table-column prop="description" label="描述" min-width="110" show-overflow-tooltip>
             <template #default="{ row }">{{ row.description ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="创建时间" min-width="140">
+          <el-table-column label="创建时间" width="145">
             <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="230" align="center">
+          <el-table-column label="操作" width="190" align="center" fixed="right">
             <template #default="{ row }">
-              <div class="role-management__actions">
+              <RowActions>
                 <el-button
                   text
                   type="primary"
                   size="small"
-                  :icon="ShieldCheck"
                   @click="openPermissionAssign(row as RoleListItem)"
                 >
                   权限分配
@@ -276,19 +277,21 @@ function openPermissionAssign(row: RoleListItem) {
                 <el-button text type="primary" size="small" @click="openEdit(row as RoleListItem)">
                   编辑
                 </el-button>
-                <el-button
-                  text
-                  type="danger"
-                  size="small"
-                  :loading="deletingId === (row as RoleListItem).roleId"
-                  :disabled="deletingId !== null"
-                  @click="handleDelete(row as RoleListItem)"
-                >
-                  删除
-                </el-button>
-              </div>
+                <template #more>
+                  <el-dropdown-item
+                    class="row-actions__danger"
+                    :disabled="deletingId !== null"
+                    @click="handleDelete(row as RoleListItem)"
+                  >
+                    {{ deletingId === (row as RoleListItem).roleId ? '删除中…' : '删除角色' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState text="暂无角色数据" compact />
+          </template>
         </el-table>
 
         <div class="role-management__pagination">
@@ -361,20 +364,6 @@ function openPermissionAssign(row: RoleListItem) {
 
 <style scoped lang="scss">
 .role-management {
-  &__actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    flex-wrap: nowrap;
-    white-space: nowrap;
-
-    // 去掉 Element Plus 相邻按钮默认 12px 间距，保证三个操作一排排布
-    :deep(.el-button + .el-button) {
-      margin-left: 0;
-    }
-  }
-
   &__pagination {
     margin-top: $spacing-lg;
     display: flex;
