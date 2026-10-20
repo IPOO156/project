@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
 import type { AISuggestion } from '@/features/ai-chat/types'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { AlertTriangle, Sparkles } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
 import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import { getAISuggestions } from '@/shared/api/ai-chat'
+import { deleteCareerPlan } from '@/shared/api/career-plan'
 import { useDict } from '@/shared/composables/composables'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
 import { useSemesters } from '@/shared/composables/useSemesters'
@@ -172,9 +173,24 @@ async function handleSubmit() {
   }
 }
 
-function handleRemove(id: string) {
-  careerPlanStore.plans = careerPlanStore.plans.filter((p: any) => p.id !== id)
-  ElMessage.success('已删除')
+/** 删除整份规划：调用后端 DELETE /profile/career-plans/{planId}，成功后刷新列表 */
+async function handleRemove(id: string) {
+  try {
+    await ElMessageBox.confirm('确定删除该职业规划吗？删除后不可恢复。', '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await deleteCareerPlan(Number(id))
+    await careerPlanStore.fetchPlans()
+    ElMessage.success('已删除')
+  } catch {
+    /* 失败提示由请求拦截器统一给出，列表保持不变 */
+  }
 }
 
 onMounted(() => {

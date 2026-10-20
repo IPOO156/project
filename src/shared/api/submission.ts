@@ -718,10 +718,15 @@ async function submitResearchStarApplication(
   if (!sub) throw new Error(`未配置科研之星子类型契约：${type}`)
 
   const semesterId = await resolveSemesterId(data.semester)
-  const master: any = await request.post('/awards/research-star', {
-    semesterId,
-    isDraft: 1,
-  })
+  // 扩展信息挂在主记录上（后端 ResearchStarCreateRequest 接受这四项）：
+  // 此前只传 semesterId/isDraft，导致三个科研之星页面填写的证书编号/发证单位/有效期/本人角色全部丢失。
+  const masterPayload: Record<string, any> = { semesterId, isDraft: 1 }
+  const role = normalizeRole(data.role)
+  if (role) masterPayload.participantRole = role
+  if (data.certNumber) masterPayload.certificateNo = String(data.certNumber)
+  if (data.issuingAuthority) masterPayload.issuingUnit = String(data.issuingAuthority)
+  if (data.validityPeriod) masterPayload.validUntil = toDateString(data.validityPeriod)
+  const master: any = await request.post('/awards/research-star', masterPayload)
   const researchStarId = master?.researchStarId
   if (!researchStarId) throw new Error('科研之星主记录创建失败')
 

@@ -87,14 +87,23 @@ function getRecordStatus(record: any): string {
 function canEdit(s: string) {
   return s === 'draft' || !s || s === 'rejected'
 }
+// 与后端 ActivityService.checkDeletable 对齐：草稿 / 已退回 / 已撤回可删除（最终以后端校验为准）
 function canDelete(s: string) {
-  return s === 'draft' || !s
+  return s === 'draft' || !s || s === 'rejected' || s === 'withdrawn'
 }
 function canWithdraw(s: string) {
   return s === 'pending'
 }
-function canRequestCorrection(s: string) {
-  return s === 'approved'
+/**
+ * 申请更正仅适用于档案类记录。
+ * 后端只有 POST /applications/{archiveId}/correction（ApplicationService 从 archive 表取数），
+ * 奖项类没有对应接口；此前奖项行也显示该按钮，会把奖项 id 当作档案 id 提交。
+ */
+function canRequestCorrection(row: any) {
+  return (
+    getRecordStatus(row) === 'approved' &&
+    activityCategoryOf(row?.type as ApplicationType) === 'archive'
+  )
 }
 function canViewScore(s: string) {
   return s === 'pending' || s === 'approved' || s === 'withdrawn'
@@ -422,7 +431,7 @@ async function openGuide(row: any) {
               >撤回</el-button
             >
             <el-button
-              v-if="canRequestCorrection(getRecordStatus(row))"
+              v-if="canRequestCorrection(row)"
               size="small"
               type="primary"
               link
