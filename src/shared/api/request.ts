@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import {
   clearAuth,
   getRefreshToken,
@@ -17,12 +18,17 @@ const request = axios.create({
   },
 })
 
-// 测试账号（后端已配置跳过验证码）
-const CAPTCHA_SKIP_ACCOUNTS = ['202401002', 'T00003', 'A00002']
+// 测试账号（仅开发/联调环境启用）。
+// 生产构建必须完全消除该清单，避免测试账号标识跟随 bundle 发布；
+// 后端 prod profile 本身也会硬拒绝验证码跳过，前端这里只是不发送跳过头。
+const CAPTCHA_SKIP_ACCOUNTS = import.meta.env.DEV ? ['202401002', 'T00003', 'A00002'] : []
 
-// 密钥：与后端 auth.captcha.skip-secret 保持一致
-// 开发环境 .env.development 可覆盖，生产构建 import.meta.env.PROD 为空字符串自动不生效
-const CAPTCHA_SKIP_SECRET = import.meta.env.VITE_CAPTCHA_SKIP_SECRET || ''
+// 密钥：与后端 auth.captcha.skip-secret 保持一致，仅开发/联调环境读取。
+// .env.production 不设置 VITE_CAPTCHA_SKIP_SECRET，且此处再用 DEV 门控，
+// 防止误配环境变量把跳过能力带进生产构建。
+const CAPTCHA_SKIP_SECRET = import.meta.env.DEV
+  ? import.meta.env.VITE_CAPTCHA_SKIP_SECRET || ''
+  : ''
 
 // 请求拦截器
 request.interceptors.request.use(
@@ -85,6 +91,9 @@ function tryRefreshToken(): Promise<string | null> {
  */
 function clearAuthCaches() {
   try {
+    // 会话失效（刷新失败）时同样清理当前用户的草稿/撤回标记，
+    // 避免令牌已失效但 PII 仍留在 localStorage。必须在删除身份缓存前执行。
+    clearCurrentUserScopedStorage(['form_draft_', 'submission:'])
     localStorage.removeItem('user_info_cache')
     localStorage.removeItem('teacher_me')
     localStorage.removeItem('user_avatar_cache')

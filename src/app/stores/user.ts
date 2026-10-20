@@ -6,6 +6,7 @@ import { uploadAvatar as apiUpload } from '@/shared/api/common'
 import { updateProfileContact } from '@/shared/api/student'
 import { logout as apiLogout } from '@/shared/api/user'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import { clearAuth, getToken, setToken as persistToken } from '@/shared/utils/token'
 import { useTabsStore } from './tabs'
 
@@ -178,6 +179,9 @@ export const useUserStore = defineStore('user', () => {
     cachedAvatar.value = undefined
     clearAuth()
     localStorage.removeItem(AVATAR_CACHE_KEY)
+    // 清理当前用户的表单草稿与撤回标记（含 PII）。必须在删除 user_info_cache 之前，
+    // 否则 storageScope 已退化为 anonymous，找不到 ::u<id> 键。
+    clearCurrentUserScopedStorage(['form_draft_', 'submission:'])
     // 登出必须清空身份缓存，否则换账号登录会读到上一个账号的 loginType / 权限码：
     //   - user_info_cache：loginType 决定端级分流
     //   - teacher_me：/auth/me 的 permissions 决定菜单与页面可访问性

@@ -26,6 +26,10 @@ const themeStore = useThemeStore()
 const { toggleThemeWithRipple } = useThemeRipple()
 const { refresh: refreshTeacherMe } = useTeacherMe()
 
+// 测试账号：仅开发/联调环境跳过前端验证码必填校验。
+// 生产构建必须完全消除该清单（后端 prod 也会硬拒绝验证码跳过）。
+const SKIP_ACCOUNTS = import.meta.env.DEV ? ['202401002', 'T00003', 'A00002'] : []
+
 // 教师端身份不再映射为前端角色枚举：权限码由 /auth/me 的 permissions 提供，
 // 菜单与路由授权见 shared/composables/useTeacherAuthz.ts。
 function toUserInfo(user: {
@@ -218,8 +222,6 @@ async function handleLogin() {
     return
   }
 
-  // 测试账号：后端已配置跳过验证码，前端不需要校验
-  const SKIP_ACCOUNTS = ['202401002', 'T00003', 'A00002']
   const userNo = loginForm.username
   const isSkipAccount = SKIP_ACCOUNTS.includes(userNo)
 
