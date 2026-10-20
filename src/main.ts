@@ -34,15 +34,27 @@ app.use(router)
 // 此时 router 已通过 app.use(router) 注册完毕，无需等待组件渲染）
 initTabsRouter(router)
 
+/**
+ * 仅记录错误的名称/信息/堆栈。
+ * 不直接打印原始对象：AxiosError 的 config 携带 Authorization 请求头与请求体
+ * （可能含档案联系信息等），整对象输出会把凭据与业务数据写进控制台。
+ */
+function describeError(err: unknown): Record<string, unknown> {
+  if (err instanceof Error) {
+    return { name: err.name, message: err.message, stack: err.stack }
+  }
+  return { name: 'NonError', message: typeof err === 'string' ? err : '非 Error 类型的异常' }
+}
+
 // ── 全局错误兜底（CLAUDE.md 3.4：异常需日志记录，不向用户暴露技术细节）──
 // 组件渲染错误统一捕获：记录日志并给出友好提示
 app.config.errorHandler = (err) => {
-  console.error('[GlobalError]', err)
+  console.error('[GlobalError]', describeError(err))
   ElMessage.error('页面出现异常，请刷新重试')
 }
 // 未处理的 Promise rejection 仅记录日志（请求层 rejection 已由拦截器提示，此处避免重复弹窗）
 window.addEventListener('unhandledrejection', (e) => {
-  console.error('[UnhandledRejection]', e.reason)
+  console.error('[UnhandledRejection]', describeError(e.reason))
 })
 
 app.mount('#app')
