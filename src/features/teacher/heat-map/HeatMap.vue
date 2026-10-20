@@ -2,7 +2,7 @@
 import type { HeatmapStatistics, SemesterItem } from '@/shared/types/teacher'
 /**
  * HeatMap - 成果热力图（管理员与教师共用同一页面，按角色切换端点）
- * 管理员（isAdmin：持 log:view / log:audit）→ /admin/statistics/heatmap（全校数据，指标含「兴趣」）；
+ * 持 statistics:view（或 admin 角色）→ /admin/statistics/heatmap（全校数据，指标含「兴趣」）；
  * 教师 → /teacher/statistics/heatmap（本人 role_scopes 范围，指标仅 gpa/award/practice/archive）。
  * 组织 × 学期 指标矩阵，values 为 0-100 归一化值，rawValues 为原始值，maxValue/minValue 为原始值范围。
  * 学期与学院/专业/班级范围来自 /common/semesters + /auth/me scopes。
@@ -14,8 +14,9 @@ import { getAdminStatisticsHeatmap, getSemesters, getStatisticsHeatmap } from '@
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 
-const { hasPermission } = useTeacherAuthz()
-const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
+// 与后端 AdminStatisticsService 的 statistics:view 同码；admin 角色直通（其权限码可能为空）
+const { canAccessAny } = useTeacherAuthz()
+const useAdminHeatmap = computed(() => canAccessAny(['statistics:view']))
 
 const semesters = ref<SemesterItem[]>([])
 const loadingSemesters = ref(false)
@@ -46,10 +47,10 @@ const METRIC_OPTIONS: MetricOption[] = [
  * 教师端 /teacher/statistics/heatmap 仅 gpa/award/practice/archive
  * （教师端接口文档注明为「子集」，对应 AdminStatisticsService.TEACHER_HEATMAP_METRICS）。
  * 教师若选中「兴趣」，请求会被后端以 code 10001「metric 仅支持 gpa/award/practice/archive」拒绝，
- * 故选项跟随端点一起收窄 —— 与 load() 里 isAdmin 选端点的判断保持同一口径。
+ * 故选项跟随端点一起收窄 —— 与 load() 里 useAdminHeatmap 选端点的判断保持同一口径。
  */
 const metricOptions = computed(() =>
-  isAdmin.value ? METRIC_OPTIONS : METRIC_OPTIONS.filter((m) => !m.adminOnly),
+  useAdminHeatmap.value ? METRIC_OPTIONS : METRIC_OPTIONS.filter((m) => !m.adminOnly),
 )
 
 const ORG_TYPE_OPTIONS = [
@@ -92,7 +93,7 @@ async function load() {
   loading.value = true
   try {
     // 管理员调 /admin/statistics/heatmap（全校数据），教师调 /teacher/statistics/heatmap（学院范围）
-    const fn = isAdmin.value ? getAdminStatisticsHeatmap : getStatisticsHeatmap
+    const fn = useAdminHeatmap.value ? getAdminStatisticsHeatmap : getStatisticsHeatmap
     heatmap.value = await fn({
       semesterId: filters.semesterId,
       orgType: filters.orgType,

@@ -14,7 +14,7 @@ import { onMounted, reactive, ref } from 'vue'
 
 import {
   getUserDetail,
-  listClasses,
+  listAllClasses,
   listUsers,
   resetUserPassword,
   updateUser,
@@ -37,8 +37,9 @@ const grades = ref<string[]>([])
 
 async function loadGrades() {
   try {
-    const res = await listClasses({ page: 1, per_page: 200 })
-    const distinct = new Set((res.list ?? []).map((c) => (c.grade ?? '').trim()).filter(Boolean))
+    // 后端单页上限 100，分页取全量后再去重年级，避免第 101 个班级起年级缺失
+    const list = await listAllClasses()
+    const distinct = new Set(list.map((c) => (c.grade ?? '').trim()).filter(Boolean))
     grades.value = [...distinct].sort((a, b) => b.localeCompare(a))
   } catch {
     grades.value = []

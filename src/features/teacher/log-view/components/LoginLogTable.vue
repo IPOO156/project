@@ -10,8 +10,9 @@ interface Props {
 defineProps<Props>()
 
 // 持有系统日志权限的管理员看明文；教师 / 辅导员看脱敏（后端 /teacher/logs 亦为脱敏数据）
-const { hasPermission } = useTeacherAuthz()
-const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
+// 后端日志接口只校验 log:view；admin 角色直通（其权限码可能为空）
+const { canAccessAny } = useTeacherAuthz()
+const isAdmin = computed(() => canAccessAny(['log:view']))
 
 function nameTitle(name: string | null) {
   return isAdmin.value ? (name ?? '') : ''

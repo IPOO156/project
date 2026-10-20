@@ -9,7 +9,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Save } from 'lucide-vue-next'
 
 import { computed, reactive, ref, watch } from 'vue'
-import { listApprovalFlowSteps, listRoles, saveApprovalFlowSteps } from '@/shared/api/teacher'
+import { listAllRoles, listApprovalFlowSteps, saveApprovalFlowSteps } from '@/shared/api/teacher'
 import RowActions from '@/shared/ui/RowActions.vue'
 
 const props = defineProps<{
@@ -70,8 +70,8 @@ const steps = ref<ApprovalFlowStep[]>([])
 const roles = ref<RoleListItem[]>([])
 async function loadRoles() {
   try {
-    const res = await listRoles({ page: 1, per_page: 200 })
-    roles.value = res.list ?? []
+    // 后端单页上限 100，分页取全量，避免第 101 个角色起无法选择
+    roles.value = await listAllRoles()
   } catch {
     roles.value = []
   }

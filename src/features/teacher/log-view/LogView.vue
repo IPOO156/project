@@ -22,10 +22,11 @@ import LoginLogTable from './components/LoginLogTable.vue'
 import LogTable from './components/LogTable.vue'
 import ScopedLogView from './components/ScopedLogView.vue'
 
-const { hasPermission } = useTeacherAuthz()
-// 仅持有 log:view / log:audit 的管理员可查看系统 / 登录 / 导出三个维度（/admin/logs/**）；
-// 教师 / 辅导员只能查看自身 + 授权范围内学生的操作日志（/teacher/logs，脱敏）。
-const isScoped = computed(() => !hasPermission('log:view') && !hasPermission('log:audit'))
+const { canAccessAny } = useTeacherAuthz()
+// 可查看系统 / 登录 / 导出三个维度（/admin/logs/**）的判据是后端真实的 log:view
+// （AdminLogService 只校验该码），admin 角色直通。log:audit 不在此列。
+// 教师 / 辅导员查看自身 + 授权范围内学生日志的分支保留给 /teacher/logs（后端当前仍要求 admin）。
+const isScoped = computed(() => !canAccessAny(['log:view']))
 
 // ── 操作日志（系统日志）：筛选与分页 ──
 const filters = reactive({

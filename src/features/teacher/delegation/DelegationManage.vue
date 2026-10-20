@@ -68,7 +68,8 @@ async function loadList() {
   try {
     const res = await listTeacherDelegations({
       direction: filters.direction || undefined,
-      status: filters.status || undefined,
+      // 0（待生效）是有效筛选值，不能用 || 丢弃；仅空串表示「全部」
+      status: filters.status === '' ? undefined : filters.status,
       page: page.value,
       per_page: perPage.value,
     })

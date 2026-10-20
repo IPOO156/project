@@ -26,6 +26,7 @@ import {
   updateSemesterStatus,
   uploadFile,
 } from '@/shared/api/teacher'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { COMMON_STATUS } from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
@@ -37,6 +38,12 @@ type DateRange = [string, string] | null
 // ── 3. Props & Emits（顶层页面，无）──
 
 // ── 4. Store / Composable（直接调用 API，无）──
+
+// ── 4. Store / Composable ──
+// 导入/模板下载在后端单独校验 semester:import（SemesterManageService.IMPORT_PERMISSION），
+// 与页面入口的 semester:manage 不是同一个码；admin 角色直通。
+const { canAccessAny } = useTeacherAuthz()
+const canImport = computed(() => canAccessAny(['semester:import']))
 
 // ── 5. 响应式数据 ──
 const loading = ref(false)
@@ -274,14 +281,21 @@ function openImportResult() {
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="load">刷新</el-button>
         <el-button type="primary" :icon="Plus" @click="openCreate">新增学期</el-button>
-        <el-button plain :icon="FileUp" @click="importDialogVisible = true">导入学期</el-button>
+        <el-button v-if="canImport" plain :icon="FileUp" @click="importDialogVisible = true"
+          >导入学期</el-button
+        >
         <!--
           「导入结果」是**页面级**的（本次会话最近一次批量导入的统计），不是某一行的属性，
           原先挂在每行操作列会让人以为是该行的导入结果（点击后提示「请先执行导入」）。
           后端无导入历史接口（无「按批次查导入记录」的端点），故此处只保留本次会话结果，
           且无结果时按钮置灰，不再给出点了必然提示的入口。
         -->
-        <el-button :icon="ClipboardCheck" :disabled="!importResult" @click="openImportResult">
+        <el-button
+          v-if="canImport"
+          :icon="ClipboardCheck"
+          :disabled="!importResult"
+          @click="openImportResult"
+        >
           本次导入结果
         </el-button>
       </div>

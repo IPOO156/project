@@ -40,7 +40,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import {
   getRecalculationTask,
   getSemesters,
-  listClasses,
+  listAllClasses,
   listTeacherArchives,
   triggerScoreRecalculate,
 } from '@/shared/api/teacher'
@@ -192,8 +192,9 @@ async function loadClasses() {
   }
   targetLoading.value = true
   try {
-    const res = await listClasses({ page: 1, per_page: 200 })
-    classOptions.value = res.list.map((c) => ({ value: c.classId, label: c.className }))
+    // 后端单页上限 100，分页取全量，避免第 101 个班级起无法选择
+    const list = await listAllClasses()
+    classOptions.value = list.map((c) => ({ value: c.classId, label: c.className }))
     targetOptionsFailed.value = false
   } catch {
     classOptions.value = []

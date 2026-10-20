@@ -7,14 +7,11 @@ import type {
 } from '@/shared/types/teacher'
 /**
  * ArchiveView - 档案查看 / 档案汇总总览
- * 对接后端：
- * - /teacher/archives/overview（教师端组织档案汇总，维度全校/学院/专业/班级 + 下钻）
- * - /teacher/archives（教师端学生档案列表，支持组织/状态/学期/关键词筛选）
- * 以上两项与管理端 /admin/archives* 的参数、响应字段完全一致，差别仅在鉴权口径
- * （教师按 role_scopes 限定范围，管理端不限制）。
- * 仍为 admin 端点、待后端补教师端接口的部分：
- * - /admin/archives/{archiveId}（档案详情，教师身份会 403，详见 openDetail）
- * - /admin/statistics/overview（档案汇总统计看板，见 components/StatisticsOverview.vue）
+ * 对接后端（均为教师端端点，教师按 role_scopes 限定范围，管理员同样放行）：
+ * - /teacher/archives/overview（组织档案汇总，维度全校/学院/专业/班级 + 下钻）
+ * - /teacher/archives（学生档案列表，支持组织/状态/学期/关键词筛选）
+ * - /teacher/archives/{archiveId}（档案详情，见 openDetail）
+ * - /teacher/statistics/overview（档案汇总统计看板，见 components/StatisticsOverview.vue）
  * 行内「学生档案」按钮进入 /teacher/student-detail/{userId}（教师端 /teacher/students/*）。
  * 学期下拉与学院/专业/班级范围来自 /common/semesters + /auth/me scopes。
  */
@@ -119,7 +116,7 @@ const hasActiveFilter = computed(() =>
   ),
 )
 
-/* ── 组织汇总（/admin/archives/overview）── */
+/* ── 组织汇总（/teacher/archives/overview）── */
 
 const overviewLoading = ref(false)
 const overviewRows = ref<ArchiveOverviewRow[]>([])
@@ -225,8 +222,7 @@ function handleReset() {
   void loadList()
 }
 
-/* ── 档案详情（/admin/archives/{id}）：教师端暂无等价接口，教师身份调用会 403，
-      待后端补 /teacher/archives/{archiveId} 后改接；此处保留现状（详见文件头注释）── */
+/* ── 档案详情（/teacher/archives/{id}）：教师/管理员均可访问 ── */
 
 const detailDrawerVisible = ref(false)
 const detailLoading = ref(false)

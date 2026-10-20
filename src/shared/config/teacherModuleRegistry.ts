@@ -218,8 +218,9 @@ export const teacherModules: TeacherModule[] = [
     icon: History,
     order: 40,
     routePrefix: '/teacher/log-view',
-    // 仅管理员可查看（持 log:view / log:audit），教师/辅导员无此权限
-    permissions: ['log:view', 'log:audit'],
+    // 后端 AdminLogService 只校验 log:view（log:audit 不被接受），admin 角色直通；
+    // 教师/辅导员无此权限（V36 已从非 admin 角色撤销 log:view）
+    permissions: ['log:view'],
     description: '系统操作日志',
     menuItems: [{ label: '日志查看', icon: History, path: '/teacher/log-view' }],
   },
@@ -248,14 +249,16 @@ export const teacherModules: TeacherModule[] = [
   },
   {
     // 原「档案导出」与「导出模板」两个一级菜单合并（同一业务对象的「用模板」与「管模板」）。
-    // permissions 取两者并集：模块级 isModuleAllowed 是 any-of，故导出中心对持任一码的人可见，
+    // permissions 取并集：模块级 isModuleAllowed 是 any-of，故导出中心对持任一码的人可见，
     // 页内再按 tab 各自的码收窄（见 ExportCenter.vue 的 visibleTabs）。
+    // export:research / grade:import 是「档案导出」tab 内两个独立面板的后端码，
+    // 只持它们的人也应能进入本页（export:manage 仅约束 admin 单任务查询，不放此处）。
     id: 'export-center',
     label: '导出中心',
     icon: LayoutTemplate,
     order: 47,
     routePrefix: '/teacher/export-center',
-    permissions: ['export:execute', 'export:manage', 'export:template:manage'],
+    permissions: ['export:execute', 'export:research', 'grade:import', 'export:template:manage'],
     description: '档案导出与导出模板',
     menuItems: [{ label: '导出中心', icon: LayoutTemplate, path: '/teacher/export-center' }],
   },
@@ -275,8 +278,11 @@ export const teacherModules: TeacherModule[] = [
     icon: Settings,
     order: 80,
     routePrefix: '/teacher/system-management',
-    // 该页含字典/角色/学期三个 Tab，持有任一子管理码即可进入
-    permissions: ['system:role:manage', 'dictionary:manage', 'semester:manage', 'org:manage'],
+    // 该页含字典/角色/学期三个 Tab，持有任一子管理码即可进入；
+    // semester:import 是学期导入/模板下载的独立码，只持该码的角色也应能进入学期 Tab。
+    // 不要加入 org:manage：组织架构是独立模块（见 org-management），本页没有对应 Tab，
+    // 否则只持该码的角色会进入一个没有任何可见 Tab 的空白页。
+    permissions: ['system:role:manage', 'dictionary:manage', 'semester:manage', 'semester:import'],
     description: '字典/角色/学期统一管理',
     menuItems: [{ label: '系统管理', icon: Settings, path: '/teacher/system-management?tab=dict' }],
   },
@@ -289,7 +295,9 @@ export const teacherModules: TeacherModule[] = [
     icon: Users,
     order: 50,
     routePrefix: '/teacher/account-role',
-    permissions: ['system:user:manage'],
+    // 后端 UserManageService：读接口接受 user:view / user:manage，写接口仅 user:manage。
+    // 页面四个 tab 都含写操作，故入口按 user:manage 判定（admin 角色直通）。
+    permissions: ['user:manage'],
     description: '学生/教师账号管理与职位调整',
     menuItems: [{ label: '账号与角色', icon: Users, path: '/teacher/account-role' }],
   },

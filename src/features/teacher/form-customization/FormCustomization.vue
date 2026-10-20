@@ -80,7 +80,8 @@ async function loadList() {
   try {
     const res = await listFormTemplates({
       category: filters.category || undefined,
-      status: filters.status || undefined,
+      // 0（停用）是有效筛选值，不能用 || 丢弃；仅空串表示「全部」
+      status: filters.status === '' ? undefined : filters.status,
       keyword: filters.keyword.trim() || undefined,
       page: page.value,
       per_page: perPage.value,

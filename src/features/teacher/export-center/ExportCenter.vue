@@ -41,12 +41,16 @@ interface HubTab {
  * 能进本页但不应对其显示「导出模板」tab，故按 tab 过滤。
  * canAccessAny 与 isModuleAllowed 同序（admin 角色直通），不会误伤 permissions 为空的
  * 线上管理员 —— 裸用 hasPermission 会把管理员的「导出模板」tab 隐藏掉。
+ *
+ * 「档案导出」tab 对应三个后端码：教师端列表/提交/模板为 export:execute，
+ * 研究数据导出为 export:research，成绩导入为 grade:import。export:manage 只约束
+ * /admin/exports/{jobId} 单任务查询，不代表能使用教师端导出，故不放入本 tab。
  */
 const TABS: HubTab[] = [
   {
     key: 'export',
     label: '档案导出',
-    permissions: ['export:execute', 'export:manage'],
+    permissions: ['export:execute', 'export:research', 'grade:import'],
     baselineVisible: true,
     component: ArchiveExport,
   },

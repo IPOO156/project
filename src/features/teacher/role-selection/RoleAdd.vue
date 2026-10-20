@@ -15,7 +15,7 @@
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 
-import { createUser, listClasses, listRoles } from '@/shared/api/teacher'
+import { createUser, listAllClasses, listAllRoles } from '@/shared/api/teacher'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 
 const { me } = useTeacherMe()
@@ -89,14 +89,14 @@ function resolveRoleIds(role: string): number[] | null {
 
 onMounted(async () => {
   try {
-    const res = await listRoles({ page: 1, per_page: 200 })
-    roleIdByCode.value = Object.fromEntries((res.list ?? []).map((r) => [r.roleCode, r.roleId]))
+    const roles = await listAllRoles()
+    roleIdByCode.value = Object.fromEntries(roles.map((r) => [r.roleCode, r.roleId]))
   } catch {
     roleIdByCode.value = {}
   }
   try {
-    const res = await listClasses({ page: 1, per_page: 200 })
-    classes.value = (res.list ?? []).map((c) => ({
+    const list = await listAllClasses()
+    classes.value = list.map((c) => ({
       classId: c.classId,
       className: c.className,
       grade: c.grade ?? '',
