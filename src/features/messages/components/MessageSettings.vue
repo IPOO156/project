@@ -2,6 +2,7 @@
 import { ElMessage } from 'element-plus'
 import { ref, watch } from 'vue'
 import { getMessageSettings, updateMessageSettings } from '@/shared/api/notification'
+import EmptyState from '@/shared/ui/EmptyState.vue'
 
 interface MessageSetting {
   category: string
@@ -16,6 +17,8 @@ const visible = defineModel<boolean>('visible', { default: false })
 const loading = ref(false)
 const saving = ref(false)
 const settings = ref<MessageSetting[]>([])
+/** 读取失败与「确实没有设置项」必须分开，前者不能渲染成全部关闭 */
+const loadFailed = ref(false)
 
 type ChannelKey = 'emailEnabled' | 'smsEnabled' | 'pushEnabled'
 
@@ -27,8 +30,13 @@ const CHANNELS: Array<{ key: ChannelKey; label: string }> = [
 
 async function loadSettings() {
   loading.value = true
+  loadFailed.value = false
   try {
     settings.value = await getMessageSettings()
+  } catch {
+    // 错误提示由请求拦截器统一给出；这里只记录错误态，避免显示成「全部关闭」
+    settings.value = []
+    loadFailed.value = true
   } finally {
     loading.value = false
   }
@@ -77,8 +85,11 @@ watch(
     destroy-on-close
   >
     <div v-loading="loading" class="message-settings">
+      <EmptyState v-if="!loading && loadFailed" text="消息设置加载失败，请重试" compact>
+        <el-button size="small" type="primary" plain @click="loadSettings">重新加载</el-button>
+      </EmptyState>
       <el-empty
-        v-if="!loading && settings.length === 0"
+        v-else-if="!loading && settings.length === 0"
         description="暂无消息设置项"
         :image-size="80"
       />
@@ -97,7 +108,14 @@ watch(
     </div>
     <template #footer>
       <el-button @click="close">取消</el-button>
-      <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
+      <el-button
+        type="primary"
+        :loading="saving"
+        :disabled="saving || loading || loadFailed || settings.length === 0"
+        @click="handleSave"
+      >
+        保存
+      </el-button>
     </template>
   </el-dialog>
 </template>

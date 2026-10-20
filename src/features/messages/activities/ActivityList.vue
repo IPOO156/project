@@ -142,6 +142,15 @@ function handleActivityReset() {
   activityStore.fetchActivities()
 }
 
+/** 动态加载失败后的重试：沿用当前筛选条件 */
+function retryActivities() {
+  const filters: Record<string, string> = {}
+  if (activityKeyword.value) filters.keyword = activityKeyword.value
+  if (activityStatus.value) filters.status = activityStatus.value
+  activityPageNum.value = 1
+  activityStore.fetchActivities(Object.keys(filters).length ? filters : undefined)
+}
+
 function handleSubmissionSearch() {
   submissionPageNum.value = 1
   const filters: SubmissionFilters = {}
@@ -322,7 +331,20 @@ onMounted(() => {
             </template>
           </el-table-column>
           <template #empty>
-            <EmptyState text="暂无动态记录" compact />
+            <EmptyState
+              :text="activityStore.loadFailed ? '动态加载失败，请重试' : '暂无动态记录'"
+              compact
+            >
+              <el-button
+                v-if="activityStore.loadFailed"
+                size="small"
+                type="primary"
+                plain
+                @click="retryActivities"
+              >
+                重新加载
+              </el-button>
+            </EmptyState>
           </template>
         </el-table>
 

@@ -14,6 +14,8 @@ import { getActivities } from '@/shared/api/activity'
 export const useAwardReviewStore = defineStore('award-review', () => {
   const allRecords = ref<StarRecord[]>([])
   const loading = ref(false)
+  /** getActivities 失败标记；StarDialog 不渲染本列表，但保留状态供后续列表页区分「空」与「失败」 */
+  const loadFailed = ref(false)
 
   /** 加载奖项审核记录（对接 /activities，过滤 award 类型） */
   async function fetchAll(_filters?: AwardReviewFilters): Promise<void> {
@@ -43,6 +45,10 @@ export const useAwardReviewStore = defineStore('award-review', () => {
           sourcePath: '',
           applicant: '',
         }))
+      loadFailed.value = false
+    } catch {
+      // 错误提示由请求拦截器统一给出；保留已有列表，仅记录错误态
+      loadFailed.value = true
     } finally {
       loading.value = false
     }
@@ -59,5 +65,5 @@ export const useAwardReviewStore = defineStore('award-review', () => {
     ElMessage.success('修改已保存，等待重新审核')
   }
 
-  return { allRecords, loading, fetchAll, resubmit }
+  return { allRecords, loading, loadFailed, fetchAll, resubmit }
 })

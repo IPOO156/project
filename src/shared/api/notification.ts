@@ -1,16 +1,51 @@
 import type { Notification, NotificationFilters } from '@/shared/types/types'
 import request from './request'
 
+/** 后端 GET /messages 的单页上限（MessageController 将 per_page 截断到 100） */
+const MESSAGE_PAGE_SIZE = 100
+/** 安全上限：避免 total 异常时无限翻页；达到上限会在控制台明确告警 */
+const MESSAGE_MAX_PAGES = 50
+
+interface MessagePage {
+  list: any[]
+  total: number
+}
+
 /**
- * 获取通知列表
+ * 获取通知列表（拉取全部页）
  * 对接后端 GET /messages（5.1）。
- * 接口异常由全局请求拦截器统一提示，此处不做 mock 兜底——伪造数据会在刷新后消失，
- * 造成"消息归零"假象；失败交由 Store 捕获置空态。
+ *
+ * 后端默认只返回 10 条、单页上限 100 条；此前固定请求第一页 50 条再在本地分页，
+ * 导致第 51 条之后的消息在「消息中心」不可见、头部未读角标偏小，且前端拿不到
+ * total 就无法区分「确实没有更多」与「还有没加载的」。这里按 total 逐页取完，
+ * 再交给 Store 合并两态；不做 mock 兜底（失败交由 Store 与全局拦截器处理）。
  */
 export function getNotifications(filters?: NotificationFilters): Promise<Notification[]> {
+  return fetchMessagePage(filters, 1).then(async (first) => {
+    const pages: any[][] = [first.list]
+    const totalPages = Math.min(Math.ceil(first.total / MESSAGE_PAGE_SIZE), MESSAGE_MAX_PAGES)
+    if (Math.ceil(first.total / MESSAGE_PAGE_SIZE) > MESSAGE_MAX_PAGES) {
+      console.warn(
+        `[messages] 消息总数 ${first.total} 超过前端安全上限 ${MESSAGE_MAX_PAGES * MESSAGE_PAGE_SIZE}，仅加载前 ${MESSAGE_MAX_PAGES} 页`,
+      )
+    }
+    if (totalPages > 1) {
+      const rest = await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, i) => fetchMessagePage(filters, i + 2)),
+      )
+      rest.forEach((p) => pages.push(p.list))
+    }
+    return pages.flat().map(mapMessage)
+  })
+}
+
+function fetchMessagePage(
+  filters: NotificationFilters | undefined,
+  page: number,
+): Promise<MessagePage> {
   const params: Record<string, any> = {
-    page: 1,
-    per_page: 50,
+    page,
+    per_page: MESSAGE_PAGE_SIZE,
   }
   if (filters?.category) params.category = filters.category
   if (filters?.status === 'read') params.isRead = 1
@@ -18,7 +53,10 @@ export function getNotifications(filters?: NotificationFilters): Promise<Notific
   if (filters?.archived === true) params.isArchived = 1
   if (filters?.keyword) params.keyword = filters.keyword
 
-  return request.get('/messages', { params }).then((res: any) => (res?.list ?? []).map(mapMessage))
+  return request.get('/messages', { params }).then((res: any) => ({
+    list: Array.isArray(res?.list) ? res.list : [],
+    total: Number(res?.total) || 0,
+  }))
 }
 
 function mapMessage(m: any): Notification {
@@ -107,10 +145,9 @@ export function getMessageSettings(): Promise<
     pushEnabled: number
   }>
 > {
-  return request
-    .get('/messages/settings')
-    .then((res: any) => (Array.isArray(res) ? res : []))
-    .catch(() => [])
+  // 不吞错误：接口失败必须让调用方区分「读取失败」与「没有任何设置项」，
+  // 否则页面会把失败显示成「全部关闭/暂无设置」，用户可能据此误改通知配置。
+  return request.get('/messages/settings').then((res: any) => (Array.isArray(res) ? res : []))
 }
 
 /** 更新/新增消息通知设置（PUT /messages/settings） */

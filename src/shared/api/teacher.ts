@@ -157,6 +157,34 @@ import type {
 import { downloadBlobFile } from '@/shared/utils/download'
 import request from './request'
 
+/** 下拉/候选列表分页拉全量：后端 PageParam 单页上限为 100，超出部分必须翻页获取 */
+const LOOKUP_PAGE_SIZE = 100
+/** 安全上限：total 异常时避免无限翻页；达到上限会在控制台明确告警 */
+const LOOKUP_MAX_PAGES = 50
+
+async function fetchAllPageItems<T>(
+  fetchPage: (page: number, perPage: number) => Promise<PageResult<T>>,
+): Promise<T[]> {
+  const first = await fetchPage(1, LOOKUP_PAGE_SIZE)
+  const firstList = first?.list ?? []
+  const total = Number(first?.total) || 0
+  const totalPages = Math.max(1, Math.ceil(total / LOOKUP_PAGE_SIZE))
+  if (totalPages > LOOKUP_MAX_PAGES) {
+    console.warn(
+      `[lookup] 数据共 ${total} 条，超过前端安全上限 ${LOOKUP_MAX_PAGES * LOOKUP_PAGE_SIZE}，仅加载前 ${LOOKUP_MAX_PAGES} 页`,
+    )
+  }
+  const pageCount = Math.min(totalPages, LOOKUP_MAX_PAGES)
+  if (pageCount <= 1 || firstList.length === 0) return firstList
+  // 顺序翻页而非一次性并发：下拉候选总量通常很小，顺序请求可避免异常 total 时对后端形成请求突发。
+  const all = [...firstList]
+  for (let page = 2; page <= pageCount; page++) {
+    const res = await fetchPage(page, LOOKUP_PAGE_SIZE)
+    all.push(...(res?.list ?? []))
+  }
+  return all
+}
+
 /* ===================== 认证 ===================== */
 
 export function getCaptcha(): Promise<CaptchaResponse> {
@@ -923,6 +951,15 @@ export function listRoles(params: {
   return request.get('/admin/roles', { params })
 }
 
+/**
+ * 角色下拉候选（全部页）。
+ * 后端 PageParam 会把 per_page 截断到 100，原先固定 per_page=200 时第 101 个角色起缺失，
+ * 表现为审批步骤/新增账号里选不到对应角色。
+ */
+export function listAllRoles(params: { status?: number } = {}): Promise<RoleListItem[]> {
+  return fetchAllPageItems((page, per_page) => listRoles({ ...params, page, per_page }))
+}
+
 export function createRole(payload: RoleSavePayload): Promise<{ roleId: number }> {
   return request.post('/admin/roles', payload)
 }
@@ -1233,6 +1270,16 @@ export function listMajors(params?: {
 
 export function listClasses(params: OrgClassQuery): Promise<PageResult<OrgClassItem>> {
   return request.get('/admin/classes', { params })
+}
+
+/**
+ * 班级下拉候选（全部页）。
+ * 同 listAllRoles：后端单页上限 100，原先固定 per_page=200 时第 101 个班级起缺失。
+ */
+export function listAllClasses(
+  params: Omit<OrgClassQuery, 'page' | 'per_page'> = {},
+): Promise<OrgClassItem[]> {
+  return fetchAllPageItems((page, per_page) => listClasses({ ...params, page, per_page }))
 }
 
 export function createClass(payload: OrgClassSavePayload): Promise<OrgCreateIdResult> {

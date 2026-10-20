@@ -15,6 +15,8 @@ export const useReviewStore = defineStore('review', () => {
   const allRecords = ref<ReviewRecord[]>([])
   const typeRecords = ref<Record<string, ReviewRecord[]>>({})
   const loading = ref(false)
+  /** 最近一次动态加载是否失败（与「确实没有记录」区分；已有数据保留） */
+  const loadFailed = ref(false)
 
   let pendingFetch: Promise<ReviewRecord[]> | null = null
   let lastFullFetchAt = 0
@@ -23,8 +25,8 @@ export const useReviewStore = defineStore('review', () => {
 
   /**
    * 加载全部审核记录（对接 GET /activities）。
-   * 底层 getActivities（shared/api/activity）接口异常时内部吞错并返回空数组、不注入假数据，
-   * 故此处失败时列表回退为空态，而非向上抛错。
+   * 接口异常时错误由请求拦截器提示，此处记录 loadFailed 并保留已有列表，
+   * 不清空成「看起来没有记录」的空态。
    */
   async function fetchAll(filters?: ReviewFilters, force = false): Promise<ReviewRecord[]> {
     if (pendingFetch) return pendingFetch
@@ -55,12 +57,17 @@ export const useReviewStore = defineStore('review', () => {
           proofMaterials: [],
         }))
         allRecords.value = mapped
+        loadFailed.value = false
         if (!isFiltered) lastFullFetchAt = Date.now()
         if (filters) {
           return allRecords.value.filter(
             (r) => !filters.keyword || r.title.includes(filters.keyword),
           )
         }
+        return allRecords.value
+      } catch {
+        // 错误提示由请求拦截器统一给出；保留已有列表，仅记录错误态
+        loadFailed.value = true
         return allRecords.value
       } finally {
         loading.value = false
@@ -86,6 +93,7 @@ export const useReviewStore = defineStore('review', () => {
     const task = (async () => {
       try {
         const activities = await getActivities()
+        loadFailed.value = false
         return activities
           .filter((a: any) => a.type === type)
           .map((a: any) => ({
@@ -98,6 +106,10 @@ export const useReviewStore = defineStore('review', () => {
             status: a.status || 'pending',
             proofMaterials: [],
           }))
+      } catch {
+        // 错误提示由请求拦截器统一给出；保留该类型已有记录
+        loadFailed.value = true
+        return typeRecords.value[type] ?? []
       } finally {
         loading.value = false
       }
@@ -132,5 +144,5 @@ export const useReviewStore = defineStore('review', () => {
     ElMessage.success('修改已保存，等待重新审核')
   }
 
-  return { allRecords, typeRecords, loading, fetchAll, fetchByType, resubmit }
+  return { allRecords, typeRecords, loading, loadFailed, fetchAll, fetchByType, resubmit }
 })
