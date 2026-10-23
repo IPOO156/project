@@ -18,10 +18,21 @@ const request = axios.create({
   },
 })
 
-// 测试账号（仅开发/联调环境启用）。
-// 生产构建必须完全消除该清单，避免测试账号标识跟随 bundle 发布；
-// 后端 prod profile 本身也会硬拒绝验证码跳过，前端这里只是不发送跳过头。
-const CAPTCHA_SKIP_ACCOUNTS = import.meta.env.DEV ? ['202401002', 'T00003', 'A00002'] : []
+// 免验证码测试账号名单。
+//
+// 原先此处硬编码了一份测试账号清单（学生/教师/管理员各若干），与 Login.vue 的
+// SKIP_ACCOUNTS、后端 application-dev.yml 的 auth.captcha.skip-users 三处各自维护、
+// 极易发散（曾出现后端已加账号、前端两处名单未加，导致点击登录无任何请求发出）。
+// 现按要求移除：前端不再内置任何测试账号，开发时一律走图形验证码登录。
+//
+// 若日后确需免验证码调试，优先从 .env.development 注入（如 VITE_CAPTCHA_SKIP_ACCOUNTS），
+// 而不是在源码里硬编码 —— 硬编码的账号标识会随开发构建产物分发。
+const CAPTCHA_SKIP_ACCOUNTS = import.meta.env.DEV
+  ? (import.meta.env.VITE_CAPTCHA_SKIP_ACCOUNTS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : []
 
 // 密钥：与后端 auth.captcha.skip-secret 保持一致，仅开发/联调环境读取。
 // .env.production 不设置 VITE_CAPTCHA_SKIP_SECRET，且此处再用 DEV 门控，

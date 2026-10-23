@@ -1,12 +1,18 @@
 {
   "compilerOptions": {
     "composite": true,
+    // 必须 noEmit：否则 tsc 会把 vite.config.ts 编译成项目根目录的 vite.config.js，
+    // 而 Vite 查找配置的顺序是 vite.config.js → .mjs → .ts，
+    // 导致源码里的配置被编译产物遮蔽（端口/代理地址改动不生效）。
+    "noEmit": true,
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
     "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    // 增量构建信息也移出仓库根目录
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
   },
   "include": ["vite.config.ts"]
 }

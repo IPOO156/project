@@ -26,9 +26,18 @@ const themeStore = useThemeStore()
 const { toggleThemeWithRipple } = useThemeRipple()
 const { refresh: refreshTeacherMe } = useTeacherMe()
 
-// 测试账号：仅开发/联调环境跳过前端验证码必填校验。
-// 生产构建必须完全消除该清单（后端 prod 也会硬拒绝验证码跳过）。
-const SKIP_ACCOUNTS = import.meta.env.DEV ? ['202401002', 'T00003', 'A00002'] : []
+// 免验证码测试账号名单。
+//
+// 原先此处硬编码了一份测试账号清单，与 request.ts 的 CAPTCHA_SKIP_ACCOUNTS、
+// 后端 application-dev.yml 的 auth.captcha.skip-users 三处各自维护、极易发散。
+// 现按要求移除：前端不再内置任何测试账号，开发时一律走图形验证码登录。
+// 本清单控制「是否放行不填验证码」，request.ts 那份控制「是否发送跳过头」，两者同源。
+const SKIP_ACCOUNTS = import.meta.env.DEV
+  ? (import.meta.env.VITE_CAPTCHA_SKIP_ACCOUNTS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  : []
 
 // 教师端身份不再映射为前端角色枚举：权限码由 /auth/me 的 permissions 提供，
 // 菜单与路由授权见 shared/composables/useTeacherAuthz.ts。
