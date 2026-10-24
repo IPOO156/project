@@ -195,6 +195,14 @@ const routes: RouteRecordRaw[] = [
     meta: { teacher: true },
     children: teacherRoutes,
   },
+  // ─── 404 兜底 ───
+  // 必须放在最后：命中前两条路由组之外的任意路径（手输错误 URL、合并后遗留的旧书签）。
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/features/error/NotFound.vue'),
+    meta: { title: '页面不存在', noLayout: true },
+  },
 ]
 
 const router = createRouter({

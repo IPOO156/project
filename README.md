@@ -105,13 +105,21 @@ archive-system-student/
 
 ## 常用脚本
 
-| 脚本                 | 说明                      |
-| -------------------- | ------------------------- |
-| `npm run dev`        | 启动开发服务器            |
-| `npm run build`      | 类型检查并构建生产包      |
-| `npm run preview`    | 预览生产包                |
-| `npm run lint`       | 运行 ESLint 并自动修复    |
-| `npm run lint:check` | 运行 ESLint，有警告即失败 |
+| 脚本                                                   | 说明                                             |
+| ------------------------------------------------------ | ------------------------------------------------ |
+| `npm run dev`                                          | 启动开发服务器（端口 5173）                      |
+| `npm run type-check`                                   | 类型检查（vue-tsc）                              |
+| `npm run build`                                        | 构建生产包（纯 vite build，不含类型检查）        |
+| `npm run preview`                                      | 预览生产包                                       |
+| `npm run lint`                                         | 运行 ESLint 并自动修复                           |
+| `npm run lint:check`                                   | 运行 ESLint，有警告即失败                        |
+| `npm run test:unit`                                    | 单元测试（vitest，纯逻辑）                       |
+| `npm run test:unit:coverage`                           | 单元测试 + 覆盖率门槛                            |
+| `npm run test:e2e`                                     | Playwright E2E（需要后端与 `VITE_E2E_PASSWORD`） |
+| `npx playwright test tests/e2e/student-mocked.spec.ts` | 全接口 mock 的 E2E，无需后端                     |
+
+> 环境变量：复制 `.env.example` 为 `.env.local` 后填写（该文件已被忽略，不入库）。
+> 本机若已有失效的 dev server 占用 5173，可用 `E2E_PORT=5174` 让 Playwright 另起干净实例。
 
 ---
 

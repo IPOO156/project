@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /**
+ * 端口可通过 E2E_PORT 覆盖：本机若已有旧的 dev server 占用 5173（常见于 HMR 失效的
+ * 残留进程），可用 `E2E_PORT=5174 npx playwright test` 另起一个干净的实例。
+ */
+const PORT = Number(process.env.E2E_PORT ?? 5173)
+const BASE_URL = `http://localhost:${PORT}`
+
+/**
  * Playwright E2E 测试配置
  *
  * 【位置】本文件必须位于仓库根目录。
@@ -34,7 +41,7 @@ export default defineConfig({
   ],
 
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: BASE_URL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -52,8 +59,8 @@ export default defineConfig({
 
   webServer: {
     // 本项目用 npm（原配置写的 pnpm dev，本机无 pnpm，dev server 未启动时会拉起失败）
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
+    command: `npm run dev -- --port ${PORT}`,
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

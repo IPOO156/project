@@ -45,4 +45,18 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // 按依赖域拆包：主包曾达 919KB，拆分后首屏并行加载、缓存粒度更细。
+        // 注意：element-plus 为按需引入，分包名只影响落地位置，不改变引入方式。
+        manualChunks: {
+          vue: ['vue', 'vue-router', 'pinia'],
+          'element-plus': ['element-plus', '@element-plus/icons-vue'],
+          echarts: ['echarts', 'vue-echarts'],
+          pdf: ['jspdf', 'html2canvas'],
+        },
+      },
+    },
+  },
 })

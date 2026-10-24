@@ -8,6 +8,9 @@ dist
 playwright-report/
 test-results/
 
+# 项目内 Playwright 浏览器缓存（沙箱内无法写系统目录时使用）
+.playwright-browsers/
+
 # TypeScript composite project emit artifacts
 vite.config.js
 vite.config.d.ts

@@ -9,15 +9,9 @@ import { expect } from '@playwright/test'
 export type LoginTab = 'student' | 'admin'
 
 /** 测试账号。前三个账号在 Login.vue:221 的 SKIP_ACCOUNTS 白名单内，验证码可留空 */
-// 密码不入库：由环境变量提供，缺失时直接失败，避免明文凭据进入仓库。
-const TEST_PASSWORD = process.env.VITE_E2E_PASSWORD ?? process.env.E2E_PASSWORD
-
-if (!TEST_PASSWORD) {
-  throw new Error(
-    '缺少测试账号密码环境变量：请设置 VITE_E2E_PASSWORD（或 E2E_PASSWORD）后再运行 E2E，' +
-      '例如 PowerShell: $env:VITE_E2E_PASSWORD="<密码>"。密码向联调后端负责人索取。',
-  )
-}
+// 密码不入库：由环境变量提供，缺失时在真正执行登录时才报错（模块导入不抛错，
+// 便于 mock 场景只借用登录流程、使用自定义假密码）。
+const TEST_PASSWORD = process.env.VITE_E2E_PASSWORD ?? process.env.E2E_PASSWORD ?? ''
 
 export const ACCOUNTS = {
   student: { userNo: '202401002', password: TEST_PASSWORD },
@@ -46,6 +40,12 @@ export async function login(
   tab: LoginTab,
   account: { userNo: string; password: string },
 ): Promise<void> {
+  if (!account.password) {
+    throw new Error(
+      '缺少测试账号密码环境变量：请设置 VITE_E2E_PASSWORD（或 E2E_PASSWORD）后再运行需要真实后端的 E2E，' +
+        '例如 PowerShell: $env:VITE_E2E_PASSWORD="<密码>"。密码向联调后端负责人索取。',
+    )
+  }
   await page.goto('/login')
 
   await page.locator('button.login__tab', { hasText: TAB_TEXT[tab] }).click()

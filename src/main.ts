@@ -7,6 +7,7 @@ import { initAuthState } from '@/shared/utils/token'
 import App from './App.vue'
 import router from './app/router/routes'
 import { initTabsRouter } from './app/stores/useTabsStore'
+import { vPermission } from './shared/directives/permission'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import './assets/styles/themes.css'
@@ -34,6 +35,8 @@ const app = createApp(App)
 const pinia = createPinia()
 app.use(pinia)
 app.use(router)
+// 元素级权限指令：v-permission（无权限隐藏，admin 直通，与路由守卫同源）
+app.directive('permission', vPermission)
 
 // 注入 router 实例到 tabs store（store 初始化在首次使用时惰性执行，
 // 此时 router 已通过 app.use(router) 注册完毕，无需等待组件渲染）

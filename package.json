@@ -3,6 +3,10 @@
   "type": "module",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -11,6 +15,7 @@
     "lint": "eslint . --fix",
     "lint:check": "eslint . --max-warnings 0",
     "test:unit": "vitest run",
+    "test:unit:coverage": "vitest run --coverage",
     "prepare": "husky",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
@@ -39,10 +44,12 @@
     "@playwright/test": "^1.61.1",
     "@types/node": "^22.13.10",
     "@vitejs/plugin-vue": "^5.2.4",
+    "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "husky": "^9.1.7",
+    "jsdom": "^29.1.1",
     "lint-staged": "^15.5.2",
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.4",

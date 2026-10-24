@@ -2,8 +2,18 @@
 
 > 生成日期：2026-07-09  
 > 前端代码基准：`src/shared/api/` 下各模块的函数注释（后端就绪后替换部分）  
-> 类型定义：`src/shared/types/types.ts` 及 `src/features/ai-chat/types.ts`（AI Chat 模块）  
+> 类型定义：`src/shared/types/types.ts` 及 `src/features/ai-chat/ai-chat.types.ts`（AI Chat 模块）  
 > 响应拦截器约定：`src/shared/api/request.ts`
+
+## 文档状态与修订记录
+
+| 日期       | 修订内容                                                                                                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-25 | 目录与文件名对齐：`shared/api/teacher.ts` → `teacher-api.ts`；`submission.ts` 拆为 `submission/{record-query,record-actions,submit,payload,...}`，统一出口仍为 `@/shared/api/submission`；教师端类型冲突域名加 `-types.ts` 后缀 |
+
+> 说明：本文档最后全量核对时间为 2026-09-07，此后新增/调整的教师端接口尚未逐条回写。
+> 若与代码或后端实际返回不一致，**以 `src/shared/api/*` 的类型声明与后端实测为准**，
+> 并请同步补回本节，避免文档继续失真。
 
 ---
 
