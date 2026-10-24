@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import bookCursor from '@/shared/utils/bookCursor'
 import { clearUserScopedStorage } from '@/shared/utils/session'
 import {
   clearAuth,
@@ -25,6 +26,32 @@ const CAPTCHA_SKIP_ACCOUNTS = ['202401002', 'T00003', 'A00002']
 // 开发环境 .env.development 可覆盖，生产构建 import.meta.env.PROD 为空字符串自动不生效
 const CAPTCHA_SKIP_SECRET = import.meta.env.VITE_CAPTCHA_SKIP_SECRET || ''
 
+// ── 书册指针「加载中」态：全局请求计数 + 延迟触发 ──
+// 延迟 180ms 再切换光标，避免短请求（验证码、下拉选项等）造成光标闪烁；
+// 并发请求用计数归零才恢复，防止先完成的请求提前撤销加载态。
+let pendingRequestCount = 0
+let waitCursorTimer: number | null = null
+const WAIT_CURSOR_DELAY_MS = 180
+
+function beginRequestLoading(): void {
+  pendingRequestCount += 1
+  if (pendingRequestCount > 1 || waitCursorTimer !== null) return
+  waitCursorTimer = window.setTimeout(() => {
+    waitCursorTimer = null
+    if (pendingRequestCount > 0) bookCursor.startWait()
+  }, WAIT_CURSOR_DELAY_MS)
+}
+
+function endRequestLoading(): void {
+  pendingRequestCount = Math.max(0, pendingRequestCount - 1)
+  if (pendingRequestCount > 0) return
+  if (waitCursorTimer !== null) {
+    window.clearTimeout(waitCursorTimer)
+    waitCursorTimer = null
+  }
+  bookCursor.stopWait()
+}
+
 // 请求拦截器
 request.interceptors.request.use(
   (config) => {
@@ -39,6 +66,7 @@ request.interceptors.request.use(
       config.headers['X-Captcha-Skip-Token'] = CAPTCHA_SKIP_SECRET
     }
 
+    beginRequestLoading()
     return config
   },
   (error) => Promise.reject(error),
@@ -104,6 +132,7 @@ function isBusiness401(url = '') {
 // 响应拦截器
 request.interceptors.response.use(
   (response) => {
+    endRequestLoading()
     const res = response.data
     if (res.code !== 0 && res.code !== 200) {
       ElMessage.error(res.message || '请求失败')
@@ -112,6 +141,8 @@ request.interceptors.response.use(
     return res.data
   },
   (error) => {
+    // 先于任何分支结束加载态：401 刷新/重试、业务 401 下抛等提前 return 的场景也要归零
+    endRequestLoading()
     if (error.response) {
       const status = error.response.status
       const url: string | undefined = error.config?.url

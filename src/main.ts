@@ -1,6 +1,7 @@
 import { ElMessage } from 'element-plus'
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
+import bookCursor from '@/shared/utils/bookCursor'
 import { initAuthState } from '@/shared/utils/token'
 
 import App from './App.vue'
@@ -23,6 +24,10 @@ if (typeof document !== 'undefined') {
 // 清理历史遗留的 localStorage 令牌（无「记住我」标记），避免未登录直接进入系统。
 // 必须在 router 安装前执行，确保首个导航守卫读到的是清理后的令牌状态。
 initAuthState()
+
+// 书册鼠标指针：配色自动跟随 html[data-theme]（theme store 切换时由 MutationObserver 同步）
+// 加载态由 request.ts 的全局请求计数驱动（延迟 180ms 触发，避免短请求闪烁）
+bookCursor.init({ theme: 'auto' })
 
 const app = createApp(App)
 

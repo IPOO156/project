@@ -6,6 +6,7 @@
  */
 import type { TimelineNode } from '@/shared/types/types'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import StudyTipInline from '@/shared/ui/StudyTipInline.vue'
 
 const props = defineProps<{
   events: TimelineNode[]
@@ -98,7 +99,9 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
-  <el-empty v-else description="暂无成长记录" :image-size="60" />
+  <el-empty v-else description="暂无成长记录" :image-size="60">
+    <StudyTipInline compact />
+  </el-empty>
 </template>
 
 <style scoped lang="scss">

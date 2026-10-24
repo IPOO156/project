@@ -19,6 +19,7 @@ import {
 import { useScoreIndicator } from '@/shared/composables/composables'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
+import StudyTipInline from '@/shared/ui/StudyTipInline.vue'
 import QuickEntries from './components/QuickEntries.vue'
 import QuickEntrySettings from './components/QuickEntrySettings.vue'
 import StatsOverview from './components/StatsOverview.vue'
@@ -458,7 +459,9 @@ onMounted(() => {
             <el-empty
               v-if="!activityStore.loading && recentActivities.length === 0"
               description="暂无动态"
-            />
+            >
+              <StudyTipInline compact />
+            </el-empty>
           </div>
         </el-card>
       </el-col>

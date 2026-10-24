@@ -7,6 +7,7 @@
 import {
   Bell,
   LayoutDashboard,
+  Lightbulb,
   LogOut,
   Menu,
   Moon,
@@ -15,7 +16,7 @@ import {
   SwitchCamera,
   User,
 } from 'lucide-vue-next'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   useAppStore,
@@ -26,6 +27,7 @@ import {
 } from '@/app/stores/stores'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { useThemeRipple } from '@/shared/composables/useThemeRipple'
+import StudyTipsDialog from '@/shared/ui/StudyTipsDialog.vue'
 import NavTabs from './NavTabs.vue'
 
 const userStore = useUserStore()
@@ -36,6 +38,7 @@ const themeStore = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 const { toggleThemeWithRipple } = useThemeRipple()
+const tipsDialogVisible = ref(false)
 // 角色中文名取自 /auth/me 的 roleNames，不再由前端角色枚举映射
 const { roleLabel } = useTeacherAuthz()
 const isGrowthTimeline = computed(() => route.path.startsWith('/growth-timeline'))
@@ -133,6 +136,9 @@ async function switchToStudent() {
         </span>
         <template #dropdown>
           <el-dropdown-menu>
+            <el-dropdown-item @click="tipsDialogVisible = true">
+              <Lightbulb :size="14" /> 学习建议
+            </el-dropdown-item>
             <template v-if="isTeacher">
               <el-dropdown-item @click="router.push('/teacher/dashboard')">
                 <LayoutDashboard :size="14" /> 首页
@@ -156,6 +162,9 @@ async function switchToStudent() {
         </template>
       </el-dropdown>
     </div>
+
+    <!-- 学习建议管理：收藏夹 + 已屏蔽主题 -->
+    <StudyTipsDialog v-model="tipsDialogVisible" />
   </header>
 </template>
 

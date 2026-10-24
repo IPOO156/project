@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/app/stores/stores'
 import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
+import StudyTipInline from '@/shared/ui/StudyTipInline.vue'
 import MessageCard from './components/MessageCard.vue'
 import MessageSettings from './components/MessageSettings.vue'
 
@@ -370,7 +371,9 @@ onMounted(() => {
           notificationStore.loadError ? '消息加载失败，请检查网络后重试' : '暂无通知消息'
         "
         class="mc-empty"
-      />
+      >
+        <StudyTipInline compact />
+      </el-empty>
     </div>
 
     <MessageSettings v-model:visible="settingsVisible" />

@@ -24,7 +24,9 @@ import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import AIFloatingBall from '@/features/ai-chat/components/AIFloatingBall.vue'
 import { useGreeting } from '@/features/dashboard/composables/useGreeting'
 import { useTabs } from '@/shared/composables/composables'
+import { useLoadingTip } from '@/shared/composables/useLoadingTip'
 import GreetingToast from '@/shared/ui/GreetingToast.vue'
+import LoadingTipCard from '@/shared/ui/LoadingTipCard.vue'
 import HeaderBar from './components/HeaderBar.vue'
 import Sidebar from './components/Sidebar.vue'
 
@@ -48,6 +50,9 @@ const hasToolbar = computed(() => !!slots.toolbar)
 const hasPageHeader = computed(() => hasHeader.value || hasToolbar.value)
 const hasFooter = computed(() => !!slots.footer)
 const isLoading = computed(() => appStore.pageLoading)
+
+// 加载页温馨提示：按当前路由/角色取主题，每次加载出现时换一条
+const { tip: loadingTip, refresh: refreshLoadingTip } = useLoadingTip()
 
 /** 从路由 meta 中推断页面标题，用于文档标题与无障碍属性 */
 const pageTitle = computed(() => (route.meta?.title as string) || '')
@@ -82,6 +87,8 @@ watch(isLoading, async (loading) => {
   if (!loading) {
     return
   }
+  // 此时路由已切换完成，按新页面的主题重新抽取提示
+  refreshLoadingTip()
   await nextTick()
   if (loadingEl.value) {
     loadingEl.value.style.willChange = 'transform, opacity'
@@ -186,6 +193,7 @@ watch(isLoading, async (loading) => {
       >
         <div class="layout__loading-spinner" aria-hidden="true" />
         <span class="layout__loading-text">加载中…</span>
+        <LoadingTipCard :tip="loadingTip" @next="refreshLoadingTip" />
       </div>
     </Transition>
 

@@ -8,17 +8,21 @@
  * </EmptyState>
  */
 import { FileSearch } from 'lucide-vue-next'
+import StudyTipInline from './StudyTipInline.vue'
 
 interface Props {
   /** 文案 */
   text?: string
   /** 是否紧凑模式（用于卡片内） */
   compact?: boolean
+  /** 是否展示一条情境化学习建议（默认展示） */
+  showTip?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
   text: '暂无数据',
   compact: false,
+  showTip: true,
 })
 </script>
 
@@ -28,6 +32,10 @@ withDefaults(defineProps<Props>(), {
       <FileSearch :size="compact ? 40 : 56" class="empty-state__icon" />
     </div>
     <p class="empty-state__text">{{ text }}</p>
+
+    <!-- 空状态停留时间比加载页长，适合放一条情境化建议 -->
+    <StudyTipInline v-if="showTip" />
+
     <div v-if="$slots.default" class="empty-state__action">
       <slot />
     </div>

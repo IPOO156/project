@@ -4,6 +4,7 @@ import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { isModuleAllowed } from '@/shared/config/teacherModuleRegistry'
 import { USER_INFO_CACHE_KEY } from '@/shared/constants/storageKeys'
 import { getToken } from '@/shared/utils/token'
+import { setupNavigationLoading } from './loadingIndicator'
 import teacherRoutes from './teacher-routes'
 
 const routes: RouteRecordRaw[] = [
@@ -287,5 +288,8 @@ router.beforeEach(async (to, _from, next) => {
 
   next()
 })
+
+// 慢导航加载页：必须在全部鉴权守卫之后注册，避免重定向流程重复触发
+setupNavigationLoading(router)
 
 export default router

@@ -21,3 +21,9 @@ export const DRAFT_PREFIX = 'form_draft_'
 
 /** 已撤回申报记录 id 标记（submission store 本地持久化，属账号级数据） */
 export const SUBMISSION_WITHDRAWN_KEY = 'submission:withdrawnIds'
+
+/** 学习建议收藏的提示 id 列表（账号级偏好，登出清理，避免公用电脑残留） */
+export const LOADING_TIP_FAVORITES_KEY = 'loading_tip:favorites'
+
+/** 已屏蔽的提示主题列表（账号级偏好，登出清理） */
+export const LOADING_TIP_HIDDEN_KEY = 'loading_tip:hidden_categories'

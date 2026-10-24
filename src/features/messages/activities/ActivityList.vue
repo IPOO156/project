@@ -13,6 +13,7 @@ import { useActivityStore, useSubmissionStore } from '@/app/stores/stores'
 import { sourcePathOf } from '@/shared/api/submission'
 import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import StatusTag from '@/shared/ui/StatusTag.vue'
+import StudyTipInline from '@/shared/ui/StudyTipInline.vue'
 import ActivityCenterHeader from '../components/ActivityCenterHeader.vue'
 
 /**
@@ -333,7 +334,9 @@ onMounted(() => {
             @size-change="handleActivitySizeChange"
           />
         </div>
-        <el-empty v-else-if="!activityStore.loading" description="暂无动态记录" class="mc-empty" />
+        <el-empty v-else-if="!activityStore.loading" description="暂无动态记录" class="mc-empty">
+          <StudyTipInline compact />
+        </el-empty>
       </div>
     </section>
 
