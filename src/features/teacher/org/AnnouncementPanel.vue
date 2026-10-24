@@ -447,7 +447,7 @@ onMounted(() => void loadAnnouncements())
           :label="annDialog.targetType === 'college' ? '目标学院' : '所属学院'"
           required
         >
-          <el-select v-model="annTarget.collegeId" placeholder="请选择学院" style="width: 100%">
+          <el-select v-model="annTarget.collegeId" class="u-w-full" placeholder="请选择学院">
             <el-option
               v-for="c in annColleges"
               :key="c.collegeId"
@@ -463,9 +463,9 @@ onMounted(() => void loadAnnouncements())
         >
           <el-select
             v-model="annTarget.majorId"
+            class="u-w-full"
             placeholder="请选择专业"
             :disabled="!annTarget.collegeId"
-            style="width: 100%"
           >
             <el-option
               v-for="m in annMajors"
@@ -478,9 +478,9 @@ onMounted(() => void loadAnnouncements())
         <el-form-item v-if="annDialog.targetType === 'class'" label="目标班级" required>
           <el-select
             v-model="annTarget.classId"
+            class="u-w-full"
             placeholder="请选择班级"
             :disabled="!annTarget.majorId"
-            style="width: 100%"
           >
             <el-option
               v-for="c in annClasses"

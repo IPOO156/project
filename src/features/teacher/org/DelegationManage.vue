@@ -414,13 +414,12 @@ onMounted(() => void loadList())
                这里直接产出带时区偏移、无毫秒的字符串。 -->
           <el-date-picker
             v-model="form.timeRange"
-            class="u-w-full"
+            class="u-w-full u-w-full"
             type="datetimerange"
             range-separator="至"
             start-placeholder="开始时间"
             end-placeholder="结束时间"
             value-format="YYYY-MM-DDTHH:mm:ssZ"
-            style="width: 100%"
           />
         </el-form-item>
         <el-form-item label="委托原因">

@@ -125,7 +125,7 @@ onMounted(async () => {
     <div class="mc-filter-bar">
       <el-form inline @submit.prevent="handleSearch">
         <el-form-item label="指标">
-          <el-select v-model="filters.metric" style="width: 140px">
+          <el-select v-model="filters.metric" class="u-w-140">
             <el-option
               v-for="m in metricOptions"
               :key="m.value"
@@ -135,7 +135,7 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item label="行维度">
-          <el-select v-model="filters.orgType" style="width: 120px">
+          <el-select v-model="filters.orgType" class="u-w-120">
             <el-option
               v-for="t in ORG_TYPE_OPTIONS"
               :key="t.value"
@@ -145,42 +145,27 @@ onMounted(async () => {
           </el-select>
         </el-form-item>
         <el-form-item v-if="cascade.college" label="学院">
-          <el-select
-            v-model="filters.collegeId"
-            clearable
-            placeholder="全部学院"
-            style="width: 170px"
-          >
+          <el-select v-model="filters.collegeId" class="u-w-170" clearable placeholder="全部学院">
             <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="cascade.major" label="专业">
-          <el-select
-            v-model="filters.majorId"
-            clearable
-            placeholder="全部专业"
-            style="width: 170px"
-          >
+          <el-select v-model="filters.majorId" class="u-w-170" clearable placeholder="全部专业">
             <el-option v-for="m in majors" :key="m.id" :label="m.name" :value="m.id" />
           </el-select>
         </el-form-item>
         <el-form-item v-if="cascade.class" label="班级">
-          <el-select
-            v-model="filters.classId"
-            clearable
-            placeholder="全部班级"
-            style="width: 170px"
-          >
+          <el-select v-model="filters.classId" class="u-w-170" clearable placeholder="全部班级">
             <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="学期">
           <el-select
             v-model="filters.semesterId"
+            class="u-w-180"
             clearable
             placeholder="全部学期"
             :loading="loadingSemesters"
-            style="width: 180px"
           >
             <el-option v-for="s in semesters" :key="s.value" :label="s.label" :value="s.value" />
           </el-select>
