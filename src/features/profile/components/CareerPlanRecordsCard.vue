@@ -104,7 +104,7 @@ const getStatusType = computed(
       </el-table-column>
       <!-- TODO(待后端契约字段)：教师反馈(teacherFeedback)、学生反思(reflection) 尚未在
            CareerPlanRecord 契约中定义，待后端补充后在此新增两列展示 -->
-      <el-table-column label="操作" width="130" align="center">
+      <el-table-column label="操作" width="130" align="center" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="openDetail(row)">详情</el-button>
           <el-button type="danger" link size="small" @click="emit('remove', row.id)"

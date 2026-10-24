@@ -67,7 +67,22 @@ function matchFilters(record: SubmissionRecord, filters?: SubmissionFilters): bo
 export async function getSubmissionRecords(
   filters?: SubmissionFilters,
 ): Promise<SubmissionRecord[]> {
-  const res = await getActivities({ page: 1, per_page: 200 })
-  const all = (res?.list ?? []).map(mapActivityToSubmission)
+  // 筛选在前端完成，因此需拉全量：后端单页上限 100（PageParam @Max），逐页拉取直至 total。
+  // 设 20 页上限（2000 条）防止异常 total 导致无限请求；超出部分在控制台明确告警，不静默截断。
+  const PER_PAGE = 100
+  const MAX_PAGES = 20
+  const items: ActivityListItem[] = []
+  let total = 0
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const res = await getActivities({ page, perPage: PER_PAGE })
+    const list = res?.list ?? []
+    items.push(...list)
+    total = res?.total ?? items.length
+    if (list.length === 0 || items.length >= total) break
+  }
+  if (items.length < total) {
+    console.warn(`[submission] 申报记录共 ${total} 条，仅加载前 ${items.length} 条`)
+  }
+  const all = items.map(mapActivityToSubmission)
   return filters ? all.filter((r) => matchFilters(r, filters)) : all
 }

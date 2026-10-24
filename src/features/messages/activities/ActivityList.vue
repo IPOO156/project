@@ -6,14 +6,15 @@ import type {
   SubmissionRecord,
 } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Filter, Pencil, Search, Trash2, Undo2, X } from 'lucide-vue-next'
+import { Filter, Search, X } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useActivityStore, useSubmissionStore } from '@/app/stores/stores'
 import { sourcePathOf } from '@/shared/api/submission'
 import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import RowActions from '@/shared/ui/RowActions.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
-import StudyTipInline from '@/shared/ui/StudyTipInline.vue'
 import ActivityCenterHeader from '../components/ActivityCenterHeader.vue'
 
 /**
@@ -139,6 +140,15 @@ function handleActivityReset() {
   activityStatus.value = ''
   activityPageNum.value = 1
   activityStore.fetchActivities()
+}
+
+/** 动态加载失败后的重试：沿用当前筛选条件 */
+function retryActivities() {
+  const filters: Record<string, string> = {}
+  if (activityKeyword.value) filters.keyword = activityKeyword.value
+  if (activityStatus.value) filters.status = activityStatus.value
+  activityPageNum.value = 1
+  activityStore.fetchActivities(Object.keys(filters).length ? filters : undefined)
 }
 
 function handleSubmissionSearch() {
@@ -317,6 +327,22 @@ onMounted(() => {
               <span class="mc-time">{{ (row as Activity).time }}</span>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState
+              :text="activityStore.loadFailed ? '动态加载失败，请重试' : '暂无动态记录'"
+              compact
+            >
+              <el-button
+                v-if="activityStore.loadFailed"
+                size="small"
+                type="primary"
+                plain
+                @click="retryActivities"
+              >
+                重新加载
+              </el-button>
+            </EmptyState>
+          </template>
         </el-table>
 
         <div v-if="activityPaginated.length > 0" class="mc-pagination">
@@ -331,9 +357,6 @@ onMounted(() => {
             @size-change="handleActivitySizeChange"
           />
         </div>
-        <el-empty v-else-if="!activityStore.loading" description="暂无动态记录" class="mc-empty">
-          <StudyTipInline compact />
-        </el-empty>
       </div>
     </section>
 
@@ -418,53 +441,53 @@ onMounted(() => {
               <StatusTag :status="(row as SubmissionRecord).status" size="small" />
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="300" fixed="right" align="center">
+          <el-table-column label="操作" width="126" fixed="right" align="center">
             <template #default="{ row }">
-              <el-button
-                type="primary"
-                link
-                :icon="Search"
-                size="small"
-                @click="viewSubmission((row as SubmissionRecord).sourcePath)"
+              <RowActions
+                :more="
+                  canEditSubmission(row as SubmissionRecord) ||
+                  canDeleteSubmission(row as SubmissionRecord) ||
+                  canWithdrawSubmission(row as SubmissionRecord)
+                "
               >
-                查看
-              </el-button>
-              <el-button
-                v-if="canEditSubmission(row as SubmissionRecord)"
-                type="primary"
-                link
-                size="small"
-                :icon="Pencil"
-                @click="editSubmission(row as SubmissionRecord)"
-              >
-                编辑
-              </el-button>
-              <el-button
-                v-if="canDeleteSubmission(row as SubmissionRecord)"
-                type="danger"
-                link
-                size="small"
-                :icon="Trash2"
-                :loading="deletingId === (row as SubmissionRecord).id"
-                :disabled="deletingId !== null"
-                @click="handleDeleteSubmission(row as SubmissionRecord)"
-              >
-                删除
-              </el-button>
-              <el-button
-                v-if="canWithdrawSubmission(row as SubmissionRecord)"
-                type="warning"
-                link
-                size="small"
-                :icon="Undo2"
-                :loading="withdrawingId === (row as SubmissionRecord).id"
-                :disabled="withdrawingId !== null"
-                @click="handleWithdrawSubmission(row as SubmissionRecord)"
-              >
-                撤回
-              </el-button>
+                <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="viewSubmission((row as SubmissionRecord).sourcePath)"
+                >
+                  查看
+                </el-button>
+                <template #more>
+                  <el-dropdown-item
+                    v-if="canEditSubmission(row as SubmissionRecord)"
+                    @click="editSubmission(row as SubmissionRecord)"
+                  >
+                    编辑
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    v-if="canWithdrawSubmission(row as SubmissionRecord)"
+                    :disabled="withdrawingId !== null"
+                    @click="handleWithdrawSubmission(row as SubmissionRecord)"
+                  >
+                    {{ withdrawingId === (row as SubmissionRecord).id ? '撤回中…' : '撤回' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    v-if="canDeleteSubmission(row as SubmissionRecord)"
+                    divided
+                    class="row-actions__danger"
+                    :disabled="deletingId !== null"
+                    @click="handleDeleteSubmission(row as SubmissionRecord)"
+                  >
+                    {{ deletingId === (row as SubmissionRecord).id ? '删除中…' : '删除' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState text="暂无报名记录" compact />
+          </template>
         </el-table>
 
         <div v-if="submissionPaginated.length > 0" class="mc-pagination">
@@ -479,11 +502,6 @@ onMounted(() => {
             @size-change="handleSubmissionSizeChange"
           />
         </div>
-        <el-empty
-          v-else-if="!submissionStore.loading"
-          description="暂无报名记录"
-          class="mc-empty"
-        />
       </div>
     </section>
   </PageContainer>
@@ -552,25 +570,11 @@ onMounted(() => {
     @include mc-table;
   }
 
+  // 表格行不做逐行入场动画：分页/筛选后整表重复动画会拖慢阅读，
+  // 密集业务表格应以稳定呈现为先。
   &--staggered {
-    --mc-row-duration: 0.54s;
-    --mc-row-delay: 0.05s;
-    --mc-row-offset: -28px;
-
     :deep(.el-table__row) {
-      --_duration: var(--mc-row-duration, 0.6s);
-      --_delay: var(--mc-row-delay, 0.08s);
-      --_easing: var(--mc-row-easing, #{$ease-emphasized});
-
-      opacity: 0;
-      will-change: transform, opacity;
-      animation: table-row-brush var(--_duration) var(--_easing) both;
-    }
-
-    @for $i from 1 through 50 {
-      :deep(.el-table__body .el-table__row:nth-child(#{$i})) {
-        animation-delay: calc((#{$i} - 1) * var(--_delay));
-      }
+      animation: none;
     }
   }
 }

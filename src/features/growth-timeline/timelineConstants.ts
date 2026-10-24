@@ -5,20 +5,21 @@ export interface GrowthExperience {
   semester: string
   description: string
   tags: string[]
-  skills: { name: string; growth: number }[]
+  /** 能力成长项；dimensionCode 用于写接口 abilityData（后端要求维度编码，不能只传名称） */
+  skills: { name: string; growth: number; dimensionCode?: string }[]
   /** 后端事件对应的档案记录 ID（sourceId），本地新增经历无此字段 */
   recordId?: string
   /** 审核状态文案（由后端返回，有则展示、无则不展示，不硬编码字典） */
   statusLabel?: string
 }
 
-/** 新增成长经历的提交入参（含可选来源记录：4.2.1 要求 sourceId+sourceType 来源必填才能落库） */
+/** 新增成长经历的提交入参（后端要求必须关联已有来源记录：sourceId + sourceType 同时提供） */
 export interface GrowthExperienceInput {
   title: string
   date: string
   description: string
   tags: string[]
-  skills: { name: string; growth: number }[]
+  skills: { name: string; growth: number; dimensionCode?: string }[]
   /** 来源记录 ID（4.2.1 sourceId，从已提交的申报/报名记录中选择） */
   sourceId?: number
   /** 来源模型类型（4.2.1 sourceType：archives 申报 / award_applications 奖项报名） */

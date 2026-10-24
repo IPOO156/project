@@ -89,9 +89,9 @@ function appendCommonFields(payload: Record<string, any>, data: Record<string, a
   if (data.certNumber) payload.certificateNo = String(data.certNumber)
   if (data.issuingAuthority) payload.issuingUnit = String(data.issuingAuthority)
   if (data.validityPeriod) payload.validUntil = toDateString(data.validityPeriod)
-  // 取得时间（扩展字段 acquisitionDate）→ 契约字段 obtainedTime；类型已映射 obtainedTime 时不覆盖
-  if (data.acquisitionDate && payload.obtainedTime === undefined) {
-    payload.obtainedTime = toDateString(data.acquisitionDate)
+  // 取得时间（扩展字段 acquisitionDate）→ 契约字段 obtainTime；类型已映射 obtainTime 时不覆盖
+  if (data.acquisitionDate && payload.obtainTime === undefined) {
+    payload.obtainTime = toDateString(data.acquisitionDate)
   }
 }
 
@@ -130,4 +130,4 @@ export async function buildContractPayload(
   return payload
 }
 
-export { toDateString, toEvidenceFileIds }
+export { normalizeRole, toDateString, toEvidenceFileIds }

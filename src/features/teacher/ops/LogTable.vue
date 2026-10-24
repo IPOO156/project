@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import type { LogActionTag } from '@/shared/constants/dict'
 import type { SystemLogItem } from '@/shared/types/teacher'
-import dayjs from 'dayjs'
 import { computed } from 'vue'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
+import { formatDateTime } from '@/shared/utils/time'
 
 interface Props {
   data: SystemLogItem[]
 }
 defineProps<Props>()
 // 持有系统日志权限的管理员看明文；教师 / 辅导员看脱敏（后端 /teacher/logs 亦为脱敏数据）
-const { hasPermission } = useTeacherAuthz()
-const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
+// 后端日志接口只校验 log:view；admin 角色直通（其权限码可能为空）
+const { canAccessAny } = useTeacherAuthz()
+const isAdmin = computed(() => canAccessAny(['log:view']))
 
 function maskName(name: string | null) {
   if (!name) return '-'
@@ -34,7 +35,7 @@ function maskIp(ip: string | null) {
 }
 
 function formatTime(t: string | null) {
-  return t ? dayjs(t).format('YYYY-MM-DD HH:mm:ss') : '-'
+  return formatDateTime(t, true)
 }
 
 function actionTag(action: string | null): LogActionTag {
@@ -59,12 +60,12 @@ function moduleLabel(module: string | null): string {
       </template>
     </el-table-column>
     <el-table-column prop="roleName" label="角色" width="100" />
-    <el-table-column label="操作类型" width="90">
+    <el-table-column label="操作类型" width="100">
       <template #default="{ row }">
         <el-tag :type="actionTag(row.action)" size="small">{{ actionLabel(row.action) }}</el-tag>
       </template>
     </el-table-column>
-    <el-table-column label="模块" width="90">
+    <el-table-column label="模块" width="110">
       <template #default="{ row }">{{ moduleLabel(row.module) }}</template>
     </el-table-column>
     <el-table-column prop="description" label="操作描述" min-width="220" show-overflow-tooltip />
@@ -73,8 +74,14 @@ function moduleLabel(module: string | null): string {
         <span :title="isAdmin ? (row.ipAddress ?? '') : ''">{{ maskIp(row.ipAddress) }}</span>
       </template>
     </el-table-column>
-    <el-table-column label="操作时间" width="160" sortable>
+    <el-table-column label="操作时间" width="170" class-name="log-time" sortable>
       <template #default="{ row }">{{ formatTime(row.createdAt) }}</template>
     </el-table-column>
   </el-table>
 </template>
+
+<style scoped lang="scss">
+:deep(.log-time .cell) {
+  white-space: nowrap;
+}
+</style>

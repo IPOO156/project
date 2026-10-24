@@ -1,152 +1,23 @@
-@use 'sass:color';
 @use '@/assets/styles/variables.scss' as *;
 
 .heat-map {
-  /* ── 页头右侧 chip ── */
-  &__head-actions {
-    align-items: stretch;
-  }
-  &__head-chip {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 8px 14px;
-    border-radius: $radius-lg;
-    background: var(--el-bg-color);
-    border: 1px solid var(--el-border-color-lighter);
-    min-width: 96px;
-  }
-  &__head-chip-label {
-    font-size: 11px;
-    color: var(--el-text-color-secondary);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-  &__head-chip-value {
-    margin-top: 2px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--el-color-primary);
-  }
-
-  /* ── 筛选区 ── */
-  &__filters-body {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-lg;
-    padding-top: 14px;
-    padding-bottom: 18px;
-  }
-  &__filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: $spacing-sm;
-  }
-  &__filter-group-title {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--el-text-color-secondary);
-  }
-  &__filter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: $spacing-md;
-    align-items: center;
-  }
-  &__filter-actions {
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
-    justify-content: flex-end;
-    grid-column: span 2;
-
-    @media (max-width: 900px) {
-      grid-column: span 1;
-      justify-content: flex-start;
-    }
-  }
-  &__select {
-    width: 100%;
-    &--narrow {
-      max-width: 180px;
-    }
-  }
-
-  /* ── 概览统计（4 张卡）── */
+  /* ── 概览统计：一条汇总栏，避免四张彩色卡片分散注意力 ── */
   &__stats {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: $spacing-lg;
+    gap: 1px;
+    background: var(--el-border-color-lighter);
+    border: 1px solid var(--el-border-color-lighter);
+    border-radius: $radius-lg;
+    overflow: hidden;
 
     @media (max-width: 1100px) {
       grid-template-columns: repeat(2, 1fr);
     }
   }
   &__stat {
-    position: relative;
-    padding: 16px 20px 14px;
-    border-radius: $radius-lg;
+    padding: 14px 20px;
     background: var(--el-bg-color);
-    border: 1px solid var(--el-border-color-lighter);
-    overflow: hidden;
-    transition:
-      transform 0.25s $ease-standard,
-      border-color 0.25s $ease-standard,
-      box-shadow 0.25s $ease-standard;
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 14px;
-      bottom: 14px;
-      width: 3px;
-      border-radius: 0 3px 3px 0;
-      background: var(--stat-accent, var(--el-color-primary));
-    }
-
-    /* 右上角细微色彩光晕 */
-    &::after {
-      content: '';
-      position: absolute;
-      right: -30px;
-      top: -30px;
-      width: 90px;
-      height: 90px;
-      border-radius: 50%;
-      background: radial-gradient(
-        circle,
-        color-mix(in srgb, var(--stat-accent, var(--el-color-primary)) 18%, transparent),
-        transparent 70%
-      );
-      pointer-events: none;
-    }
-
-    &:hover {
-      transform: translateY(-2px);
-      border-color: color-mix(
-        in srgb,
-        var(--stat-accent, var(--el-color-primary)) 35%,
-        var(--el-border-color-lighter)
-      );
-      box-shadow: 0 4px 14px -6px rgba($color-primary, 0.15);
-    }
-  }
-  /* 统计卡强调色（原内联 --stat-accent，改为修饰类，取值不变） */
-  &__stat--max {
-    --stat-accent: #d4a574;
-  }
-  &__stat--total {
-    --stat-accent: var(--el-color-primary);
-  }
-  &__stat--avg {
-    --stat-accent: #10b981;
-  }
-  &__stat--cell {
-    --stat-accent: #64748b;
   }
   &__stat-label {
     margin: 0;
@@ -155,8 +26,8 @@
     letter-spacing: 0.04em;
   }
   &__stat-value {
-    margin: 6px 0 4px;
-    font-size: 26px;
+    margin: 4px 0 2px;
+    font-size: 24px;
     font-weight: 700;
     color: var(--el-text-color-primary);
     line-height: 1.15;
@@ -179,30 +50,9 @@
   /* ── 卡片头部 ── */
   &__matrix-title-metric {
     margin-left: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
     font-size: 12px;
     font-weight: 500;
     color: var(--el-text-color-regular);
-  }
-  &__metric-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
-
-    &.is-sm {
-      width: 7px;
-      height: 7px;
-      box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 14%, transparent);
-    }
-  }
-  &__metric-option {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
   }
 
   /* ── 图例 ── */

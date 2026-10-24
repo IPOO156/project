@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { FormTemplateItem } from '@/shared/types/teacher'
-import { RefreshCw, Search, SlidersHorizontal, Star, Trash2 } from 'lucide-vue-next'
+import { RefreshCw, Search } from 'lucide-vue-next'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import RowActions from '@/shared/ui/RowActions.vue'
+import { formatDateTime } from '@/shared/utils/time'
 
 defineProps<{
   list: FormTemplateItem[]
@@ -63,7 +66,7 @@ const keyword = defineModel<string>('keyword', { required: true })
 
   <div class="mc-card">
     <div class="mc-card__head">
-      <span class="mc-card__title"><SlidersHorizontal :size="15" /> 模板列表</span>
+      <span class="mc-card__title">模板列表</span>
       <span class="form-customization__count">{{ total }} 个</span>
     </div>
     <div class="mc-card__body">
@@ -73,7 +76,8 @@ const keyword = defineModel<string>('keyword', { required: true })
             <span class="form-customization__name">{{ row.templateName }}</span>
             <el-tag
               v-if="row.isDefault === 1"
-              type="warning"
+              type="primary"
+              effect="plain"
               size="small"
               class="form-customization__default"
             >
@@ -81,9 +85,9 @@ const keyword = defineModel<string>('keyword', { required: true })
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="code" label="编码" width="140">
+        <el-table-column prop="code" label="编码" width="170">
           <template #default="{ row }"
-            ><span class="mc-num">{{ row.code }}</span></template
+            ><span class="mc-num form-customization__code">{{ row.code }}</span></template
           >
         </el-table-column>
         <el-table-column prop="categoryLabel" label="分类" width="100" align="center" />
@@ -99,39 +103,41 @@ const keyword = defineModel<string>('keyword', { required: true })
             }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="updatedAt" label="更新时间" width="170" />
-        <el-table-column label="操作" width="230" align="center" fixed="right">
+        <el-table-column label="更新时间" width="145">
+          <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="132" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button
-              text
-              type="primary"
-              size="small"
-              @click="emit('edit', row as FormTemplateItem)"
-              >编辑</el-button
-            >
-            <el-button
-              v-if="row.isDefault !== 1"
-              text
-              type="warning"
-              size="small"
-              :icon="Star"
-              @click="emit('setDefault', row as FormTemplateItem)"
-            >
-              默认
-            </el-button>
-            <el-button
-              text
-              type="danger"
-              size="small"
-              :icon="Trash2"
-              :loading="deletingId === (row as FormTemplateItem).id"
-              :disabled="deletingId !== null"
-              @click="emit('delete', row as FormTemplateItem)"
-            >
-              删除
-            </el-button>
+            <RowActions>
+              <el-button
+                text
+                type="primary"
+                size="small"
+                @click="emit('edit', row as FormTemplateItem)"
+                >编辑</el-button
+              >
+              <template #more>
+                <el-dropdown-item
+                  v-if="row.isDefault !== 1"
+                  @click="emit('setDefault', row as FormTemplateItem)"
+                >
+                  设为默认
+                </el-dropdown-item>
+                <el-dropdown-item
+                  divided
+                  class="row-actions__danger"
+                  :disabled="deletingId !== null"
+                  @click="emit('delete', row as FormTemplateItem)"
+                >
+                  {{ deletingId === (row as FormTemplateItem).id ? '删除中…' : '删除' }}
+                </el-dropdown-item>
+              </template>
+            </RowActions>
           </template>
         </el-table-column>
+        <template #empty>
+          <EmptyState text="暂无表单模板" compact />
+        </template>
       </el-table>
       <div class="form-customization__pagination">
         <el-pagination
@@ -145,7 +151,6 @@ const keyword = defineModel<string>('keyword', { required: true })
           @size-change="emit('sizeChange', $event)"
         />
       </div>
-      <el-empty v-if="!loading && !list.length" description="暂无表单模板" :image-size="72" />
     </div>
   </div>
 </template>
@@ -159,6 +164,11 @@ const keyword = defineModel<string>('keyword', { required: true })
 
   &__name {
     font-weight: 500;
+  }
+
+  // 模板编码是下划线分隔的长标识，保持单行，避免在字符中间断行
+  &__code {
+    white-space: nowrap;
   }
 
   &__default {

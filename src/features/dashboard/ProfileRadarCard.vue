@@ -206,7 +206,7 @@ const radarOption = computed(() => {
 <template>
   <el-card class="dashboard__section dashboard__section--radar">
     <template #header>
-      <div class="dashboard__section-header">
+      <div class="dashboard__section-header dashboard__section-header--stacked">
         <span class="section-title">多维度画像评估</span>
         <span class="indicator-meta">
           规则版本 {{ indicatorMeta.ruleVersion }} · 计算时间 {{ indicatorMeta.calculatedAt }} ·
@@ -256,6 +256,14 @@ const radarOption = computed(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+
+  // 画像卡的规则版本/计算时间较长，和标题并排会把标题挤成两行；
+  // 改为上下两行，标题保持单行，元信息自行换行。
+  &--stacked {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
 }
 
 .section-title {
@@ -267,8 +275,10 @@ const radarOption = computed(() => {
 .indicator-meta {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   font-size: 12px;
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 
@@ -334,10 +344,16 @@ const radarOption = computed(() => {
 .radar-metric__meta {
   margin-top: 8px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+
+  // 环比文字（含学期名）与目标差距都是完整短语，不在短语中间断行
+  > span {
+    white-space: nowrap;
+  }
 }
 
 .radar-metric__delta.is-up {

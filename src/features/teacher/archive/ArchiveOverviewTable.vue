@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ArchiveOverviewRow } from '@/shared/types/teacher'
+import EmptyState from '@/shared/ui/EmptyState.vue'
 
 interface Props {
   /** 当前组织维度（全校 / 学院 / 专业 / 班级） */
@@ -106,8 +107,10 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
             <span v-else class="archive-view__empty-cell">-</span>
           </template>
         </el-table-column>
+        <template #empty>
+          <EmptyState text="当前筛选范围内暂无汇总数据" compact />
+        </template>
       </el-table>
-      <el-empty v-if="!loading && !rows.length" description="暂无汇总数据" />
     </div>
   </section>
 </template>

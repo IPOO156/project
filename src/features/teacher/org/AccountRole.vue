@@ -30,32 +30,37 @@ interface HubTab {
 }
 
 /**
- * 四个 tab 目前同码；仍统一走权限过滤，保证与 isModuleAllowed 的判定顺序一致
- * （admin 角色直通），后端日后给「新增账号」单独收紧码时本文件无需改动。
+ * 四个 tab 均包含写操作（新增账号、改角色/范围、重置密码、启停账号），
+ * 后端 UserManageService 对这些接口统一校验 user:manage（读列表也接受 user:view）。
+ * 页面没有做按钮级权限收窄，故整个入口按 user:manage 判定，避免只读角色看到
+ * 必然返回 403 的操作按钮。
+ *
+ * 注意：此前这里写的是 'system:user:manage'，该权限码在后端权限字典中不存在，
+ * 导致非 admin 角色永远看不到本页。
  */
 const TABS: HubTab[] = [
   {
     key: 'student',
     label: '学生账号',
-    permissions: ['system:user:manage'],
+    permissions: ['user:manage'],
     component: StudentAccount,
   },
   {
     key: 'teacher',
     label: '教师账号',
-    permissions: ['system:user:manage'],
+    permissions: ['user:manage'],
     component: TeacherAccount,
   },
   {
     key: 'adjust',
     label: '教师职位调整',
-    permissions: ['system:user:manage'],
+    permissions: ['user:manage'],
     component: RoleAdjust,
   },
   {
     key: 'add',
     label: '新增账号',
-    permissions: ['system:user:manage'],
+    permissions: ['user:manage'],
     component: RoleAdd,
   },
 ]

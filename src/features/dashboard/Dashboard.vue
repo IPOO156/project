@@ -205,7 +205,7 @@ onMounted(() => {
     <StatsOverview :cards="statsCards" @card-click="onStatCardClick" />
 
     <el-row :gutter="16" class="dashboard__main">
-      <el-col :span="13" class="dashboard__col">
+      <el-col :span="13" :xs="24" :sm="24" :md="24" :lg="13" class="dashboard__col">
         <ProfileRadarCard
           :dimensions="profileDimensions"
           :compared-semester-map="comparedSemesterMap"
@@ -216,7 +216,7 @@ onMounted(() => {
         />
       </el-col>
 
-      <el-col :span="11" class="dashboard__col">
+      <el-col :span="11" :xs="24" :sm="24" :md="24" :lg="11" class="dashboard__col">
         <QuickEntries
           :entries="visibleEntries"
           @entry-click="onEntryClick"
@@ -290,6 +290,27 @@ onMounted(() => {
 
   &__charts {
     margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 1199px) {
+  // 两栏在 1024 等窄桌面下会压缩快捷入口，导致标题逐字竖排；
+  // 改为上下堆叠，并解除内部卡片的高度约束，让页面自然滚动。
+  .dashboard {
+    height: auto;
+  }
+
+  .dashboard__main {
+    flex: none;
+  }
+
+  .dashboard__col {
+    height: auto;
+
+    &:first-child :deep(.el-card),
+    &:last-child :deep(.el-card) {
+      flex: 0 0 auto;
+    }
   }
 }
 </style>

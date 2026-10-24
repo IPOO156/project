@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Plus, Trash2 } from 'lucide-vue-next'
+import { Plus } from 'lucide-vue-next'
 
 /** 字段编辑器（UI 层）——options 用字符串数组，提交时转换为后端 {value,label} 结构 */
 interface FieldEditor {
@@ -43,7 +43,7 @@ const emit = defineEmits<{
           />
         </el-select>
         <el-switch v-model="field.required" active-text="必填" />
-        <el-button text type="danger" :icon="Trash2" @click="emit('remove', idx)" />
+        <el-button text type="danger" @click="emit('remove', idx)">删除</el-button>
       </div>
       <div
         v-if="field.type === 'select' || field.type === 'radio' || field.type === 'checkbox'"

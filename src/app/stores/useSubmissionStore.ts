@@ -8,6 +8,7 @@ import {
   withdrawSubmission,
 } from '@/shared/api/submission'
 import { SUBMISSION_WITHDRAWN_KEY } from '@/shared/constants/storageKeys'
+import { scopedStorageKey } from '@/shared/utils/storageScope'
 
 export const useSubmissionStore = defineStore('submission', () => {
   const records = ref<SubmissionRecord[]>([])
@@ -20,11 +21,13 @@ export const useSubmissionStore = defineStore('submission', () => {
   // 刷新后前端无法从接口区分「已撤回」与「普通草稿」。故本地持久化已撤回 id，
   // 供刷新/重进页面后重拉列表（fetchRecords）时强制保持「已撤回、不可编辑、可删除」态。
   // 注：这是同页 UI 状态恢复（撤回语义标记），非跨页面结构化数据传递，符合 CLAUDE.md 2.11。
+  // 按登录用户隔离：撤回标记属于当前学生的数据，共享浏览器换账号后不应互相可见
+  const withdrawnStorageKey = () => scopedStorageKey(SUBMISSION_WITHDRAWN_KEY)
   const withdrawnIds = ref<string[]>(loadWithdrawnIds())
 
   function loadWithdrawnIds(): string[] {
     try {
-      const raw = localStorage.getItem(SUBMISSION_WITHDRAWN_KEY)
+      const raw = localStorage.getItem(withdrawnStorageKey())
       return raw ? (JSON.parse(raw) as string[]) : []
     } catch {
       return []
@@ -33,7 +36,7 @@ export const useSubmissionStore = defineStore('submission', () => {
 
   function persistWithdrawnIds() {
     try {
-      localStorage.setItem(SUBMISSION_WITHDRAWN_KEY, JSON.stringify(withdrawnIds.value))
+      localStorage.setItem(withdrawnStorageKey(), JSON.stringify(withdrawnIds.value))
     } catch {
       /* localStorage 不可用（隐私模式等）时退化为会话内标记 */
     }
@@ -177,7 +180,7 @@ export const useSubmissionStore = defineStore('submission', () => {
     loadError.value = false
     withdrawnIds.value = []
     try {
-      localStorage.removeItem(SUBMISSION_WITHDRAWN_KEY)
+      localStorage.removeItem(withdrawnStorageKey())
     } catch {
       // localStorage 不可用（隐私模式等）时静默降级
     }

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
+import { deleteCareerPlan } from '@/shared/api/career-plan'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import CareerPlanAICard from './components/CareerPlanAICard.vue'
 import CareerPlanFormCard from './components/CareerPlanFormCard.vue'
@@ -48,9 +49,24 @@ const planProgressPercent = computed(() =>
 
 const activeTab = ref<'plan' | 'growth'>('plan')
 
-function handleRemove(id: string) {
-  careerPlanStore.plans = careerPlanStore.plans.filter((p: any) => p.id !== id)
-  ElMessage.success('已删除')
+/** 删除整份规划：调用后端 DELETE /profile/career-plans/{planId}，成功后刷新列表 */
+async function handleRemove(id: string) {
+  try {
+    await ElMessageBox.confirm('确定删除该职业规划吗？删除后不可恢复。', '删除确认', {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await deleteCareerPlan(Number(id))
+    await careerPlanStore.fetchPlans()
+    ElMessage.success('已删除')
+  } catch {
+    /* 失败提示由请求拦截器统一给出，列表保持不变 */
+  }
 }
 
 onMounted(() => {

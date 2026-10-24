@@ -157,7 +157,9 @@ function handleDragEndVisual() {
 
 .quick-entry-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  // 按容器宽度自适应列数：11/24 栏在 1200–1366 宽度下只有约 130px/列，
+  // 固定三列会把「个人档案信息申报」压成逐字竖排。168px 才能留出约 70px 的标签宽度。
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
   gap: 12px;
 
   &--1 {

@@ -12,6 +12,7 @@ import type {
   UserListQuery,
 } from '@/shared/types/teacher'
 import request from './request'
+import { fetchAllPageItems } from './teacher-common'
 
 /* ===================== 用户管理（/admin/users）===================== */
 
@@ -55,6 +56,15 @@ export function listRoles(params: {
   per_page?: number
 }): Promise<PageResult<RoleListItem>> {
   return request.get('/admin/roles', { params })
+}
+
+/**
+ * 角色下拉候选（全部页）。
+ * 后端 PageParam 会把 per_page 截断到 100，原先固定 per_page=200 时第 101 个角色起缺失，
+ * 表现为审批步骤/新增账号里选不到对应角色。
+ */
+export function listAllRoles(params: { status?: number } = {}): Promise<RoleListItem[]> {
+  return fetchAllPageItems((page, per_page) => listRoles({ ...params, page, per_page }))
 }
 
 export function createRole(payload: RoleSavePayload): Promise<{ roleId: number }> {

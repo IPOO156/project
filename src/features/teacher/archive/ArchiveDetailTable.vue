@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ArchiveAdminListItem } from '@/shared/types/teacher'
-import { Eye, FileSearch, UserRound } from 'lucide-vue-next'
+import { FileSearch } from 'lucide-vue-next'
+import { formatDateTime } from '@/shared/utils/time'
 import { statusLabel, statusTagType } from './archiveStatus'
 
 interface Props {
@@ -83,16 +84,17 @@ const emit = defineEmits<{
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="submittedAt" label="提交时间" width="160">
-          <template #default="{ row }">{{ row.submittedAt ?? '-' }}</template>
+        <el-table-column label="提交时间" width="145">
+          <template #default="{ row }">
+            {{ row.submittedAt ? formatDateTime(row.submittedAt) : '-' }}
+          </template>
         </el-table-column>
-        <el-table-column label="操作" width="170" align="center" fixed="right">
+        <el-table-column label="操作" width="156" align="center" fixed="right">
           <template #default="{ row }">
             <el-button
               text
               type="primary"
               size="small"
-              :icon="UserRound"
               @click="emit('openStudentArchive', row as ArchiveAdminListItem)"
             >
               学生档案
@@ -101,7 +103,6 @@ const emit = defineEmits<{
               text
               type="primary"
               size="small"
-              :icon="Eye"
               @click="emit('openDetail', row as ArchiveAdminListItem)"
             >
               详情

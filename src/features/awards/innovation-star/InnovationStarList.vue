@@ -57,7 +57,7 @@ async function handleRemove(row: any) {
       cancelButtonText: '取消',
       type: 'warning',
     })
-    page.removeRecord(row.id)
+    await page.removeRecord(row.id)
     ElMessage.success('已删除')
   } catch {
     /* cancel */

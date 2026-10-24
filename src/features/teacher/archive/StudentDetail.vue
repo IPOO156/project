@@ -63,6 +63,15 @@ const summaryItems = computed(() => {
   ]
 })
 
+/** 个人兴趣：后端返回 InterestItem 对象数组；兼容旧数据的纯字符串，统一取 tagName 展示 */
+const interestText = computed(() => {
+  const list = profile.value?.interests ?? []
+  const names = list
+    .map((i) => (typeof i === 'string' ? i : i?.tagName))
+    .filter((name): name is string => Boolean(name))
+  return names.length ? names.join('、') : '-'
+})
+
 // ── 职业规划详情弹窗 ──
 const careerDialogVisible = ref(false)
 const careerLoading = ref(false)
@@ -230,7 +239,7 @@ onMounted(() => void loadAll())
                 <span class="mc-num">{{ profile.totalVolunteerHours ?? 0 }}</span> 小时
               </el-descriptions-item>
               <el-descriptions-item label="个人兴趣" :span="2">
-                {{ profile.interests?.length ? profile.interests.join('、') : '-' }}
+                {{ interestText }}
               </el-descriptions-item>
             </el-descriptions>
             <p v-if="profile.selfEvaluation" class="student-detail__eval">
@@ -342,7 +351,7 @@ onMounted(() => void loadAll())
               </el-table-column>
               <el-table-column prop="sourceLabel" label="来源" width="90" align="center" />
               <el-table-column prop="createdAt" label="创建时间" width="170" />
-              <el-table-column label="操作" width="110" align="center">
+              <el-table-column label="操作" width="110" align="center" fixed="right">
                 <template #default="{ row }">
                   <el-button
                     text

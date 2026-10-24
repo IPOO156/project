@@ -32,14 +32,19 @@ import { formatDateTime } from '@/shared/utils/time'
 import GradeImportPanel from './GradeImportPanel.vue'
 import ResearchExportDialog from './ResearchExportDialog.vue'
 
-// 以下四项能力按后端权限码判定（原先统一挂在 super_admin 上，而该角色不存在 → 对所有人生效为 false）
-const { hasPermission } = useTeacherAuthz()
-/** 是否管理员：管理员调 /admin/exports/archives 走全校范围，教师调 /teacher/exports 走学院范围 */
-const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
+// 以下能力按后端权限码判定（原先统一挂在 super_admin 上，而该角色不存在 → 对所有人生效为 false）。
+// 管理员的 /auth/me.permissions 可能为空，故一律走 canAccessAny（admin 角色直通），
+// 裸用 hasPermission 会让管理员看不到这些入口。
+// 管理端档案导出（/admin/exports/archives，全校范围）对应后端 archive:export；admin 角色直通。
+// 不持该码时走教师端 /teacher/exports（学院范围，export:execute）。
+const { canAccessAny } = useTeacherAuthz()
+const useAdminExport = computed(() => canAccessAny(['archive:export']))
+/** 教师端档案导出（/teacher/exports/**）：export:execute */
+const canExportExecute = computed(() => canAccessAny(['export:execute']))
 /** 研究数据导出（/admin/exports/research）：export:research */
-const canExportResearch = computed(() => hasPermission('export:research'))
+const canExportResearch = computed(() => canAccessAny(['export:research']))
 /** 成绩导入面板：grade:import */
-const canImportGrade = computed(() => hasPermission('grade:import'))
+const canImportGrade = computed(() => canAccessAny(['grade:import']))
 
 /** 组织范围下拉项（学院/专业/班级，来自 /auth/me 的 scopes） */
 const { colleges, majors, classes } = useScopeFilter()
@@ -184,18 +189,20 @@ async function handleExport(fileType: 'pdf' | 'xlsx') {
           : undefined
   const selectedTemplate = templates.value.find((t) => t.templateId === selectedTemplateId.value)
   try {
-    // 管理员走 /admin/exports/archives（支持学校级范围等教师端没有的参数），教师走 /teacher/exports
-    const res = isAdmin.value
+    // 管理员走 /admin/exports/archives（支持学校级范围等教师端没有的参数），教师走 /teacher/exports。
+    // fileType 是「文件格式」只能为 pdf/xlsx（后端校验），模板的 exportType（student_archive 等）是
+    // 「模板内容类型」，必须放到 templateId，不能拿来当 fileType。
+    const res = useAdminExport.value
       ? await submitAdminArchiveExport({
           scopeType,
           scopeId,
-          fileType: selectedTemplate?.exportType ?? fileType,
+          fileType,
           templateId: selectedTemplate?.templateId,
         })
       : await submitArchiveExport({
           scopeType,
           scopeId,
-          fileType: selectedTemplate?.exportType ?? fileType,
+          fileType,
           templateId: selectedTemplate?.templateId,
         })
     ElMessage.success(
@@ -276,6 +283,9 @@ async function handleDownload(row: TeacherExportJob) {
 }
 
 onMounted(async () => {
+  // 只持 export:research / grade:import 的角色可进入本页，但无权访问教师端导出接口；
+  // 此时不发起必然 403 的模板/任务请求，页面仅展示其有权限的面板。
+  if (!canExportExecute.value) return
   await Promise.all([loadTemplates(), loadExportTasks()])
   startListPolling()
 })
@@ -294,7 +304,6 @@ onUnmounted(() => {
   <div class="mc-page archive-export">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
-        <p class="mc-page-head__eyebrow">档案导出 · Exports</p>
         <h2 class="mc-page-head__title">档案导出</h2>
         <p class="mc-page-head__desc">
           选择导出范围（全校 / 学院 / 专业 / 班级）与导出模板，提交后可在下方记录中下载或删除。
@@ -302,7 +311,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="mc-filter-bar">
+    <div v-if="canExportExecute" class="mc-filter-bar">
       <el-form inline @submit.prevent>
         <el-form-item label="导出范围">
           <el-select v-model="filters.scope" class="u-w-120">
@@ -347,7 +356,7 @@ onUnmounted(() => {
       </el-form>
     </div>
 
-    <div class="mc-card">
+    <div v-if="canExportExecute" class="mc-card">
       <div class="mc-card__head">
         <span class="mc-card__title">导出操作</span>
       </div>
@@ -386,7 +395,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="mc-card">
+    <div v-if="canExportExecute" class="mc-card">
       <div class="mc-card__head">
         <span class="mc-card__title">导出记录</span>
         <span class="archive-export__count">{{ filteredTasks.length }} 条</span>
@@ -453,7 +462,7 @@ onUnmounted(() => {
               <span v-else class="archive-export__nodata">-</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="90" align="center">
+          <el-table-column label="操作" width="90" align="center" fixed="right">
             <template #default="{ row }">
               <el-button
                 type="danger"

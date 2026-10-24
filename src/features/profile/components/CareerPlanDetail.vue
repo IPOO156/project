@@ -111,13 +111,8 @@ async function handleDownload() {
   if (props.planId == null) return
   fileLoading.value = true
   try {
-    // downloadCareerPlanFile 声明返回 void，实际响应可携带签名下载链接（downloadUrl）
-    const res = (await downloadCareerPlanFile(props.planId, 'internal')) as unknown
-    const resObj = typeof res === 'object' && res !== null ? (res as Record<string, unknown>) : null
-    const downloadUrl = resObj?.downloadUrl
-    if (typeof downloadUrl === 'string') {
-      window.open(downloadUrl, '_blank', 'noopener')
-    }
+    // 后端 302 到 OSS 签名 URL，downloadCareerPlanFile 已按 blob 接收并触发本地保存
+    await downloadCareerPlanFile(props.planId, 'internal')
   } catch {
     // 接口失败已由请求拦截器统一提示
   } finally {

@@ -127,23 +127,34 @@
       }
     }
 
-    // plain 按钮：线框浅底。--primary 的深蓝渐变会错误叠加到浅底上，
-    // 还原为浅底，悬停/按下再恢复渐变（与 is-text 同理）
+    // plain 按钮：线框浅底。--primary 的深蓝底/渐变会错误叠加到浅底上，
+    // 还原为浅底与主色文字，悬停/按下再恢复实心渐变（与 is-text 同理）。
+    // 注意必须同时覆盖 background-color 与 color：只清 background-image 会留下
+    // 深海蓝实心底 + 同色文字，按钮看起来像空白的深色方块。
     &--primary.is-plain {
+      background-color: var(--el-color-primary-light-9);
       background-image: none;
+      border-color: var(--el-color-primary-light-7);
+      color: var(--el-color-primary);
       box-shadow: none;
 
       &:hover,
       &:focus {
+        background-color: var(--el-color-primary);
         background-image: linear-gradient(180deg, #26486e 0%, var(--el-color-primary) 100%);
+        border-color: var(--el-color-primary-dark-2);
+        color: #fff;
       }
 
       &:active {
+        background-color: var(--el-color-primary);
         background-image: linear-gradient(
           180deg,
           var(--el-color-primary) 0%,
           var(--mc-btn-press) 100%
         );
+        border-color: var(--mc-btn-press);
+        color: #fff;
       }
     }
   }
@@ -159,10 +170,10 @@
       border-color 0.25s $ease-standard,
       transform 0.25s $ease-standard;
 
+    // 静态容器不做悬浮位移：位移会让表格/统计卡误以为可点击，也增加无意义动效
     &:hover {
-      transform: translateY(-2px);
       box-shadow: $shadow-base;
-      border-color: rgba($color-accent, 0.35);
+      border-color: var(--el-border-color);
     }
   }
 
@@ -199,9 +210,8 @@
       transform 0.25s $ease-standard;
 
     &:hover {
-      transform: translateY(-2px);
       box-shadow: $shadow-base;
-      border-color: rgba($color-accent, 0.4);
+      border-color: var(--el-border-color);
     }
 
     &__value {
@@ -309,12 +319,16 @@
 
   .mc-page-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
-    gap: $spacing-lg;
+    gap: $spacing-md $spacing-lg;
     padding-bottom: $spacing-xl;
 
+    // 标题区至少保留可读宽度：1024 等窄桌面下，右侧操作组会整体换到下一行，
+    // 而不是把说明文字挤成每行几个字的窄条。
     &__left {
+      flex: 1 1 420px;
       min-width: 0;
     }
 
@@ -329,15 +343,7 @@
       line-height: 1.25;
       font-weight: 700;
       letter-spacing: -0.02em;
-      background: linear-gradient(
-        120deg,
-        var(--el-color-primary) 0%,
-        var(--el-color-primary-light-3) 100%
-      );
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      color: transparent;
+      color: var(--el-color-primary);
     }
 
     &__desc {
@@ -350,14 +356,21 @@
 
     &__actions {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
+      justify-content: flex-end;
       gap: $spacing-sm;
       flex-shrink: 0;
     }
 
     @media (max-width: 768px) {
       flex-direction: column;
-      align-items: flex-start;
+      align-items: stretch;
+      gap: $spacing-sm;
+
+      &__actions {
+        justify-content: flex-start;
+      }
     }
   }
 
@@ -406,8 +419,7 @@
       transform 0.25s $ease-standard;
 
     &:hover {
-      transform: translateY(-2px);
-      border-color: rgba($color-accent, 0.3);
+      border-color: var(--el-border-color);
       box-shadow: 0 1px 3px rgba($color-primary, 0.06);
     }
 
@@ -596,6 +608,40 @@ html.dark #app .layout--teacher {
           var(--mc-btn-press) 100%
         );
         box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+      }
+    }
+
+    // 深色模式下必须重新压掉 primary 渐变：
+    // .el-button--primary.is-text 的特异性高于浅色主题里的 .is-text 重置，
+    // 否则文字按钮会渲染成无文字的蓝色实心块。
+    &.is-text {
+      background-color: transparent;
+      background-image: none;
+      box-shadow: none;
+    }
+
+    &--primary.is-text {
+      color: var(--el-color-primary-light-3);
+
+      &:hover,
+      &:focus {
+        background-color: var(--el-color-primary-light-9);
+      }
+    }
+
+    &--primary.is-plain {
+      background-color: transparent;
+      background-image: none;
+      border-color: var(--el-color-primary-light-5);
+      color: var(--el-color-primary-light-3);
+      box-shadow: none;
+
+      &:hover,
+      &:focus {
+        background-color: var(--el-color-primary);
+        background-image: linear-gradient(180deg, #5a8ab8 0%, var(--el-color-primary) 100%);
+        border-color: var(--el-color-primary);
+        color: #fff;
       }
     }
   }

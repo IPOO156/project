@@ -7,6 +7,7 @@ import { updateProfileContact } from '@/shared/api/student'
 import { logout as apiLogout } from '@/shared/api/user'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { USER_AVATAR_CACHE_KEY, USER_INFO_CACHE_KEY } from '@/shared/constants/storageKeys'
+import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import { clearAuth, getToken, setToken as persistToken } from '@/shared/utils/token'
 import { resetUserScopedStores } from './sessionReset'
 
@@ -123,11 +124,19 @@ export const useUserStore = defineStore('user', () => {
    * （联系信息展示改由档案概览读取 archive store 的 /profile/info.contactInfo）。
    * 接口失败向上抛出，由调用方决定是否提示「已保存」。
    */
-  async function updateUserInfo(partial: Partial<UserInfo>) {
-    await updateProfileContact({
-      email: partial.email || undefined,
-      phone: partial.phone || undefined,
-    })
+  /**
+   * 更新联系信息。后端 PUT /profile/contact 为整体覆盖且六个字段都必填，
+   * 因此这里必须接收完整联系信息，而不是只传邮箱/手机号。
+   */
+  async function updateUserInfo(contact: {
+    email: string
+    phone: string
+    address: string
+    emergencyName: string
+    emergencyRelation: string
+    emergencyPhone: string
+  }) {
+    await updateProfileContact(contact)
   }
 
   async function changePassword(payload: {
@@ -165,6 +174,14 @@ export const useUserStore = defineStore('user', () => {
     userInfo.value = null
     cachedAvatar.value = undefined
     clearAuth()
+    localStorage.removeItem(USER_AVATAR_CACHE_KEY)
+    // 清理当前用户的表单草稿与撤回标记（含 PII）。必须在删除 user_info_cache 之前，
+    // 否则 storageScope 已退化为 anonymous，找不到 ::u<id> 键。
+    clearCurrentUserScopedStorage(['form_draft_', 'submission:'])
+    // 登出必须清空身份缓存，否则换账号登录会读到上一个账号的 loginType / 权限码：
+    //   - user_info_cache：loginType 决定端级分流
+    //   - teacher_me：/auth/me 的 permissions 决定菜单与页面可访问性
+    localStorage.removeItem(USER_INFO_CACHE_KEY)
     // 教师身份为模块级 ref，需显式清空（clearUserScopedStorage 只清 localStorage）
     useTeacherMe().clear()
     // 重置全部用户级业务 store 与用户级本地存储（身份缓存 / 头像 / 草稿 / 撤回标记 / tabs）：

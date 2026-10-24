@@ -20,6 +20,11 @@ export interface LoginPayload {
   captchaKey: string
   captchaCode: string
   rememberMe?: boolean
+  /**
+   * 登录入口。后端据此校验账号角色与入口是否匹配（学生 / 管理端）；
+   * 缺省时后端按账号实际角色兜底推导，但会失去入口错配的服务端拦截。
+   */
+  loginType?: 'student' | 'admin'
 }
 
 export interface LoginResponse {

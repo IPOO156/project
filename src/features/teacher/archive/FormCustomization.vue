@@ -79,7 +79,8 @@ async function loadList() {
   try {
     const res = await listFormTemplates({
       category: filters.category || undefined,
-      status: filters.status || undefined,
+      // 0（停用）是有效筛选值，不能用 || 丢弃；仅空串表示「全部」
+      status: filters.status === '' ? undefined : filters.status,
       keyword: filters.keyword.trim() || undefined,
       page: page.value,
       per_page: perPage.value,
@@ -332,10 +333,10 @@ onMounted(() => void loadList())
     -->
     <el-alert
       class="form-customization__notice"
-      type="warning"
+      type="info"
       :closable="false"
       show-icon
-      title="模板尚未接入学生端：目前字段配置只保存在后端配置表中，后端还没有任何模块读取表单模板，学生的申报页面不会按这里的模板渲染，也不会按模板校验提交内容。"
+      title="模板配置当前仅保存在后台，学生端申报页暂未按模板渲染，修改不会影响现有申报表单。"
     />
 
     <FormTemplateTable

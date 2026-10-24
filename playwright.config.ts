@@ -63,5 +63,10 @@ export default defineConfig({
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    // 测试用 dev server 注入免验证码账号：与后端 application-test.yml 的 skip-users 对齐。
+    // 说明：仅影响 Playwright 拉起的测试实例，不影响生产构建（request.ts 另有 DEV 门控）。
+    env: {
+      VITE_CAPTCHA_SKIP_ACCOUNTS: process.env.E2E_CAPTCHA_ACCOUNTS ?? '202401002,T00003,A00002',
+    },
   },
 })

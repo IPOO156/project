@@ -80,7 +80,8 @@ export function deleteApprovalFlowMapping(mappingId: number): Promise<void> {
 /* ===================== 教师端-审批委托（/teacher/delegations）===================== */
 
 export function listTeacherDelegations(params: {
-  direction?: number
+  /** delegator（我发出的）/ delegatee（我收到的），后端不识别数字 */
+  direction?: 'delegator' | 'delegatee'
   status?: number
   keyword?: string
   page?: number

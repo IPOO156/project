@@ -14,12 +14,12 @@ import request from './request'
 
 /** 学生成长档案总览（GET /teacher/students/{userId}/profile） */
 export async function getTeacherStudentProfile(userId: number): Promise<TeacherStudentProfile> {
-  // 后端返回 { isInScope, profile: {...} }，此处展开 profile 供页面扁平化使用
-  const res = (await request.get(`/teacher/students/${userId}/profile`)) as unknown as {
-    isInScope?: boolean
-    profile?: TeacherStudentProfile
-  }
-  return { isInScope: res?.isInScope ?? true, ...(res?.profile ?? {}) } as TeacherStudentProfile
+  // 后端 ProfileInfo 使用 @JsonUnwrapped，实际响应是扁平结构：
+  // { isInScope, academicInfo, contactInfo, ... }，没有 profile 包裹层。
+  const res = (await request.get(
+    `/teacher/students/${userId}/profile`,
+  )) as unknown as TeacherStudentProfile | null
+  return { ...(res ?? {}), isInScope: res?.isInScope ?? true } as TeacherStudentProfile
 }
 
 /** 学生成长时间轴（GET /teacher/students/{userId}/growth-timeline） */

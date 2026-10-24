@@ -6,6 +6,7 @@ import { autosaveApplication } from '@/shared/api/applications'
 import { autosaveAward } from '@/shared/api/awards'
 import { activityCategoryOf, buildContractPayload, createDraft } from '@/shared/api/submission'
 import { DRAFT_PREFIX } from '@/shared/constants/storageKeys'
+import { scopedStorageKey } from '@/shared/utils/storageScope'
 
 const DEBOUNCE_MS = 800
 
@@ -42,7 +43,8 @@ export function useFormDraft<T extends Record<string, unknown>>(
     minDraftFields?: string[]
   },
 ) {
-  const storageKey = DRAFT_PREFIX + key
+  // 按登录用户隔离：换账号登录时不能读到上一个学生的草稿
+  const storageKey = scopedStorageKey(DRAFT_PREFIX + key)
   const enableBackend = options?.enableBackend !== false
   const enableLeaveGuard = options?.enableLeaveGuard !== false
   const autoRestore = options?.autoRestore !== false

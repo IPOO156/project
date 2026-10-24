@@ -21,7 +21,7 @@ import { computed } from 'vue'
  * 页面 SFC 只保留数据请求、刷新与跳转等交互回调。所有字段与文案与原实现逐字一致。
  */
 export function useDashboardOption(params: {
-  isAdmin: ComputedRef<boolean>
+  canViewSystemLogs: ComputedRef<boolean>
   unreadCount: Ref<number | null>
   scopeText: Ref<string>
   recentTotal: Ref<number | null>
@@ -30,7 +30,7 @@ export function useDashboardOption(params: {
   canAccessModule: (moduleId: string) => boolean
 }) {
   const {
-    isAdmin,
+    canViewSystemLogs,
     unreadCount,
     scopeText,
     recentTotal,
@@ -80,7 +80,7 @@ export function useDashboardOption(params: {
       color: 'var(--el-color-success)',
     },
     {
-      label: isAdmin.value ? '系统操作' : '消息总数',
+      label: canViewSystemLogs.value ? '系统操作' : '消息总数',
       value: recentTotal.value ?? '—',
       icon: Activity,
       color: 'var(--el-color-warning)',

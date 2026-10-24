@@ -11,6 +11,11 @@ export const useActivityStore = defineStore('activity', () => {
   const activities = ref<Activity[]>([])
   const filteredActivities = ref<Activity[]>([])
   const loading = ref(false)
+  /**
+   * 最近一次加载是否失败（与「确实没有动态」区分）。
+   * getActivities 失败时向上抛错，此处捕获并置位；已有数据保留，不做清空。
+   */
+  const loadFailed = ref(false)
 
   let pendingFetch: Promise<void> | null = null
   let lastFetchedAt = 0
@@ -35,6 +40,10 @@ export const useActivityStore = defineStore('activity', () => {
           lastFetchedAt = Date.now()
         }
         filteredActivities.value = filters ? await getActivities(filters) : activities.value
+        loadFailed.value = false
+      } catch {
+        // 错误提示由请求拦截器统一给出；保留旧数据，仅记录错误态供页面展示重试
+        loadFailed.value = true
       } finally {
         loading.value = false
       }
@@ -69,6 +78,7 @@ export const useActivityStore = defineStore('activity', () => {
     activities,
     filteredActivities,
     loading,
+    loadFailed,
     fetchActivities,
     reset,
   }

@@ -156,7 +156,7 @@ onMounted(() => {
             <StatusTag :status="row.status" size="small" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="120" align="center">
+        <el-table-column label="操作" width="120" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="viewRecord(row.sourcePath)">
               查看

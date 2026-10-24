@@ -15,7 +15,7 @@
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 
-import { createUser, listClasses, listRoles } from '@/shared/api/teacher-api'
+import { createUser, listAllClasses, listAllRoles } from '@/shared/api/teacher-api'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 
 const { me } = useTeacherMe()
@@ -89,14 +89,14 @@ function resolveRoleIds(role: string): number[] | null {
 
 onMounted(async () => {
   try {
-    const res = await listRoles({ page: 1, per_page: 200 })
-    roleIdByCode.value = Object.fromEntries((res.list ?? []).map((r) => [r.roleCode, r.roleId]))
+    const roles = await listAllRoles()
+    roleIdByCode.value = Object.fromEntries(roles.map((r) => [r.roleCode, r.roleId]))
   } catch {
     roleIdByCode.value = {}
   }
   try {
-    const res = await listClasses({ page: 1, per_page: 200 })
-    classes.value = (res.list ?? []).map((c) => ({
+    const list = await listAllClasses()
+    classes.value = list.map((c) => ({
       classId: c.classId,
       className: c.className,
       grade: c.grade ?? '',
@@ -177,7 +177,6 @@ async function handleAdd() {
   <div class="mc-page">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
-        <p class="mc-page-head__eyebrow">管理权限 · Accounts</p>
         <h2 class="mc-page-head__title">新增账号</h2>
         <p class="mc-page-head__desc">
           添加管理员、审核员（辅导员）、课任教师、学生账号，数据写入后端 /admin/users。

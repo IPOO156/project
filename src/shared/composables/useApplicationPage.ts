@@ -2,13 +2,14 @@ import type { ApplicationType } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, reactive, ref, toRaw, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getActivityDetail, withdrawActivity } from '@/shared/api/activities'
+import { deleteActivity, getActivityDetail, withdrawActivity } from '@/shared/api/activities'
 import { duplicateCheck } from '@/shared/api/applications'
 import { awardDuplicateCheck } from '@/shared/api/awards'
 import { getProfileInfo } from '@/shared/api/student'
 import {
   activityCategoryOf,
   ARCHIVE_TYPE_ALIASES,
+  awardTypeCodeOf,
   deriveRecordTitle,
   mapDetailToForm,
   submitApplication,
@@ -85,9 +86,17 @@ export function useApplicationPage(
     removeRecord: _removeRecord,
   } = useFormRecords(type, `form_draft_${effectiveDraftKey}`)
 
-  /** 删除记录：本地草稿一并清空 localStorage（草稿仅本地持久化，无后端删除接口） */
-  function removeRecord(id: string) {
-    if (id === DRAFT_LOCAL_ID) clearDraft()
+  /**
+   * 删除记录：后端真实记录调用 DELETE /activities/{type}/{id}，成功后才从列表移除；
+   * 本地草稿（draft-local）仅清空 localStorage，临时 id（rec-*）只存在于内存。
+   * 失败时由请求拦截器提示，记录保留在列表中，避免「提示已删除、刷新又出现」。
+   */
+  async function removeRecord(id: string) {
+    if (id === DRAFT_LOCAL_ID) {
+      clearDraft()
+    } else if (/^\d+$/.test(id)) {
+      await deleteActivity(Number(id), activityCategoryOf(appType))
+    }
     _removeRecord(id)
   }
   const {
@@ -141,7 +150,8 @@ export function useApplicationPage(
       const r: any =
         activityCategoryOf(appType) === 'award'
           ? await awardDuplicateCheck({
-              awardType: type,
+              // 后端按 award_type 枚举码严格相等匹配（competition_star / innovation_star / research_star）
+              awardType: awardTypeCodeOf(type),
               certificateNo: data.certNumber,
               title,
               participatedTime:
@@ -153,9 +163,13 @@ export function useApplicationPage(
             })
           : await duplicateCheck({
               archiveType: ARCHIVE_TYPE_ALIASES[type]?.[0] ?? type,
-              certificateNo: data.certNumber,
-              title,
-              obtainedTime: data.acquisitionDate,
+              // 后端 DuplicateCheckRequest 为 { archiveType, fields: Map }，检测字段取自
+              // duplicate_detection_rules.detect_fields，需放在 fields 内；平铺字段会被忽略。
+              fields: {
+                ...(data.certNumber ? { certificateNo: data.certNumber } : {}),
+                ...(data.acquisitionDate ? { obtainTime: data.acquisitionDate } : {}),
+                title,
+              },
             })
       // 奖项(8.x)返回 isDuplicate/duplicateRecords；档案(7.0.1)实测返回 hasDuplicate/similarItems/suggestion，统一归一化读取
       const hasDuplicate = r?.isDuplicate ?? r?.hasDuplicate
@@ -164,12 +178,14 @@ export function useApplicationPage(
         similarity?: number
       }[]
       if (hasDuplicate) {
+        // title/suggestion 均为后端/用户输入，禁止拼进 HTML：改用纯文本弹窗，
+        // 由文本节点自动转义，避免 dangerouslyUseHTMLString 引入 XSS。
         const items = duplicateList
           .map((d) => `${d.title}${d.similarity != null ? `（相似度 ${d.similarity}%）` : ''}`)
-          .join('<br/>')
-        const suggestion = r?.suggestion ? `<br/>建议：${r.suggestion}` : ''
-        ElMessageBox.alert((items || '检测到可能重复的申报记录') + suggestion, '检测到重复申报', {
-          dangerouslyUseHTMLString: true,
+          .join('；')
+        const suggestion = r?.suggestion ? `。建议：${r.suggestion}` : ''
+        const content = `${items || '检测到可能重复的申报记录'}${suggestion}`
+        ElMessageBox.alert(content, '检测到重复申报', {
           confirmButtonText: '知道了',
           type: 'warning',
         }).catch(() => {})

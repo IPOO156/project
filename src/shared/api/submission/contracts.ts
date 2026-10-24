@@ -13,6 +13,22 @@ interface TypeContract {
   enumMap?: Record<string, Record<string, string>>
 }
 
+/**
+ * 前端奖项类型 key → award_applications.award_type 枚举码。
+ * 后端奖项查重按 awardType 与已存记录严格相等过滤；传驼峰 key 永远匹配不到任何记录。
+ */
+const AWARD_TYPE_CODES: Record<string, string> = {
+  competitionStar: 'competition_star',
+  innovationStar: 'innovation_star',
+  scientificProject: 'research_star',
+  softwareCopyright: 'research_star',
+  paper: 'research_star',
+}
+
+export function awardTypeCodeOf(type: string): string {
+  return AWARD_TYPE_CODES[type] ?? type
+}
+
 /** 8.3 科研之星：走"主记录 + 子项目"流程，不走简单 POST 提交 */
 export const RESEARCH_STAR_TYPES: ApplicationType[] = [
   'scientificProject',
@@ -60,9 +76,10 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
       competitionName: 'competitionName',
       competitionType: 'competitionType',
       awardLevel: 'awardLevel',
-      obtainedTime: 'awardDate',
+      // 后端 DTO 字段为 obtainTime（ApplicationService 的 CompetitionRequest/... 实测）
+      obtainTime: 'awardDate',
     },
-    dateFields: ['obtainedTime'],
+    dateFields: ['obtainTime'],
   },
   scholarship: {
     endpoint: '/applications/scholarship',
@@ -70,14 +87,14 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
       scholarshipName: 'awardName',
       scholarshipCategory: 'scholarshipLevel',
       awardLevel: 'scholarshipGrade',
-      obtainedTime: 'acquireDate',
+      obtainTime: 'acquireDate',
     },
-    dateFields: ['obtainedTime'],
+    dateFields: ['obtainTime'],
   },
   certificate: {
     endpoint: '/applications/certificate',
-    mapping: { certificateType: 'certType', certificateName: 'certName', obtainedTime: 'certDate' },
-    dateFields: ['obtainedTime'],
+    mapping: { certificateType: 'certType', certificateName: 'certName', obtainTime: 'certDate' },
+    dateFields: ['obtainTime'],
   },
   innovation: {
     endpoint: '/applications/innovation',

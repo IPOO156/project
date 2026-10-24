@@ -10,6 +10,19 @@ import { setRefreshToken } from '@/shared/utils/token'
 /** 登录入口页签：学生端 / 管理端（教师走管理端入口） */
 export type LoginType = 'student' | 'admin'
 
+// 免验证码测试账号名单。
+//
+// 原先此处硬编码了一份测试账号清单，与 request.ts 的 CAPTCHA_SKIP_ACCOUNTS、
+// 后端 application-dev.yml 的 auth.captcha.skip-users 三处各自维护、极易发散。
+// 现按要求移除：前端不再内置任何测试账号，开发时一律走图形验证码登录。
+// 本清单控制「是否放行不填验证码」，request.ts 那份控制「是否发送跳过头」，两者同源。
+const SKIP_ACCOUNTS = import.meta.env.DEV
+  ? (import.meta.env.VITE_CAPTCHA_SKIP_ACCOUNTS || '')
+      .split(',')
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+  : []
+
 export interface LoginFlowOptions {
   /**
    * 登录入口与账号角色的匹配判定。
@@ -201,8 +214,6 @@ export function useLoginFlow(options: LoginFlowOptions) {
       return
     }
 
-    // 测试账号：后端已配置跳过验证码，前端不需要校验
-    const SKIP_ACCOUNTS = ['202401002', 'T00003', 'A00002']
     const userNo = loginForm.username
     const isSkipAccount = SKIP_ACCOUNTS.includes(userNo)
 
@@ -229,11 +240,13 @@ export function useLoginFlow(options: LoginFlowOptions) {
         captchaKey,
         captchaCode: loginForm.captcha,
         rememberMe: loginForm.remember,
+        // 管理端页签同时承载教师与管理员账号，后端统一按 admin 入口校验。
+        loginType: loginType.value,
       })
       // ── 登录入口与账号角色必须匹配 ──
       // 必须在写 token **之前**校验：一旦落下 token，路由守卫就会放行，页面已经切走了。
-      // 后端 POST /auth/login 目前不接收登录入口信息，无法在服务端拒绝错配，
-      // 前端这层是当前唯一的拦截点（待后端补 loginType 入参后可省去本段）。
+      // 服务端已接收 loginType 并在签发令牌前拦截错配；这里保留兜底提示，
+      // 防止旧版后端或异常响应绕过入口校验。
       if (!options.isRoleMatched(res.user.roles ?? [], loginType.value)) {
         loading.value = false
         // 已弹过一次图形验证码，失败后换一张，避免用户重试时用的是已消费的 key

@@ -62,7 +62,7 @@ function importStatusType(status: number | null) {
       </template>
     </el-table-column>
     <el-table-column prop="startedAt" label="开始时间" width="170" />
-    <el-table-column label="操作" width="90" align="center">
+    <el-table-column label="操作" width="90" align="center" fixed="right">
       <template #default="{ row }">
         <el-button
           text

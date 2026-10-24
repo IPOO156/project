@@ -33,12 +33,27 @@ function formatSemester(s: string): string {
   return s.replace(/-(\d)$/, '第$1学期')
 }
 
+/**
+ * 自定义 tooltip formatter 返回的是 HTML，ECharts 不会再自动转义，
+ * 故学期名（后端可写数据）必须先做实体转义再拼接。
+ */
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 const option = computed(() => ({
   tooltip: {
     trigger: 'axis' as const,
     formatter: (params: any) => {
-      const p = params[0]
-      return `${formatSemester(p.name)}<br/>提交数：${p.value}`
+      const p = params?.[0]
+      const name = escapeHtml(formatSemester(String(p?.name ?? '')))
+      const value = escapeHtml(p?.value ?? '')
+      return `${name}<br/>提交数：${value}`
     },
   },
   grid: { left: 50, right: 20, top: 20, bottom: 30 },

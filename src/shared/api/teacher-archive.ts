@@ -48,8 +48,13 @@ export function listArchives(params: ArchiveAdminQuery): Promise<PageResult<Arch
   return request.get('/admin/archives', { params })
 }
 
+/**
+ * 档案详情（GET /teacher/archives/{archiveId}）。
+ * 教师与管理端共用同一 DTO，且教师端接口对管理员同样放行；
+ * 不能走 /admin/archives/{id}——教师没有 archive:view 权限，会直接 403。
+ */
 export function getArchiveDetail(archiveId: number): Promise<ArchiveAdminDetail> {
-  return request.get(`/admin/archives/${archiveId}`)
+  return request.get(`/teacher/archives/${archiveId}`)
 }
 
 export function getArchiveOverview(params: {

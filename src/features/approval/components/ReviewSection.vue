@@ -245,9 +245,14 @@ const typeOptions = computed(() =>
   DECLARATION_TYPE_KEYS.map((k) => ({ value: k, label: DECLARATION_TYPE_LABELS[k] || k })),
 )
 
+/** 加载失败后重试：复用同一数据源，刷新后由 store 清除/保留 loadFailed 标记 */
+function retryReviewRecords() {
+  void reviewStore.fetchAll()
+}
+
 // 初始化：加载全部审核记录
 onMounted(() => {
-  reviewStore.fetchAll()
+  retryReviewRecords()
 })
 </script>
 
@@ -327,13 +332,32 @@ onMounted(() => {
     </div>
 
     <!-- 表格卡片 -->
-    <div :key="tableKey" v-loading="submissionStore.loading" class="review-section__card mc-card">
+    <div
+      :key="tableKey"
+      v-loading="submissionStore.loading || reviewStore.loading"
+      class="review-section__card mc-card"
+    >
       <el-table
         :data="paginatedRecords"
         class="mc-table mc-table--staggered u-w-full"
         :class="{ 'is-success-pulse': successPulse }"
         stripe
       >
+        <template #empty>
+          <el-empty
+            :description="reviewStore.loadFailed ? '审核记录加载失败，请重试' : '暂无审核记录'"
+            :image-size="80"
+          >
+            <el-button
+              v-if="reviewStore.loadFailed"
+              type="primary"
+              plain
+              @click="retryReviewRecords"
+            >
+              重新加载
+            </el-button>
+          </el-empty>
+        </template>
         <template v-if="activeTab === 'all'">
           <el-table-column type="index" label="序号" width="60" />
           <el-table-column label="模块类型" width="120">

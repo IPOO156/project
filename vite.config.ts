@@ -36,11 +36,12 @@ export default defineConfig({
   server: {
     // 端口必须是后端 WebConfig 默认 CORS 白名单中的地址（3000/5173/8080），
     // 否则登录等带 Origin 的请求会被后端以 403 Invalid CORS request 拒绝。
-    // 后端地址以《学生端接口文档.md》（V5.8，2026-08-09）基础 URL 为准。
+    // 本地联调指向本机后端（127.0.0.1:8080，由 Spring Boot 监听，
+    // context-path 为 /api/v1，前端 baseURL '/api/v1' 由此经代理转发）。
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://vf2a39ce.natappfree.cc',
+        target: 'http://127.0.0.1:8080',
         changeOrigin: true,
       },
     },

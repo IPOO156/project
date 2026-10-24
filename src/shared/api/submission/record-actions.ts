@@ -11,9 +11,7 @@ export async function withdrawSubmission(
   id: string,
   category: ActivityType = 'archive',
 ): Promise<void> {
-  try {
-    await withdrawActivity(Number(id), category)
-  } catch {
-    // 撤回失败：本地状态由 store 兜底更新，不阻断交互
-  }
+  // 撤回失败必须上抛：调用方只有拿到成功结果才能把本地状态改为「已撤回」，
+  // 否则接口失败仍显示已撤回，刷新后记录又变回草稿，属于伪成功。
+  await withdrawActivity(Number(id), category)
 }

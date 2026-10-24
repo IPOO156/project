@@ -199,6 +199,20 @@ onUnmounted(() => {
   window.removeEventListener('scroll', hideContextMenu, true)
 })
 
+/**
+ * 标签过多时允许用滚轮横向滚动。
+ *
+ * 标签栏本身隐藏了滚动条，若只保留原生 overflow-x，桌面鼠标用户很难发现
+ * 右侧还有标签。这里把垂直滚轮转换为横向滚动；触控板的横向手势仍走原生行为。
+ */
+function onTabsWheel(e: WheelEvent) {
+  const el = scrollerRef.value
+  if (!el || el.scrollWidth <= el.clientWidth) return
+  if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return
+  e.preventDefault()
+  el.scrollLeft += e.deltaY
+}
+
 function onKeydown(e: KeyboardEvent, path: string, index: number) {
   const total = tabs.value.length
   let nextIndex = index
@@ -238,7 +252,13 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
   <div v-if="tabs.length > 0" class="nav-tabs" role="presentation">
     <!-- 标签栏主体：水平滚动 + mask 渐变提示 -->
     <div class="nav-tabs__viewport">
-      <div ref="scrollerRef" class="nav-tabs__scroller" role="tablist" aria-label="已访问页面标签">
+      <div
+        ref="scrollerRef"
+        class="nav-tabs__scroller"
+        role="tablist"
+        aria-label="已访问页面标签"
+        @wheel="onTabsWheel"
+      >
         <div
           v-for="(tab, index) in tabs"
           :key="tab.path"
@@ -308,7 +328,9 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
 // =============================================================================
 .nav-tabs {
   --tab-base-width: 168px;
-  --tab-min-width: 80px;
+  // 最小值需容纳「图标 + 4 个汉字 + 关闭按钮」；低于该宽度时标题会退化成
+  // 「材...」这类无法辨认的标签，不如让标签栏横向滚动。
+  --tab-min-width: 140px;
 
   flex: 1 1 auto;
   display: flex;

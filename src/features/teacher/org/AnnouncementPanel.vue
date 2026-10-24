@@ -11,16 +11,25 @@
  * 由 SystemConfig 页内嵌使用，自身负责加载与分页。
  */
 import type { AnnouncementItem } from '@/shared/types/teacher'
+import type {
+  OrgClassItem,
+  OrgCollegeItem,
+  OrgMajorItem,
+} from '@/shared/types/teacher/organization'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Megaphone, Plus, RefreshCw, Trash2 } from 'lucide-vue-next'
-import { onMounted, reactive, ref } from 'vue'
+import { Megaphone, Plus, RefreshCw } from 'lucide-vue-next'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 
 import {
   createAnnouncement,
   deleteAnnouncement,
   listAnnouncements,
+  listClasses,
+  listColleges,
+  listMajors,
   updateAnnouncement,
 } from '@/shared/api/teacher-api'
+import RowActions from '@/shared/ui/RowActions.vue'
 
 const announcementLoading = ref(false)
 const deletingId = ref<number | null>(null)
@@ -60,9 +69,13 @@ const TARGET_TYPE_LABELS: Record<string, string> = {
   class: '班级',
 }
 
-/** 投递口径说明（与后端实现一致，避免「以为发了其实没人收到」） */
+/**
+ * 投递口径说明（与后端实现一致，避免「以为发了其实没人收到」）：
+ * Announcement.receiverType 未在创建请求中暴露，后端默认 ALL —— 接收人 = 学生 + 教师 + 管理员；
+ * 草稿/下线改为已发布时后端会补发通知（SystemConfigManageService.updateAnnouncement）。
+ */
 const ANNOUNCEMENT_DELIVERY_HINT =
-  '公告按所选对象推送站内系统通知，接收人按学生档案归属解析：全校 = 全校学生，学院 / 专业 / 班级 = 对应范围内的学生；教师与管理员不会收到公告通知。通知仅在以「立即发布」创建时投递一次，保存为「草稿」后再改为「立即发布」不会补发，删除公告也不会撤回已发出的通知。'
+  '公告按所选对象推送站内系统通知：全校 = 全校学生、教师与管理员；学院 / 专业 / 班级 = 对应范围内的学生与教师，管理员始终接收。公告必须选择具体范围，未选择时学生不会收到通知。「立即发布」创建时投递一次；草稿或已下线公告改为「已发布」时会补发，已发布状态下重复编辑不会重发。删除公告不会撤回已发出的通知。'
 
 const annDialog = reactive({
   visible: false,
@@ -74,12 +87,96 @@ const annDialog = reactive({
   status: 1,
 })
 
+/**
+ * 学院 / 专业 / 班级目标对象。
+ * 后端 create/update 接收 targetId；缺失时 resolveStudentUserIds 对 college/major/class
+ * 直接返回空列表（公告只发给教师与管理员，学生一个都收不到），故非 all 必须选到具体对象。
+ */
+const annTarget = reactive({
+  collegeId: undefined as number | undefined,
+  majorId: undefined as number | undefined,
+  classId: undefined as number | undefined,
+})
+const annColleges = ref<OrgCollegeItem[]>([])
+const annMajors = ref<OrgMajorItem[]>([])
+const annClasses = ref<OrgClassItem[]>([])
+
+const selectedTargetId = computed(() => {
+  if (annDialog.targetType === 'college') return annTarget.collegeId
+  if (annDialog.targetType === 'major') return annTarget.majorId
+  if (annDialog.targetType === 'class') return annTarget.classId
+  return undefined
+})
+
+function resetAnnTarget() {
+  annTarget.collegeId = undefined
+  annTarget.majorId = undefined
+  annTarget.classId = undefined
+  annMajors.value = []
+  annClasses.value = []
+}
+
+async function loadAnnColleges() {
+  try {
+    annColleges.value = await listColleges()
+  } catch {
+    annColleges.value = []
+  }
+}
+
+async function loadAnnMajors(collegeId: number) {
+  try {
+    annMajors.value = await listMajors({ collegeId })
+  } catch {
+    annMajors.value = []
+  }
+}
+
+async function loadAnnClasses(majorId: number) {
+  try {
+    const res = await listClasses({ majorId, page: 1, per_page: 100 })
+    annClasses.value = res?.list ?? []
+  } catch {
+    annClasses.value = []
+  }
+}
+
+// 切换目标类型时清空下级选择；学院/专业/班级都需要先选学院
+watch(
+  () => annDialog.targetType,
+  (type) => {
+    resetAnnTarget()
+    if (type !== 'all') void loadAnnColleges()
+  },
+)
+
+watch(
+  () => annTarget.collegeId,
+  (collegeId) => {
+    annTarget.majorId = undefined
+    annTarget.classId = undefined
+    annMajors.value = []
+    annClasses.value = []
+    if (collegeId) void loadAnnMajors(collegeId)
+  },
+)
+
+watch(
+  () => annTarget.majorId,
+  (majorId) => {
+    annTarget.classId = undefined
+    annClasses.value = []
+    if (majorId) void loadAnnClasses(majorId)
+  },
+)
+
 async function loadAnnouncements() {
   announcementLoading.value = true
   try {
     const res = await listAnnouncements({
       targetType: announcementFilters.targetType || undefined,
-      status: announcementFilters.status || undefined,
+      // 0（草稿）是有效筛选值，不能用 || 丢弃；仅空串表示「全部」
+      status: announcementFilters.status === '' ? undefined : announcementFilters.status,
       page: page.value,
       per_page: perPage.value,
     })
@@ -117,6 +214,7 @@ function openAnnCreate() {
   annDialog.content = ''
   annDialog.targetType = 'all'
   annDialog.status = 1
+  resetAnnTarget()
   annDialog.visible = true
 }
 
@@ -126,6 +224,8 @@ function openAnnEdit(item: AnnouncementItem) {
   annDialog.content = item.content
   annDialog.targetType = item.targetType ?? 'all'
   annDialog.status = item.status ?? 0
+  // 列表 DTO 不返回 targetId，编辑时非 all 需重新选择具体范围
+  resetAnnTarget()
   annDialog.visible = true
 }
 
@@ -138,24 +238,29 @@ async function handleSaveAnnouncement() {
     ElMessage.warning('请输入公告内容')
     return
   }
+  if (annDialog.targetType !== 'all' && !selectedTargetId.value) {
+    ElMessage.warning('请选择公告的具体投放范围（学院 / 专业 / 班级）')
+    return
+  }
   const payload = {
     title: annDialog.title.trim(),
     content: annDialog.content.trim(),
     targetType: annDialog.targetType,
+    targetId: annDialog.targetType === 'all' ? undefined : selectedTargetId.value,
     status: annDialog.status,
   }
   annDialog.saving = true
   try {
     if (annDialog.editingId) {
       await updateAnnouncement(annDialog.editingId, payload)
-      // 编辑保存不会触发通知投递（后端只在创建时投递），如实提示以免误以为已通知
+      // 后端仅在「非已发布 → 已发布」的转换时补发通知，已发布状态下编辑不重发
       ElMessage.success(
-        annDialog.status === 1 ? '公告已更新（编辑保存不会向学生补发通知）' : '公告已更新',
+        annDialog.status === 1 ? '公告已更新（状态转为已发布时会补发通知）' : '公告已更新',
       )
     } else {
       await createAnnouncement(payload)
       ElMessage.success(
-        annDialog.status === 1 ? '公告已发布，已向范围内学生推送通知' : '公告已保存为草稿',
+        annDialog.status === 1 ? '公告已发布，已向范围内用户推送通知' : '公告已保存为草稿',
       )
     }
     annDialog.visible = false
@@ -259,25 +364,26 @@ onMounted(() => void loadAnnouncements())
           </el-table-column>
           <el-table-column label="操作" width="120" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button
-                text
-                type="primary"
-                size="small"
-                @click="openAnnEdit(row as AnnouncementItem)"
-              >
-                编辑
-              </el-button>
-              <el-button
-                text
-                type="danger"
-                size="small"
-                :icon="Trash2"
-                :loading="deletingId === (row as AnnouncementItem).announcementId"
-                :disabled="deletingId !== null"
-                @click="handleDeleteAnnouncement(row as AnnouncementItem)"
-              >
-                删除
-              </el-button>
+              <RowActions :more="false">
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openAnnEdit(row as AnnouncementItem)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  text
+                  type="danger"
+                  size="small"
+                  :loading="deletingId === (row as AnnouncementItem).announcementId"
+                  :disabled="deletingId !== null"
+                  @click="handleDeleteAnnouncement(row as AnnouncementItem)"
+                >
+                  删除
+                </el-button>
+              </RowActions>
             </template>
           </el-table-column>
         </el-table>
@@ -335,8 +441,59 @@ onMounted(() => void loadAnnouncements())
               :value="t.value"
             />
           </el-select>
-          <span class="announcement-panel__field-hint">
-            接收人按学生档案归属解析，仅学生范围可选
+        </el-form-item>
+        <el-form-item
+          v-if="annDialog.targetType !== 'all'"
+          :label="annDialog.targetType === 'college' ? '目标学院' : '所属学院'"
+          required
+        >
+          <el-select v-model="annTarget.collegeId" placeholder="请选择学院" style="width: 100%">
+            <el-option
+              v-for="c in annColleges"
+              :key="c.collegeId"
+              :label="c.collegeName"
+              :value="c.collegeId"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item
+          v-if="annDialog.targetType === 'major' || annDialog.targetType === 'class'"
+          :label="annDialog.targetType === 'major' ? '目标专业' : '所属专业'"
+          required
+        >
+          <el-select
+            v-model="annTarget.majorId"
+            placeholder="请选择专业"
+            :disabled="!annTarget.collegeId"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="m in annMajors"
+              :key="m.majorId"
+              :label="m.majorName"
+              :value="m.majorId"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="annDialog.targetType === 'class'" label="目标班级" required>
+          <el-select
+            v-model="annTarget.classId"
+            placeholder="请选择班级"
+            :disabled="!annTarget.majorId"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="c in annClasses"
+              :key="c.classId"
+              :label="c.className"
+              :value="c.classId"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="接收说明">
+          <span class="announcement-panel__field-hint announcement-panel__field-hint--block">
+            接收人按所选范围解析；管理员始终接收。学院 / 专业 /
+            班级必须选到具体对象，否则学生收不到通知。
           </span>
         </el-form-item>
         <el-form-item label="状态">
@@ -346,7 +503,7 @@ onMounted(() => void loadAnnouncements())
             <el-option label="已下线" :value="2" />
           </el-select>
           <span class="announcement-panel__field-hint">
-            选「立即发布」创建才会推送通知；草稿改发布不会补发
+            「立即发布」创建时推送；草稿 / 已下线改为「已发布」时会补发
           </span>
         </el-form-item>
       </el-form>
@@ -374,6 +531,10 @@ onMounted(() => void loadAnnouncements())
   &__field-hint {
     margin-left: 8px;
     font-size: 12px;
+    &--block {
+      margin-left: 0;
+      line-height: 1.6;
+    }
     color: var(--el-text-color-secondary);
   }
 

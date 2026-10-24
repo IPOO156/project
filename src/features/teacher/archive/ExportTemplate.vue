@@ -5,17 +5,20 @@
  */
 import type { ExportTemplateItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Eye, Plus, RefreshCw } from 'lucide-vue-next'
+import { Plus, RefreshCw } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 
 import {
   createExportTemplate,
   deleteExportTemplate,
+  getExportTemplateDetail,
   listExportTemplates,
   setDefaultExportTemplate,
   updateExportTemplate,
   updateExportTemplateStatus,
 } from '@/shared/api/teacher-api'
+import RowActions from '@/shared/ui/RowActions.vue'
+import { formatDateTime } from '@/shared/utils/time'
 import ExportTemplateDetailDrawer from './ExportTemplateDetailDrawer.vue'
 
 const loading = ref(false)
@@ -65,6 +68,10 @@ const form = reactive({
   templateMode: 1,
   paperSize: 'A4',
   orientation: 1,
+  /** 字段列表模式配置（JSON 文本，提交前解析） */
+  fieldsConfigText: '',
+  /** 自由模板模式 HTML */
+  templateContent: '',
 })
 
 function openCreate() {
@@ -77,10 +84,12 @@ function openCreate() {
   form.templateMode = 1
   form.paperSize = 'A4'
   form.orientation = 1
+  form.fieldsConfigText = ''
+  form.templateContent = ''
   dialogVisible.value = true
 }
 
-function openEdit(row: ExportTemplateItem) {
+async function openEdit(row: ExportTemplateItem) {
   isEdit.value = true
   editingId.value = row.id
   form.templateName = row.templateName
@@ -90,12 +99,58 @@ function openEdit(row: ExportTemplateItem) {
   form.templateMode = row.templateMode ?? 1
   form.paperSize = row.paperSize ?? 'A4'
   form.orientation = row.orientation ?? 1
+  form.fieldsConfigText = ''
+  form.templateContent = ''
   dialogVisible.value = true
+  // 列表接口不返回 fieldsConfig/templateContent（大字段），编辑时从详情补全，
+  // 避免切换渲染模式后因缺少配套内容被后端拒绝。
+  try {
+    const detail = await getExportTemplateDetail(row.id)
+    form.fieldsConfigText =
+      detail.fieldsConfig == null ? '' : JSON.stringify(detail.fieldsConfig, null, 2)
+    form.templateContent = detail.templateContent ?? ''
+  } catch {
+    /* 详情失败时保留列表字段，内容留空不提交 */
+  }
+}
+
+/** 解析字段配置 JSON；非法时提示并返回 undefined */
+function parseFieldsConfig(): unknown[] | undefined {
+  const text = form.fieldsConfigText.trim()
+  if (!text) return undefined
+  try {
+    const parsed = JSON.parse(text)
+    if (!Array.isArray(parsed)) {
+      ElMessage.warning('字段配置必须是 JSON 数组')
+      return undefined
+    }
+    return parsed
+  } catch {
+    ElMessage.warning('字段配置不是合法的 JSON，请检查格式')
+    return undefined
+  }
 }
 
 async function handleSave() {
   if (!form.templateName.trim() || !form.templateCode.trim()) {
     ElMessage.warning('请填写模板名称和编码')
+    return
+  }
+  // 后端 create 校验：mode=1 必须 fieldsConfig（非 null），mode=2 必须 templateContent 非空。
+  // 前端提前拦截并给出可操作提示，避免提交后才收到 10002。
+  let fieldsConfig: unknown[] | undefined
+  if (form.templateMode === 1) {
+    fieldsConfig = parseFieldsConfig()
+    if (!fieldsConfig) {
+      ElMessage.warning('字段列表模式需填写字段配置（JSON 数组）')
+      return
+    }
+    if (fieldsConfig.length === 0) {
+      ElMessage.warning('字段配置至少包含一个字段')
+      return
+    }
+  } else if (!form.templateContent.trim()) {
+    ElMessage.warning('自由模板模式需填写模板 HTML 内容')
     return
   }
   if (saving.value) return
@@ -109,6 +164,9 @@ async function handleSave() {
         templateMode: form.templateMode,
         paperSize: form.paperSize,
         orientation: form.orientation,
+        // 仅提交已填写的内容，避免详情拉取失败时空值覆盖原模板
+        ...(fieldsConfig ? { fieldsConfig } : {}),
+        ...(form.templateContent.trim() ? { templateContent: form.templateContent } : {}),
       })
       ElMessage.success('更新成功')
     } else {
@@ -120,6 +178,8 @@ async function handleSave() {
         templateMode: form.templateMode,
         paperSize: form.paperSize,
         orientation: form.orientation,
+        ...(fieldsConfig ? { fieldsConfig } : {}),
+        ...(form.templateMode === 2 ? { templateContent: form.templateContent } : {}),
       })
       ElMessage.success('创建成功')
     }
@@ -215,20 +275,21 @@ onMounted(() => void load())
           <el-table-column
             prop="templateName"
             label="模板名称"
-            min-width="130"
+            min-width="180"
             show-overflow-tooltip
           />
           <el-table-column
             prop="templateCode"
             label="模板编码"
-            min-width="140"
+            min-width="150"
             show-overflow-tooltip
           />
-          <el-table-column label="导出类型" min-width="80" show-overflow-tooltip>
+          <el-table-column label="导出类型" width="110" show-overflow-tooltip>
             <template #default="{ row }">{{ row.exportTypeLabel ?? row.exportType }}</template>
           </el-table-column>
           <el-table-column prop="version" label="版本" width="60" align="center" />
-          <el-table-column label="默认" width="60" align="center">
+          <!-- 标签「默认」约 38px + 单元格内边距 24px，60px 会裁掉右侧 -->
+          <el-table-column label="默认" width="76" align="center">
             <template #default="{ row }">
               <el-tag v-if="row.isDefault === 1" type="success" size="small">默认</el-tag>
               <span v-else>-</span>
@@ -241,20 +302,21 @@ onMounted(() => void load())
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="createdByName" label="创建人" min-width="60" show-overflow-tooltip>
+          <el-table-column prop="createdByName" label="创建人" width="90" show-overflow-tooltip>
             <template #default="{ row }">{{ row.createdByName ?? '-' }}</template>
           </el-table-column>
-          <el-table-column prop="updatedAt" label="更新时间" min-width="120" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.updatedAt ?? '-' }}</template>
-          </el-table-column>
-          <el-table-column label="操作" min-width="270" align="center">
+          <el-table-column label="更新时间" width="145" show-overflow-tooltip>
             <template #default="{ row }">
-              <div class="export-template__actions">
+              {{ row.updatedAt ? formatDateTime(row.updatedAt) : '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="156" align="center" fixed="right">
+            <template #default="{ row }">
+              <RowActions>
                 <el-button
                   text
                   type="primary"
                   size="small"
-                  :icon="Eye"
                   @click="openDetail(row as ExportTemplateItem)"
                 >
                   详情
@@ -267,38 +329,30 @@ onMounted(() => void load())
                 >
                   编辑
                 </el-button>
-                <el-button
-                  v-if="row.isDefault !== 1"
-                  text
-                  type="primary"
-                  size="small"
-                  :loading="actingId === (row as ExportTemplateItem).id"
-                  :disabled="actingId !== null"
-                  @click="handleSetDefault(row as ExportTemplateItem)"
-                >
-                  设默认
-                </el-button>
-                <el-button
-                  text
-                  :type="row.status === 1 ? 'danger' : 'success'"
-                  size="small"
-                  :loading="actingId === (row as ExportTemplateItem).id"
-                  :disabled="actingId !== null"
-                  @click="handleToggleStatus(row as ExportTemplateItem)"
-                >
-                  {{ row.status === 1 ? '禁用' : '启用' }}
-                </el-button>
-                <el-button
-                  text
-                  type="danger"
-                  size="small"
-                  :loading="deletingId === (row as ExportTemplateItem).id"
-                  :disabled="deletingId !== null"
-                  @click="handleDelete(row as ExportTemplateItem)"
-                >
-                  删除
-                </el-button>
-              </div>
+                <template #more>
+                  <el-dropdown-item
+                    v-if="row.isDefault !== 1"
+                    :disabled="actingId !== null"
+                    @click="handleSetDefault(row as ExportTemplateItem)"
+                  >
+                    {{ actingId === (row as ExportTemplateItem).id ? '设置中…' : '设为默认' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    :disabled="actingId !== null"
+                    @click="handleToggleStatus(row as ExportTemplateItem)"
+                  >
+                    {{ row.status === 1 ? '禁用' : '启用' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    divided
+                    class="row-actions__danger"
+                    :disabled="deletingId !== null"
+                    @click="handleDelete(row as ExportTemplateItem)"
+                  >
+                    {{ deletingId === (row as ExportTemplateItem).id ? '删除中…' : '删除' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
         </el-table>
@@ -349,6 +403,28 @@ onMounted(() => void load())
             <el-radio :value="2">横向</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-form-item label="渲染模式" required>
+          <el-radio-group v-model="form.templateMode">
+            <el-radio :value="1">字段列表</el-radio>
+            <el-radio :value="2">自由模板</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="form.templateMode === 1" label="字段配置" required>
+          <el-input
+            v-model="form.fieldsConfigText"
+            type="textarea"
+            :rows="6"
+            placeholder='JSON 数组，例如 [{"key":"studentName","name":"姓名","path":"users.name","source":"variable"}]'
+          />
+        </el-form-item>
+        <el-form-item v-else label="模板内容" required>
+          <el-input
+            v-model="form.templateContent"
+            type="textarea"
+            :rows="6"
+            placeholder="完整 HTML 模板内容"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -367,20 +443,6 @@ onMounted(() => void load())
 
 <style scoped lang="scss">
 .export-template {
-  &__actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    flex-wrap: nowrap;
-    white-space: nowrap;
-
-    // 去掉相邻按钮默认 12px 间距，保证操作按钮一排排布
-    :deep(.el-button + .el-button) {
-      margin-left: 0;
-    }
-  }
-
   &__pagination {
     margin-top: $spacing-lg;
     display: flex;

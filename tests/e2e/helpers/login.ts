@@ -54,6 +54,14 @@ export async function login(
   await form.locator('input.el-input__inner').first().fill(account.userNo)
   await form.locator('input[type="password"]').first().fill(account.password)
 
+  // 免验证码名单依赖 dev server 的 VITE_CAPTCHA_SKIP_ACCOUNTS；若未生效（例如连的是
+  // 别人的 dev server），这里补填一个验证码，避免用例卡在「请输入验证码」而不发请求。
+  const captcha = page.locator('.login__captcha-row input')
+  if ((await captcha.count()) > 0) {
+    const value = await captcha.first().inputValue()
+    if (!value) await captcha.first().fill('0000')
+  }
+
   await page.locator('button.login__btn').click()
 
   // 登录成功即离开 /login（路由守卫会把已登录用户从 /login 弹走）

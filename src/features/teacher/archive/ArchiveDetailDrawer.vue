@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ArchiveAdminDetail } from '@/shared/types/teacher'
 import { computed } from 'vue'
+import { formatDateTime } from '@/shared/utils/time'
 import { statusLabel, statusTagType } from './archiveStatus'
 
 interface Props {
@@ -91,10 +92,10 @@ const detailEntries = computed(() => {
               detail.semesterName ?? '-'
             }}</el-descriptions-item>
             <el-descriptions-item label="获得时间">{{
-              detail.obtainedAt ?? '-'
+              detail.obtainedAt ? formatDateTime(detail.obtainedAt) : '-'
             }}</el-descriptions-item>
             <el-descriptions-item label="提交时间">{{
-              detail.submittedAt ?? '-'
+              detail.submittedAt ? formatDateTime(detail.submittedAt) : '-'
             }}</el-descriptions-item>
             <el-descriptions-item label="审核人">{{
               detail.auditorName ?? '-'

@@ -224,7 +224,9 @@ onMounted(() => {
         </div>
         <div>
           <h1 class="message-header__title">消息中心</h1>
-          <p class="message-header__subtitle">集中查看系统通知、审批提醒与动态记录</p>
+          <p class="message-header__subtitle">
+            系统通知、审批结果和动态提醒都在这里；打开详情后会标记为已读。
+          </p>
         </div>
       </div>
 
@@ -305,42 +307,40 @@ onMounted(() => {
         <el-button @click="handleReset"> <X class="u-mr-4" :size="14" />重置 </el-button>
       </div>
 
-      <div class="panel-toolbar__batch">
-        <el-button v-if="!batchMode" size="small" @click="batchMode = true"> 批量操作 </el-button>
-        <template v-else>
-          <span class="panel-toolbar__batch-count">已选 {{ selectedIds.length }} 条</span>
-          <el-button size="small" @click="handleCancelBatchMode">取消</el-button>
-          <el-button
-            size="small"
-            type="primary"
-            :loading="batchReading"
-            :disabled="selectedIds.length === 0 || batchReading"
-            @click="handleBatchRead"
-          >
-            批量已读
-          </el-button>
-          <el-button
-            size="small"
-            :loading="batchArchiving"
-            :disabled="selectedIds.length === 0 || batchArchiving"
-            @click="handleBatchArchive"
-          >
-            <Archive class="u-mr-4" :size="14" />批量归档
-          </el-button>
-        </template>
-      </div>
+      <div class="panel-toolbar__actions">
+        <div class="panel-toolbar__batch">
+          <el-button v-if="!batchMode" size="small" @click="batchMode = true"> 批量操作 </el-button>
+          <template v-else>
+            <span class="panel-toolbar__batch-count">已选 {{ selectedIds.length }} 条</span>
+            <el-button size="small" @click="handleCancelBatchMode">取消</el-button>
+            <el-button
+              size="small"
+              type="primary"
+              :loading="batchReading"
+              :disabled="selectedIds.length === 0 || batchReading"
+              @click="handleBatchRead"
+            >
+              批量已读
+            </el-button>
+            <el-button
+              size="small"
+              :loading="batchArchiving"
+              :disabled="selectedIds.length === 0 || batchArchiving"
+              @click="handleBatchArchive"
+            >
+              <Archive class="u-mr-4" :size="14" />批量归档
+            </el-button>
+          </template>
+        </div>
 
-      <el-button @click="navigateToActivities">
-        <Mail class="u-mr-4" :size="16" />查看动态记录
-      </el-button>
+        <el-button @click="navigateToActivities">
+          <Mail class="u-mr-4" :size="16" />查看动态记录
+        </el-button>
+      </div>
     </div>
 
     <!-- 通知列表 -->
-    <div
-      :key="listKey"
-      v-loading="notificationStore.loading"
-      class="mc-card message-list message-list--staggered"
-    >
+    <div :key="listKey" v-loading="notificationStore.loading" class="mc-card message-list">
       <MessageCard
         v-for="item in paginatedList"
         :key="item.id"
@@ -498,6 +498,16 @@ onMounted(() => {
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
+  }
+
+  // 批量操作与「查看动态记录」同属页面动作，放在同一组内换行，
+  // 避免在 1366/1440 宽度下变成右侧孤零零一个按钮。
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-left: auto;
   }
 
   &__batch {

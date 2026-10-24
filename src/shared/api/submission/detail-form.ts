@@ -150,15 +150,18 @@ export function mapDetailToForm(type: string, detail: any): Record<string, any> 
     const v = nested[from]
     if (v != null && v !== '') out[to] = v
   }
-  // 通用取得时间 obtainTime → 扩展表单 acquisitionDate（重复校验 obtainedTime 用）
+  // 通用取得时间 obtainTime → 扩展表单 acquisitionDate（重复校验 obtainTime 用）
   if (nested.obtainTime != null && nested.obtainTime !== '') {
     out.acquisitionDate = nested.obtainTime
   }
-  // 学期：详情在顶层返回 semesterName（列表为 semester_name）
-  if (detail?.semesterName) out.semester = detail.semesterName
-  // 附件：evidenceFiles（file_id/file_name/file_url）→ proofMaterials（UploadUserFile 形状，含自定义 fileId）。
+  // 学期：ActivityDetailResponse 用 @JsonProperty("semester_name")，实际返回下划线字段
+  if (detail?.semester_name ?? detail?.semesterName) {
+    out.semester = detail.semester_name ?? detail.semesterName
+  }
+  // 附件：evidence_files（file_id/file_name/file_url）→ proofMaterials（UploadUserFile 形状，含自定义 fileId）。
   // 无附件时也返回空数组，保证 handleEditClick 回填后 form.proofMaterials 恒为数组（el-upload 需要数组而非 ''）
-  const files = Array.isArray(detail?.evidenceFiles) ? detail.evidenceFiles : []
+  const rawFiles = detail?.evidence_files ?? detail?.evidenceFiles
+  const files = Array.isArray(rawFiles) ? rawFiles : []
   out.proofMaterials = files.map((f: any, idx: number) => ({
     // uid 用大基数 + 索引，避免与 el-upload 自增 uid 冲突
     uid: 1_000_000_000 + idx,

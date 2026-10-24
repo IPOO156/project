@@ -33,8 +33,36 @@ import type {
   SettingItem,
   SettingUpdatePayload,
 } from '@/shared/types/teacher'
-import { getToken } from '@/shared/utils/token'
+import { downloadBlobFile } from '@/shared/utils/download'
 import request from './request'
+
+/** 下拉/候选列表分页拉全量：后端 PageParam 单页上限为 100，超出部分必须翻页获取 */
+const LOOKUP_PAGE_SIZE = 100
+/** 安全上限：total 异常时避免无限翻页；达到上限会在控制台明确告警 */
+const LOOKUP_MAX_PAGES = 50
+
+export async function fetchAllPageItems<T>(
+  fetchPage: (page: number, perPage: number) => Promise<PageResult<T>>,
+): Promise<T[]> {
+  const first = await fetchPage(1, LOOKUP_PAGE_SIZE)
+  const firstList = first?.list ?? []
+  const total = Number(first?.total) || 0
+  const totalPages = Math.max(1, Math.ceil(total / LOOKUP_PAGE_SIZE))
+  if (totalPages > LOOKUP_MAX_PAGES) {
+    console.warn(
+      `[lookup] 数据共 ${total} 条，超过前端安全上限 ${LOOKUP_MAX_PAGES * LOOKUP_PAGE_SIZE}，仅加载前 ${LOOKUP_MAX_PAGES} 页`,
+    )
+  }
+  const pageCount = Math.min(totalPages, LOOKUP_MAX_PAGES)
+  if (pageCount <= 1 || firstList.length === 0) return firstList
+  // 顺序翻页而非一次性并发：下拉候选总量通常很小，顺序请求可避免异常 total 时对后端形成请求突发。
+  const all = [...firstList]
+  for (let page = 2; page <= pageCount; page++) {
+    const res = await fetchPage(page, LOOKUP_PAGE_SIZE)
+    all.push(...(res?.list ?? []))
+  }
+  return all
+}
 
 /* ===================== 能力维度（/admin/ability-dimensions）===================== */
 
@@ -100,12 +128,13 @@ export function deleteFile(fileId: number): Promise<void> {
 }
 
 /**
- * 下载文件（后端 302 重定向到 OSS 签名 URL，绕过统一拦截器以 blob 接收）。
+ * 下载文件（后端 302 重定向到 OSS 签名 URL，以 blob 接收）。
  *
  * ⚠️ 必须走本函数，不能用 `<a href="{downloadUrl}">` 直链：
  * `/common/files/{fileId}/download` 是**鉴权端点**（无 token 返回 401 未登录，
  * 见 CommonService.downloadFile 的权限与有效期校验），浏览器直链不会携带
- * Authorization 头，必然下载失败。此处以 axios 带 Bearer 取回 blob 再触发本地保存。
+ * Authorization 头，必然下载失败。此处经统一 request 实例（自动带 Bearer 与
+ * 401 续期）取回 blob 再触发本地保存。
  *
  * 文件名：省略 fileName 时优先解析响应头 `Content-Disposition` —— 后端经
  * OssFileService.getFileUrl(objectKey, originalName) 生成的签名 URL 会带上真实
@@ -113,42 +142,7 @@ export function deleteFile(fileId: number): Promise<void> {
  * 退回「下载文件」。
  */
 export async function downloadFile(fileId: number, fileName?: string): Promise<void> {
-  const { default: axios } = await import('axios')
-  const res = await axios.get(`/api/v1/common/files/${fileId}/download`, {
-    responseType: 'blob',
-    headers: { Authorization: `Bearer ${getToken()}` },
-  })
-  const blob = new Blob([res.data])
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName ?? resolveFileName(res.headers) ?? '下载文件'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-}
-
-/**
- * 从响应头解析下载文件名：依次尝试 RFC 5987 的 `filename*=UTF-8''<pct-encoded>`
- * 与普通 `filename="..."`，均无则返回 null（由调用方兜底）。
- */
-function resolveFileName(headers: unknown): string | null {
-  const record = headers as Record<string, unknown> | undefined
-  const raw = record?.['content-disposition']
-  if (typeof raw !== 'string') {
-    return null
-  }
-  const utf8 = /filename\*=UTF-8''([^;]+)/i.exec(raw)
-  if (utf8?.[1]) {
-    try {
-      return decodeURIComponent(utf8[1])
-    } catch {
-      return null
-    }
-  }
-  const plain = /filename="?([^";]+)"?/i.exec(raw)
-  return plain?.[1] ?? null
+  await downloadBlobFile(`/common/files/${fileId}/download`, '下载文件', fileName)
 }
 
 /* ===================== 字典管理（/admin/dict）===================== */
@@ -214,22 +208,9 @@ export function importSemesters(payload: SemesterImportPayload): Promise<Semeste
   return request.post('/admin/semesters/import', payload)
 }
 
-/** 下载学期导入模板（后端返回 xlsx 二进制，绕过统一拦截器） */
+/** 下载学期导入模板（后端返回 xlsx 二进制） */
 export async function downloadSemesterImportTemplate(): Promise<void> {
-  const { default: axios } = await import('axios')
-  const res = await axios.get('/api/v1/admin/semesters/import-template', {
-    responseType: 'blob',
-    headers: { Authorization: `Bearer ${getToken()}` },
-  })
-  const blob = new Blob([res.data])
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = '学期导入模板.xlsx'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  await downloadBlobFile('/admin/semesters/import-template', '学期导入模板.xlsx')
 }
 
 /* ===================== 表单自定义（/admin/form-templates）===================== */
@@ -331,6 +312,16 @@ export function listMajors(params?: {
 
 export function listClasses(params: OrgClassQuery): Promise<PageResult<OrgClassItem>> {
   return request.get('/admin/classes', { params })
+}
+
+/**
+ * 班级下拉候选（全部页）。
+ * 同 listAllRoles：后端单页上限 100，原先固定 per_page=200 时第 101 个班级起缺失。
+ */
+export function listAllClasses(
+  params: Omit<OrgClassQuery, 'page' | 'per_page'> = {},
+): Promise<OrgClassItem[]> {
+  return fetchAllPageItems((page, per_page) => listClasses({ ...params, page, per_page }))
 }
 
 export function createClass(payload: OrgClassSavePayload): Promise<OrgCreateIdResult> {

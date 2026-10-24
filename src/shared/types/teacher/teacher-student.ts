@@ -49,10 +49,19 @@ export interface TeacherStudentProfile {
   contactInfo: TeacherStudentContactInfo
   totalVolunteerHours: number | null
   dimensionProfile: TeacherDimensionProfileItem[]
-  interests: string[] | null
+  /** /profile/info 返回 InterestItem 对象数组（tagName/detailContent/proficiencyLabel…），不是字符串数组 */
+  interests: Array<{ tagName?: string | null; detailContent?: string | null }> | string[] | null
   semesterGrades: unknown[] | null
   personalAwards: unknown[] | null
-  weaknessAnalysis: string | null
+  /** /profile/info 返回 WeaknessItem 对象数组（weaknessType/weaknessDesc/severityLevel…） */
+  weaknessAnalysis:
+    | Array<{
+        weaknessType?: string | null
+        weaknessDesc?: string | null
+        severityLevel?: number | null
+      }>
+    | string
+    | null
   selfEvaluation: string | null
 }
 

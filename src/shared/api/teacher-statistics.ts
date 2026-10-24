@@ -19,7 +19,7 @@ import type {
   TeacherSnapshotRefresh,
   TeacherSnapshotRefreshPayload,
 } from '@/shared/types/teacher'
-import { getToken } from '@/shared/utils/token'
+import { downloadBlobFile } from '@/shared/utils/download'
 import request from './request'
 
 /* ===================== 评分重算（教师端 /teacher/scores）===================== */
@@ -51,22 +51,9 @@ export function getGradeImportDetail(importId: number): Promise<GradeImportDetai
   return request.get(`/admin/grades/imports/${importId}`)
 }
 
-/** 下载成绩导入模板（后端返回 xlsx 二进制，绕过统一拦截器） */
+/** 下载成绩导入模板（后端返回 xlsx 二进制） */
 export async function downloadGradeImportTemplate(): Promise<void> {
-  const { default: axios } = await import('axios')
-  const res = await axios.get('/api/v1/admin/grades/import-template', {
-    responseType: 'blob',
-    headers: { Authorization: `Bearer ${getToken()}` },
-  })
-  const blob = new Blob([res.data])
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = '成绩导入模板.xlsx'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  await downloadBlobFile('/admin/grades/import-template', '成绩导入模板.xlsx')
 }
 
 /* ===================== 成绩导入配置（/admin/grade-import-configs）===================== */
@@ -112,9 +99,9 @@ export function getStatisticsDashboard(
   return request.get('/admin/statistics/dashboard', { params })
 }
 
-/** 管理端组织统计看板（/admin/statistics/overview，教师端无等价接口） */
+/** 教师端组织统计看板（GET /teacher/statistics/overview，响应与 admin 版兼容） */
 export function getStatisticsOverview(params: StatisticsQuery): Promise<OrgOverviewStatistics> {
-  return request.get('/admin/statistics/overview', { params })
+  return request.get('/teacher/statistics/overview', { params })
 }
 
 /** 教师端成果热力图（GET /teacher/statistics/heatmap，响应与 admin 版兼容） */

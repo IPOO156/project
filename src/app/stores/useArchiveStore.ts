@@ -159,6 +159,7 @@ export const useArchiveStore = defineStore('archive', () => {
     if (newEvents.length > 0) timelineEvents.value = [...newEvents, ...timelineEvents.value]
   }
 
+  // ── 兴趣 CRUD（PUT /profile/interests 整组提交 + DELETE /profile/interests/{id}）──
   const { createInterest, editInterest, removeInterest } = createInterestActions(interests)
   /**
    * 重置用户级状态（登出/换账号时调用）。

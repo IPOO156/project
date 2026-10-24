@@ -61,8 +61,8 @@ const activeMenu = computed(() => {
   return path
 })
 
-// 教师端标题
-const sidebarTitle = computed(() => (isTeacher.value ? '教师档鉴未来' : '档鉴未来'))
+// 侧栏保留统一品牌名；管理员 / 教师身份由顶栏角色标签区分，避免出现不自然的拼接标题。
+const sidebarTitle = '档鉴未来'
 
 function handleMenuSelect(index: string) {
   if (index === route.fullPath) return
@@ -71,7 +71,8 @@ function handleMenuSelect(index: string) {
 
 async function handleSwitchToStudent() {
   await userStore.logout()
-  router.push('/login')
+  // 整页跳转，确保内存中的上一个账号业务数据被清空（见 HeaderBar.handleLogout）
+  window.location.replace('/login')
 }
 </script>
 
@@ -129,11 +130,12 @@ async function handleSwitchToStudent() {
       </el-menu>
     </el-scrollbar>
 
-    <!-- 折叠按钮 + 教师端切换 -->
+    <!-- 折叠按钮 + 退出当前端 -->
     <div class="sidebar__footer">
       <el-button v-if="isTeacher" text class="sidebar__switch-btn" @click="handleSwitchToStudent">
         <component :is="SwitchCamera" :size="16" />
-        <span v-show="!appStore.isSidebarCollapsed">切换学生端</span>
+        <!-- 实际行为是退出登录回到登录页；管理员没有学生端，故统一用「切换账号」 -->
+        <span v-show="!appStore.isSidebarCollapsed">切换账号</span>
       </el-button>
       <el-button text class="sidebar__collapse-btn" @click="appStore.toggleSidebar()">
         <component :is="appStore.isSidebarCollapsed ? ChevronRight : ChevronLeft" :size="16" />

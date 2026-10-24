@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { GrowthExperienceInput } from '../timelineConstants'
+import { ElMessage } from 'element-plus'
 import { Plus } from 'lucide-vue-next'
 import { computed, reactive, ref, watch } from 'vue'
 import { useSubmissionStore } from '@/app/stores/stores'
+import { getAbilityDimensionOptions } from '@/shared/api/archive'
 import { activityCategoryOf } from '@/shared/api/submission'
 import { inferSemester } from '../timelineConstants'
 
@@ -13,10 +15,12 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
-  (e: 'submit', payload: GrowthExperienceInput): void
+  (e: 'submit', payload: GrowthExperienceInput, done: (ok: boolean) => void): void
 }>()
 
 interface SkillForm {
+  /** 能力维度编码（后端 abilityData.dimensionCode，不能提交用户自由输入的名称） */
+  dimensionCode: string
   name: string
   growth: number
 }
@@ -27,8 +31,11 @@ interface FormState {
   description: string
   tags: string
   skills: SkillForm[]
-  /** 关联来源记录 ID（4.2.1 sourceId） */
-  sourceId?: number
+  /**
+   * 关联来源的唯一键（sourceType:id）。
+   * 申报记录与奖项报名是两张表，数字 id 可能重复，直接用 id 会选错来源。
+   */
+  sourceKey: string
 }
 
 const submissionStore = useSubmissionStore()
@@ -37,21 +44,44 @@ const form = reactive<FormState>({
   date: '',
   description: '',
   tags: '',
-  skills: [{ name: '', growth: 0 }],
-  sourceId: undefined,
+  skills: [{ dimensionCode: '', name: '', growth: 0 }],
+  sourceKey: '',
 })
 
 const submitting = ref(false)
+
+// ── 能力维度选项（GET /archive/dimensions）──
+const dimensions = ref<Array<{ dimensionCode: string; dimensionName: string }>>([])
+const dimensionLoading = ref(false)
+const dimensionLoadFailed = ref(false)
+
+async function loadDimensions() {
+  if (dimensions.value.length || dimensionLoading.value) return
+  dimensionLoading.value = true
+  dimensionLoadFailed.value = false
+  try {
+    dimensions.value = await getAbilityDimensionOptions()
+  } catch {
+    // 拉取失败时禁用能力选择，避免提交无法映射的假编码
+    dimensionLoadFailed.value = true
+  } finally {
+    dimensionLoading.value = false
+  }
+}
 
 /** 可关联来源：已提交（待审核/已通过）的申报/报名记录，按 activityCategoryOf 归类为 4.2.1 的 archives / award_applications */
 const sourceOptions = computed(() =>
   submissionStore.records
     .filter((r) => r.status === 'approved' || r.status === 'pending')
-    .map((r) => ({
-      id: Number(r.id),
-      sourceType: activityCategoryOf(r.type) === 'award' ? 'award_applications' : 'archives',
-      label: `${r.title}（${r.typeLabel} · ${r.status === 'approved' ? '已通过' : '待审核'}）`,
-    })),
+    .map((r) => {
+      const sourceType = activityCategoryOf(r.type) === 'award' ? 'award_applications' : 'archives'
+      return {
+        key: `${sourceType}:${r.id}`,
+        id: Number(r.id),
+        sourceType,
+        label: `${r.title}（${r.typeLabel} · ${r.status === 'approved' ? '已通过' : '待审核'}）`,
+      }
+    }),
 )
 
 function reset() {
@@ -59,46 +89,74 @@ function reset() {
   form.date = ''
   form.description = ''
   form.tags = ''
-  form.skills = [{ name: '', growth: 0 }]
-  form.sourceId = undefined
+  form.skills = [{ dimensionCode: '', name: '', growth: 0 }]
+  form.sourceKey = ''
 }
 
 function addSkill() {
-  form.skills.push({ name: '', growth: 0 })
+  form.skills.push({ dimensionCode: '', name: '', growth: 0 })
 }
 
 function removeSkill(index: number) {
   form.skills.splice(index, 1)
 }
 
-function handleSubmit() {
-  if (!form.title || !form.date) return
-  submitting.value = true
+function onDimensionChange(skill: SkillForm, code: string) {
+  const dimension = dimensions.value.find((d) => d.dimensionCode === code)
+  skill.name = dimension?.dimensionName ?? code
+}
 
-  const selected = sourceOptions.value.find((o) => o.id === form.sourceId)
-  setTimeout(() => {
-    emit('submit', {
-      title: form.title,
+function handleSubmit() {
+  if (!form.title.trim() || !form.date) {
+    ElMessage.warning('请填写经历标题和发生日期')
+    return
+  }
+  const skills = form.skills.filter((s) => s.dimensionCode)
+  const codes = skills.map((s) => s.dimensionCode)
+  if (new Set(codes).size !== codes.length) {
+    ElMessage.warning('同一能力维度只能填写一次')
+    return
+  }
+  if (submitting.value) return
+
+  const selected = sourceOptions.value.find((o) => o.key === form.sourceKey)
+  if (!selected) {
+    ElMessage.warning('请选择关联来源记录：成长经历必须关联一条已提交的申报/报名记录')
+    return
+  }
+  submitting.value = true
+  emit(
+    'submit',
+    {
+      title: form.title.trim(),
       date: form.date,
       description: form.description,
       tags: form.tags
         .split(/[,，]/)
         .map((t) => t.trim())
         .filter(Boolean),
-      skills: form.skills.filter((s) => s.name),
+      skills,
       ...(selected ? { sourceId: selected.id, sourceType: selected.sourceType } : {}),
-    })
-    submitting.value = false
-    reset()
-    emit('update:visible', false)
-  }, 400)
+    },
+    (ok) => {
+      submitting.value = false
+      if (!ok) {
+        // 保存失败：保留弹窗与已填内容，用户可修改后重试
+        return
+      }
+      reset()
+      emit('update:visible', false)
+    },
+  )
 }
 
 watch(
   () => props.visible,
   async (val) => {
     reset()
-    if (val && submissionStore.records.length === 0) {
+    if (!val) return
+    void loadDimensions()
+    if (submissionStore.records.length === 0) {
       // 打开弹窗时确保来源记录已加载（成长时间轴页本身不拉申报列表）
       await submissionStore.fetchRecords()
     }
@@ -132,22 +190,25 @@ watch(
         <el-input :value="form.date ? inferSemester(form.date) : ''" disabled />
       </el-form-item>
 
-      <el-form-item label="关联来源">
+      <el-form-item label="关联来源" required>
         <el-select
-          v-model="form.sourceId"
-          placeholder="选择已提交的申报/报名记录（可选）"
+          v-model="form.sourceKey"
+          :placeholder="
+            sourceOptions.length ? '选择已提交的申报/报名记录' : '暂无可关联的申报/报名记录'
+          "
+          :disabled="sourceOptions.length === 0"
           clearable
           class="source-select"
         >
           <el-option
             v-for="opt in sourceOptions"
-            :key="opt.id"
+            :key="opt.key"
             :label="opt.label"
-            :value="opt.id"
+            :value="opt.key"
           />
         </el-select>
         <div class="source-hint">
-          选择后该经历关联所选记录并提交至后端落库；不选择时仅保留在本地（接口要求来源必填）。
+          每条成长经历必须关联一条已有的申报/报名记录，选择后便于在详情中追溯。
         </div>
       </el-form-item>
 
@@ -166,19 +227,51 @@ watch(
 
       <el-form-item label="能力成长">
         <div v-for="(skill, index) in form.skills" :key="index" class="skill-input-row">
-          <el-input v-model="skill.name" placeholder="能力名称" />
+          <el-select
+            v-model="skill.dimensionCode"
+            placeholder="选择能力维度"
+            clearable
+            filterable
+            :loading="dimensionLoading"
+            :disabled="dimensionLoadFailed"
+            class="skill-select"
+            @change="(code: string) => onDimensionChange(skill, code)"
+          >
+            <el-option
+              v-for="d in dimensions"
+              :key="d.dimensionCode"
+              :label="d.dimensionName"
+              :value="d.dimensionCode"
+            />
+          </el-select>
           <el-slider v-model="skill.growth" :min="0" :max="100" show-stops class="skill-slider" />
           <el-button v-if="form.skills.length > 1" text type="danger" @click="removeSkill(index)">
             删除
           </el-button>
         </div>
-        <el-button text type="primary" :icon="Plus" @click="addSkill">添加能力</el-button>
+        <el-button
+          text
+          type="primary"
+          :icon="Plus"
+          :disabled="dimensionLoadFailed"
+          @click="addSkill"
+          >添加能力</el-button
+        >
+        <div v-if="dimensionLoadFailed" class="source-hint">
+          能力维度加载失败，可暂不填写能力成长，稍后重试。
+        </div>
       </el-form-item>
     </el-form>
 
     <template #footer>
       <el-button @click="emit('update:visible', false)">取消</el-button>
-      <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
+      <el-button
+        type="primary"
+        :loading="submitting"
+        :disabled="sourceOptions.length === 0"
+        @click="handleSubmit"
+        >确定</el-button
+      >
     </template>
   </el-dialog>
 </template>
@@ -189,6 +282,11 @@ watch(
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.skill-select {
+  width: 180px;
+  flex-shrink: 0;
 }
 
 .skill-slider {

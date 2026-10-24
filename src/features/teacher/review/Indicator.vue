@@ -12,7 +12,7 @@ import type {
   SemesterItem,
 } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Check, History, Plus, RefreshCw, Rocket, X } from 'lucide-vue-next'
+import { Check, ChevronDown, History, Plus, RefreshCw, Rocket, X } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 
 import {
@@ -25,6 +25,7 @@ import {
   updateIndicatorsStatusBatch,
   updateIndicatorStatus,
 } from '@/shared/api/teacher-api'
+import RowActions from '@/shared/ui/RowActions.vue'
 import IndicatorVersionsDrawer from './IndicatorVersionsDrawer.vue'
 
 const loading = ref(false)
@@ -52,38 +53,78 @@ const dialogVisible = ref(false)
 const isEdit = ref(false)
 const editingId = ref<number | null>(null)
 const parentId = ref<number | null>(null)
+/** 当前编辑/新增指标的层级（1/2/3）；父级为二级时新建的是三级指标，必须填 scoringRule */
+const formLevel = ref(1)
 const form = reactive({
   indicatorName: '',
   indicatorCode: '',
   weight: 0,
   description: '',
+  scoringRuleText: '',
 })
 
 function openCreate(parent?: IndicatorNode) {
   isEdit.value = false
   editingId.value = null
   parentId.value = parent?.id ?? null
+  formLevel.value = parent ? (parent.level ?? 0) + 1 : 1
   form.indicatorName = ''
   form.indicatorCode = ''
   form.weight = 0
   form.description = ''
+  form.scoringRuleText = ''
   dialogVisible.value = true
 }
 
 function openEdit(row: IndicatorNode) {
   isEdit.value = true
   editingId.value = row.id
+  formLevel.value = row.level
   form.indicatorName = row.indicatorName
   form.indicatorCode = row.indicatorCode
   form.weight = row.weight
   form.description = row.description ?? ''
+  form.scoringRuleText = row.scoringRule ? JSON.stringify(row.scoringRule, null, 2) : ''
   dialogVisible.value = true
+}
+
+/** 解析计分规则 JSON；非法时提示并返回 undefined */
+function parseScoringRule(): Record<string, unknown> | undefined {
+  const text = form.scoringRuleText.trim()
+  if (!text) return undefined
+  try {
+    const parsed = JSON.parse(text)
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      ElMessage.warning('计分规则必须是 JSON 对象')
+      return undefined
+    }
+    return parsed as Record<string, unknown>
+  } catch {
+    ElMessage.warning('计分规则不是合法的 JSON，请检查格式')
+    return undefined
+  }
 }
 
 async function handleSave() {
   if (!form.indicatorName.trim() || !form.indicatorCode.trim()) {
     ElMessage.warning('请填写指标名称和编码')
     return
+  }
+  // 后端要求三级指标必填 scoringRule（type + source 等，见 ScoringRuleValidator）
+  let scoringRule: Record<string, unknown> | undefined
+  if (formLevel.value === 3) {
+    scoringRule = parseScoringRule()
+    if (!scoringRule) {
+      ElMessage.warning('三级指标需填写计分规则（JSON 对象）')
+      return
+    }
+    if (!scoringRule.type) {
+      ElMessage.warning('计分规则缺少 type 字段')
+      return
+    }
+  } else if (form.scoringRuleText.trim()) {
+    scoringRule = parseScoringRule()
+    if (!scoringRule) return
   }
   saving.value = true
   try {
@@ -92,6 +133,7 @@ async function handleSave() {
         indicatorName: form.indicatorName.trim(),
         weight: form.weight,
         description: form.description || undefined,
+        ...(scoringRule ? { scoringRule } : {}),
       })
       ElMessage.success('更新成功')
     } else {
@@ -101,6 +143,7 @@ async function handleSave() {
         indicatorName: form.indicatorName.trim(),
         weight: form.weight,
         description: form.description || undefined,
+        ...(scoringRule ? { scoringRule } : {}),
       }
       await createIndicator(payload)
       ElMessage.success('创建成功')
@@ -235,36 +278,31 @@ onMounted(() => void load())
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="load">刷新</el-button>
-        <el-button :icon="History" @click="versionsDrawerVisible = true">版本</el-button>
-        <el-button
-          type="success"
-          plain
-          :icon="Check"
-          :loading="batching"
+        <el-button :icon="History" @click="versionsDrawerVisible = true">版本记录</el-button>
+        <el-dropdown
+          trigger="click"
           :disabled="!selectedIndicators.length || batching"
-          @click="handleBatchStatus(1)"
+          @command="(cmd: number) => handleBatchStatus(cmd)"
         >
-          批量启用
-        </el-button>
-        <el-button
-          type="danger"
-          plain
-          :icon="X"
-          :loading="batching"
-          :disabled="!selectedIndicators.length || batching"
-          @click="handleBatchStatus(0)"
-        >
-          批量禁用
-        </el-button>
+          <el-button :loading="batching" :disabled="!selectedIndicators.length || batching">
+            批量操作<ChevronDown :size="14" class="indicator-page__caret" />
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item :command="1" :icon="Check">批量启用</el-dropdown-item>
+              <el-dropdown-item :command="0" :icon="X">批量禁用</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
         <el-button type="primary" :icon="Plus" @click="openCreate()">新增一级指标</el-button>
         <el-button
-          type="success"
+          plain
           :icon="Rocket"
           :loading="publishing"
           :disabled="publishing"
           @click="openPublish"
         >
-          发布
+          发布规则版本
         </el-button>
       </div>
     </div>
@@ -301,38 +339,35 @@ onMounted(() => void load())
           <el-table-column prop="description" label="说明" min-width="160" show-overflow-tooltip>
             <template #default="{ row }">{{ row.description ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="240" align="center">
+          <el-table-column label="操作" width="176" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button
-                v-if="(row.level ?? 0) < 3"
-                text
-                type="primary"
-                size="small"
-                @click="openCreate(row as IndicatorNode)"
-              >
-                加子项
-              </el-button>
-              <el-button text type="primary" size="small" @click="openEdit(row as IndicatorNode)">
-                编辑
-              </el-button>
-              <el-button
-                text
-                :type="row.status === 1 ? 'danger' : 'success'"
-                size="small"
-                @click="handleToggleStatus(row as IndicatorNode)"
-              >
-                {{ row.status === 1 ? '禁用' : '启用' }}
-              </el-button>
-              <el-button
-                text
-                type="danger"
-                size="small"
-                :loading="deletingId === (row as IndicatorNode).id"
-                :disabled="deletingId !== null"
-                @click="handleDelete(row as IndicatorNode)"
-              >
-                删除
-              </el-button>
+              <RowActions>
+                <el-button
+                  v-if="(row.level ?? 0) < 3"
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openCreate(row as IndicatorNode)"
+                >
+                  加子项
+                </el-button>
+                <el-button text type="primary" size="small" @click="openEdit(row as IndicatorNode)">
+                  编辑
+                </el-button>
+                <template #more>
+                  <el-dropdown-item @click="handleToggleStatus(row as IndicatorNode)">
+                    {{ row.status === 1 ? '禁用' : '启用' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    divided
+                    class="row-actions__danger"
+                    :disabled="deletingId !== null"
+                    @click="handleDelete(row as IndicatorNode)"
+                  >
+                    {{ deletingId === (row as IndicatorNode).id ? '删除中…' : '删除' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
         </el-table>
@@ -355,6 +390,14 @@ onMounted(() => void load())
         </el-form-item>
         <el-form-item label="说明">
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="指标说明" />
+        </el-form-item>
+        <el-form-item v-if="formLevel === 3" label="计分规则" required>
+          <el-input
+            v-model="form.scoringRuleText"
+            type="textarea"
+            :rows="5"
+            placeholder='JSON 对象，例如 {"type":"AVG","source":"gpa"}（type 支持 AVG/SUM/MAX/WEIGHTED/THRESHOLD/COUNT）'
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -412,5 +455,9 @@ onMounted(() => void load())
   font-size: 12px;
   line-height: 1.6;
   color: var(--el-text-color-secondary);
+}
+
+.indicator-page__caret {
+  margin-left: 2px;
 }
 </style>

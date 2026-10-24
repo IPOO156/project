@@ -252,7 +252,7 @@ function handleClosed() {
             <span v-else>即时 ~ 长期</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="130" align="center">
+        <el-table-column label="操作" width="130" align="center" fixed="right">
           <template #default="{ row }">
             <el-button
               text
@@ -340,7 +340,7 @@ function handleClosed() {
             range-separator="至"
             start-placeholder="开始时间"
             end-placeholder="结束时间"
-            value-format="YYYY-MM-DDTHH:mm:ss"
+            value-format="YYYY-MM-DDTHH:mm:ssZ"
           />
         </el-form-item>
       </el-form>

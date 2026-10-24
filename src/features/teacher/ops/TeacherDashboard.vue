@@ -40,11 +40,14 @@ const router = useRouter()
 const userStore = useUserStore()
 const { me } = useTeacherMe()
 // 模块授权与角色名统一取自 /auth/me（permissions / roleNames）
-const { hasPermission, canAccessModule, roleLabel } = useTeacherAuthz()
+const { canAccessAny, canAccessModule, roleLabel } = useTeacherAuthz()
 
 const userName = computed(() => userStore.userName)
-// 系统日志接口（/admin/logs/system）仅管理员可用，持 log:view 即视为管理员侧
-const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
+// 管理端接口按后端真实鉴权码判定（admin 角色直通）：
+//   数据概览/快照刷新 → statistics:view；系统日志 → log:view。
+// 不能用单一「是否管理员」布尔量同时控制两者，也不能裸用 hasPermission（管理员权限码可能为空）。
+const useAdminStats = computed(() => canAccessAny(['statistics:view']))
+const canViewSystemLogs = computed(() => canAccessAny(['log:view']))
 
 // ── 真实统计数据 ──
 const unreadCount = ref<number | null>(null)
@@ -80,7 +83,7 @@ async function loadStats() {
     unreadCount.value = null
   }
   buildScopeText()
-  if (isAdmin.value) {
+  if (canViewSystemLogs.value) {
     try {
       const logs = await getSystemLogs({ page: 1, per_page: 1 })
       recentTotal.value = logs.total
@@ -117,8 +120,9 @@ async function loadSemesters() {
 async function loadDashboard() {
   dashboardLoading.value = true
   try {
-    // 管理员调 /admin/statistics/dashboard（全校数据），教师调 /teacher/statistics/dashboard（学院范围）
-    dashboardData.value = isAdmin.value
+    // 持 statistics:view（或 admin 角色）调 /admin/statistics/dashboard（全校数据），
+    // 其余教师调 /teacher/statistics/dashboard（学院范围）
+    dashboardData.value = useAdminStats.value
       ? await getStatisticsDashboard({ semesterId: dashSemesterId.value })
       : await getTeacherStatisticsDashboard({ semesterId: dashSemesterId.value })
   } catch {
@@ -148,7 +152,7 @@ async function handleRefreshSnapshot() {
   }
   overviewLoading.value = true
   try {
-    if (isAdmin.value) {
+    if (useAdminStats.value) {
       await refreshAdminStatistics({ semesterId: dashSemesterId.value })
     } else {
       await refreshTeacherStatistics({ semesterId: dashSemesterId.value })
@@ -164,7 +168,7 @@ async function handleRefreshSnapshot() {
 
 // 卡片 / KPI / 快捷入口等展示配置统一由 composable 提供（与原实现逐字一致）
 const { pendingItems, statsCards, quickLinks, todayDate } = useDashboardOption({
-  isAdmin,
+  canViewSystemLogs,
   unreadCount,
   scopeText,
   recentTotal,
@@ -185,7 +189,7 @@ interface RecentItem {
 const recentLogs = ref<RecentItem[]>([])
 
 async function loadRecent() {
-  if (isAdmin.value) {
+  if (canViewSystemLogs.value) {
     try {
       const logs = await getSystemLogs({ page: 1, per_page: 5 })
       recentLogs.value = logs.list.map((l) => ({
@@ -293,7 +297,7 @@ onMounted(() => {
     <el-card class="teacher-dashboard__section dash-overview">
       <template #header>
         <span class="section-title">档案数据概览</span>
-        <span v-if="!isAdmin && teacherDash?.scopeName" class="dash-overview__scope">
+        <span v-if="!useAdminStats && teacherDash?.scopeName" class="dash-overview__scope">
           统计范围：{{ teacherDash.scopeName }}
         </span>
         <div class="dash-overview__tools">
@@ -329,9 +333,9 @@ onMounted(() => {
               }}</span>
             </div>
             <div class="dash-overview__kpi">
-              <span class="dash-overview__label">{{ isAdmin ? '档案数' : '已提交' }}</span>
+              <span class="dash-overview__label">{{ useAdminStats ? '档案数' : '已提交' }}</span>
               <span class="dash-overview__value mc-num">{{
-                (isAdmin ? adminDash?.archiveCount : teacherDash?.submittedCount) ?? '—'
+                (useAdminStats ? adminDash?.archiveCount : teacherDash?.submittedCount) ?? '—'
               }}</span>
             </div>
             <div class="dash-overview__kpi">
@@ -346,20 +350,20 @@ onMounted(() => {
                 dashboardData.approvedCount ?? '—'
               }}</span>
             </div>
-            <div v-if="!isAdmin" class="dash-overview__kpi">
+            <div v-if="!useAdminStats" class="dash-overview__kpi">
               <span class="dash-overview__label">被退回</span>
               <span class="dash-overview__value mc-num">{{
                 teacherDash?.rejectedCount ?? '—'
               }}</span>
             </div>
-            <div v-if="isAdmin" class="dash-overview__kpi">
+            <div v-if="useAdminStats" class="dash-overview__kpi">
               <span class="dash-overview__label">奖项数</span>
               <span class="dash-overview__value mc-num">{{ adminDash?.awardCount ?? '—' }}</span>
             </div>
             <div class="dash-overview__kpi">
               <span class="dash-overview__label">平均绩点</span>
               <span class="dash-overview__value mc-num">{{
-                (isAdmin ? adminDash?.avgGpa : teacherDash?.averageGpa) ?? '—'
+                (useAdminStats ? adminDash?.avgGpa : teacherDash?.averageGpa) ?? '—'
               }}</span>
             </div>
           </div>

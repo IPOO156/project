@@ -8,7 +8,7 @@ import { getSemesters, getStatisticsOverview } from '@/shared/api/teacher-api'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 
 /**
- * StatisticsOverview - 统计看板（/admin/statistics/overview）
+ * StatisticsOverview - 统计看板（/teacher/statistics/overview）
  * 组织维度聚合：学生/档案/获奖/平均绩点/平均得分/实践次数/兴趣 TOP/画像维度分。
  * 自包含筛选（学期/维度/组织/年级），不依赖父组件 ArchiveView 的筛选状态。
  */
@@ -41,7 +41,7 @@ const filters = reactive({
 })
 const filterOpen = ref(false)
 
-/* ── 数据（/admin/statistics/overview）── */
+/* ── 数据（/teacher/statistics/overview）── */
 
 const overviewLoading = ref(false)
 const statsRows = ref<OrgOverviewRow[]>([])

@@ -1,4 +1,5 @@
 import type { CareerPlanRecord } from '@/shared/types/types'
+import { downloadBlobFile } from '@/shared/utils/download'
 import { getSemesters } from './common'
 import request from './request'
 
@@ -16,25 +17,54 @@ const CAREER_PLAN_STATUS_MAP: Record<number, CareerPlanRecord['status']> = {
   4: 'withdrawn',
 }
 
+const CAREER_PLAN_PAGE_SIZE = 100
+/** 安全上限：total 异常时避免无限翻页；达到上限会在控制台明确告警 */
+const CAREER_PLAN_MAX_PAGES = 50
+
 /**
- * 获取职业规划列表
+ * 获取职业规划列表（拉取全部页）
  * 对接后端 GET /profile/career-plans。接口异常时不再回退示例数据——
  * 编造的规划会被学生误认为自己的真实记录，失败由 Store 置错误态、页面展示空态。
+ *
+ * 后端单页上限 100；此前固定取第一页 20 条，第 21 份之后的规划永远不会显示。
  */
-export function getCareerPlans(): Promise<CareerPlanRecord[]> {
-  return request
-    .get('/profile/career-plans', { params: { page: 1, per_page: 20 } })
-    .then((res: any) =>
-      (res?.list ?? []).map((p: any) => ({
-        id: String(p.id),
-        semester: p.semesterName || '',
-        title: p.title,
-        submitDate: (p.submittedAt || '').slice(0, 10),
-        status: CAREER_PLAN_STATUS_MAP[p.status] ?? 'draft',
-        progressRate: p.progressRate,
-        statusLabel: p.statusLabel,
-      })),
+export async function getCareerPlans(): Promise<CareerPlanRecord[]> {
+  const first = await fetchCareerPlanPage(1)
+  const totalPages = Math.min(Math.ceil(first.total / CAREER_PLAN_PAGE_SIZE), CAREER_PLAN_MAX_PAGES)
+  if (Math.ceil(first.total / CAREER_PLAN_PAGE_SIZE) > CAREER_PLAN_MAX_PAGES) {
+    console.warn(
+      `[career-plans] 规划总数 ${first.total} 超过前端安全上限 ${CAREER_PLAN_MAX_PAGES * CAREER_PLAN_PAGE_SIZE}，仅加载前 ${CAREER_PLAN_MAX_PAGES} 页`,
     )
+  }
+  const pages = [first.list]
+  if (totalPages > 1) {
+    const rest = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, i) => fetchCareerPlanPage(i + 2)),
+    )
+    rest.forEach((p) => pages.push(p.list))
+  }
+  return pages.flat().map(mapCareerPlan)
+}
+
+function fetchCareerPlanPage(page: number): Promise<{ list: any[]; total: number }> {
+  return request
+    .get('/profile/career-plans', { params: { page, per_page: CAREER_PLAN_PAGE_SIZE } })
+    .then((res: any) => ({
+      list: Array.isArray(res?.list) ? res.list : [],
+      total: Number(res?.total) || 0,
+    }))
+}
+
+function mapCareerPlan(p: any): CareerPlanRecord {
+  return {
+    id: String(p.id),
+    semester: p.semesterName || '',
+    title: p.title,
+    submitDate: (p.submittedAt || '').slice(0, 10),
+    status: CAREER_PLAN_STATUS_MAP[p.status] ?? 'draft',
+    progressRate: p.progressRate,
+    statusLabel: p.statusLabel,
+  }
 }
 
 /** 提交职业规划的载荷（字段与 POST /profile/career-plans 一致，以表单数据为准） */
@@ -105,12 +135,21 @@ export function getCareerPlanDetail(planId: number): Promise<any> {
   return request.get(`/profile/career-plans/${planId}`)
 }
 
-/** 下载职业规划文件（GET /profile/career-plans/{planId}/download） */
+/**
+ * 下载职业规划文件（GET /profile/career-plans/{planId}/download）
+ * 后端返回 302 重定向到 OSS 签名 URL（不是 JSON 信封），必须按 blob 接收后本地保存；
+ * 按 JSON 解析会被响应拦截器当成业务失败（res.code 不存在）。PDF 生成可能较慢，单独放宽超时。
+ */
 export function downloadCareerPlanFile(
   planId: number,
   purpose: 'internal' | 'external' = 'external',
 ): Promise<void> {
-  return request.get(`/profile/career-plans/${planId}/download`, { params: { purpose } })
+  return downloadBlobFile(
+    `/profile/career-plans/${planId}/download`,
+    `职业规划-${planId}.pdf`,
+    undefined,
+    { params: { purpose }, timeout: 60_000 },
+  )
 }
 
 /** 预览职业规划文件（GET /profile/career-plans/{planId}/preview） */
@@ -124,6 +163,11 @@ export function previewCareerPlanFile(
   generatedAt: string
 }> {
   return request.get(`/profile/career-plans/${planId}/preview`, { params: { purpose } })
+}
+
+/** 删除整份职业规划（DELETE /profile/career-plans/{planId}） */
+export function deleteCareerPlan(planId: number): Promise<void> {
+  return request.delete(`/profile/career-plans/${planId}`)
 }
 
 /** 复制上一学期计划（POST /profile/career-plans/copy） */

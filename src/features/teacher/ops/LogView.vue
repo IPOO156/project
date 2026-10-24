@@ -15,15 +15,18 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { getExportLogs, getLoginLogs, getSystemLogs } from '@/shared/api/teacher-api'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { EXPORT_TYPE_OPTIONS, LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import { toDayRangeBounds } from '@/shared/utils/time'
 import ExportLogTable from './ExportLogTable.vue'
 import LoginLogTable from './LoginLogTable.vue'
 import LogTable from './LogTable.vue'
 import ScopedLogView from './ScopedLogView.vue'
 
-const { hasPermission } = useTeacherAuthz()
-// 仅持有 log:view / log:audit 的管理员可查看系统 / 登录 / 导出三个维度（/admin/logs/**）；
-// 教师 / 辅导员只能查看自身 + 授权范围内学生的操作日志（/teacher/logs，脱敏）。
-const isScoped = computed(() => !hasPermission('log:view') && !hasPermission('log:audit'))
+const { canAccessAny } = useTeacherAuthz()
+// 可查看系统 / 登录 / 导出三个维度（/admin/logs/**）的判据是后端真实的 log:view
+// （AdminLogService 只校验该码），admin 角色直通。log:audit 不在此列。
+// 教师 / 辅导员查看自身 + 授权范围内学生日志的分支保留给 /teacher/logs（后端当前仍要求 admin）。
+const isScoped = computed(() => !canAccessAny(['log:view']))
 
 // ── 操作日志（系统日志）：筛选与分页 ──
 const filters = reactive({
@@ -121,14 +124,14 @@ onMounted(() => {
 async function load() {
   loading.value = true
   try {
-    const [start, end] = filters.dateRange
+    const { startTime, endTime } = toDayRangeBounds(filters.dateRange)
     const res = await getSystemLogs({
       page: page.value,
       per_page: perPage.value,
       action: filters.action || undefined,
       module: filters.module || undefined,
-      startTime: start || undefined,
-      endTime: end || undefined,
+      startTime,
+      endTime,
     })
     logs.value = res.list
     total.value = res.total
@@ -168,14 +171,14 @@ function handlePageChange(p: number) {
 async function loadLogin() {
   loginLoading.value = true
   try {
-    const [start, end] = loginFilters.dateRange
+    const { startTime, endTime } = toDayRangeBounds(loginFilters.dateRange)
     const res = await getLoginLogs({
       page: loginPage.value,
       per_page: loginPerPage.value,
       loginStatus: loginFilters.loginStatus === '' ? undefined : loginFilters.loginStatus,
       ipAddress: loginFilters.ipAddress.trim() || undefined,
-      startTime: start || undefined,
-      endTime: end || undefined,
+      startTime,
+      endTime,
     })
     loginLogs.value = res.list
     loginTotal.value = res.total
@@ -215,14 +218,14 @@ function handleLoginPageChange(p: number) {
 async function loadExport() {
   exportLoading.value = true
   try {
-    const [start, end] = exportFilters.dateRange
+    const { startTime, endTime } = toDayRangeBounds(exportFilters.dateRange)
     const res = await getExportLogs({
       page: exportPage.value,
       per_page: exportPerPage.value,
       exportType: exportFilters.exportType.trim() || undefined,
       isAnonymized: exportFilters.isAnonymized === '' ? undefined : exportFilters.isAnonymized,
-      startTime: start || undefined,
-      endTime: end || undefined,
+      startTime,
+      endTime,
     })
     exportLogs.value = res.list
     exportTotal.value = res.total
@@ -270,10 +273,9 @@ function handleRefresh() {
   <div class="mc-page log-view">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
-        <p class="mc-page-head__eyebrow">系统运维 · Audit Logs</p>
-        <h2 class="mc-page-head__title">操作日志</h2>
+        <h2 class="mc-page-head__title">日志查看</h2>
         <p class="mc-page-head__desc">
-          查看授权范围内的系统操作记录。操作人、学号与 IP 按角色脱敏展示。
+          查看操作、登录与导出日志。操作人、学号与 IP 按当前角色脱敏展示。
         </p>
       </div>
       <div v-if="!isScoped" class="mc-page-head__actions">
@@ -316,7 +318,7 @@ function handleRefresh() {
                 range-separator="至"
                 start-placeholder="开始时间"
                 end-placeholder="结束时间"
-                value-format="YYYY-MM-DDTHH:mm:ss"
+                value-format="YYYY-MM-DD"
               />
             </el-form-item>
             <el-form-item>
@@ -335,10 +337,8 @@ function handleRefresh() {
           </div>
           <div class="mc-card__body">
             <div v-loading="loading" class="log-view__body">
-              <template v-if="logs.length">
-                <LogTable :data="logs" />
-              </template>
-              <el-empty v-else description="暂无操作日志" />
+              <LogTable v-if="logs.length" :data="logs" />
+              <EmptyState v-else text="暂无操作日志" compact />
             </div>
             <div v-if="total > 0" class="log-view__pagination">
               <el-pagination
@@ -385,7 +385,7 @@ function handleRefresh() {
                 range-separator="至"
                 start-placeholder="开始时间"
                 end-placeholder="结束时间"
-                value-format="YYYY-MM-DDTHH:mm:ss"
+                value-format="YYYY-MM-DD"
               />
             </el-form-item>
             <el-form-item>
@@ -409,10 +409,8 @@ function handleRefresh() {
           </div>
           <div class="mc-card__body">
             <div v-loading="loginLoading" class="log-view__body">
-              <template v-if="loginLogs.length">
-                <LoginLogTable :data="loginLogs" />
-              </template>
-              <el-empty v-else description="暂无登录日志" />
+              <LoginLogTable v-if="loginLogs.length" :data="loginLogs" />
+              <EmptyState v-else text="暂无登录日志" compact />
             </div>
             <div v-if="loginTotal > 0" class="log-view__pagination">
               <el-pagination
@@ -469,7 +467,7 @@ function handleRefresh() {
                 range-separator="至"
                 start-placeholder="开始时间"
                 end-placeholder="结束时间"
-                value-format="YYYY-MM-DDTHH:mm:ss"
+                value-format="YYYY-MM-DD"
               />
             </el-form-item>
             <el-form-item>
@@ -493,10 +491,8 @@ function handleRefresh() {
           </div>
           <div class="mc-card__body">
             <div v-loading="exportLoading" class="log-view__body">
-              <template v-if="exportLogs.length">
-                <ExportLogTable :data="exportLogs" />
-              </template>
-              <el-empty v-else description="暂无导出日志" />
+              <ExportLogTable v-if="exportLogs.length" :data="exportLogs" />
+              <EmptyState v-else text="暂无导出日志" compact />
             </div>
             <div v-if="exportTotal > 0" class="log-view__pagination">
               <el-pagination

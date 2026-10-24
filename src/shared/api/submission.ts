@@ -5,6 +5,8 @@
 
 /** archiveType 别名映射（前端类型 key ↔ /activities 下划线别名） */
 export { ARCHIVE_TYPE_ALIASES } from './submission/archive-type'
+/** 奖项类型 key → award_type 枚举码（奖项查重入参） */
+export { awardTypeCodeOf } from './submission/contracts'
 /** 活动详情 → 前端表单字段逆向映射 */
 export { DETAIL_TO_FORM_MAP, mapDetailToForm } from './submission/detail-form'
 /** 契约 payload 构建（字段重命名/日期归一化/学期解析） */

@@ -13,7 +13,7 @@ import type { ScheduledTaskItem } from '@/shared/types/teacher'
  * 教师端无等价接口，属管理端功能，前端在此统一展示。
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Clock, Pencil, Play, Plus, RefreshCw, Search, Trash2 } from 'lucide-vue-next'
+import { Clock, Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 
 import {
@@ -23,6 +23,10 @@ import {
   triggerScheduledTask,
   updateScheduledTaskStatus,
 } from '@/shared/api/teacher-api'
+import { SCHEDULED_TASK_GROUPS } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
+import RowActions from '@/shared/ui/RowActions.vue'
+import { formatDateTime } from '@/shared/utils/time'
 
 import ScheduledTaskDetailDrawer from './ScheduledTaskDetailDrawer.vue'
 import ScheduledTaskFormDialog from './ScheduledTaskFormDialog.vue'
@@ -44,6 +48,12 @@ function runStatusTagType(status: number | null): 'success' | 'danger' | 'info' 
   if (status === 1) return 'success'
   if (status === 2) return 'danger'
   return 'info'
+}
+
+/** 分组字段允许自定义文本：已知分组显示中文，未知值原样显示并用 title 保留原码 */
+function taskGroupLabel(group: string | null) {
+  if (!group) return '-'
+  return SCHEDULED_TASK_GROUPS[group] ?? group
 }
 
 async function loadList() {
@@ -189,9 +199,8 @@ onMounted(() => void loadList())
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">定时任务管理</h2>
         <p class="mc-page-head__desc">
-          定时任务用于按 Cron 计划自动执行后台作业（如清理过期文件、刷新统计缓存、审批超时提醒），
-          也可手动立即触发一次。任务「实际执行什么」由所选的<strong>处理器</strong>决定，
-          处理器由后端注册，新建任务时只能从已注册的处理器中选择。
+          定时任务会按设定周期自动执行清理、统计、提醒等后台作业，也可以手动执行一次。
+          新建任务时从已提供的处理程序中选择具体动作。
         </p>
       </div>
       <div class="mc-page-head__actions">
@@ -234,26 +243,30 @@ onMounted(() => void loadList())
       <div class="mc-card__body">
         <el-table v-loading="loading" :data="list" stripe>
           <el-table-column prop="taskName" label="任务名称" min-width="160" />
-          <el-table-column prop="taskCode" label="任务编码" width="170">
+          <el-table-column prop="taskCode" label="任务编码" width="170" show-overflow-tooltip>
             <template #default="{ row }"
               ><span class="mc-num">{{ row.taskCode }}</span></template
             >
           </el-table-column>
           <el-table-column prop="taskGroup" label="分组" width="110">
-            <template #default="{ row }">{{ row.taskGroup ?? '-' }}</template>
+            <template #default="{ row }">
+              <span :title="row.taskGroup ?? ''">{{ taskGroupLabel(row.taskGroup) }}</span>
+            </template>
           </el-table-column>
           <el-table-column prop="cronExpression" label="Cron 表达式" width="150">
             <template #default="{ row }"
               ><span class="mc-num">{{ row.cronExpression ?? '-' }}</span></template
             >
           </el-table-column>
-          <el-table-column label="最近运行" min-width="170">
+          <el-table-column label="最近运行" min-width="180">
             <template #default="{ row }">
               <div class="scheduled-task__run">
                 <el-tag :type="runStatusTagType(row.lastRunStatus)" size="small">
                   {{ row.lastRunStatusLabel ?? '未运行' }}
                 </el-tag>
-                <span class="scheduled-task__run-time">{{ row.lastRunAt ?? '-' }}</span>
+                <span class="scheduled-task__run-time">
+                  {{ row.lastRunAt ? formatDateTime(row.lastRunAt) : '-' }}
+                </span>
               </div>
             </template>
           </el-table-column>
@@ -268,9 +281,10 @@ onMounted(() => void loadList())
               />
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="230" align="center">
+          <!-- 1024 宽下表格横向滚动时，操作列固定在右侧，避免看不到行操作 -->
+          <el-table-column label="操作" width="130" align="center" fixed="right">
             <template #default="{ row }">
-              <div class="scheduled-task__actions">
+              <RowActions>
                 <el-button
                   text
                   type="primary"
@@ -279,40 +293,34 @@ onMounted(() => void loadList())
                 >
                   详情
                 </el-button>
-                <el-button
-                  text
-                  type="primary"
-                  size="small"
-                  :icon="Pencil"
-                  @click="handleEdit(row as ScheduledTaskItem)"
-                >
-                  编辑
-                </el-button>
-                <el-button
-                  text
-                  type="primary"
-                  size="small"
-                  :icon="Play"
-                  :loading="triggeringId === (row as ScheduledTaskItem).taskId"
-                  :disabled="triggeringId !== null"
-                  @click="handleTrigger(row as ScheduledTaskItem)"
-                >
-                  执行
-                </el-button>
-                <el-button
-                  text
-                  type="danger"
-                  size="small"
-                  :icon="Trash2"
-                  :loading="deletingId === (row as ScheduledTaskItem).taskId"
-                  :disabled="deletingId !== null"
-                  @click="handleDelete(row as ScheduledTaskItem)"
-                >
-                  删除
-                </el-button>
-              </div>
+                <template #more>
+                  <el-dropdown-item @click="handleEdit(row as ScheduledTaskItem)">
+                    编辑
+                  </el-dropdown-item>
+                  <!-- 手动执行会真实跑一次任务，属低频且影响面较大的操作，收进「更多」。 -->
+                  <el-dropdown-item
+                    :disabled="triggeringId !== null"
+                    @click="handleTrigger(row as ScheduledTaskItem)"
+                  >
+                    {{
+                      triggeringId === (row as ScheduledTaskItem).taskId ? '执行中…' : '立即执行'
+                    }}
+                  </el-dropdown-item>
+                  <el-dropdown-item
+                    divided
+                    class="row-actions__danger"
+                    :disabled="deletingId !== null"
+                    @click="handleDelete(row as ScheduledTaskItem)"
+                  >
+                    {{ deletingId === (row as ScheduledTaskItem).taskId ? '删除中…' : '删除' }}
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState text="暂无定时任务" compact />
+          </template>
         </el-table>
         <div class="scheduled-task__pagination">
           <el-pagination
@@ -326,7 +334,6 @@ onMounted(() => void loadList())
             @size-change="searchTasks"
           />
         </div>
-        <el-empty v-if="!loading && !list.length" description="暂无定时任务" :image-size="72" />
       </div>
     </div>
 
@@ -351,20 +358,6 @@ onMounted(() => void loadList())
   &__run-time {
     font-size: 12px;
     color: var(--el-text-color-secondary);
-  }
-
-  &__actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    flex-wrap: nowrap;
-    white-space: nowrap;
-
-    // 去掉 Element Plus 相邻按钮默认 12px 间距，保证操作按钮一排排布
-    :deep(.el-button + .el-button) {
-      margin-left: 0;
-    }
   }
 
   &__pagination {

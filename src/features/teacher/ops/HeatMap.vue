@@ -2,7 +2,7 @@
 import type { HeatmapStatistics, SemesterItem } from '@/shared/types/teacher'
 /**
  * HeatMap - 成果热力图（管理员与教师共用同一页面，按角色切换端点）
- * 管理员（isAdmin：持 log:view / log:audit）→ /admin/statistics/heatmap（全校数据，指标含「兴趣」）；
+ * 持 statistics:view（或 admin 角色）→ /admin/statistics/heatmap（全校数据，指标含「兴趣」）；
  * 教师 → /teacher/statistics/heatmap（本人 role_scopes 范围，指标仅 gpa/award/practice/archive）。
  * 组织 × 学期 指标矩阵，values 为 0-100 归一化值，rawValues 为原始值，maxValue/minValue 为原始值范围。
  * 学期与学院/专业/班级范围来自 /common/semesters + /auth/me scopes。
@@ -19,8 +19,9 @@ import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilte
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { useHeatMapOption } from './useHeatMapOption'
 
-const { hasPermission } = useTeacherAuthz()
-const isAdmin = computed(() => hasPermission('log:view') || hasPermission('log:audit'))
+// 与后端 AdminStatisticsService 的 statistics:view 同码；admin 角色直通（其权限码可能为空）
+const { canAccessAny } = useTeacherAuthz()
+const useAdminHeatmap = computed(() => canAccessAny(['statistics:view']))
 
 const semesters = ref<SemesterItem[]>([])
 const loadingSemesters = ref(false)
@@ -33,12 +34,6 @@ const ORG_TYPE_OPTIONS = [
   { value: 3, label: '专业' },
   { value: 4, label: '班级' },
 ]
-
-const ORG_TYPE_LABEL: Record<number, string> = {
-  2: '学院',
-  3: '专业',
-  4: '班级',
-}
 
 const filters = reactive({
   metric: 'award',
@@ -71,8 +66,7 @@ const {
   hasData,
   isFiltered,
   legendGradient,
-  semesterChipText,
-} = useHeatMapOption({ heatmap, filters, isAdmin, semesters })
+} = useHeatMapOption({ heatmap, filters, useAdminHeatmap })
 
 function drillOrgId() {
   if (filters.orgType === 2) return filters.collegeId
@@ -85,7 +79,7 @@ async function load() {
   loading.value = true
   try {
     // 管理员调 /admin/statistics/heatmap（全校数据），教师调 /teacher/statistics/heatmap（学院范围）
-    const fn = isAdmin.value ? getAdminStatisticsHeatmap : getStatisticsHeatmap
+    const fn = useAdminHeatmap.value ? getAdminStatisticsHeatmap : getStatisticsHeatmap
     heatmap.value = await fn({
       semesterId: filters.semesterId,
       orgType: filters.orgType,
@@ -125,119 +119,89 @@ onMounted(async () => {
           以组织为行、学期为列，查看各指标的成果分布（数值按全校该指标最大值归一化到 0-100）。
         </p>
       </div>
-      <div class="mc-page-head__actions heat-map__head-actions">
-        <div class="heat-map__head-chip">
-          <span class="heat-map__head-chip-label">指标</span>
-          <span class="heat-map__head-chip-value">{{ metricLabel(filters.metric) }}</span>
-        </div>
-        <div class="heat-map__head-chip">
-          <span class="heat-map__head-chip-label">行维度</span>
-          <span class="heat-map__head-chip-value">{{ ORG_TYPE_LABEL[filters.orgType] }}</span>
-        </div>
-        <div class="heat-map__head-chip">
-          <span class="heat-map__head-chip-label">学期</span>
-          <span class="heat-map__head-chip-value">{{ semesterChipText }}</span>
-        </div>
-      </div>
     </header>
 
     <!-- 筛选区 -->
-    <section class="mc-card heat-map__filters">
-      <div class="mc-card__head">
-        <span class="mc-card__title">
-          <Flame :size="14" />
-          筛选条件
-        </span>
-      </div>
-      <div class="mc-card__body heat-map__filters-body">
-        <div class="heat-map__filter-group">
-          <p class="heat-map__filter-group-title">指标维度</p>
-          <div class="heat-map__filter-row">
-            <el-select v-model="filters.metric" class="heat-map__select heat-map__select--narrow">
-              <!-- 自定义下拉内容（圆点+文案）同时需显式 :label，
-                   否则收起态 el-select 无法取到 label，会在输入框回退显示 raw value（如 "award"） -->
-              <el-option
-                v-for="m in metricOptions"
-                :key="m.value"
-                :value="m.value"
-                :label="m.label"
-              >
-                <template #default>
-                  <span class="heat-map__metric-option">
-                    <span class="heat-map__metric-dot is-sm" :style="{ background: m.accent }" />
-                    <span>{{ m.label }}</span>
-                  </span>
-                </template>
-              </el-option>
-            </el-select>
-            <el-select v-model="filters.orgType" class="heat-map__select heat-map__select--narrow">
-              <el-option
-                v-for="t in ORG_TYPE_OPTIONS"
-                :key="t.value"
-                :label="t.label"
-                :value="t.value"
-              />
-            </el-select>
-          </div>
-        </div>
-        <div class="heat-map__filter-group">
-          <p class="heat-map__filter-group-title">组织范围</p>
-          <div class="heat-map__filter-row">
-            <el-select
-              v-if="cascade.college"
-              v-model="filters.collegeId"
-              clearable
-              placeholder="全部学院"
-              class="heat-map__select"
-            >
-              <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
-            </el-select>
-            <el-select
-              v-if="cascade.major"
-              v-model="filters.majorId"
-              clearable
-              placeholder="全部专业"
-              class="heat-map__select"
-            >
-              <el-option v-for="m in majors" :key="m.id" :label="m.name" :value="m.id" />
-            </el-select>
-            <el-select
-              v-if="cascade.class"
-              v-model="filters.classId"
-              clearable
-              placeholder="全部班级"
-              class="heat-map__select"
-            >
-              <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
-            </el-select>
-            <el-select
-              v-model="filters.semesterId"
-              clearable
-              placeholder="全部学期"
-              :loading="loadingSemesters"
-              class="heat-map__select"
-            >
-              <el-option v-for="s in semesters" :key="s.value" :label="s.label" :value="s.value" />
-            </el-select>
-            <div class="heat-map__filter-actions">
-              <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <div class="mc-filter-bar">
+      <el-form inline @submit.prevent="handleSearch">
+        <el-form-item label="指标">
+          <el-select v-model="filters.metric" style="width: 140px">
+            <el-option
+              v-for="m in metricOptions"
+              :key="m.value"
+              :label="m.label"
+              :value="m.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="行维度">
+          <el-select v-model="filters.orgType" style="width: 120px">
+            <el-option
+              v-for="t in ORG_TYPE_OPTIONS"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="cascade.college" label="学院">
+          <el-select
+            v-model="filters.collegeId"
+            clearable
+            placeholder="全部学院"
+            style="width: 170px"
+          >
+            <el-option v-for="c in colleges" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="cascade.major" label="专业">
+          <el-select
+            v-model="filters.majorId"
+            clearable
+            placeholder="全部专业"
+            style="width: 170px"
+          >
+            <el-option v-for="m in majors" :key="m.id" :label="m.name" :value="m.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="cascade.class" label="班级">
+          <el-select
+            v-model="filters.classId"
+            clearable
+            placeholder="全部班级"
+            style="width: 170px"
+          >
+            <el-option v-for="c in classes" :key="c.id" :label="c.name" :value="c.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="学期">
+          <el-select
+            v-model="filters.semesterId"
+            clearable
+            placeholder="全部学期"
+            :loading="loadingSemesters"
+            style="width: 180px"
+          >
+            <el-option v-for="s in semesters" :key="s.value" :label="s.label" :value="s.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
 
     <!-- 概览统计 -->
     <section v-if="hasData" class="heat-map__stats">
-      <article class="heat-map__stat heat-map__stat--max">
+      <article class="heat-map__stat">
         <p class="heat-map__stat-label">最高值</p>
         <p class="heat-map__stat-value mc-num">
           {{ formatRaw(globalStats.maxRaw) }}
           <span class="heat-map__stat-unit">{{ metricMeta(filters.metric)?.unit || '' }}</span>
         </p>
-        <p class="heat-map__stat-foot">全校最高单格原始值</p>
+        <p class="heat-map__stat-foot">全部单格中的最高原始值</p>
       </article>
-      <article class="heat-map__stat heat-map__stat--total">
+      <article class="heat-map__stat">
         <p class="heat-map__stat-label">合计</p>
         <p class="heat-map__stat-value mc-num">
           {{ formatRaw(globalStats.totalRaw) }}
@@ -245,7 +209,7 @@ onMounted(async () => {
         </p>
         <p class="heat-map__stat-foot">矩阵内全部原始值求和</p>
       </article>
-      <article class="heat-map__stat heat-map__stat--avg">
+      <article class="heat-map__stat">
         <p class="heat-map__stat-label">平均热度</p>
         <p class="heat-map__stat-value mc-num">
           {{ globalStats.avgNorm }}
@@ -253,7 +217,7 @@ onMounted(async () => {
         </p>
         <p class="heat-map__stat-foot">按归一化值平均</p>
       </article>
-      <article class="heat-map__stat heat-map__stat--cell">
+      <article class="heat-map__stat">
         <p class="heat-map__stat-label">单元格</p>
         <p class="heat-map__stat-value mc-num">
           {{ globalStats.cellCount }}
@@ -271,12 +235,6 @@ onMounted(async () => {
         <span class="mc-card__title">
           学期成果分布
           <span v-if="heatmap" class="heat-map__matrix-title-metric">
-            <span
-              class="heat-map__metric-dot"
-              :style="{
-                background: metricMeta(heatmap.metric)?.accent || 'var(--el-color-primary)',
-              }"
-            />
             {{ metricLabel(heatmap.metric) }}
           </span>
         </span>

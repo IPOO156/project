@@ -265,7 +265,8 @@ export function useResumeExport() {
       }
 
       if (result) {
-        window.open(result.downloadUrl, '_blank')
+        // 同 useArchiveExport：预签名下载地址必须以 noopener/noreferrer 打开。
+        window.open(result.downloadUrl, '_blank', 'noopener,noreferrer')
         ElMessage.success(`简历导出任务已创建，链接有效期至 ${formatExpireAt(result.expireAt)}`)
       } else {
         // 4) 后端接口异常时回退本地 html2canvas + jspdf 生成

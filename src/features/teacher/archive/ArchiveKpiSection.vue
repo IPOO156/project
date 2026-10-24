@@ -101,7 +101,6 @@ defineProps<Props>()
     }
 
     &:hover {
-      transform: translateY(-2px);
       border-color: rgba($color-accent, 0.3);
       box-shadow: 0 4px 14px -6px rgba($color-primary, 0.15);
     }

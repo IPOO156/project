@@ -1,5 +1,5 @@
 import type { ComputedRef, Ref } from 'vue'
-import type { HeatmapStatistics, SemesterItem } from '@/shared/types/teacher'
+import type { HeatmapStatistics } from '@/shared/types/teacher'
 import { computed } from 'vue'
 
 /**
@@ -15,17 +15,16 @@ interface MetricOption {
   label: string
   unit: string
   decimals: number
-  accent: string
   /** 仅管理端端点支持；教师端后端白名单不含该项，选了会被拒（见 metricOptions） */
   adminOnly?: boolean
 }
 
 const METRIC_OPTIONS: MetricOption[] = [
-  { value: 'gpa', label: '绩点', unit: '', decimals: 2, accent: '#1e3a5f' },
-  { value: 'award', label: '获奖', unit: '项', decimals: 0, accent: '#d4a574' },
-  { value: 'practice', label: '实践', unit: '次', decimals: 0, accent: '#10b981' },
-  { value: 'interest', label: '兴趣', unit: '项', decimals: 0, accent: '#8b5cf6', adminOnly: true },
-  { value: 'archive', label: '档案', unit: '份', decimals: 0, accent: '#3b82f6' },
+  { value: 'gpa', label: '绩点', unit: '', decimals: 2 },
+  { value: 'award', label: '获奖', unit: '项', decimals: 0 },
+  { value: 'practice', label: '实践', unit: '次', decimals: 0 },
+  { value: 'interest', label: '兴趣', unit: '项', decimals: 0, adminOnly: true },
+  { value: 'archive', label: '档案', unit: '份', decimals: 0 },
 ]
 
 /** 热力图筛选条件（与页面 filters 响应式对象同源） */
@@ -105,10 +104,9 @@ function heatColor(norm: number | undefined): string {
 export function useHeatMapOption(params: {
   heatmap: Ref<HeatmapStatistics | null>
   filters: HeatMapFilters
-  isAdmin: ComputedRef<boolean>
-  semesters: Ref<SemesterItem[]>
+  useAdminHeatmap: ComputedRef<boolean>
 }) {
-  const { heatmap, filters, isAdmin, semesters } = params
+  const { heatmap, filters, useAdminHeatmap } = params
 
   /**
    * 指标下拉按角色过滤 —— 后端两个端点的 metric 白名单不同：
@@ -116,10 +114,10 @@ export function useHeatMapOption(params: {
    * 教师端 /teacher/statistics/heatmap 仅 gpa/award/practice/archive
    * （教师端接口文档注明为「子集」，对应 AdminStatisticsService.TEACHER_HEATMAP_METRICS）。
    * 教师若选中「兴趣」，请求会被后端以 code 10001「metric 仅支持 gpa/award/practice/archive」拒绝，
-   * 故选项跟随端点一起收窄 —— 与 load() 里 isAdmin 选端点的判断保持同一口径。
+   * 故选项跟随端点一起收窄 —— 与 load() 里 useAdminHeatmap 选端点的判断保持同一口径。
    */
   const metricOptions = computed(() =>
-    isAdmin.value ? METRIC_OPTIONS : METRIC_OPTIONS.filter((m) => !m.adminOnly),
+    useAdminHeatmap.value ? METRIC_OPTIONS : METRIC_OPTIONS.filter((m) => !m.adminOnly),
   )
 
   function metricMeta(metric: string) {
@@ -231,12 +229,6 @@ export function useHeatMapOption(params: {
     return `linear-gradient(90deg, ${stops})`
   })
 
-  /** 页头「学期」chip：契约无统计时间字段，按当前学期筛选标注（默认为全部学期） */
-  const semesterChipText = computed(() => {
-    if (filters.semesterId == null) return '全部学期'
-    return semesters.value.find((s) => s.value === filters.semesterId)?.label ?? '全部学期'
-  })
-
   return {
     metricOptions,
     metricMeta,
@@ -252,6 +244,5 @@ export function useHeatMapOption(params: {
     hasData,
     isFiltered,
     legendGradient,
-    semesterChipText,
   }
 }

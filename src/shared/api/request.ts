@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import bookCursor from '@/shared/utils/bookCursor'
-import { clearUserScopedStorage } from '@/shared/utils/session'
+import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import {
   clearAuth,
   getRefreshToken,
@@ -19,12 +19,28 @@ const request = axios.create({
   },
 })
 
-// 测试账号（后端已配置跳过验证码）
-const CAPTCHA_SKIP_ACCOUNTS = ['202401002', 'T00003', 'A00002']
+// 免验证码测试账号名单。
+//
+// 原先此处硬编码了一份测试账号清单（学生/教师/管理员各若干），与 Login.vue 的
+// SKIP_ACCOUNTS、后端 application-dev.yml 的 auth.captcha.skip-users 三处各自维护、
+// 极易发散（曾出现后端已加账号、前端两处名单未加，导致点击登录无任何请求发出）。
+// 现按要求移除：前端不再内置任何测试账号，开发时一律走图形验证码登录。
+//
+// 若日后确需免验证码调试，优先从 .env.development 注入（如 VITE_CAPTCHA_SKIP_ACCOUNTS），
+// 而不是在源码里硬编码 —— 硬编码的账号标识会随开发构建产物分发。
+const CAPTCHA_SKIP_ACCOUNTS = import.meta.env.DEV
+  ? (import.meta.env.VITE_CAPTCHA_SKIP_ACCOUNTS || '')
+      .split(',')
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+  : []
 
-// 密钥：与后端 auth.captcha.skip-secret 保持一致
-// 开发环境 .env.development 可覆盖，生产构建 import.meta.env.PROD 为空字符串自动不生效
-const CAPTCHA_SKIP_SECRET = import.meta.env.VITE_CAPTCHA_SKIP_SECRET || ''
+// 密钥：与后端 auth.captcha.skip-secret 保持一致，仅开发/联调环境读取。
+// .env.production 不设置 VITE_CAPTCHA_SKIP_SECRET，且此处再用 DEV 门控，
+// 防止误配环境变量把跳过能力带进生产构建。
+const CAPTCHA_SKIP_SECRET = import.meta.env.DEV
+  ? import.meta.env.VITE_CAPTCHA_SKIP_SECRET || ''
+  : ''
 
 // ── 书册指针「加载中」态：全局请求计数 + 延迟触发 ──
 // 延迟 180ms 再切换光标，避免短请求（验证码、下拉选项等）造成光标闪烁；
@@ -106,12 +122,29 @@ function tryRefreshToken(): Promise<string | null> {
   return refreshPromise
 }
 
+/**
+ * 强制登出时的本地清理。
+ * user store 的主动登出会清理这些缓存；但令牌过期/刷新失败走这里时此前只清了 token，
+ * 残留的 user_info_cache / teacher_me 会让下一个登录账号读到上一个账号的 loginType
+ * 与权限码（路由守卫据此分流），必须一并清除。
+ */
+function clearAuthCaches() {
+  try {
+    // 会话失效（刷新失败）时同样清理当前用户的草稿/撤回标记，
+    // 避免令牌已失效但 PII 仍留在 localStorage。必须在删除身份缓存前执行。
+    clearCurrentUserScopedStorage(['form_draft_', 'submission:'])
+    localStorage.removeItem('user_info_cache')
+    localStorage.removeItem('teacher_me')
+    localStorage.removeItem('user_avatar_cache')
+    sessionStorage.removeItem('app:visited-tabs')
+  } catch {
+    /* 隐私模式下存储不可用时忽略 */
+  }
+}
+
 function forceLogout() {
   clearAuth()
-  // 强制登出同样需清除用户级本地存储（身份缓存 / 头像 / 教师身份 / 草稿等）。
-  // 分层红线：shared 层不得 import app 层 store，故此处只清存储不打理 store 内存态；
-  // 下方会整页跳转 /login（非登录页时），内存态随页面重载自然消失。
-  clearUserScopedStorage()
+  clearAuthCaches()
   // 已在登录页/根路径时禁止整页跳转：对相同 URL 赋值 location 会触发 reload。
   // 若 401 源是"匿名访问被安全链拒绝"而非"会话过期"，跳转会形成 ~150ms 一次的无休止
   // reload 循环（登录页 /public/statistics 401 曾触发此死循环），故仅非登录页才回跳。
@@ -133,6 +166,11 @@ function isBusiness401(url = '') {
 request.interceptors.response.use(
   (response) => {
     endRequestLoading()
+    // 文件下载（responseType=blob）没有业务信封：直接返回完整响应，
+    // 由调用方读取 blob 与 Content-Disposition；错误响应仍走下方 error 分支。
+    if (response.config.responseType === 'blob') {
+      return response
+    }
     const res = response.data
     if (res.code !== 0 && res.code !== 200) {
       ElMessage.error(res.message || '请求失败')
@@ -152,7 +190,11 @@ request.interceptors.response.use(
       // 但后端白名单尚未放行的 /public/**），并非"令牌过期"：一律下抛交由调用方 catch
       // 静默处理，禁止走刷新/登出——否则登录页对这类 401 的 forceLogout 会整页 reload，
       // 形成无休止刷新死循环。
-      if (status === 401 && !isBusiness401(url)) {
+      //
+      // /auth/refresh 自身返回 401 说明 refreshToken 已失效，不能再走刷新流程：
+      // 否则内部的 tryRefreshToken() 会返回仍在等待本请求的 refreshPromise，
+      // 形成 Promise 循环依赖，请求永不结算、页面 Loading 卡死且不会登出。
+      if (status === 401 && !isBusiness401(url) && !url?.includes('/auth/refresh')) {
         const hadToken = Boolean(error.config?.headers?.Authorization)
         if (!hadToken) {
           return Promise.reject(error)
