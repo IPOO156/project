@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import { computed, ref } from 'vue'
 import { useScrollReveal } from '../composables/useScrollReveal'
-import { findRingBySemester } from '../timeline-constants'
+import { findRingBySemester } from '../timelineConstants'
 import GrowthCard from './GrowthCard.vue'
 
 interface Props {

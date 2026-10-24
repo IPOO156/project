@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChatMessage } from '../types'
+import type { ChatMessage } from '../ai-chat.types'
 /**
  * MessageBubble - 单条消息气泡
  *

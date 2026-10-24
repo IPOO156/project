@@ -293,11 +293,9 @@ onMounted(() => {
             />
           </el-select>
           <el-button type="primary" size="default" @click="handleActivitySearch">
-            <Filter :size="14" style="margin-right: 4px" />筛选
+            <Filter class="u-mr-4" :size="14" />筛选
           </el-button>
-          <el-button @click="handleActivityReset">
-            <X :size="14" style="margin-right: 4px" />重置
-          </el-button>
+          <el-button @click="handleActivityReset"> <X class="u-mr-4" :size="14" />重置 </el-button>
         </div>
       </div>
 
@@ -305,8 +303,7 @@ onMounted(() => {
         <el-table
           :key="activityTableKey"
           :data="activityPaginated"
-          class="mc-table mc-table--staggered"
-          style="width: 100%"
+          class="mc-table mc-table--staggered u-w-full"
         >
           <el-table-column type="index" label="序号" width="64" align="center" />
           <el-table-column prop="text" label="动态内容" min-width="360" show-overflow-tooltip />
@@ -385,10 +382,10 @@ onMounted(() => {
             />
           </el-select>
           <el-button type="primary" size="default" @click="handleSubmissionSearch">
-            <Filter :size="14" style="margin-right: 4px" />筛选
+            <Filter class="u-mr-4" :size="14" />筛选
           </el-button>
           <el-button @click="handleSubmissionReset">
-            <X :size="14" style="margin-right: 4px" />重置
+            <X class="u-mr-4" :size="14" />重置
           </el-button>
         </div>
       </div>
@@ -397,8 +394,7 @@ onMounted(() => {
         <el-table
           :key="submissionTableKey"
           :data="submissionPaginated"
-          class="mc-table mc-table--staggered"
-          style="width: 100%"
+          class="mc-table mc-table--staggered u-w-full"
         >
           <el-table-column type="index" label="序号" width="64" align="center" />
           <el-table-column prop="title" label="名称" min-width="220" show-overflow-tooltip />

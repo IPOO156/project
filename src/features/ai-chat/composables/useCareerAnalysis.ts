@@ -11,7 +11,7 @@
  *
  * 后端 AI 就绪后，将 analyzeCareer 替换为真实 API 调用即可，上下游零改动。
  */
-import type { RichBlock } from '../types'
+import type { RichBlock } from '../ai-chat.types'
 import type {
   Award,
   CareerAnalysis,

@@ -9,10 +9,20 @@ import { expect } from '@playwright/test'
 export type LoginTab = 'student' | 'admin'
 
 /** 测试账号。前三个账号在 Login.vue:221 的 SKIP_ACCOUNTS 白名单内，验证码可留空 */
+// 密码不入库：由环境变量提供，缺失时直接失败，避免明文凭据进入仓库。
+const TEST_PASSWORD = process.env.VITE_E2E_PASSWORD ?? process.env.E2E_PASSWORD
+
+if (!TEST_PASSWORD) {
+  throw new Error(
+    '缺少测试账号密码环境变量：请设置 VITE_E2E_PASSWORD（或 E2E_PASSWORD）后再运行 E2E，' +
+      '例如 PowerShell: $env:VITE_E2E_PASSWORD="<密码>"。密码向联调后端负责人索取。',
+  )
+}
+
 export const ACCOUNTS = {
-  student: { userNo: '202401002', password: '123456' },
-  teacher: { userNo: 'T00003', password: '123456' },
-  admin: { userNo: 'A00002', password: '123456' },
+  student: { userNo: '202401002', password: TEST_PASSWORD },
+  teacher: { userNo: 'T00003', password: TEST_PASSWORD },
+  admin: { userNo: 'A00002', password: TEST_PASSWORD },
 } as const
 
 const TAB_TEXT: Record<LoginTab, string> = {

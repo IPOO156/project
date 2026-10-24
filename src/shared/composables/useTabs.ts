@@ -2,7 +2,7 @@ import type { Component } from 'vue'
 import type { RouteLocationMatched, RouteLocationNormalized } from 'vue-router'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useTabsStore } from '@/app/stores/tabs'
+import { useTabsStore } from '@/app/stores/useTabsStore'
 
 import { findTeacherMenuItemByPath } from '@/shared/config/teacherModuleRegistry'
 import { findMenuItemByPath } from '@/shared/constants/menu'

@@ -6,11 +6,11 @@
  * /ai/conversations/{id}/messages/{mid}/regenerate、/ai/suggestions、/ai/messages/{mid}/feedback、
  * DELETE /ai/conversations/{id}（见下方「后端 AI 接口」节）。
  *
- * 本地模拟（非真实接口，保留用途）：
- *   - sendMessage      → 离线回退（后端不可用时标注「离线模式」）
+ * 本地离线回退（非真实接口，仅在请求失败时兜底）：
+ *   - sendMessage      → 基于知识库的本地应答，标注「离线模式」，不写任何本地"对话列表"伪数据
  * 旧 Mock getConversations/getConversation/createConversation/deleteConversation 已废弃删除。
  */
-import type { AISuggestion, RichContent } from '@/features/ai-chat/types'
+import type { AISuggestion, RichContent } from '@/features/ai-chat/ai-chat.types'
 import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
 import {
   analysisToRichBlocks,
@@ -41,9 +41,8 @@ export interface ConversationSummary {
   messageCount: number
 }
 
-// ── Mock 辅助 ──
+// ── 离线回退辅助（后端不可用时使用，不落库、不伪造列表数据）──
 let convIdCounter = 0
-const mockConversations = new Map<string, ConversationSummary>()
 
 function nextConvId(): string {
   return `conv_${++convIdCounter}`
@@ -131,19 +130,6 @@ export function sendMessage(
         time: timeStr(),
         richContent: rich,
       }
-
-      // 同步更新 mock 对话存储
-      if (!mockConversations.has(cid)) {
-        const title = text.trim().slice(0, 14) + (text.trim().length > 14 ? '...' : '')
-        mockConversations.set(cid, {
-          id: cid,
-          title,
-          createTime: new Date().toLocaleString('zh-CN'),
-          messageCount: 0,
-        })
-      }
-      const conv = mockConversations.get(cid)!
-      conv.messageCount += 2 // user + ai
 
       resolve({ message: msgResult, conversationId: cid })
     }, 800)

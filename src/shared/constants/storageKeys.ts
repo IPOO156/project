@@ -27,3 +27,6 @@ export const LOADING_TIP_FAVORITES_KEY = 'loading_tip:favorites'
 
 /** 已屏蔽的提示主题列表（账号级偏好，登出清理） */
 export const LOADING_TIP_HIDDEN_KEY = 'loading_tip:hidden_categories'
+
+/** 上一条已展示的提示 id：用于避免同一会话内连续重复推送（会话级，不随登出清理） */
+export const LOADING_TIP_LAST_ID_KEY = 'loading_tip:last_id'

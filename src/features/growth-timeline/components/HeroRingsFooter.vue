@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import { computed } from 'vue'
-import { findRingBySemester, SEMESTER_RINGS } from '../timeline-constants'
+import { findRingBySemester, SEMESTER_RINGS } from '../timelineConstants'
 
 interface Props {
   experiences: GrowthExperience[]

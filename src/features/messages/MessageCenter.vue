@@ -237,7 +237,7 @@ onMounted(() => {
           <span class="message-header__stat-label">{{ stat.label }}</span>
         </div>
         <el-button type="primary" :disabled="filteredUnreadCount === 0" @click="markAllAsRead">
-          <CheckCheck :size="16" style="margin-right: 4px" />一键已读
+          <CheckCheck class="u-mr-4" :size="16" />一键已读
         </el-button>
         <el-button class="message-header__settings-btn" @click="openSettings">
           <Settings :size="16" />消息设置
@@ -300,9 +300,9 @@ onMounted(() => {
           />
         </el-select>
         <el-button type="primary" size="default" @click="handleSearch">
-          <Filter :size="14" style="margin-right: 4px" />筛选
+          <Filter class="u-mr-4" :size="14" />筛选
         </el-button>
-        <el-button @click="handleReset"> <X :size="14" style="margin-right: 4px" />重置 </el-button>
+        <el-button @click="handleReset"> <X class="u-mr-4" :size="14" />重置 </el-button>
       </div>
 
       <div class="panel-toolbar__batch">
@@ -325,13 +325,13 @@ onMounted(() => {
             :disabled="selectedIds.length === 0 || batchArchiving"
             @click="handleBatchArchive"
           >
-            <Archive :size="14" style="margin-right: 4px" />批量归档
+            <Archive class="u-mr-4" :size="14" />批量归档
           </el-button>
         </template>
       </div>
 
       <el-button @click="navigateToActivities">
-        <Mail :size="16" style="margin-right: 4px" />查看动态记录
+        <Mail class="u-mr-4" :size="16" />查看动态记录
       </el-button>
     </div>
 

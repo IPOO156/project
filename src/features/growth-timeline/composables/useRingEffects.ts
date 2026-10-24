@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import { computed, ref, watch } from 'vue'
-import { findRingBySemester, SEMESTER_RINGS } from '../timeline-constants'
+import { findRingBySemester, SEMESTER_RINGS } from '../timelineConstants'
 
 export function useRingEffects(
   experiences: Ref<GrowthExperience[]>,

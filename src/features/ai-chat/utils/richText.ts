@@ -6,7 +6,7 @@
  * - parseMarkdownToRichContent：将后端返回的 markdown 字符串解析为 RichContent（过滤 ** / ## 等符号，
  *   支持加粗、标题、有序/无序列表），解决在线回复原始 markdown 符号直出问题
  */
-import type { HighlightSegment, InlineSegment, RichBlock, RichContent } from '../types'
+import type { HighlightSegment, InlineSegment, RichBlock, RichContent } from '../ai-chat.types'
 
 /**
  * 将富文本转为纯文本

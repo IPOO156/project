@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { GrowthExperienceInput } from '../timeline-constants'
+import type { GrowthExperienceInput } from '../timelineConstants'
 import { Plus } from 'lucide-vue-next'
 import { computed, reactive, ref, watch } from 'vue'
 import { useSubmissionStore } from '@/app/stores/stores'
 import { activityCategoryOf } from '@/shared/api/submission'
-import { inferSemester } from '../timeline-constants'
+import { inferSemester } from '../timelineConstants'
 
 interface Props {
   visible: boolean

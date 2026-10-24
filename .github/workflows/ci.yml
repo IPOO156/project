@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, new-main]
+    branches: [main, new-main, nine]
   pull_request:
-    branches: [main, new-main]
+    branches: [main, new-main, nine]
 
 jobs:
   lint-and-build:
@@ -28,7 +28,14 @@ jobs:
         run: npm run lint:check
 
       - name: Type check
-        run: npx vue-tsc -b
+        run: npm run type-check
+
+      - name: Unit test
+        run: npm run test:unit
 
       - name: Build
         run: npm run build
+
+      # npm registry 默认走 npmmirror 时不支持 audit 接口，显式指定官方源
+      - name: Security audit
+        run: npm audit --omit=dev --audit-level=high --registry=https://registry.npmjs.org

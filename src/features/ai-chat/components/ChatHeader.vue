@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ExportFormat } from '../types'
+import type { ExportFormat } from '../ai-chat.types'
 /**
  * ChatHeader - 主聊天区顶部栏
  *

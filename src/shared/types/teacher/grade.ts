@@ -1,7 +1,7 @@
 /**
  * 教师端/管理端 API 类型 —— 成绩导入与导入配置（/admin/grades、/admin/grade-import-configs）
  */
-import type { PageQuery } from './common'
+import type { PageQuery } from './common-types'
 
 /* ===================== 成绩导入（/admin/grades）===================== */
 

@@ -12,7 +12,7 @@ import SummarySection from './components/SummarySection.vue'
 import TimelineListView from './components/TimelineListView.vue'
 import TimelineNode from './components/TimelineNode.vue'
 import { useGrowthTimeline } from './composables/useGrowthTimeline'
-import { findRingBySemester } from './timeline-constants'
+import { findRingBySemester } from './timelineConstants'
 
 const {
   experiences,

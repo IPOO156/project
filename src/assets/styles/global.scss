@@ -199,3 +199,87 @@ textarea,
 .el-textarea__inner {
   user-select: auto !important;
 }
+
+// =============================================================================
+// 原子工具类
+// 规范：静态内联样式一律下沉为以下工具类（仅动态计算值允许 :style）
+// =============================================================================
+.u-w-full {
+  width: 100%;
+}
+
+.u-w-55pct {
+  width: 55%;
+}
+
+.u-w-70pct {
+  width: 70%;
+}
+
+.u-w-80pct {
+  width: 80%;
+}
+
+.u-w-92 {
+  width: 92px;
+}
+
+.u-w-110 {
+  width: 110px;
+}
+
+.u-w-120 {
+  width: 120px;
+}
+
+.u-w-130 {
+  width: 130px;
+}
+
+.u-w-140 {
+  width: 140px;
+}
+
+.u-w-150 {
+  width: 150px;
+}
+
+.u-w-160 {
+  width: 160px;
+}
+
+.u-w-170 {
+  width: 170px;
+}
+
+.u-w-180 {
+  width: 180px;
+}
+
+.u-w-200 {
+  width: 200px;
+}
+
+.u-w-220 {
+  width: 220px;
+}
+
+.u-w-240 {
+  width: 240px;
+}
+
+.u-w-250 {
+  width: 250px;
+}
+
+.u-w-260 {
+  width: 260px;
+}
+
+.u-mr-4 {
+  margin-right: 4px;
+}
+
+.u-ml-2 {
+  margin-left: 2px;
+}

@@ -20,11 +20,12 @@ defineProps<Props>()
 const emit = defineEmits<{
   close: []
   submit: []
-  'update:field': [field: string, value: any]
+  'update:visible': [visible: boolean]
+  'update:form': [field: string, value: string]
 }>()
 
-function handleFieldChange(field: string, value: any) {
-  emit('update:field', field, value)
+function handleFieldChange(field: string, value: string) {
+  emit('update:form', field, value)
 }
 
 function handleSubmit() {
@@ -32,6 +33,7 @@ function handleSubmit() {
 }
 
 function handleBeforeClose(done: (cancel?: boolean) => void) {
+  emit('update:visible', false)
   emit('close')
   done()
 }

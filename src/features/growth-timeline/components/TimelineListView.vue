@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import { Plus, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { findRingBySemester, getSemesterLabel } from '../timeline-constants'
+import { findRingBySemester, getSemesterLabel } from '../timelineConstants'
 
 interface Props {
   experiences: GrowthExperience[]

@@ -95,10 +95,10 @@ defineExpose({ keyword: props.keyword, status: props.status })
 
       <el-select
         v-if="statusOptions.length > 0"
+        class="u-w-140"
         :model-value="status"
         placeholder="状态"
         clearable
-        style="width: 140px"
         aria-label="状态筛选"
         @update:model-value="handleStatusChange"
         @change="handleSearch"

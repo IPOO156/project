@@ -15,7 +15,7 @@ import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
 import BoardCharts from './components/BoardCharts.vue'
 import PieChart from './components/PieChart.vue'
-import { DECLARATION_TYPE_KEYS, DECLARATION_TYPE_LABELS } from './components/review-columns'
+import { DECLARATION_TYPE_KEYS, DECLARATION_TYPE_LABELS } from './components/reviewColumns'
 import TrendChart from './components/TrendChart.vue'
 
 const router = useRouter()
@@ -217,7 +217,7 @@ function goTo(path: string) {
               @click.stop="goTo(item.path)"
             >
               {{ item.hasData ? '查看' : '去填写' }}
-              <Plus :size="12" style="margin-left: 2px" />
+              <Plus class="u-ml-2" :size="12" />
             </el-button>
           </div>
         </el-col>

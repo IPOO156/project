@@ -1,7 +1,7 @@
 /**
  * 教师端/管理端 API 类型 —— 系统日志与教师端操作日志
  */
-import type { PageQuery } from './common'
+import type { PageQuery } from './common-types'
 
 /* ===================== 系统日志 ===================== */
 

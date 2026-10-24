@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ExportFormat } from '../types'
+import type { ExportFormat } from '../ai-chat.types'
 /**
  * ExportMenu - 导出格式下拉菜单（TXT / MD / PDF）
  *

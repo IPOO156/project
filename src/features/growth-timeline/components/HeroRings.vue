@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import type { ElectronItem, RingItem, TooltipState } from './HeroRings.types'
 import { ChevronDown } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import { useRingEffects } from '../composables/useRingEffects'
-import { findRingBySemester, getSemesterDisplayLabel, SEMESTER_RINGS } from '../timeline-constants'
+import { findRingBySemester, getSemesterDisplayLabel, SEMESTER_RINGS } from '../timelineConstants'
 import HeroRingsElectrons from './HeroRingsElectrons.vue'
 import HeroRingsFooter from './HeroRingsFooter.vue'
 import HeroRingsNucleus from './HeroRingsNucleus.vue'

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import { ElMessageBox } from 'element-plus'
 import { Trash2, X } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
-import { getSemesterDisplayLabel } from '../timeline-constants'
+import { getSemesterDisplayLabel } from '../timelineConstants'
 
 interface Props {
   experience: GrowthExperience | null

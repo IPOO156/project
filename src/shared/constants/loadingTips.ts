@@ -1,383 +1,34 @@
-import { LOADING_TIP_FAVORITES_KEY, LOADING_TIP_HIDDEN_KEY } from '@/shared/constants/storageKeys'
+import type { GradeStage, LoadingTip, LoadingTipCategory } from '@/shared/constants/loadingTipsData'
+import {
+  LOADING_TIP_CATEGORY_LABELS,
+  LOADING_TIPS,
+  TIPS_BY_CATEGORY,
+} from '@/shared/constants/loadingTipsData'
+import {
+  LOADING_TIP_FAVORITES_KEY,
+  LOADING_TIP_HIDDEN_KEY,
+  LOADING_TIP_LAST_ID_KEY,
+} from '@/shared/constants/storageKeys'
 
 /**
- * 加载页温馨提示文案库
+ * 加载页温馨提示：偏好（屏蔽/收藏）与随机选池逻辑。
  *
- * 设计原则：
- *  1. 按主题分类，由 resolveLoadingTipCategories 依据当前路由/角色匹配，避免「申报页推留学」；
- *  2. 每条 1-2 句、可执行、不说教，优先写具体动作而非口号；
- *  3. 文案只做「顺手的提醒」，不承诺结果、不制造焦虑；
- *  4. 新增主题时同步更新 LoadingTipCategory 与 LOADING_TIP_CATEGORY_LABELS。
+ * 文案与类型等静态数据见 ./loadingTipsData，此处统一再导出，
+ * 保证外部既有的 import 路径与符号保持不变。
  */
+export type { GradeStage, LoadingTip, LoadingTipCategory }
+export { LOADING_TIP_CATEGORY_LABELS, LOADING_TIPS }
 
-export type LoadingTipCategory =
-  | 'platform'
-  | 'growth'
-  | 'college'
-  | 'postgrad'
-  | 'abroad'
-  | 'career'
-  | 'startup'
-  | 'paper'
-  | 'internship'
-  | 'teaching'
-
-/** 大学阶段：用于把建议收敛到当前年级，未识别时不展示阶段专属文案 */
-export type GradeStage = 'freshman' | 'sophomore' | 'junior' | 'senior'
-
-export interface LoadingTip {
-  id: string
-  category: LoadingTipCategory
-  text: string
-  /** 仅对特定年级展示；缺省表示通用建议 */
-  stages?: GradeStage[]
-}
-
-/** 分类中文名（同时用于提示卡上的标签） */
-export const LOADING_TIP_CATEGORY_LABELS: Record<LoadingTipCategory, string> = {
-  platform: '平台使用',
-  growth: '个人成长',
-  college: '大学生活',
-  postgrad: '考研升学',
-  abroad: '出国留学',
-  career: '求职就业',
-  startup: '创业',
-  paper: '论文写作',
-  internship: '实习实践',
-  teaching: '教学与审核',
-}
-
-export const LOADING_TIPS: LoadingTip[] = [
-  // ── 平台使用 ──
-  {
-    id: 'platform-01',
-    category: 'platform',
-    text: '申报被退回时，退回原因在「消息中心 → 报名记录」里能看到，不必反复找老师确认。',
-  },
-  {
-    id: 'platform-02',
-    category: 'platform',
-    text: '成长时间轴会自动汇总审核通过的申报记录，同一段经历不需要重复录入。',
-  },
-  {
-    id: 'platform-03',
-    category: 'platform',
-    text: '导出简历前先把联系方式补全，PDF 才会带上最新的个人信息。',
-  },
-  {
-    id: 'platform-04',
-    category: 'platform',
-    text: '奖项名称写得具体些：赛事级别、名次、时间都写清，审核会更快。',
-  },
-  {
-    id: 'platform-05',
-    category: 'platform',
-    text: '标签页最多保留 7 个，常用页面可以固定，减少来回切换。',
-  },
-  {
-    id: 'platform-06',
-    category: 'platform',
-    text: '夜间模式已适配全部页面的对比度，晚上整理材料可以打开它。',
-  },
-
-  // ── 个人成长 ──
-  {
-    id: 'growth-01',
-    category: 'growth',
-    text: '每学期挑三件让你自豪的事写下来，毕业时你会感谢现在的自己。',
-  },
-  {
-    id: 'growth-02',
-    category: 'growth',
-    text: '大目标拆成本周能完成的一步，比列一张永远完不成的清单更有用。',
-  },
-  {
-    id: 'growth-03',
-    category: 'growth',
-    text: '记录经历时多写「我做了什么、结果如何」，少写「参与了」。',
-  },
-  {
-    id: 'growth-04',
-    category: 'growth',
-    text: '复盘不是检讨：只回答「哪一步有效、下次保留什么」。',
-  },
-  { id: 'growth-05', category: 'growth', text: '与其等准备好，不如先做一个小到不可能失败的版本。' },
-  {
-    id: 'growth-06',
-    category: 'growth',
-    text: '成长不是线性的，停滞的那段时间也在积累，别急着否定自己。',
-  },
-
-  // ── 大学生活 ──
-  {
-    id: 'college-01',
-    category: 'college',
-    text: '大一多探索、大二找方向、大三做深度、大四收口，每个阶段只抓一件事。',
-  },
-  {
-    id: 'college-02',
-    category: 'college',
-    text: '绩点是门槛，项目是差异；两者都重要，但别用熬夜同时换。',
-  },
-  {
-    id: 'college-03',
-    category: 'college',
-    text: '主动去一次老师的答疑时间，被记住的人更容易拿到机会。',
-  },
-  {
-    id: 'college-04',
-    category: 'college',
-    text: '社团、竞赛、实习都可以试，但每学期只新增一个身份。',
-  },
-  {
-    id: 'college-05',
-    category: 'college',
-    text: '学会用学校的数据库和图书馆，它们比搜索引擎更可靠。',
-  },
-  {
-    id: 'college-06',
-    category: 'college',
-    text: '找比你高两届的学长学姐聊一次，比自己摸索一个学期更快。',
-  },
-
-  // ── 考研升学 ──
-  {
-    id: 'postgrad-01',
-    category: 'postgrad',
-    text: '先定专业再定院校：方向错了，努力只会放大偏差。',
-  },
-  {
-    id: 'postgrad-02',
-    category: 'postgrad',
-    text: '真题是最好的模拟题，先做三年真题，再谈刷题量。',
-  },
-  {
-    id: 'postgrad-03',
-    category: 'postgrad',
-    text: '英语和数学拉分，专业课决定上限，时间按分值分配。',
-  },
-  {
-    id: 'postgrad-04',
-    category: 'postgrad',
-    text: '复试看科研经历和表达，初试结束就开始准备，别等出分。',
-  },
-  {
-    id: 'postgrad-05',
-    category: 'postgrad',
-    text: '择校时看近三年的报录比和复试线，别只盯一年的「爆冷」。',
-  },
-  { id: 'postgrad-06', category: 'postgrad', text: '备考是长跑，固定作息比偶尔通宵更接近上岸。' },
-
-  // ── 出国留学 ──
-  {
-    id: 'abroad-01',
-    category: 'abroad',
-    text: 'GPA、语言、文书三条线并行，任何一条拖到最后都会很被动。',
-  },
-  {
-    id: 'abroad-02',
-    category: 'abroad',
-    text: '推荐信找真正了解你的老师，头衔不如「他写过你什么」。',
-  },
-  {
-    id: 'abroad-03',
-    category: 'abroad',
-    text: '把每个学校的截止日期倒排进日历，提前两周提交最稳。',
-  },
-  {
-    id: 'abroad-04',
-    category: 'abroad',
-    text: '文书不要罗列经历，讲清「为什么是你、为什么是这个项目」。',
-  },
-  {
-    id: 'abroad-05',
-    category: 'abroad',
-    text: '选校分冲刺、匹配、保底三档，别把希望押在一所学校。',
-  },
-  { id: 'abroad-06', category: 'abroad', text: '语言成绩够用就好，省下的时间留给科研和文书。' },
-
-  // ── 求职就业 ──
-  {
-    id: 'career-01',
-    category: 'career',
-    text: '简历用 STAR 写：情境、任务、行动、结果，结果尽量带数字。',
-  },
-  {
-    id: 'career-02',
-    category: 'career',
-    text: '投递前把 JD 里的关键词圈出来，简历里出现同样的词，通过率更高。',
-  },
-  { id: 'career-03', category: 'career', text: '实习转正通常比海投高效，先争取一段能转正的实习。' },
-  {
-    id: 'career-04',
-    category: 'career',
-    text: '面试前准备三个能讲透的项目，比背二十个名词更有用。',
-  },
-  {
-    id: 'career-05',
-    category: 'career',
-    text: '被拒不等于你不行，可能只是岗位匹配度问题，记下原因再调整。',
-  },
-  { id: 'career-06', category: 'career', text: '秋招别等到九月，很多暑期实习在春天就截止了。' },
-
-  // ── 创业 ──
-  {
-    id: 'startup-01',
-    category: 'startup',
-    text: '先验证需求再投入：愿意付费的用户，比点赞的用户更可信。',
-  },
-  { id: 'startup-02', category: 'startup', text: '找互补的合伙人，比找一个和你一样的人更重要。' },
-  { id: 'startup-03', category: 'startup', text: '现金流比估值重要，先算清楚能活几个月。' },
-  { id: 'startup-04', category: 'startup', text: '最小可行产品先上线，用户的反馈比你的假设值钱。' },
-  {
-    id: 'startup-05',
-    category: 'startup',
-    text: '创业不是逃避就业，它需要更强的执行力和抗压能力。',
-  },
-  { id: 'startup-06', category: 'startup', text: '把每次失败写成可复用的清单，下一次会快很多。' },
-
-  // ── 论文写作 ──
-  { id: 'paper-01', category: 'paper', text: '先写提纲再填内容，结构定了，写作速度会快一倍。' },
-  { id: 'paper-02', category: 'paper', text: '每写完一节就锁稿，最后统一改格式，别边写边排版。' },
-  { id: 'paper-03', category: 'paper', text: '引用格式从一开始就统一，返工会浪费整晚。' },
-  { id: 'paper-04', category: 'paper', text: '摘要最后写，它决定别人要不要继续读你的正文。' },
-  { id: 'paper-05', category: 'paper', text: '数据留好原始记录，审稿人追问细节时你会庆幸。' },
-  {
-    id: 'paper-06',
-    category: 'paper',
-    text: '找一个人读你的初稿，他读不懂的地方就是需要改的地方。',
-  },
-
-  // ── 实习实践 ──
-  {
-    id: 'internship-01',
-    category: 'internship',
-    text: '实习记录要量化：独立完成 3 个页面，比「参与开发」有说服力。',
-  },
-  {
-    id: 'internship-02',
-    category: 'internship',
-    text: '主动争取核心项目，边缘任务做十件不如核心任务做一件。',
-  },
-  {
-    id: 'internship-03',
-    category: 'internship',
-    text: '入职第一周把流程和联系人画成一张图，后面会省很多时间。',
-  },
-  {
-    id: 'internship-04',
-    category: 'internship',
-    text: '每周给导师发一次简短进展，让帮忙的人知道你在做什么。',
-  },
-  {
-    id: 'internship-05',
-    category: 'internship',
-    text: '实习结束前整理一份成果清单，转正和下一份工作都用得上。',
-  },
-  {
-    id: 'internship-06',
-    category: 'internship',
-    text: '不懂就问，但先自己查十分钟，问题会更有质量。',
-  },
-
-  // ── 教学与审核 ──
-  {
-    id: 'teaching-01',
-    category: 'teaching',
-    text: '审核时先看材料是否完整，再看内容质量，能少返工一半。',
-  },
-  { id: 'teaching-02', category: 'teaching', text: '退回原因写得具体，学生才知道下一步该改什么。' },
-  {
-    id: 'teaching-03',
-    category: 'teaching',
-    text: '批量处理前先筛出「明显不合规」的，优先集中处理。',
-  },
-  { id: 'teaching-04', category: 'teaching', text: '给学生的建议控制在三条以内，多了等于没建议。' },
-  { id: 'teaching-05', category: 'teaching', text: '同一类问题出现三次，就值得做成模板或说明。' },
-  {
-    id: 'teaching-06',
-    category: 'teaching',
-    text: '审核高峰期先处理临近截止的，避免学生错过时间。',
-  },
-
-  // ── 按年级细分的建议（仅在识别到年级时进入候选池） ──
-  {
-    id: 'stage-freshman-01',
-    category: 'college',
-    stages: ['freshman'],
-    text: '大一先把绩点和作息稳住，后面的选择会多很多。',
-  },
-  {
-    id: 'stage-freshman-02',
-    category: 'growth',
-    stages: ['freshman'],
-    text: '大一不必急着定方向，但每门课都别轻易放弃。',
-  },
-  {
-    id: 'stage-sophomore-01',
-    category: 'growth',
-    stages: ['sophomore'],
-    text: '大二试着进一个课题组或团队，深度比数量重要。',
-  },
-  {
-    id: 'stage-sophomore-02',
-    category: 'internship',
-    stages: ['sophomore'],
-    text: '大二把一门工具学到能用，比学十门入门课值钱。',
-  },
-  {
-    id: 'stage-junior-01',
-    category: 'internship',
-    stages: ['junior'],
-    text: '大三优先补一段与目标方向相关的实习或科研。',
-  },
-  {
-    id: 'stage-junior-02',
-    category: 'growth',
-    stages: ['junior'],
-    text: '大三要开始做减法：方向越聚焦，准备越有效。',
-  },
-  {
-    id: 'stage-senior-01',
-    category: 'career',
-    stages: ['senior'],
-    text: '大四同时推进毕业设计与去向落实，给彼此留缓冲。',
-  },
-  {
-    id: 'stage-senior-02',
-    category: 'postgrad',
-    stages: ['senior'],
-    text: '大四别只盯一个结果，offer、复试、备选方案同时准备。',
-  },
-]
-
-const TIPS_BY_CATEGORY: Record<LoadingTipCategory, LoadingTip[]> = LOADING_TIPS.reduce(
-  (acc, tip) => {
-    acc[tip.category].push(tip)
-    return acc
-  },
-  {
-    platform: [],
-    growth: [],
-    college: [],
-    postgrad: [],
-    abroad: [],
-    career: [],
-    startup: [],
-    paper: [],
-    internship: [],
-    teaching: [],
-  } as Record<LoadingTipCategory, LoadingTip[]>,
-)
-
-const LAST_TIP_STORAGE_KEY = 'loading_tip:last_id'
 const ALL_CATEGORIES = Object.keys(LOADING_TIP_CATEGORY_LABELS) as LoadingTipCategory[]
-const ALL_STAGES: GradeStage[] = ['freshman', 'sophomore', 'junior', 'senior']
+/** 本科四阶段，用于「2023级」这类只有入学年份时的推算 */
+const UNDERGRAD_STAGES: GradeStage[] = ['freshman', 'sophomore', 'junior', 'senior']
+/** 研究生阶段：不推送本科专属主题（大学生活 / 考研升学） */
+const GRADUATE_STAGES: GradeStage[] = ['master', 'phd']
 
 function readLastTipId(): string | undefined {
   if (typeof window === 'undefined') return undefined
   try {
-    return sessionStorage.getItem(LAST_TIP_STORAGE_KEY) || undefined
+    return sessionStorage.getItem(LOADING_TIP_LAST_ID_KEY) || undefined
   } catch {
     return undefined
   }
@@ -404,20 +55,30 @@ function writeStringList(key: string, values: string[]): void {
   }
 }
 
-/** 从年级文本解析大学阶段：兼容「2023级」「大三」「Junior」等写法 */
+/**
+ * 从年级/学历文本解析学习阶段。
+ * 兼容本科（大一/2023级/Junior）、硕士（硕士/研究生/研一/Master）、
+ * 博士（博士/博士生/博一/PhD）等写法；无法识别返回 null（只展示通用建议）。
+ */
 export function resolveGradeStage(grade?: string | null): GradeStage | null {
   if (!grade) return null
   const text = grade.trim()
   if (!text) return null
+
+  // 博士必须先判：「博士研究生」也含「研究生」，否则会被误判为硕士
+  if (/博士|博一|博二|博三|博四|博五|phd|doctor/i.test(text)) return 'phd'
+  if (/硕士|研究生|研一|研二|研三|master|postgraduate/i.test(text)) return 'master'
+
   if (/大一|一年级|freshman/i.test(text)) return 'freshman'
   if (/大二|二年级|sophomore/i.test(text)) return 'sophomore'
   if (/大三|三年级|junior/i.test(text)) return 'junior'
   if (/大四|四年级|senior/i.test(text)) return 'senior'
 
+  // 只有入学年份时按本科四年制推算；超出范围（已毕业）视为无法识别
   const cohort = text.match(/20\d{2}/)
   if (cohort) {
     const stage = new Date().getFullYear() - Number(cohort[0]) + 1
-    if (stage >= 1 && stage <= 4) return ALL_STAGES[stage - 1]
+    if (stage >= 1 && stage <= 4) return UNDERGRAD_STAGES[stage - 1]
   }
   return null
 }
@@ -427,10 +88,6 @@ export function getHiddenTipCategories(): LoadingTipCategory[] {
   return readStringList(LOADING_TIP_HIDDEN_KEY).filter((value): value is LoadingTipCategory =>
     ALL_CATEGORIES.includes(value as LoadingTipCategory),
   )
-}
-
-export function isTipCategoryHidden(category: LoadingTipCategory): boolean {
-  return getHiddenTipCategories().includes(category)
 }
 
 /** 屏蔽某类提示；若会导致全部主题被屏蔽，则拒绝并返回 false（至少要保留一类） */
@@ -505,6 +162,7 @@ export interface PickLoadingTipOptions {
 /**
  * 随机取一条提示。
  *  - 先剔除用户屏蔽的主题；若全部被屏蔽则回落到「平台使用」，保证永远有内容；
+ *  - 研究生/博士生不推「大学生活」「考研升学」两个本科专属主题；
  *  - 有年级时：通用建议 + 该年级专属建议；无年级时：只取通用建议；
  *  - 默认排除上一次展示过的 id（sessionStorage 持久化）。
  */
@@ -513,7 +171,16 @@ export function pickLoadingTip(
   options: PickLoadingTipOptions = {},
 ): LoadingTip {
   const hidden = new Set(getHiddenTipCategories())
-  const visible = categories.filter((category) => !hidden.has(category))
+  let visible = categories.filter((category) => !hidden.has(category))
+
+  // 研究生/博士生：过滤本科专属主题；若过滤后为空（例如该页只配了 postgrad），保留原主题
+  if (options.stage && GRADUATE_STAGES.includes(options.stage)) {
+    const graduateAware = visible.filter(
+      (category) => category !== 'college' && category !== 'postgrad',
+    )
+    if (graduateAware.length) visible = graduateAware
+  }
+
   const effective = visible.length ? visible : (['platform'] as LoadingTipCategory[])
 
   let pool = effective.flatMap((category) => TIPS_BY_CATEGORY[category])
@@ -527,7 +194,7 @@ export function pickLoadingTip(
     excludeId && pool.length > 1 ? pool.filter((tip) => tip.id !== excludeId) : pool
   const picked = candidates[Math.floor(Math.random() * candidates.length)] ?? LOADING_TIPS[0]
   try {
-    sessionStorage.setItem(LAST_TIP_STORAGE_KEY, picked.id)
+    sessionStorage.setItem(LOADING_TIP_LAST_ID_KEY, picked.id)
   } catch {
     // 隐私模式下静默降级：不记录上次提示，允许重复
   }

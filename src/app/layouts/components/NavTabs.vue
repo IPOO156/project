@@ -19,8 +19,9 @@
 import { X } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
-import { useTabsStore } from '@/app/stores/tabs'
+import { useTabsStore } from '@/app/stores/useTabsStore'
 import { findMenuItemByPath } from '@/shared/constants/menu'
+import TabContextMenu from './TabContextMenu.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -285,42 +286,16 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
       </div>
     </div>
 
-    <Teleport to="body">
-      <div
-        v-if="contextMenu.visible"
-        class="nav-tabs__menu"
-        :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
-        role="menu"
-        @contextmenu.prevent
-      >
-        <button
-          type="button"
-          class="nav-tabs__menu-item"
-          role="menuitem"
-          :disabled="!contextMenu.closable"
-          @click.stop="onCloseCurrent"
-        >
-          关闭当前
-        </button>
-        <button
-          type="button"
-          class="nav-tabs__menu-item"
-          role="menuitem"
-          @click.stop="onCloseOthers"
-        >
-          关闭其他
-        </button>
-        <button
-          type="button"
-          class="nav-tabs__menu-item"
-          role="menuitem"
-          :disabled="!hasClosableTabs"
-          @click.stop="onCloseAll"
-        >
-          关闭全部
-        </button>
-      </div>
-    </Teleport>
+    <TabContextMenu
+      :visible="contextMenu.visible"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :closable="contextMenu.closable"
+      :has-closable-tabs="hasClosableTabs"
+      @close-current="onCloseCurrent"
+      @close-others="onCloseOthers"
+      @close-all="onCloseAll"
+    />
   </div>
 </template>
 
@@ -507,38 +482,6 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
   &__item.is-drop-target .nav-tabs__surface {
     border-color: var(--el-color-primary);
     background: rgba(96, 165, 250, 0.08);
-  }
-
-  &__menu {
-    position: fixed;
-    z-index: $z-popover;
-    min-width: 112px;
-    padding: 4px;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: $radius-base;
-    background: var(--el-bg-color-overlay);
-    box-shadow: $shadow-lg;
-  }
-  &__menu-item {
-    display: block;
-    width: 100%;
-    padding: 6px 12px;
-    border: 0;
-    border-radius: $radius-sm;
-    background: transparent;
-    color: var(--el-text-color-primary);
-    font-size: $font-size-base;
-    line-height: 1.5;
-    text-align: left;
-    cursor: pointer;
-    &:hover:not(:disabled) {
-      background: var(--el-fill-color-light);
-      color: var(--el-color-primary);
-    }
-    &:disabled {
-      color: var(--el-text-color-disabled);
-      cursor: not-allowed;
-    }
   }
 }
 

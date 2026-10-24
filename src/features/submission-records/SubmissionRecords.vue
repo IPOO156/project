@@ -4,6 +4,7 @@ import { Search } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSubmissionStore } from '@/app/stores/stores'
+import { useDebounce } from '@/shared/composables/useDebounce'
 import { APPLICATION_STATUS, APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import DictColumn from '@/shared/ui/DictColumn.vue'
 import PageContainer from '@/shared/ui/PageContainer.vue'
@@ -42,14 +43,11 @@ const statusOptions = computed(() => {
 })
 
 // ── 防抖搜索 ──
-let debounceTimer: ReturnType<typeof setTimeout>
-watch(keyword, (val) => {
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => {
-    filters.value = { ...filters.value, keyword: val || undefined }
-    fetchWithFilters()
-  }, 300)
+const debouncedApplyKeyword = useDebounce(() => {
+  filters.value = { ...filters.value, keyword: keyword.value || undefined }
+  fetchWithFilters()
 })
+watch(keyword, () => debouncedApplyKeyword.run())
 
 function handleTypeChange(val: ApplicationType | '') {
   filters.value = { ...filters.value, type: val || undefined }
@@ -106,9 +104,9 @@ onMounted(() => {
         <el-col :span="5">
           <el-select
             v-model="typeFilter"
+            class="u-w-full"
             placeholder="模块类型"
             clearable
-            style="width: 100%"
             @change="handleTypeChange"
           >
             <el-option
@@ -122,9 +120,9 @@ onMounted(() => {
         <el-col :span="5">
           <el-select
             v-model="statusFilter"
+            class="u-w-full"
             placeholder="状态"
             clearable
-            style="width: 100%"
             @change="handleStatusChange"
           >
             <el-option
@@ -143,12 +141,7 @@ onMounted(() => {
 
     <!-- 记录表格 -->
     <el-card>
-      <el-table
-        v-loading="submissionStore.loading"
-        :data="paginatedList"
-        stripe
-        style="width: 100%"
-      >
+      <el-table v-loading="submissionStore.loading" class="u-w-full" :data="paginatedList" stripe>
         <el-table-column type="index" label="序号" width="60" />
         <el-table-column label="模块类型" width="120">
           <template #default="{ row }">

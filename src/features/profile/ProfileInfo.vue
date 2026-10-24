@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import type { UserInfo } from '@/shared/types/types'
-import { ElMessage } from 'element-plus'
-import { Download, Edit2, GraduationCap, Info, Lightbulb, Plus } from 'lucide-vue-next'
+import { Download } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import {
   useArchiveStore,
@@ -9,15 +7,9 @@ import {
   useThemeStore,
   useUserStore,
 } from '@/app/stores/stores'
-import { getDict } from '@/shared/api/common'
-import {
-  getDataCompleteness,
-  updatePoliticalStatus,
-  updateStudentStatus,
-} from '@/shared/api/student'
-import { STUDENT_STATUS_OPTIONS } from '@/shared/constants/dict'
+import { getDataCompleteness } from '@/shared/api/student'
 import { calcAggregateScore } from '@/shared/utils/score'
-import AvatarUploader from './components/AvatarUploader.vue'
+import BasicInfoCard from './BasicInfoCard.vue'
 import AwardsPanel from './components/AwardsPanel.vue'
 import CompletenessBar from './components/CompletenessBar.vue'
 import DimensionPanel from './components/DimensionPanel.vue'
@@ -25,6 +17,8 @@ import InterestPanel from './components/InterestPanel.vue'
 import SelfEvaluationPanel from './components/SelfEvaluationPanel.vue'
 import { useArchiveExport } from './composables/useArchiveExport'
 import { useResumeExport } from './composables/useResumeExport'
+import GradeSummaryCard from './GradeSummaryCard.vue'
+import ProfileStatCards from './ProfileStatCards.vue'
 import ResumeTemplate from './ResumeTemplate.vue'
 
 const archiveStore = useArchiveStore()
@@ -143,82 +137,6 @@ const dimAvg = computed<number | null>(() =>
   calcAggregateScore(dimensions.value.map((d) => ({ score: d.score, maxScore: d.maxScore }))),
 )
 
-// ── 基本资料编辑 ──
-// 学籍字段（学号/年级/专业/班级/姓名）属学术身份信息，仅只读展示，不进入编辑表单；
-// 编辑表单保留可更新的联系方式（邮箱/手机号 PUT /profile/contact）与
-// 政治面貌/学生状态（PUT /profile/political-status、/profile/student-status，见接口文档 4.1.5）。
-const isEditing = ref(false)
-/** 基本资料「保存」提交中（最多串行 3 次 PUT，防连点重复提交） */
-const savingEdit = ref(false)
-const formData = ref<Partial<UserInfo> & { politicalStatus?: string; studentStatus?: string }>({})
-const politicalOptions = ref<{ value: string; label: string }[]>([])
-/** /profile/info 中的学籍信息（政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
-const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})
-
-/**
- * 联系邮箱/手机号：来自 /profile/info 的 contactInfo（PUT /profile/contact 的写入目标）。
- * 与「账号邮箱」（userStore.userInfo.email，用于登录与找回密码）不是同一份数据，展示上分开。
- */
-const contactEmail = computed(() => archiveStore.profileData?.contactInfo?.email ?? '')
-const contactPhone = computed(() => archiveStore.profileData?.contactInfo?.phone ?? '')
-
-/** 政治面貌选项来自后端字典（GET /common/dict?dictType=political_status），不前端硬编码 */
-async function loadPoliticalOptions() {
-  try {
-    const list = await getDict('political_status')
-    politicalOptions.value = (list ?? []).map((d: any) => ({ value: d.value, label: d.label }))
-  } catch {
-    politicalOptions.value = []
-  }
-}
-
-function startEdit() {
-  const a = academicInfo.value
-  formData.value = {
-    email: contactEmail.value,
-    phone: contactPhone.value,
-    politicalStatus: a.politicalStatus ?? '',
-    studentStatus: a.studentStatus ?? '',
-  }
-  isEditing.value = true
-  loadPoliticalOptions()
-}
-async function saveEdit() {
-  const a = academicInfo.value
-  // 三类保存（联系方式 PUT /profile/contact、政治面貌、学生状态）任一失败即终止流程，
-  // 不继续执行后续「已保存」，避免成败提示并存；失败提示由请求拦截器统一给出
-  savingEdit.value = true
-  try {
-    await userStore.updateUserInfo({
-      email: formData.value.email,
-      phone: formData.value.phone,
-    })
-    if (formData.value.politicalStatus && formData.value.politicalStatus !== a.politicalStatus) {
-      await updatePoliticalStatus(formData.value.politicalStatus)
-    }
-    if (formData.value.studentStatus && formData.value.studentStatus !== a.studentStatus) {
-      await updateStudentStatus(formData.value.studentStatus)
-    }
-  } catch {
-    return
-  } finally {
-    savingEdit.value = false
-  }
-  isEditing.value = false
-  // 重新拉取 /profile/info，保证展示标签与后端一致
-  await archiveStore.fetchArchive()
-  ElMessage.success('已保存')
-}
-function cancelEdit() {
-  isEditing.value = false
-  formData.value = {}
-}
-
-async function handleAvatarUpload(base64: string) {
-  await userStore.updateAvatar(base64 || undefined)
-  ElMessage.success(base64 ? '头像更新成功' : '头像已删除')
-}
-
 // ── 简历导出 ──
 const resumeRef = ref<InstanceType<typeof ResumeTemplate>>()
 const { exportResumePDF } = useResumeExport()
@@ -271,7 +189,7 @@ async function handleExportResume() {
       </div>
       <div class="page-head__actions">
         <el-button type="primary" @click="exportArchivePDF">
-          <Download :size="16" style="margin-right: 4px" />导出档案
+          <Download class="u-mr-4" :size="16" />导出档案
         </el-button>
         <el-button
           type="primary"
@@ -279,157 +197,22 @@ async function handleExportResume() {
           :disabled="exporting"
           @click="handleExportResume"
         >
-          <Download :size="16" style="margin-right: 4px" />导出简历 PDF
+          <Download class="u-mr-4" :size="16" />导出简历 PDF
         </el-button>
       </div>
     </div>
 
     <CompletenessBar v-if="completenessRate !== null" :rate="completenessRate" />
 
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-card__inner">
-          <div>
-            <p class="stat-card__label">平均绩点</p>
-            <p class="stat-card__value">{{ avgGpa }}</p>
-          </div>
-          <div class="stat-card__icon" style="background: #e8f0fe; color: #4a7fb5">
-            <GraduationCap :size="20" />
-          </div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card__inner">
-          <div>
-            <p class="stat-card__label">获奖总数</p>
-            <p class="stat-card__value">{{ totalAwardCount }}</p>
-          </div>
-          <div class="stat-card__icon stat-card__icon--award">
-            <Plus :size="20" />
-          </div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card__inner">
-          <div>
-            <p class="stat-card__label">课程总数</p>
-            <p class="stat-card__value">{{ totalCourses }}</p>
-          </div>
-          <div class="stat-card__icon" style="background: #e6f7ee; color: #10b981">
-            <GraduationCap :size="20" />
-          </div>
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card__inner">
-          <div>
-            <p class="stat-card__label">综合评分</p>
-            <p class="stat-card__value">{{ dimAvg ?? '--' }}</p>
-          </div>
-          <div class="stat-card__icon stat-card__icon--score">
-            <Lightbulb :size="20" />
-          </div>
-        </div>
-      </div>
-    </div>
+    <ProfileStatCards
+      :avg-gpa="avgGpa"
+      :total-award-count="totalAwardCount"
+      :total-courses="totalCourses"
+      :dim-avg="dimAvg"
+    />
 
     <div class="row-2col">
-      <el-card class="section-card" shadow="never">
-        <template #header
-          ><div class="section-head">
-            <span class="section-head__title"><Info :size="15" /> 基本资料</span
-            ><el-button
-              v-if="!isEditing"
-              link
-              type="primary"
-              size="small"
-              :icon="Edit2"
-              @click="startEdit"
-              >编辑</el-button
-            >
-            <div v-else class="edit-actions">
-              <el-button size="small" @click="cancelEdit">取消</el-button
-              ><el-button
-                size="small"
-                type="primary"
-                :loading="savingEdit"
-                :disabled="savingEdit"
-                @click="saveEdit"
-                >保存</el-button
-              >
-            </div>
-          </div></template
-        >
-        <div class="profile-top">
-          <AvatarUploader
-            :model-value="userStore.avatar ?? ''"
-            :size="72"
-            @upload="handleAvatarUpload"
-          />
-          <div>
-            <h3 class="profile-top__name">{{ userStore.userName }}</h3>
-            <p class="profile-top__meta">
-              {{ userStore.userInfo?.major || '' }} · {{ userStore.userInfo?.className || '' }} ·
-              学号 {{ userStore.studentId }}
-            </p>
-          </div>
-        </div>
-        <el-descriptions v-if="!isEditing" :column="2" border class="profile-desc" size="small">
-          <el-descriptions-item label="姓名">{{ userStore.userName || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="学号">{{ userStore.studentId || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="年级">{{
-            userStore.userInfo?.grade || '-'
-          }}</el-descriptions-item>
-          <el-descriptions-item label="专业">{{
-            userStore.userInfo?.major || '-'
-          }}</el-descriptions-item>
-          <el-descriptions-item label="班级">{{
-            userStore.userInfo?.className || '-'
-          }}</el-descriptions-item>
-          <el-descriptions-item label="政治面貌">{{
-            academicInfo.politicalStatusLabel || '-'
-          }}</el-descriptions-item>
-          <el-descriptions-item label="学生状态">{{
-            academicInfo.studentStatusLabel || '-'
-          }}</el-descriptions-item>
-          <el-descriptions-item label="账号邮箱">
-            {{ userStore.userInfo?.email || '-' }}
-            <div class="profile-desc__hint">用于登录与找回密码，如需修改请联系管理员</div>
-          </el-descriptions-item>
-          <el-descriptions-item label="联系邮箱">{{ contactEmail || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="手机号">{{ contactPhone || '-' }}</el-descriptions-item>
-        </el-descriptions>
-        <el-form v-else :model="formData" label-width="70px" class="profile-form">
-          <el-row :gutter="12">
-            <el-col :span="12"
-              ><el-form-item label="联系邮箱"
-                ><el-input v-model="formData.email" size="small" /></el-form-item
-            ></el-col>
-            <el-col :span="12"
-              ><el-form-item label="手机号"
-                ><el-input v-model="formData.phone" size="small" /></el-form-item
-            ></el-col>
-            <el-col :span="12"
-              ><el-form-item label="政治面貌"
-                ><el-select v-model="formData.politicalStatus" size="small" class="form-w">
-                  <el-option
-                    v-for="o in politicalOptions"
-                    :key="o.value"
-                    :label="o.label"
-                    :value="o.value" /></el-select></el-form-item
-            ></el-col>
-            <el-col :span="12"
-              ><el-form-item label="学生状态"
-                ><el-select v-model="formData.studentStatus" size="small" class="form-w">
-                  <el-option
-                    v-for="o in STUDENT_STATUS_OPTIONS"
-                    :key="o.value"
-                    :label="o.label"
-                    :value="o.value" /></el-select></el-form-item
-            ></el-col>
-          </el-row>
-        </el-form>
-      </el-card>
+      <BasicInfoCard />
       <DimensionPanel
         :dimensions="dimensions"
         :load-failed="archiveStore.loadFailed"
@@ -438,33 +221,7 @@ async function handleExportResume() {
     </div>
 
     <div class="row-2col">
-      <el-card class="section-card" shadow="never">
-        <template #header
-          ><div class="section-head">
-            <span class="section-head__title"><GraduationCap :size="15" /> 期末成绩</span
-            ><span class="section-head__tag">平均绩点 {{ avgGpa }}</span>
-          </div></template
-        >
-        <div class="grade-list">
-          <div v-for="g in gradeSummary" :key="g.semester" class="grade-item">
-            <div class="grade-item__sem">{{ g.semester.replace(/-(\d)$/g, '第$1学期') }}</div>
-            <div class="grade-item__body">
-              <div class="grade-item__stat">
-                <span class="grade-item__num">{{ g.gpa }}</span
-                ><span class="grade-item__lbl">绩点</span>
-              </div>
-              <div class="grade-item__stat">
-                <span class="grade-item__num">{{ g.totalScore }}</span
-                ><span class="grade-item__lbl">均分</span>
-              </div>
-              <div class="grade-item__stat">
-                <span class="grade-item__num">{{ g.courses }}</span
-                ><span class="grade-item__lbl">课程</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </el-card>
+      <GradeSummaryCard :grade-summary="gradeSummary" :avg-gpa="avgGpa" />
       <AwardsPanel :awards="personalAwards" />
     </div>
 
@@ -511,68 +268,6 @@ async function handleExportResume() {
   gap: 12px;
 }
 
-// 统计卡片
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-.stat-card {
-  border: 1px solid #f1f5f9;
-  border-radius: 10px;
-  background: #fff;
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
-  &:hover {
-    border-color: #e2e8f0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-  }
-}
-.stat-card__inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-}
-.stat-card__label {
-  font-size: 13px;
-  color: #94a3b8;
-  margin-bottom: 2px;
-}
-.stat-card__value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #1e293b;
-  line-height: 1.2;
-}
-.stat-card__icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  &--gpa {
-    background: #e8f0fe;
-    color: #4a7fb5;
-  }
-  &--award {
-    background: #fef3e2;
-    color: #d4a574;
-  }
-  &--course {
-    background: #e6f7ee;
-    color: #10b981;
-  }
-  &--score {
-    background: #f0e6ff;
-    color: #8b5cf6;
-  }
-}
-
 // 两列布局
 .row-2col {
   display: grid;
@@ -580,123 +275,7 @@ async function handleExportResume() {
   gap: 16px;
 }
 
-// 区块卡片
-.section-card {
-  border: 1px solid #f1f5f9;
-  border-radius: 10px;
-  :deep(.el-card__body) {
-    padding: 16px 20px;
-  }
-}
-.section-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.section-head__title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1e293b;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-}
-.section-head__tag {
-  font-size: 12px;
-  color: #94a3b8;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: #f8fafc;
-}
-.edit-actions {
-  display: flex;
-  gap: 6px;
-}
-
-// 基本资料
-.profile-top {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 14px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid #f1f5f9;
-}
-.profile-top__name {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 2px;
-}
-.profile-top__meta {
-  font-size: 13px;
-  color: #94a3b8;
-  margin: 0;
-}
-.profile-desc {
-  :deep(.el-descriptions__label) {
-    width: 65px;
-    min-width: 65px;
-    text-align: center;
-    font-size: 13px;
-  }
-  :deep(.el-descriptions__content) {
-    font-size: 13px;
-  }
-}
-.profile-desc__hint {
-  margin-top: 2px;
-  font-size: 12px;
-  color: #94a3b8;
-}
-.profile-form {
-  margin-top: 8px;
-}
-.form-w {
-  width: 100%;
-}
-
-// 成绩
-.grade-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.grade-item {
-  padding: 10px 12px;
-  border-radius: 6px;
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
-}
-.grade-item__sem {
-  font-size: 12px;
-  color: #94a3b8;
-  margin-bottom: 4px;
-}
-.grade-item__body {
-  display: flex;
-  gap: 20px;
-}
-.grade-item__stat {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-.grade-item__num {
-  font-size: 17px;
-  font-weight: 700;
-  color: #1e293b;
-}
-.grade-item__lbl {
-  font-size: 11px;
-  color: #cbd5e1;
-}
-
 @media (max-width: 900px) {
-  .stat-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
   .row-2col {
     grid-template-columns: 1fr;
   }
@@ -718,64 +297,6 @@ html.dark {
   }
   .page-head__title {
     color: #f1f5f9;
-  }
-
-  .stat-card {
-    background: #0f172a;
-    border-color: #334155;
-
-    &:hover {
-      border-color: #475569;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-    }
-  }
-  .stat-card__value {
-    color: #f1f5f9;
-  }
-  .stat-card__icon--gpa {
-    background: rgba(96, 165, 250, 0.14);
-    color: #7fb0e0;
-  }
-  .stat-card__icon--award {
-    background: rgba(212, 165, 116, 0.14);
-    color: #dbb68c;
-  }
-  .stat-card__icon--course {
-    background: rgba(16, 185, 129, 0.14);
-    color: #34d399;
-  }
-  .stat-card__icon--score {
-    background: rgba(139, 92, 246, 0.16);
-    color: #a78bfa;
-  }
-
-  .section-card {
-    border-color: #334155;
-  }
-  .section-head__title {
-    color: #f1f5f9;
-  }
-  .section-head__tag {
-    background: #1e293b;
-    color: #94a3b8;
-  }
-
-  .profile-top {
-    border-bottom-color: #334155;
-  }
-  .profile-top__name {
-    color: #f1f5f9;
-  }
-
-  .grade-item {
-    background: #1e293b;
-    border-color: rgba(255, 255, 255, 0.08);
-  }
-  .grade-item__num {
-    color: #f1f5f9;
-  }
-  .grade-item__lbl {
-    color: #64748b;
   }
 }
 </style>

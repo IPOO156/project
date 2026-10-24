@@ -9,9 +9,10 @@ import { defineConfig, devices } from '@playwright/test'
  * page.goto('/teacher') 这类相对路径变成非法 URL（报 Cannot navigate to invalid URL）。
  *
  * 测试账号：
- * - 学生端：202401002 / 123456  （「学生登录」Tab）
- * - 教师端：T00003   / 123456  （「管理员登录」Tab —— 登录页只有学生/管理员两个 Tab）
- * - 管理员端：A00002 / 123456  （「管理员登录」Tab）
+ * - 学生端：202401002（「学生登录」Tab）
+ * - 教师端：T00003  （「管理员登录」Tab —— 登录页只有学生/管理员两个 Tab）
+ * - 管理员端：A00002（「管理员登录」Tab）
+ * 密码不写入仓库，运行前通过环境变量 VITE_E2E_PASSWORD（或 E2E_PASSWORD）提供。
  */
 export default defineConfig({
   testDir: './tests/e2e',

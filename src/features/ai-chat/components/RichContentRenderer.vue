@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CardBlock, CardIcon, ParagraphBlock, RichContent } from '../types'
+import type { CardBlock, CardIcon, ParagraphBlock, RichContent } from '../ai-chat.types'
 /**
  * RichContentRenderer - 结构化富文本渲染
  *
@@ -60,9 +60,12 @@ function cardSegments(block: CardBlock) {
         </template>
         <!-- 知识库场景：按 highlights 高亮 -->
         <template v-else>
-          <template v-for="(seg, j) in paragraphSegments(block)" :key="j">
-            <span :class="{ rc__hl: seg.isHighlight }">{{ seg.text }}</span>
-          </template>
+          <span
+            v-for="(seg, j) in paragraphSegments(block)"
+            :key="j"
+            :class="{ rc__hl: seg.isHighlight }"
+            >{{ seg.text }}</span
+          >
         </template>
       </p>
 
@@ -92,9 +95,12 @@ function cardSegments(block: CardBlock) {
           <span>{{ block.title }}</span>
         </div>
         <div class="rc__card-body">
-          <template v-for="(seg, j) in cardSegments(block)" :key="j">
-            <span :class="{ rc__hl: seg.isHighlight }">{{ seg.text }}</span>
-          </template>
+          <span
+            v-for="(seg, j) in cardSegments(block)"
+            :key="j"
+            :class="{ rc__hl: seg.isHighlight }"
+            >{{ seg.text }}</span
+          >
         </div>
       </div>
     </template>

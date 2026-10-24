@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { TypeColumnConfig } from './review-columns'
-import { CheckCircle, Clock, FileText, Search, XCircle } from 'lucide-vue-next'
+import type { TypeColumnConfig } from './reviewColumns'
+import { CheckCircle, Clock, Search, XCircle } from 'lucide-vue-next'
 // ReviewSection - 个人档案信息申报状态
 // Tab形式展示10个申报类型，查看/编辑弹窗支持修改后重新提交
 import { computed, onMounted, ref, watch } from 'vue'
@@ -12,8 +12,9 @@ import {
   DECLARATION_TYPE_LABELS,
   REVIEW_COLUMNS,
   STATUS_FILTER_OPTIONS,
-} from './review-columns'
+} from './reviewColumns'
 import ReviewDialog from './ReviewDialog.vue'
+import ReviewSummary from './ReviewSummary.vue'
 
 const submissionStore = useSubmissionStore()
 const reviewStore = useReviewStore()
@@ -253,28 +254,7 @@ onMounted(() => {
 <template>
   <div class="review-section">
     <!-- 页面头部 -->
-    <header class="review-section__hero">
-      <div class="review-section__hero-main">
-        <div class="review-section__hero-icon">
-          <FileText :size="28" />
-        </div>
-        <div>
-          <h1 class="review-section__hero-title">申报审核</h1>
-          <p class="review-section__hero-subtitle">
-            查看各类型申报信息的提交状态与审核进度。待审核或被驳回的申报可点击编辑修改后重新提报
-          </p>
-        </div>
-      </div>
-      <div class="review-section__hero-stats">
-        <div v-for="stat in stats" :key="stat.label" class="review-section__hero-stat">
-          <div class="review-section__hero-stat-main" :style="{ color: stat.color }">
-            <component :is="stat.icon" :size="18" />
-            <span class="review-section__hero-stat-value">{{ stat.value }}</span>
-          </div>
-          <span class="review-section__hero-stat-label">{{ stat.label }}</span>
-        </div>
-      </div>
-    </header>
+    <ReviewSummary :stats="stats" />
 
     <el-tabs v-model="activeTab" type="card" @tab-change="handleTabChange">
       <el-tab-pane v-for="tab in tabList" :key="tab.key" :label="tab.label" :name="tab.key" />
@@ -350,10 +330,9 @@ onMounted(() => {
     <div :key="tableKey" v-loading="submissionStore.loading" class="review-section__card mc-card">
       <el-table
         :data="paginatedRecords"
-        class="mc-table mc-table--staggered"
+        class="mc-table mc-table--staggered u-w-full"
         :class="{ 'is-success-pulse': successPulse }"
         stripe
-        style="width: 100%"
       >
         <template v-if="activeTab === 'all'">
           <el-table-column type="index" label="序号" width="60" />
@@ -458,97 +437,6 @@ onMounted(() => {
   gap: 16px;
   font-family: $mc-font-body;
   color: var(--mc-text);
-
-  // hero 头部
-  &__hero {
-    @include mc-fade-in;
-
-    background: var(--mc-card);
-    border: 1px solid var(--mc-border);
-    border-radius: var(--mc-radius);
-    padding: 24px 28px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    flex-wrap: wrap;
-    box-shadow: var(--mc-shadow);
-  }
-
-  &__hero-main {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  &__hero-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 10px;
-    background: var(--mc-wood);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  &__hero-title {
-    margin: 0;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--el-text-color-primary);
-  }
-
-  &__hero-subtitle {
-    margin: 4px 0 0;
-    font-size: 14px;
-    color: var(--mc-text-secondary);
-  }
-
-  &__hero-stats {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  &__hero-stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    min-width: 90px;
-    padding: 10px 16px;
-    background: var(--mc-bg);
-    border: 1px solid var(--mc-border);
-    border-radius: 8px;
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
-
-    &:hover {
-      border-color: var(--mc-wood);
-      box-shadow: 0 2px 8px var(--mc-primary-fade);
-    }
-  }
-
-  &__hero-stat-main {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  &__hero-stat-value {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--el-text-color-primary);
-  }
-
-  &__hero-stat-label {
-    font-size: 12px;
-    color: var(--mc-text-secondary);
-  }
 
   // 工具栏
   &__filters {

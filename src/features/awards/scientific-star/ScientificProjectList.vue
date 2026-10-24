@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
@@ -84,19 +85,19 @@ onMounted(() => {
     :show-extended-fields="true"
     :extended-form="page.extendedForm"
     @update:extended-form="
-      (field, val) => {
+      (field: string, val: string) => {
         ;(page.extendedForm as Record<string, string>)[field] = val
       }
     "
     @save-draft="page.handleSaveDraft"
     @submit="page.handleSubmit"
-    @view="(row) => page.viewRecord(row)"
-    @edit="(row) => handleEditClick(row)"
-    @remove="(row) => handleRemove(row)"
+    @view="(row: FormRecord) => page.viewRecord(row)"
+    @edit="(row: FormRecord) => handleEditClick(row)"
+    @remove="(row: FormRecord) => handleRemove(row)"
     @cancel="page.handleCancel"
-    @withdraw="(row) => page.handleWithdraw(row)"
-    @correction="(row) => page.handleCorrection(row)"
-    @score="(row) => page.handleViewScore(row)"
+    @withdraw="(row: FormRecord) => page.handleWithdraw(row)"
+    @correction="(row: FormRecord) => page.handleCorrection(row)"
+    @score="(row: FormRecord) => page.handleViewScore(row)"
   >
     <template #form>
       <el-form :model="page.form" label-width="120px">
@@ -158,11 +159,11 @@ onMounted(() => {
     :original-record="page.originalSnapshot"
     :form="page.correctionForm"
     @update:visible="
-      (v) => {
+      (v: boolean) => {
         if (!v) page.closeCorrection()
       }
     "
-    @update:form="(field, val) => page.setChangedField(field, val)"
+    @update:form="(field: string, val: string) => page.setChangedField(field, val)"
     @submit="page.submitCorrection"
   />
   <ScoreIndicatorDialog

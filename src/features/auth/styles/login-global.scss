@@ -1,0 +1,61 @@
+.login-card-enter-from {
+  opacity: 0;
+  transform: translateY(30px) scale(0.98);
+  filter: blur(10px);
+}
+.login-card-enter-active {
+  transition:
+    opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 1.2s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.login-card-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
+}
+
+html.dark .login {
+  background:
+    radial-gradient(circle at 20% 20%, rgba(81, 152, 255, 0.24), transparent 34%),
+    radial-gradient(circle at 80% 18%, rgba(251, 191, 36, 0.12), transparent 24%),
+    linear-gradient(135deg, #040912 0%, #08111f 38%, #0d1d35 100%);
+  &.login--admin {
+    background:
+      radial-gradient(circle at 20% 20%, rgba(95, 181, 255, 0.18), transparent 30%),
+      radial-gradient(circle at 80% 18%, rgba(94, 234, 212, 0.1), transparent 24%),
+      linear-gradient(135deg, #030812 0%, #09121f 38%, #0b2741 100%);
+  }
+}
+
+.login--light {
+  .login__theme-toggle {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(148, 163, 184, 0.25);
+    color: #1e293b;
+  }
+  .login__card {
+    background: rgba(255, 255, 255, 0.88);
+  }
+  .login__tabs {
+    border-color: rgba(148, 163, 184, 0.18);
+  }
+  .login__form .el-input__wrapper {
+    background: rgba(248, 250, 252, 0.95);
+    box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.25);
+  }
+  .login__form .el-input__wrapper.is-focus {
+    box-shadow:
+      0 0 0 1px rgba(59, 130, 246, 0.5) inset,
+      0 0 0 4px rgba(59, 130, 246, 0.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login *,
+  .login *::before,
+  .login *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

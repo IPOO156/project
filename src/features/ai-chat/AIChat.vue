@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ChatSettings, ExportFormat } from './types'
+import type { ChatSettings, ExportFormat } from './ai-chat.types'
 import { ElMessage } from 'element-plus'
 /**
  * AIChat - AI 智能助手独立页（编排者）

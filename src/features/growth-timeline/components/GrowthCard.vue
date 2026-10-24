@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import { ElMessageBox } from 'element-plus'
 import { FlaskConical, GraduationCap, HeartHandshake, Trash2, Trophy } from 'lucide-vue-next'
 import { GROWTH_TAG_COLORS } from '@/shared/constants/dict'
-import { getSemesterDisplayLabel } from '../timeline-constants'
+import { getSemesterDisplayLabel } from '../timelineConstants'
 
 interface Props {
   experience: GrowthExperience

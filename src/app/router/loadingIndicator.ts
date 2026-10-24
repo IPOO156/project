@@ -1,5 +1,5 @@
 import type { Router } from 'vue-router'
-import { useAppStore } from '@/app/stores/app'
+import { useAppStore } from '@/app/stores/useAppStore'
 
 /**
  * 慢导航加载页触发

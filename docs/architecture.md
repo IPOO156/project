@@ -16,24 +16,25 @@
 
 ```
 src/
-├── app/               # 应用入口：路由、布局、全局 Store
+├── app/               # 应用入口：路由、布局、全局 Store（useXxxStore.ts）
 │   ├── layouts/
 │   ├── router/
-│   └── stores/
-├── assets/            # 静态资源、全局样式、SCSS 变量
+│   └── stores/        # 每个 Store ≤200 行；纯逻辑与写操作拆到同级 xxxHelpers/Mutations
+├── assets/            # 静态资源、全局样式、SCSS 变量、原子工具类（u-*）
 ├── features/          # 按业务模块划分
 │   ├── auth/          # 登录认证
 │   ├── dashboard/     # 首页仪表盘
 │   ├── messages/      # 消息中心（通知 + 动态记录）
 │   ├── profile/       # 个人档案、成长时间轴、职业规划
 │   ├── applications/  # 各类申报模块
-│   └── approval/      # 审批/提交记录
+│   ├── approval/      # 审批/提交记录
+│   └── teacher/       # 教师端按域分组：archive / review / org / ops（组内页面与子组件同级，路径 ≤4 层）
 └── shared/            # 全局共享
-    ├── api/           # Axios 请求封装
-    ├── composables/   # 公共 Composables
+    ├── api/           # Axios 请求封装（submission 等大模块按域拆分到同名目录）
+    ├── composables/   # 公共 Composables（含 useDebounce）
     ├── config/        # 模块注册表等配置化接口
-    ├── constants/     # 全局常量、字典
-    ├── types/         # 全局 TypeScript 类型
+    ├── constants/     # 全局常量、字典、存储键
+    ├── types/         # 全局 TypeScript 类型（teacher/ 下为 *-types.ts）
     └── utils/         # 工具函数
 ```
 
@@ -45,12 +46,12 @@ src/
 
 ## Store 依赖
 
-| Store                  | 路径                             | 用途                 | 依赖模块      |
-| ---------------------- | -------------------------------- | -------------------- | ------------- |
-| `useUserStore`         | `src/app/stores/user.ts`         | 用户登录态、用户信息 | 全局          |
-| `useAppStore`          | `src/app/stores/app.ts`          | 应用级状态（待扩展） | 全局          |
-| `useNotificationStore` | `src/app/stores/notification.ts` | 消息中心通知数据     | 消息中心      |
-| `useActivityStore`     | `src/app/stores/activity.ts`     | 动态记录数据         | 消息中心/首页 |
+| Store                  | 路径                                     | 用途                 | 依赖模块      |
+| ---------------------- | ---------------------------------------- | -------------------- | ------------- |
+| `useUserStore`         | `src/app/stores/useUserStore.ts`         | 用户登录态、用户信息 | 全局          |
+| `useAppStore`          | `src/app/stores/useAppStore.ts`          | 应用级状态（待扩展） | 全局          |
+| `useNotificationStore` | `src/app/stores/useNotificationStore.ts` | 消息中心通知数据     | 消息中心      |
+| `useActivityStore`     | `src/app/stores/useActivityStore.ts`     | 动态记录数据         | 消息中心/首页 |
 
 ## 路由关系
 

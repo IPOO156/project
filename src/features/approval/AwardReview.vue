@@ -173,7 +173,7 @@ function goTo(path: string) {
               @click.stop="goTo(item.path)"
             >
               {{ item.hasData ? '查看' : '去报名' }}
-              <Plus :size="12" style="margin-left: 2px" />
+              <Plus class="u-ml-2" :size="12" />
             </el-button>
           </div>
         </el-col>

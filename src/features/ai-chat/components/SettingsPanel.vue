@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
-import type { ChatSettings } from '../types'
+import type { ChatSettings } from '../ai-chat.types'
 /**
  * SettingsPanel - 右侧滑入设置面板
  *

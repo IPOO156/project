@@ -5,6 +5,7 @@ import { computed, ref } from 'vue'
 import { useDict } from '@/shared/composables/composables'
 import { INTEREST_LEVEL } from '@/shared/constants/dict'
 import { calcAggregateScore } from '@/shared/utils/score'
+import ResumeHeader from './ResumeHeader.vue'
 
 interface ResumeData {
   userInfo: Partial<UserInfo>
@@ -70,28 +71,6 @@ const dimAvg = computed(
     ) ?? 0,
 )
 
-/** 将 submission 按类型分组，过滤有意义的活动 */
-const _u_experienceGroups = computed(() => {
-  const groupLabels: Record<string, string> = {
-    internship: '实习经历',
-    organization: '组织/社团经历',
-    socialPractice: '社会实践',
-    research: '科研项目',
-    training: '培训经历',
-    certificate: '证书',
-  }
-
-  const groups = new Map<string, { title: string; submitDate: string }[]>()
-  for (const item of props.data.submissions) {
-    const label = groupLabels[item.type]
-    if (!label) continue
-    const list = groups.get(label) ?? []
-    list.push(item)
-    groups.set(label, list)
-  }
-  return [...groups.entries()]
-})
-
 const allExperiences = computed(() => {
   return props.data.submissions.filter((s) =>
     ['internship', 'organization', 'socialPractice', 'research', 'training'].includes(s.type),
@@ -135,88 +114,7 @@ defineExpose({
 <template>
   <div class="resume">
     <!-- ─── 头部：个人信息 ─── -->
-    <header class="resume-header">
-      <div class="header-top">
-        <h1 class="header-name">{{ data.userInfo.realName || '姓名' }}</h1>
-        <p class="header-subtitle">应届毕业生 · {{ data.userInfo.major || '' }}</p>
-      </div>
-      <div class="header-contact">
-        <span v-if="data.userInfo.phone" class="contact-item">
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
-            />
-          </svg>
-          {{ data.userInfo.phone }}
-        </span>
-        <span v-if="data.userInfo.email" class="contact-item">
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-            <polyline points="22,6 12,13 2,6" />
-          </svg>
-          {{ data.userInfo.email }}
-        </span>
-        <span v-if="data.userInfo.studentId" class="contact-item">
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-          </svg>
-          {{ data.userInfo.studentId }}
-        </span>
-        <span v-if="data.userInfo.grade" class="contact-item">
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
-          </svg>
-          {{ data.userInfo.grade }}级
-        </span>
-        <span v-if="data.userInfo.className" class="contact-item">
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-          {{ data.userInfo.className }}
-        </span>
-      </div>
-    </header>
+    <ResumeHeader :user-info="data.userInfo" />
 
     <!-- ─── 主体 ─── -->
     <main class="resume-body">
@@ -336,50 +234,6 @@ defineExpose({
   font-size: 11pt;
   line-height: 1.5;
   box-sizing: border-box;
-}
-
-/* ====== 头部 ====== */
-.resume-header {
-  padding: 28px 30px 20px;
-  border-bottom: 3px solid #1e3a5f;
-}
-
-.header-top {
-  margin-bottom: 10px;
-}
-
-.header-name {
-  margin: 0 0 2px;
-  font-size: 26pt;
-  font-weight: 700;
-  color: #1e293b;
-  letter-spacing: 4px;
-}
-
-.header-subtitle {
-  margin: 0;
-  font-size: 11pt;
-  color: #64748b;
-}
-
-.header-contact {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 16px;
-  font-size: 9.5pt;
-  color: #475569;
-}
-
-.contact-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #475569;
-}
-
-.contact-item svg {
-  opacity: 0.6;
-  flex-shrink: 0;
 }
 
 /* ====== 主体 ====== */

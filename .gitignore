@@ -13,7 +13,7 @@ vite.config.js
 vite.config.d.ts
 *.tsbuildinfo
 
-package-lock.json
+# Node 依赖锁文件：CI 使用 npm ci，只保留 package-lock.json（已入库）
 
 # Cursor AI 配置目录（本地规则，不入库）
 .cursor/

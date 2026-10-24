@@ -25,7 +25,20 @@
 - 文件夹：`kebab-case`（如 `user-profile`）
 - 组件文件：`PascalCase`（如 `UserProfile.vue`）
 - Composable：`camelCase` 且以 `use` 开头（如 `usePagination.ts`）
-- Store：`camelCase` 且以 `use` 开头（如 `useUserStore.ts`）
+- Store：`camelCase` 且以 `use` 开头，文件名 `useXxxStore.ts`（如 `useUserStore.ts`）
+- 非组件 TS 模块：`camelCase`（如 `timelineConstants.ts`、`reviewColumns.ts`），禁止 kebab-case
+- 类型模块：`src/shared/types/teacher/` 下与 API 模块同名的文件统一加 `-types.ts` 后缀
+
+## 样式约定
+
+- 静态样式一律使用类名；原子工具类定义在 `src/assets/styles/global.scss`（`u-w-*`、`u-mr-4`、`u-ml-2`）。
+- 仅动态计算值允许 `:style`，并在注释中说明原因。
+- `--xxx` CSS 变量若为固定取值，应改为修饰类，不要写在 `style` 里。
+
+## 搜索与防抖
+
+- 输入类搜索字段统一使用 `@/shared/composables/useDebounce`，默认 300ms；禁止在页面里手写 `setTimeout` 计时器。
+- 下拉选择等离散操作可直接触发查询，无需防抖。
 
 ## Vue 文件结构
 

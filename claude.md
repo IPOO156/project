@@ -66,6 +66,14 @@ src/
 - **禁止跨层引用**；路径嵌套不要超过 4 层。
 - **同一项目内禁止出现同名文件**（含不同目录）。
 
+> **实际落地约定（2026-10-25 修订，与代码保持一致）**：
+>
+> - Store 位于 `src/app/stores/`，文件名统一为 `useXxxStore.ts`（与 `docs/style-guide.md` 一致）。
+> - 通用 Composable 位于 `src/shared/composables/`（不在 `src/composables/`）。
+> - 教师端位于 `src/features/teacher/`，按业务域分为 `archive` / `review` / `org` / `ops` 四组；组内页面与子组件同级，不再嵌套 `components/`，保证路径 ≤ 4 层。
+> - 类型文件按业务域拆分，`src/shared/types/teacher/` 下冲突域名统一加 `-types.ts` 后缀。
+> - 上述差异以代码为准；如需调整结构，先更新本节再改代码。
+
 ### 2.2 Vue 文件结构规范
 
 推荐标准骨架（`<script setup>`）：
@@ -81,8 +89,8 @@ interface FormData {
 }
 
 // ── 3. Props & Emits ──
-const props = defineProps<{ /* ... */ }>()
-const emit = defineEmits<{ /* ... */ }>()
+const props = defineProps<{/* ... */}>()
+const emit = defineEmits<{/* ... */}>()
 
 // ── 4. Store / Composable ──
 // const userStore = useUserStore()

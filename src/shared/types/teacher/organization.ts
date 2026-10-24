@@ -1,7 +1,7 @@
 /**
  * 教师端/管理端 API 类型 —— 组织架构（/admin/schools|colleges|majors|classes）
  */
-import type { PageQuery } from './common'
+import type { PageQuery } from './common-types'
 
 export interface OrgSchoolItem {
   schoolId: number

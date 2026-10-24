@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
-import type { QuickQuestion } from '../types'
+import type { QuickQuestion } from '../ai-chat.types'
 /**
  * QuickQuestions - 快捷问题胶囊区
  *

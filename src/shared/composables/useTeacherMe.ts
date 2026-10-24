@@ -1,6 +1,6 @@
 import type { CurrentUser } from '@/shared/types/teacher'
 import { ref } from 'vue'
-import { getCurrentUser } from '@/shared/api/teacher'
+import { getCurrentUser } from '@/shared/api/teacher-api'
 import { TEACHER_ME_KEY } from '@/shared/constants/storageKeys'
 
 function readCache(): CurrentUser | null {

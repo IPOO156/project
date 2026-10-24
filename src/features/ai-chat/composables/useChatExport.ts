@@ -1,4 +1,4 @@
-import type { ChatMessage, ExportFormat } from '../types'
+import type { ChatMessage, ExportFormat } from '../ai-chat.types'
 /**
  * useChatExport - 对话导出（TXT / MD / PDF）
  *

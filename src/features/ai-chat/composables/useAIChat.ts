@@ -6,7 +6,7 @@ import type {
   Conversation,
   MessageFeedback,
   RichContent,
-} from '../types'
+} from '../ai-chat.types'
 /**
  * useAIChat - AI 助手对话核心 composable
  *

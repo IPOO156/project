@@ -1,7 +1,7 @@
 /**
  * 教师端/管理端 API 类型 —— 教师端待审核任务与审核历史（/teacher/audits）
  */
-import type { PageQuery } from './common'
+import type { PageQuery } from './common-types'
 
 /* ===================== 教师端-待审核任务（/teacher/audits）===================== */
 

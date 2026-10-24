@@ -1,8 +1,8 @@
-import type { GrowthExperience, GrowthExperienceInput } from '../timeline-constants'
+import type { GrowthExperience, GrowthExperienceInput } from '../timelineConstants'
 import { computed, ref } from 'vue'
 import { addTimelineEvent, deleteTimelineEvent } from '@/shared/api/archive'
 import { getGrowthTimeline } from '@/shared/api/student'
-import { inferSemester, mapTimelineEventType } from '../timeline-constants'
+import { inferSemester, mapTimelineEventType } from '../timelineConstants'
 import { useGrowthDataSources } from './useGrowthDataSources'
 
 function sortExperiencesByDate(list: GrowthExperience[]): GrowthExperience[] {
