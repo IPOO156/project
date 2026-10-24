@@ -178,10 +178,56 @@ function buildWaitFrame(palette: { ink: string; paper: string; back: string }, p
 
 /* ---------------- 样式 ---------------- */
 
+/** 运行时归一化标记：悬停时把原生 pointer/text/not-allowed 映射到书册对应状态 */
+const DATA_CURSOR_ATTR = 'data-bc-cursor'
+
+/** 项目内大量自定义可点区域不走 a/button，靠 pointerover 按「实际计算光标」兜底 */
+const NATIVE_CURSOR_STATES: Record<string, 'hover' | 'text' | 'not-allowed'> = {
+  pointer: 'hover',
+  text: 'text',
+  'not-allowed': 'not-allowed',
+}
+
+// 常见交互元素前置声明，避免首次悬停时出现一帧系统光标
+const HOVER_SELECTOR = [
+  'a',
+  'button',
+  '[role="button"]',
+  '[role="tab"]',
+  '[role="menuitem"]',
+  '[role="option"]',
+  '[role="switch"]',
+  '[role="checkbox"]',
+  '[role="radio"]',
+  'select',
+  'summary',
+  'label[for]',
+  '.el-button',
+  '.el-link',
+  '.el-tabs__item',
+  '.el-radio',
+  '.el-checkbox',
+  '.el-switch',
+  '.el-select',
+  '.el-dropdown',
+  '.el-menu-item',
+  '.el-sub-menu__title',
+  '.el-pager li',
+  '.el-collapse-item__header',
+  '.el-tree-node__content',
+  '.el-upload',
+  '.el-upload-dragger',
+  '.bc-link',
+].join(',')
+
 const CURSOR_CSS = [
   'html{cursor:var(--bc-default),auto;}',
-  'a,button,[role="button"],select,summary,label[for],.el-button,.el-link,.bc-link{cursor:var(--bc-hover),pointer;}',
-  'input,textarea,[contenteditable=""],[contenteditable="true"]{cursor:var(--bc-text),text;}',
+  `${HOVER_SELECTOR}{cursor:var(--bc-hover),pointer;}`,
+  'input,textarea,.el-input__wrapper,.el-textarea__inner,[contenteditable=""],[contenteditable="true"]{cursor:var(--bc-text),text;}',
+  // 运行时归一化规则放在 disabled 之前：元素被禁用时由后面的 disabled 规则覆盖
+  `[${DATA_CURSOR_ATTR}='hover']{cursor:var(--bc-hover),pointer!important;}`,
+  `[${DATA_CURSOR_ATTR}='text']{cursor:var(--bc-text),text!important;}`,
+  `[${DATA_CURSOR_ATTR}='not-allowed']{cursor:var(--bc-na),not-allowed!important;}`,
   '[disabled],.is-disabled,[aria-disabled="true"]{cursor:var(--bc-na),not-allowed!important;}',
   `.${BUSY_CLASS},.${BUSY_CLASS} *{cursor:var(--bc-wait),progress!important;}`,
   `.${OFF_CLASS},.${OFF_CLASS} *{cursor:auto!important;}`,
@@ -283,6 +329,36 @@ function onMouseDown(event: MouseEvent): void {
   else if (event.button === 1) setPress('middle')
 }
 
+/**
+ * 悬停归一化：项目里大量可点区域是 div/span + 自定义 CSS（登录端切换、
+ * 卡片、时间轴节点等），无法靠选择器穷举。
+ * 这里读取元素「实际计算光标」，只把原生 pointer / text / not-allowed
+ * 映射为书册状态；grab、resize 等特殊光标保持原样。
+ */
+function onPointerOver(event: PointerEvent): void {
+  if (!enabled) return
+  const target = event.target
+  if (!(target instanceof Element)) return
+  // 已经归一化过的元素不再重复判断（避免每次进入都读一次计算样式）
+  if (target.hasAttribute(DATA_CURSOR_ATTR)) return
+
+  const cursor = getComputedStyle(target).cursor
+  // 已命中自定义光标（含 data URI）时直接跳过
+  if (cursor.includes('data:image/svg+xml')) return
+
+  // computed 形如 "pointer" 或 "url(...) 5 3, pointer"，取首个 token 判断
+  const primary = cursor.split(',')[0]?.trim() ?? ''
+  const state = NATIVE_CURSOR_STATES[primary]
+  if (state) target.setAttribute(DATA_CURSOR_ATTR, state)
+}
+
+/** 清除所有运行期归一化标记（禁用/销毁/拖拽开始时调用） */
+function clearHoverMarks(): void {
+  document.querySelectorAll(`[${DATA_CURSOR_ATTR}]`).forEach((el) => {
+    el.removeAttribute(DATA_CURSOR_ATTR)
+  })
+}
+
 function startWait(target?: Element): void {
   stopWait()
   const el = target ?? document.documentElement
@@ -323,6 +399,7 @@ function applyEnabled(on: boolean): void {
   if (!on) {
     stopWait()
     release()
+    clearHoverMarks()
     document.documentElement.classList.add(OFF_CLASS)
   } else {
     document.documentElement.classList.remove(OFF_CLASS)
@@ -359,6 +436,8 @@ function init(options: BookCursorOptions = {}): void {
 
   document.addEventListener('mousedown', onMouseDown, true)
   document.addEventListener('mouseup', release, true)
+  document.addEventListener('pointerover', onPointerOver, true)
+  document.addEventListener('dragstart', clearHoverMarks, true)
   document.addEventListener('dragend', release, true)
   window.addEventListener('blur', release)
 
@@ -379,8 +458,11 @@ function destroy(): void {
   release()
   document.removeEventListener('mousedown', onMouseDown, true)
   document.removeEventListener('mouseup', release, true)
+  document.removeEventListener('pointerover', onPointerOver, true)
+  document.removeEventListener('dragstart', clearHoverMarks, true)
   document.removeEventListener('dragend', release, true)
   window.removeEventListener('blur', release)
+  clearHoverMarks()
   if (observer) {
     observer.disconnect()
     observer = null
