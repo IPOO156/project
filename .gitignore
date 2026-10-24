@@ -8,6 +8,9 @@ dist
 playwright-report/
 test-results/
 
+# 单元测试覆盖率报告（vitest --coverage 产物）
+coverage/
+
 # 项目内 Playwright 浏览器缓存（沙箱内无法写系统目录时使用）
 .playwright-browsers/
 
