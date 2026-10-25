@@ -35,6 +35,10 @@ export default defineConfig({
   // 真实缺陷两次都会失败，不会因此漏检。Playwright 会把重试通过的用例单列为 flaky。
   retries: process.env.CI ? 2 : 1,
 
+  // dev server 首次访问某个路由时才编译对应 chunk（实测权限页 Tab 在 5s 断言超时内
+  // 仍是 0 个元素、重试即通过），放宽断言超时，避免把编译耗时误判为权限回归失败。
+  expect: { timeout: 15000 },
+
   reporter: [
     ['html', { open: 'never' }],
     ['junit', { outputFile: 'test-results/junit.xml' }],

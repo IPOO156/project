@@ -36,11 +36,13 @@ jobs:
       - name: Build
         run: npm run build
 
-      # npm registry 默认走 npmmirror 时不支持 audit 接口，显式指定官方源
+      # 含 devDependencies：vite / playwright 等构建链同样是供应链攻击面，
+      # 仅审计生产依赖会漏掉构建期执行的包。
+      # npm registry 默认走 npmmirror 时不支持 audit 接口，显式指定官方源。
       - name: Security audit
-        run: npm audit --omit=dev --audit-level=high --registry=https://registry.npmjs.org
+        run: npm audit --audit-level=high --registry=https://registry.npmjs.org
 
-  # 接口全 mock 的 E2E：不依赖后端与 natapp 隧道，可稳定跑主链路与 404 兜底
+  # 接口全 mock 的 E2E：不依赖后端与 natapp 隧道，可稳定跑主链路、权限码回归与安全回归
   e2e-mocked:
     name: E2E (mocked)
     runs-on: ubuntu-latest
@@ -61,5 +63,11 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      # 依赖真实后端 + VITE_E2E_PASSWORD 的用例（student/teacher-authz/security）仍只在
+      # 本机联调环境执行；这里跑它们的 mock 版本，保证权限码与登出清理合主干时有自动防线。
       - name: Run mocked E2E
-        run: npx playwright test tests/e2e/student-mocked.spec.ts
+        run: >-
+          npx playwright test
+          tests/e2e/student-mocked.spec.ts
+          tests/e2e/teacher-authz-mocked.spec.ts
+          tests/e2e/security-mocked.spec.ts

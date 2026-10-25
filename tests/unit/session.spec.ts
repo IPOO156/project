@@ -1,10 +1,9 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DRAFT_PREFIX,
   LOADING_TIP_FAVORITES_KEY,
   LOADING_TIP_HIDDEN_KEY,
-  SUBMISSION_WITHDRAWN_KEY,
   TEACHER_ME_KEY,
   USER_AVATAR_CACHE_KEY,
   USER_INFO_CACHE_KEY,
@@ -16,13 +15,16 @@ beforeEach(() => {
   sessionStorage.clear()
 })
 
+function loginAs(id: string | number) {
+  localStorage.setItem(USER_INFO_CACHE_KEY, JSON.stringify({ id }))
+}
+
 describe('clearUserScopedStorage', () => {
-  it('清空全部 6 个账号级固定键', () => {
+  it('清空 5 个账号级固定键', () => {
     const scopedKeys = [
       USER_INFO_CACHE_KEY,
       USER_AVATAR_CACHE_KEY,
       TEACHER_ME_KEY,
-      SUBMISSION_WITHDRAWN_KEY,
       LOADING_TIP_FAVORITES_KEY,
       LOADING_TIP_HIDDEN_KEY,
     ]
@@ -33,14 +35,36 @@ describe('clearUserScopedStorage', () => {
     scopedKeys.forEach((key) => expect(localStorage.getItem(key)).toBeNull())
   })
 
-  it('按前缀清除全部表单草稿', () => {
-    localStorage.setItem(`${DRAFT_PREFIX}career-plan`, '{}')
-    localStorage.setItem(`${DRAFT_PREFIX}competition`, '{}')
+  it('按命名空间清除当前用户与 anonymous 的草稿与撤回标记', () => {
+    loginAs(2)
+    localStorage.setItem(`${DRAFT_PREFIX}career-plan::u2`, '{}')
+    localStorage.setItem(`${DRAFT_PREFIX}competition::anonymous`, '{}')
+    localStorage.setItem('submission:withdrawnIds::u2', '["1"]')
 
     clearUserScopedStorage()
 
-    expect(localStorage.getItem(`${DRAFT_PREFIX}career-plan`)).toBeNull()
-    expect(localStorage.getItem(`${DRAFT_PREFIX}competition`)).toBeNull()
+    expect(localStorage.getItem(`${DRAFT_PREFIX}career-plan::u2`)).toBeNull()
+    expect(localStorage.getItem(`${DRAFT_PREFIX}competition::anonymous`)).toBeNull()
+    expect(localStorage.getItem('submission:withdrawnIds::u2')).toBeNull()
+  })
+
+  it('不误删其他账号命名空间下的草稿', () => {
+    loginAs(2)
+    localStorage.setItem(`${DRAFT_PREFIX}career-plan::u9`, '{}')
+
+    clearUserScopedStorage()
+
+    expect(localStorage.getItem(`${DRAFT_PREFIX}career-plan::u9`)).not.toBeNull()
+  })
+
+  it('先按命名空间清理再删身份缓存（否则作用域退化为 anonymous 漏删）', () => {
+    loginAs(5)
+    localStorage.setItem(`${DRAFT_PREFIX}x::u5`, '{}')
+
+    clearUserScopedStorage()
+
+    expect(localStorage.getItem(`${DRAFT_PREFIX}x::u5`)).toBeNull()
+    expect(localStorage.getItem(USER_INFO_CACHE_KEY)).toBeNull()
   })
 
   it('保留设备级偏好（主题、悬浮球位置等）', () => {
@@ -53,16 +77,25 @@ describe('clearUserScopedStorage', () => {
     expect(localStorage.getItem('ai_float_position')).toBe('{"x":1,"y":2}')
   })
 
-  it('按前缀匹配清除（含同前缀变体）', () => {
-    localStorage.setItem('form_draft_v2', 'another-draft')
-    // 前缀是 form_draft_，form_draft_v2 同样命中，属预期行为
-    clearUserScopedStorage()
-    expect(localStorage.getItem('form_draft_v2')).toBeNull()
-  })
-
   it('sessionStorage 不在清理范围（令牌独立管理）', () => {
     sessionStorage.setItem('token', 'session-token')
     clearUserScopedStorage()
     expect(sessionStorage.getItem('token')).toBe('session-token')
+  })
+
+  it('存储不可用时静默降级（隐私模式）', () => {
+    const spy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('storage disabled')
+    })
+
+    expect(() => clearUserScopedStorage()).not.toThrow()
+
+    spy.mockRestore()
+  })
+
+  it('非浏览器环境（SSR / 单测 node 环境）直接返回', () => {
+    vi.stubGlobal('window', undefined)
+    expect(() => clearUserScopedStorage()).not.toThrow()
+    vi.unstubAllGlobals()
   })
 })

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { USER_SCOPED_PREFIXES } from '@/shared/constants/storageKeys'
 import bookCursor from '@/shared/utils/bookCursor'
 import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import {
@@ -132,7 +133,7 @@ function clearAuthCaches() {
   try {
     // 会话失效（刷新失败）时同样清理当前用户的草稿/撤回标记，
     // 避免令牌已失效但 PII 仍留在 localStorage。必须在删除身份缓存前执行。
-    clearCurrentUserScopedStorage(['form_draft_', 'submission:'])
+    clearCurrentUserScopedStorage(USER_SCOPED_PREFIXES)
     localStorage.removeItem('user_info_cache')
     localStorage.removeItem('teacher_me')
     localStorage.removeItem('user_avatar_cache')

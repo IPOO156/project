@@ -1,10 +1,9 @@
 import type { ReviewFilters } from '@/shared/api/review'
 import type { ReviewRecord } from '@/shared/types/types'
-import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { updateActivity } from '@/shared/api/activities'
 import { getActivities } from '@/shared/api/activity'
+import { applyResubmitted, mapActivityBase, resubmitActivity } from './reviewRecordShared'
 
 /**
  * 申报审核 Store
@@ -46,14 +45,8 @@ export const useReviewStore = defineStore('review', () => {
         if (filters?.keyword) params.keyword = filters.keyword
         if (filters?.status) params.status = Number(filters.status)
         const activities = await getActivities(params)
-        const mapped = activities.map((a: any) => ({
-          id: a.id,
-          type: a.type || '',
-          typeLabel: a.typeLabel || '',
-          title: a.text || a.title || '',
-          submitDate: a.time || '',
-          semester: a.semester || '',
-          status: a.status || 'pending',
+        const mapped = activities.map((a) => ({
+          ...mapActivityBase(a),
           proofMaterials: [],
         }))
         allRecords.value = mapped
@@ -95,15 +88,9 @@ export const useReviewStore = defineStore('review', () => {
         const activities = await getActivities()
         loadFailed.value = false
         return activities
-          .filter((a: any) => a.type === type)
-          .map((a: any) => ({
-            id: a.id,
-            type: a.type || '',
-            typeLabel: a.typeLabel || '',
-            title: a.text || a.title || '',
-            submitDate: a.time || '',
-            semester: a.semester || '',
-            status: a.status || 'pending',
+          .filter((a) => a.type === type)
+          .map((a) => ({
+            ...mapActivityBase(a),
             proofMaterials: [],
           }))
       } catch {
@@ -129,19 +116,11 @@ export const useReviewStore = defineStore('review', () => {
    *  接口失败时错误向上抛出（拦截器已统一提示），禁止本地伪造 pending 状态与假成功提示
    */
   async function resubmit(id: string, data: Record<string, any>): Promise<void> {
-    await updateActivity(Number(id), 'archive', data)
+    await resubmitActivity(id, 'archive', data)
 
-    const status = 'pending'
-    const allIdx = allRecords.value.findIndex((r) => r.id === id)
-    if (allIdx >= 0) allRecords.value[allIdx] = { ...allRecords.value[allIdx], ...data, status }
-    const type = (data.type || allRecords.value[allIdx]?.type) as string
-    if (type && typeRecords.value[type]) {
-      const tIdx = typeRecords.value[type].findIndex((r) => r.id === id)
-      if (tIdx >= 0)
-        typeRecords.value[type][tIdx] = { ...typeRecords.value[type][tIdx], ...data, status }
-    }
-
-    ElMessage.success('修改已保存，等待重新审核')
+    applyResubmitted(allRecords.value, id, data)
+    const type = (data.type || allRecords.value.find((r) => r.id === id)?.type) as string
+    if (type && typeRecords.value[type]) applyResubmitted(typeRecords.value[type], id, data)
   }
 
   /**

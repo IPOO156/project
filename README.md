@@ -49,11 +49,17 @@ archive-system-student/
 │   ├── app/                 # 应用入口（路由、布局、Pinia store：useXxxStore.ts）
 │   ├── assets/              # 静态资源与全局 SCSS（含原子工具类 u-*）
 │   ├── features/            # 按业务模块划分的页面与逻辑
+│   │   ├── ai-chat/         # AI 助手会话
 │   │   ├── applications/    # 各类申报模块
 │   │   ├── approval/        # 审批与提交记录
 │   │   ├── auth/            # 登录认证
+│   │   ├── awards/          # 奖项与荣誉
 │   │   ├── dashboard/       # 首页仪表盘
+│   │   ├── error/           # 404 等兜底页
+│   │   ├── growth-timeline/ # 成长时间线
+│   │   ├── messages/        # 消息中心与全部动态
 │   │   ├── profile/         # 个人中心
+│   │   ├── submission-records/ # 提交记录
 │   │   └── teacher/         # 教师端，按域分组：archive / review / org / ops（组内页面与子组件同级）
 │   ├── shared/              # 全局共享资源
 │   │   ├── api/             # 请求封装（submission 等大模块按域拆分到同名目录）

@@ -1,10 +1,9 @@
 import type { AwardReviewFilters } from '@/shared/api/award-review'
 import type { StarRecord } from '@/shared/types/types'
-import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { updateActivity } from '@/shared/api/activities'
 import { getActivities } from '@/shared/api/activity'
+import { applyResubmitted, mapActivityBase, resubmitActivity } from './reviewRecordShared'
 
 /**
  * 奖项审核 Store
@@ -23,25 +22,18 @@ export const useAwardReviewStore = defineStore('award-review', () => {
     try {
       const activities = await getActivities()
       allRecords.value = activities
-        .filter(
-          (a: any) =>
-            a.type === 'award' ||
-            [
-              'competitionStar',
-              'innovationStar',
-              'scientificProject',
-              'softwareCopyright',
-              'paper',
-            ].includes(a.type),
+        .filter((a) =>
+          [
+            'award',
+            'competitionStar',
+            'innovationStar',
+            'scientificProject',
+            'softwareCopyright',
+            'paper',
+          ].includes(a.type ?? ''),
         )
-        .map((a: any) => ({
-          id: a.id,
-          type: a.type || '',
-          typeLabel: a.typeLabel || '',
-          title: a.text || a.title || '',
-          submitDate: a.time || '',
-          semester: a.semester || '',
-          status: a.status || 'pending',
+        .map((a) => ({
+          ...mapActivityBase(a),
           sourcePath: '',
           applicant: '',
         }))
@@ -59,10 +51,8 @@ export const useAwardReviewStore = defineStore('award-review', () => {
    *  接口失败时错误向上抛出（拦截器已统一提示），禁止本地伪造 pending 状态与假成功提示
    */
   async function resubmit(id: string, data: Record<string, any>): Promise<void> {
-    await updateActivity(Number(id), 'award', data)
-    const idx = allRecords.value.findIndex((r) => r.id === id)
-    if (idx >= 0) allRecords.value[idx] = { ...allRecords.value[idx], ...data, status: 'pending' }
-    ElMessage.success('修改已保存，等待重新审核')
+    await resubmitActivity(id, 'award', data)
+    applyResubmitted(allRecords.value, id, data)
   }
 
   /** 重置用户级状态（登出/换账号时调用） */

@@ -22,6 +22,12 @@ export const DRAFT_PREFIX = 'form_draft_'
 /** 已撤回申报记录 id 标记（submission store 本地持久化，属账号级数据） */
 export const SUBMISSION_WITHDRAWN_KEY = 'submission:withdrawnIds'
 
+/**
+ * 登出 / 会话失效时需清理的键前缀（草稿与撤回标记均为 `键::u<id>` 命名空间存储）。
+ * 必须按当前用户命名空间清理，不能按前缀整批删除——同浏览器其他账号的未提交草稿不应被带走。
+ */
+export const USER_SCOPED_PREFIXES = [DRAFT_PREFIX, 'submission:'] as const
+
 /** 学习建议收藏的提示 id 列表（账号级偏好，登出清理，避免公用电脑残留） */
 export const LOADING_TIP_FAVORITES_KEY = 'loading_tip:favorites'
 
