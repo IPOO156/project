@@ -2,13 +2,15 @@ import type { Component } from 'vue'
 import type { RouteLocationMatched, RouteLocationNormalized } from 'vue-router'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useTabsStore } from '@/app/stores/useTabsStore'
-
 import { findTeacherMenuItemByPath } from '@/shared/config/teacherModuleRegistry'
 import { findMenuItemByPath } from '@/shared/constants/menu'
+import { useTabsStore } from '../stores/useTabsStore'
 
 /**
- * useTabs - 标签页状态桥接
+ * useTabs - 标签页状态桥接（应用装配层）
+ *
+ * 放在 app/ 而不是 shared/：它直接读写 app 层的 tabs store，
+ * 属应用骨架能力，不是可复用的通用工具（分层约束见 docs/architecture.md）。
  *
  * 职责：
  *  1. 监听路由变化 → 写入 useTabsStore

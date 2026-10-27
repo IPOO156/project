@@ -19,11 +19,11 @@
  */
 import { computed, nextTick, ref, useSlots, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useTabs } from '@/app/composables/useTabs'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
 import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import AIFloatingBall from '@/features/ai-chat/components/AIFloatingBall.vue'
 import { useGreeting } from '@/features/dashboard/composables/useGreeting'
-import { useTabs } from '@/shared/composables/composables'
 import { useLoadingTip } from '@/shared/composables/useLoadingTip'
 import GreetingToast from '@/shared/ui/GreetingToast.vue'
 import LoadingTipCard from '@/shared/ui/LoadingTipCard.vue'

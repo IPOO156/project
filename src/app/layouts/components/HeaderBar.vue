@@ -18,6 +18,7 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useThemeRipple } from '@/app/composables/useThemeRipple'
 import {
   useAppStore,
   useNotificationStore,
@@ -26,7 +27,6 @@ import {
   useUserStore,
 } from '@/app/stores/stores'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
-import { useThemeRipple } from '@/shared/composables/useThemeRipple'
 import StudyTipsDialog from '@/shared/ui/StudyTipsDialog.vue'
 import NavTabs from './NavTabs.vue'
 
