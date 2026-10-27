@@ -33,4 +33,51 @@ export default antfu({
     // Node 依赖
     'node_modules/**',
   ],
-}).append(eslintConfigPrettier)
+})
+  .append(eslintConfigPrettier)
+  .append(
+    // 分层约束（见 docs/architecture.md「分层约束」）：
+    // 页面/组件层禁止绕过服务层直接用 axios，保证 token、错误提示、401 兜底只有一处实现。
+    {
+      name: 'project/layer-boundary-features',
+      files: ['src/features/**/*.ts', 'src/features/**/*.vue'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: 'axios',
+                message: '请求统一走 @/shared/api，禁止在页面/组件层直接使用 axios',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    // shared 层不得反向依赖 app / features；仅类型导入放行。
+    // ignores 中的文件是已知技术债，改完应同步从列表移除（只减不增）。
+    {
+      name: 'project/layer-boundary-shared',
+      files: ['src/shared/**/*.ts', 'src/shared/**/*.vue'],
+      ignores: [
+        // 学习建议组合式函数读 user store 的年级，且被 shared/ui/StudyTipInline 复用；
+        // 迁移需先把该 UI 组件改为纯展示（props 注入），暂列例外。
+        'src/shared/composables/useLoadingTip.ts',
+      ],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            patterns: [
+              {
+                group: ['@/app', '@/app/*', '@/features', '@/features/*'],
+                allowTypeImports: true,
+                message: 'shared 层不得反向依赖 app / features（分层红线）',
+              },
+            ],
+          },
+        ],
+      },
+    },
+  )

@@ -27,7 +27,6 @@ import type {
 import { ref } from 'vue'
 // 真实接口 + 本地模拟回复（离线回退）与反馈占位实现
 import {
-  sendMessage as apiSendMessageOffline,
   submitFeedback as apiSubmitFeedback,
   createAIConversation,
   deleteAIConversation,
@@ -37,6 +36,7 @@ import {
   renameAIConversation,
   sendAIMessage,
 } from '@/shared/api/ai-chat'
+import { sendMessage as apiSendMessageOffline } from '../services/offlineChat'
 import { parseMarkdownToRichContent } from '../utils/richText'
 
 // 重新导出类型，保持旧的 `import type { ChatMessage } from './useAIChat'` 可用

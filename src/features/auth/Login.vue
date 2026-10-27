@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Lock, Moon, Shield, Sun, User } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
+import { useThemeRipple } from '@/app/composables/useThemeRipple'
 import { useThemeStore } from '@/app/stores/stores'
-import { useThemeRipple } from '@/shared/composables/useThemeRipple'
 import { isRoleMatchedLoginTab } from '@/shared/config/teacherModuleRegistry'
 import ChangePasswordDialog from './components/ChangePasswordDialog.vue'
 import LoginBackground from './components/LoginBackground.vue'

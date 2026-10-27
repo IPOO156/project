@@ -18,17 +18,20 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      // 统计范围为「状态与纯逻辑层」：Store、工具、常量、Composable。
-      // 组件与页面依赖真实渲染，纳入覆盖率会长期失真，改由 E2E / 人工回归保障。
+      // 统计范围为「状态与纯逻辑层」：Store、工具、常量、Composable，以及 features 下
+      // 非组件的 .ts（组合式函数、映射工具）。.vue 组件依赖真实渲染，纳入覆盖率会长期失真，
+      // 改由 E2E / 人工回归保障；类型声明与静态数据（*.types.ts / data/）无执行逻辑，不计入分母。
       include: [
         'src/app/stores/**/*.ts',
         'src/shared/utils/**/*.ts',
         'src/shared/constants/**/*.ts',
         'src/shared/composables/**/*.ts',
+        'src/features/**/*.ts',
       ],
+      exclude: ['src/features/**/*.types.ts', 'src/features/**/data/**'],
       thresholds: {
-        // 全逻辑层下限：2026-10-25 实测 30.51 / 27 / 33.67 / 30.53，向下取整留出波动余量。
-        // 门槛只升不降：新增测试后应同步上调，禁止为过 CI 而下调。
+        // 全逻辑层下限：2026-10-25 实测 29.54 / 25.75 / 30.51 / 29.65（含 features 纯逻辑）。
+        // 分母扩大后仍保持 28/28/29/25 不变，等于收紧约束；门槛只升不降，禁止为过 CI 而下调。
         lines: 28,
         statements: 28,
         functions: 29,

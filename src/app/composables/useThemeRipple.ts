@@ -1,5 +1,11 @@
-import { useThemeStore } from '@/app/stores/stores'
+import { useThemeStore } from '../stores/stores'
 
+/**
+ * 日间/夜间切换的水波过渡（应用装配层能力）。
+ *
+ * 放在 app/ 而不是 shared/：它直接依赖主题 store，属应用级交互，
+ * 不是与业务无关的通用工具（分层约束见 docs/architecture.md）。
+ */
 export function useThemeRipple() {
   const themeStore = useThemeStore()
 
