@@ -131,7 +131,7 @@ function switchTab(tab: 'activity' | 'submission') {
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.25s ease;
+    @include transition-ui($duration-base);
 
     &:hover {
       background: var(--mc-primary-faint);

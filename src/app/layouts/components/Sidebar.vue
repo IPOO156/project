@@ -151,15 +151,15 @@ async function handleSwitchToStudent() {
   top: 0;
   left: 0;
   width: $sidebar-width;
-  height: 100vh;
+  height: 100dvh;
   background: var(--el-bg-color);
   border-right: 1px solid var(--el-border-color-light);
   display: flex;
   flex-direction: column;
   z-index: 100;
   transition:
-    width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    width 0.28s $ease-standard,
+    transform 0.28s $ease-standard;
   overflow: hidden;
 
   &--collapsed {

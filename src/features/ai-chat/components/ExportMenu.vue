@@ -124,7 +124,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 
 .em-enter-active,
 .em-leave-active {
-  transition: all $duration-fast $ease-standard;
+  @include transition-ui;
 }
 
 .em-enter-from,

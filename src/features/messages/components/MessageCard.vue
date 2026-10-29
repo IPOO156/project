@@ -283,7 +283,7 @@ function handleCardClick() {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  @include transition-ui($duration-base);
   color: var(--mc-text-secondary);
   background: transparent;
   &:hover {

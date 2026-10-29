@@ -89,7 +89,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  @include transition-ui($duration-base);
   font-family: $mc-font-body;
 
   &:disabled {

@@ -378,7 +378,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     color: var(--el-text-color-secondary);
     font-size: 12px;
     cursor: pointer;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
     &:hover:not(:disabled) {
       border-color: var(--mc-primary);
       color: var(--mc-primary);
@@ -435,7 +435,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
     &:hover:not(:disabled) {
       background: var(--mc-primary-light);
       transform: translateY(-1px);
@@ -498,23 +498,6 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     .ai-drawer__panel {
       transform: translateY(100%);
       opacity: 1;
-    }
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-drawer-enter-active,
-  .ai-drawer-leave-active {
-    &,
-    .ai-drawer__backdrop,
-    .ai-drawer__panel {
-      transition: none;
-    }
-  }
-  .ai-drawer-enter-from,
-  .ai-drawer-leave-to {
-    .ai-drawer__panel {
-      transform: none;
     }
   }
 }

@@ -31,7 +31,7 @@
   --login-captcha-bg: rgba(255, 255, 255, 0.06);
   --login-float-bg: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.5));
 
-  min-height: 100vh;
+  min-height: 100svh;
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(420px, 0.8fr);
   position: relative;
@@ -99,7 +99,7 @@
     backdrop-filter: blur(16px);
     cursor: pointer;
     transition:
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.45s $ease-out-quint,
       border-color 0.45s ease,
       box-shadow 0.45s ease,
       color 0.45s ease;
@@ -110,7 +110,7 @@
     }
   }
   &__theme-icon {
-    animation: themeIconSpin 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: themeIconSpin 0.5s $ease-out-quint;
   }
 
   /* ---- 右侧登录面板 ---- */
@@ -121,7 +121,7 @@
     align-items: center;
     justify-content: center;
     padding: 56px 5vw 56px 0;
-    animation: panelEnter 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: panelEnter 1.4s $ease-emphasized;
   }
   &__card {
     position: relative;
@@ -135,7 +135,7 @@
       0 34px 80px var(--login-card-shadow),
       inset 0 1px 0 rgba(255, 255, 255, 0.12);
     transition:
-      background-color 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 0.6s $ease-out-quint,
       border-color 0.6s ease,
       box-shadow 0.6s ease;
   }
@@ -193,7 +193,7 @@
     transition: color 0.5s ease;
     > span {
       display: inline-block;
-      animation: textSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      animation: textSlideIn 0.35s $ease-out-quint;
     }
   }
 
@@ -243,7 +243,7 @@
       0 16px 30px var(--login-btn-shadow),
       inset 0 1px 0 rgba(255, 255, 255, 0.18);
     transition:
-      transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.5s $ease-out-quint,
       background 0.5s ease,
       box-shadow 0.5s ease;
     &.is-admin {
@@ -272,10 +272,14 @@
     font-weight: 500;
     letter-spacing: 0.01em;
     opacity: 1;
+    // 浮动标签移动依赖 top/left/font-size，无法只走合成层；
+    // 至少去掉 all，避免把无关属性一并卷入过渡
     transition:
-      all 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-      color 0.3s ease,
-      opacity 0.2s ease;
+      top $duration-slow $ease-emphasized,
+      left $duration-slow $ease-emphasized,
+      font-size $duration-slow $ease-emphasized,
+      color $duration-slow $ease-standard,
+      opacity $duration-base $ease-standard;
   }
   .login__input-group.is-focus &__floating-label {
     top: -6px;
@@ -293,7 +297,6 @@
   .login--dark .login__input-group.is-focus &__floating-label {
     color: #8bb8ff;
     background: transparent;
-    text-shadow: 0 0 20px rgba(139, 184, 255, 0.3);
   }
   .login--light .login__input-group.is-focus &__floating-label {
     color: #2563eb;
@@ -317,8 +320,8 @@
       background: var(--login-input-bg);
       box-shadow: inset 0 0 0 1px var(--login-input-border);
       transition:
-        box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.35s $ease-out-quint,
+        transform 0.35s $ease-out-quint,
         background-color 0.35s ease;
       &::after {
         content: '';
@@ -333,7 +336,7 @@
         );
         opacity: 0;
         z-index: -1;
-        transition: opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: opacity 0.35s $ease-out-quint;
       }
     }
     :deep(.el-input__wrapper.is-focus) {
@@ -485,7 +488,7 @@
       0 20px 36px var(--login-btn-shadow),
       inset 0 1px 0 rgba(255, 255, 255, 0.16);
     transition:
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.45s $ease-out-quint,
       box-shadow 0.45s ease,
       filter 0.45s ease,
       background 0.45s ease;
@@ -497,7 +500,8 @@
       filter: brightness(1.04);
     }
     &:active {
-      transform: translateY(0);
+      transform: translateY(0) scale(0.98);
+      transition-duration: $duration-instant;
     }
     &--success {
       background: linear-gradient(135deg, #1f9d67 0%, #16784f 100%) !important;

@@ -216,7 +216,7 @@ function formatConvTime(conv: Conversation): string {
     font-size: $font-size-sm;
     color: var(--el-text-color-regular);
     cursor: pointer;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
     flex-shrink: 0;
 
     &:hover {
@@ -341,7 +341,7 @@ function formatConvTime(conv: Conversation): string {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover {
       background: var(--el-fill-color);
@@ -420,7 +420,7 @@ function formatConvTime(conv: Conversation): string {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover {
       background: var(--el-fill-color-light);

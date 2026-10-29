@@ -175,7 +175,7 @@ onUnmounted(() => {
 /* ---- 文字区 ---- */
 .login__hero-inner {
   max-width: 760px;
-  animation: heroEnter 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: heroEnter 1.2s $ease-emphasized;
   position: relative;
   z-index: 2;
   transition: transform 0.25s ease-out;
@@ -274,7 +274,7 @@ onUnmounted(() => {
 .login__hero-title-text {
   display: block;
   text-wrap: balance;
-  animation: textSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: textSlideIn 0.45s $ease-out-quint;
 }
 
 .login__hero-subtitle {
@@ -290,7 +290,7 @@ onUnmounted(() => {
 
 .login__hero-subtitle-text {
   display: block;
-  animation: textSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) 0.05s;
+  animation: textSlideIn 0.35s $ease-out-quint 0.05s;
 }
 
 /* ---- 特性卡片 ---- */
@@ -313,7 +313,7 @@ onUnmounted(() => {
   overflow: hidden;
   animation: fadeUp 1.35s ease both;
   transition:
-    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.45s $ease-out-quint,
     border-color 0.45s ease,
     box-shadow 0.45s ease,
     background-color 0.5s ease,

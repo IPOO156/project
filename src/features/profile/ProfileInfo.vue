@@ -250,12 +250,12 @@ async function handleExportResume() {
   align-items: flex-start;
   justify-content: space-between;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid $color-bg;
 }
 .page-head__title {
   font-size: 20px;
   font-weight: 700;
-  color: #1e293b;
+  color: $color-text-primary;
   margin: 0 0 2px;
 }
 .page-head__desc {

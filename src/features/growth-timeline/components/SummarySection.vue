@@ -151,9 +151,9 @@ watch(avgGrowth, (newVal) => {
   transform: translateY(40px) scale(0.96);
   filter: blur(4px);
   transition:
-    opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-    filter 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.85s $ease-emphasized,
+    transform 0.85s $ease-emphasized,
+    filter 0.85s $ease-emphasized,
     box-shadow 0.4s ease;
   display: flex;
   flex-direction: column;
@@ -237,9 +237,9 @@ watch(avgGrowth, (newVal) => {
   transform: translateY(24px);
   filter: blur(3px);
   transition:
-    opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.55s,
-    transform 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.55s,
-    filter 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.55s;
+    opacity 0.85s $ease-emphasized 0.55s,
+    transform 0.85s $ease-emphasized 0.55s,
+    filter 0.85s $ease-emphasized 0.55s;
 }
 
 .summary-closing.is-revealed {

@@ -534,16 +534,6 @@
       outline-offset: 2px;
     }
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    .el-card,
-    .stat-card,
-    .mc-card,
-    .mc-skeleton::after {
-      transition: none;
-      animation: none;
-    }
-  }
 }
 
 // =============================================================================
@@ -742,13 +732,4 @@ html.dark #app .layout--teacher {
   }
 
   /* ── 深色模式下禁止 skeleton shimmer 动画（尊重系统偏好） ── */
-  @media (prefers-reduced-motion: reduce) {
-    .el-card,
-    .stat-card,
-    .mc-card,
-    .mc-skeleton::after {
-      transition: none;
-      animation: none;
-    }
-  }
 }

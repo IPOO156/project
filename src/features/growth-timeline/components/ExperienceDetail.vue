@@ -160,10 +160,10 @@ function handleBackdropClick(event: MouseEvent) {
   border-radius: 50%;
   transform-origin: v-bind(origin);
   transition:
-    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.6s $ease-emphasized,
     opacity 0.45s ease,
     border-radius 0.55s ease;
-  will-change: transform, opacity, border-radius;
+  will-change: transform, opacity;
 }
 
 .experience-detail.is-open {
@@ -187,7 +187,7 @@ function handleBackdropClick(event: MouseEvent) {
   align-items: center;
   justify-content: center;
   z-index: $z-overlay;
-  transition: all 0.3s ease;
+  @include transition-ui($duration-slow);
 }
 
 .detail-close:hover {
@@ -203,8 +203,8 @@ function handleBackdropClick(event: MouseEvent) {
   opacity: 0;
   transform: translateY(30px);
   transition:
-    opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 0.4s $ease-emphasized,
+    transform 0.4s $ease-emphasized;
   will-change: opacity, transform;
 }
 
@@ -349,7 +349,7 @@ function handleBackdropClick(event: MouseEvent) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  @include transition-ui($duration-slow);
 }
 
 .detail-delete:hover {

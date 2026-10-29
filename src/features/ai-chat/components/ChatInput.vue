@@ -299,7 +299,7 @@ function handleVoiceClick() {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover {
       background: var(--el-fill-color-light);
@@ -343,7 +343,7 @@ function handleVoiceClick() {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover:not(:disabled) {
       transform: scale(1.05);
@@ -375,7 +375,7 @@ function handleVoiceClick() {
 .voice-leave-active,
 .attach-enter-active,
 .attach-leave-active {
-  transition: all $duration-fast $ease-standard;
+  @include transition-ui;
 }
 
 .voice-enter-from,

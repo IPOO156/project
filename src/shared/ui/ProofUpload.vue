@@ -291,7 +291,7 @@ async function handlePreview(file: UploadFile) {
     color: var(--el-color-primary);
     font-size: 12px;
     cursor: pointer;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover:not(:disabled) {
       border-color: var(--el-color-primary);
@@ -316,7 +316,7 @@ async function handlePreview(file: UploadFile) {
     background: transparent;
     color: var(--el-text-color-secondary);
     cursor: pointer;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover {
       color: var(--el-color-danger);

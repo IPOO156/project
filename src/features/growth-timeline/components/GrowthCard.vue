@@ -128,7 +128,6 @@ function getTypeColor(tag: string): string {
     border-color 0.35s ease,
     background 0.35s ease,
     box-shadow 0.35s ease;
-  will-change: transform, box-shadow;
 }
 
 .growth-card:hover {
@@ -218,10 +217,9 @@ function getTypeColor(tag: string): string {
   justify-content: center;
   opacity: 0.55;
   transition:
-    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s $ease-emphasized,
     background 0.2s ease,
     color 0.2s ease;
-  will-change: transform, opacity;
   z-index: 5;
 }
 
@@ -344,9 +342,9 @@ function getTypeColor(tag: string): string {
   opacity: 0;
   transform: translateX(-8px);
   transition:
-    width 1.2s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    width 1.2s $ease-emphasized,
+    opacity 0.6s $ease-emphasized,
+    transform 0.6s $ease-emphasized;
 }
 
 .growth-card.visible .card-skill-fill {
@@ -390,8 +388,8 @@ function getTypeColor(tag: string): string {
   transform: translateY(10px);
   transition:
     all 0.3s ease,
-    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 0.5s $ease-emphasized,
+    transform 0.5s $ease-emphasized;
 }
 
 .card-tag:hover {

@@ -1,5 +1,8 @@
 import { useThemeStore } from '../stores/stores'
 
+/** 与 variables.scss 的 $ease-out-quint 保持一致（TS 侧无法直接读取 SCSS 变量） */
+const EASE_OUT_QUINT = 'cubic-bezier(0.22, 1, 0.36, 1)'
+
 /**
  * 日间/夜间切换的水波过渡（应用装配层能力）。
  *
@@ -33,8 +36,8 @@ export function useThemeRipple() {
       opacity: 0;
       filter: blur(4px);
       transition:
-        transform 0.9s cubic-bezier(0.22, 1, 0.36, 1),
-        opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.9s ${EASE_OUT_QUINT},
+        opacity 0.9s ${EASE_OUT_QUINT},
         filter 0.9s ease;
     `
     document.body.appendChild(ripple)

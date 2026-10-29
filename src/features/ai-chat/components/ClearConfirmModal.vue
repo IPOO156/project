@@ -95,7 +95,7 @@ const emit = defineEmits<{
     border-radius: $radius-base;
     font-size: $font-size-sm;
     cursor: pointer;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
     border: 1px solid transparent;
 
     &--ghost {
@@ -123,7 +123,7 @@ const emit = defineEmits<{
   transition: opacity $duration-base $ease-standard;
 
   .ccm__dialog {
-    transition: all $duration-base $ease-emphasized;
+    @include transition-ui($duration-base, $ease-emphasized);
   }
 }
 

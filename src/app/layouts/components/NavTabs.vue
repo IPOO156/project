@@ -13,7 +13,6 @@
  *  - role="tablist" / role="tab" / aria-selected
  *  - 移动端触控目标 ≥ 44×44px
  *  - 用 transform 做 active 指示条动画（合成层）
- *  - prefers-reduced-motion: reduce 关闭动画
  *  - 不使用 Emoji 图标
  */
 import { X } from 'lucide-vue-next'
@@ -541,14 +540,6 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     width: 16px;
     height: 16px;
     right: 6px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .nav-tabs__item,
-  .nav-tabs__surface,
-  .nav-tabs__close {
-    transition: none !important;
   }
 }
 </style>

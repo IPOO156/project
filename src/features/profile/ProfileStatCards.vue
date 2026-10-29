@@ -21,7 +21,7 @@ defineProps<{
   <div class="stat-grid">
     <div class="stat-card">
       <div class="stat-card__inner">
-        <div>
+        <div class="stat-card__text">
           <p class="stat-card__label">平均绩点</p>
           <p class="stat-card__value">{{ avgGpa }}</p>
         </div>
@@ -32,7 +32,7 @@ defineProps<{
     </div>
     <div class="stat-card">
       <div class="stat-card__inner">
-        <div>
+        <div class="stat-card__text">
           <p class="stat-card__label">获奖总数</p>
           <p class="stat-card__value">{{ totalAwardCount }}</p>
         </div>
@@ -43,7 +43,7 @@ defineProps<{
     </div>
     <div class="stat-card">
       <div class="stat-card__inner">
-        <div>
+        <div class="stat-card__text">
           <p class="stat-card__label">课程总数</p>
           <p class="stat-card__value">{{ totalCourses }}</p>
         </div>
@@ -54,7 +54,7 @@ defineProps<{
     </div>
     <div class="stat-card">
       <div class="stat-card__inner">
-        <div>
+        <div class="stat-card__text">
           <p class="stat-card__label">综合评分</p>
           <p class="stat-card__value">{{ dimAvg ?? '--' }}</p>
         </div>
@@ -74,33 +74,43 @@ defineProps<{
   gap: 12px;
 }
 .stat-card {
-  border: 1px solid #f1f5f9;
-  border-radius: 10px;
+  border: 1px solid $color-bg;
+  border-radius: $radius-xl;
   background: #fff;
   transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+    border-color $duration-base $ease-standard,
+    box-shadow $duration-base $ease-standard;
   &:hover {
-    border-color: #e2e8f0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    border-color: $color-border;
+    box-shadow: $shadow-base;
   }
 }
 .stat-card__inner {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   padding: 16px;
+}
+.stat-card__text {
+  min-width: 0;
+  flex: 1;
 }
 .stat-card__label {
   font-size: 13px;
   color: #94a3b8;
   margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .stat-card__value {
   font-size: 24px;
   font-weight: 700;
   color: #1e293b;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .stat-card__icon {
   width: 38px;

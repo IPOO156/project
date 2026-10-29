@@ -287,7 +287,7 @@ function handleScrollToGrowth() {
 <style scoped lang="scss">
 .growth-timeline-page {
   position: relative;
-  min-height: calc(100vh - #{$header-height});
+  min-height: calc(100dvh - #{$header-height});
   width: 100%;
   margin: 0;
   background-color: var(--gt-bg-page);
@@ -525,14 +525,6 @@ function handleScrollToGrowth() {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .timeline-intro {
-    animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
   }
 }
 

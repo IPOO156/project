@@ -206,20 +206,4 @@ function handleClick() {
     }
   }
 }
-
-// 减少动画偏好
-@media (prefers-reduced-motion: reduce) {
-  .ai-fb {
-    animation: none;
-    transition: none;
-
-    &:hover {
-      transform: none;
-    }
-
-    &__tooltip {
-      transition: none;
-    }
-  }
-}
 </style>
