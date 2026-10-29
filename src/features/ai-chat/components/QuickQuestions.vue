@@ -95,7 +95,7 @@ function getIcon(icon: string): Component {
     font-size: $font-size-sm;
     color: var(--el-text-color-regular);
     cursor: pointer;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover {
       border-color: var(--mc-accent);
@@ -109,7 +109,7 @@ function getIcon(icon: string): Component {
 /* 入场/退场 */
 .qq-enter-active,
 .qq-leave-active {
-  transition: all $duration-base $ease-standard;
+  @include transition-ui($duration-base);
 }
 
 .qq-enter-from,

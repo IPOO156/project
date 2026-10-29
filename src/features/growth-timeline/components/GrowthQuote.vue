@@ -33,8 +33,8 @@ const { isVisible } = useScrollReveal(quoteRef, {
   opacity: 0;
   transform: translateY(30px);
   transition:
-    opacity 1s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 1s $ease-emphasized,
+    transform 1s $ease-emphasized;
 }
 
 .growth-quote.is-visible .quote-block {

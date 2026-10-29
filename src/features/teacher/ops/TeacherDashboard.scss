@@ -7,7 +7,7 @@
   &__stats :deep(.el-col) {
     opacity: 0;
     transform: translateY(12px);
-    animation: dash-card-enter 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+    animation: dash-card-enter 0.5s $ease-drawer forwards;
     @for $i from 1 through 4 {
       &:nth-child(#{$i}) {
         animation-delay: #{$i * 0.08}s;
@@ -98,7 +98,7 @@
 }
 
 .stat-card {
-  transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  @include transition-ui($duration-base);
   cursor: default;
 
   &:active {
@@ -218,7 +218,7 @@
   border: 1px solid var(--el-border-color-lighter);
   border-radius: $radius-lg;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  @include transition-ui($duration-base);
 
   &:hover {
     transform: translateY(-2px);
@@ -315,13 +315,5 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .teacher-dashboard__stats :deep(.el-col) {
-    opacity: 1;
-    transform: none;
-    animation: none;
   }
 }

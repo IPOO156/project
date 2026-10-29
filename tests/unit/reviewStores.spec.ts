@@ -73,7 +73,7 @@ describe('useReviewStore', () => {
     ])
     const store = useReviewStore()
 
-    const filtered = await store.fetchAll({ keyword: '蓝桥' } as any)
+    const filtered = await store.fetchAll({ keyword: '蓝桥' })
     expect(filtered.map((r) => r.id)).toEqual(['1'])
 
     // 关键字请求不算全量拉取，下一次全量仍会回源

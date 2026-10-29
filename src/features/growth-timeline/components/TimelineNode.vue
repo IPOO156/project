@@ -83,7 +83,7 @@ const { isVisible } = useScrollReveal(nodeRef, {
 
 .growth-node.visible :deep(.growth-card),
 .growth-node.visible .ring-marker {
-  animation: gt-card-enter 0.85s cubic-bezier(0.16, 1, 0.3, 1) var(--stagger-delay, 0s) both;
+  animation: gt-card-enter 0.85s $ease-emphasized var(--stagger-delay, 0s) both;
 }
 
 .growth-node--odd :deep(.growth-card) {
@@ -162,7 +162,7 @@ const { isVisible } = useScrollReveal(nodeRef, {
 }
 
 .growth-node.visible .ring-marker-outer {
-  animation: ringMarkerPulse 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: ringMarkerPulse 0.6s $ease-emphasized forwards;
 }
 
 @keyframes ringMarkerPulse {

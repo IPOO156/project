@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { UserInfo } from '@/shared/types/types'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -21,6 +22,22 @@ vi.mock('@/shared/composables/useTeacherMe', () => ({
 vi.mock('@/app/stores/sessionReset', () => ({ resetUserScopedStores: mocks.resetStores }))
 
 const { useUserStore } = await import('@/app/stores/useUserStore')
+
+/** 构造完整 UserInfo（接口要求必填字段齐全，避免用类型断言绕过检查） */
+function userInfo(overrides: Partial<UserInfo> = {}): UserInfo {
+  return {
+    id: '1',
+    username: 'u',
+    realName: '张三',
+    studentId: 'S1',
+    grade: '',
+    major: '',
+    className: '',
+    email: '',
+    phone: '',
+    ...overrides,
+  }
+}
 
 beforeEach(() => {
   sessionStorage.clear()
@@ -57,7 +74,9 @@ describe('useUserStore 登录态', () => {
 
   it('setUserInfo 持久化并计算展示字段', () => {
     const store = useUserStore()
-    store.setUserInfo({ id: 1, username: 'zhangsan', realName: '张三', studentId: 'S1' } as any)
+    store.setUserInfo(
+      userInfo({ id: '1', username: 'zhangsan', realName: '张三', studentId: 'S1' }),
+    )
 
     expect(store.userName).toBe('张三')
     expect(store.studentId).toBe('S1')
@@ -69,14 +88,14 @@ describe('useUserStore 登录态', () => {
     localStorage.setItem('user_avatar_cache', 'cached.png')
     const store = useUserStore()
 
-    store.setUserInfo({ id: 1, realName: '张三' } as any)
+    store.setUserInfo(userInfo({ realName: '张三' }))
 
     expect(store.avatar).toBe('cached.png')
   })
 
   it('setLoginType 同步写入身份缓存，教师端判定生效', () => {
     const store = useUserStore()
-    store.setUserInfo({ id: 1, realName: '李老师' } as any)
+    store.setUserInfo(userInfo({ realName: '李老师' }))
 
     store.setLoginType('teacher')
 
@@ -99,7 +118,7 @@ describe('useUserStore 资料与密码', () => {
 
   it('updateUserInfo 整体提交联系信息，不回写账号邮箱', async () => {
     const store = useUserStore()
-    store.setUserInfo({ id: 1, email: 'account@example.com' } as any)
+    store.setUserInfo(userInfo({ email: 'account@example.com' }))
 
     await store.updateUserInfo({
       email: 'contact@example.com',
@@ -116,7 +135,7 @@ describe('useUserStore 资料与密码', () => {
 
   it('updateAvatar 非 data URL 直接缓存，接口失败时保留本地值', async () => {
     const store = useUserStore()
-    store.setUserInfo({ id: 1 } as any)
+    store.setUserInfo(userInfo())
 
     mocks.uploadAvatar.mockRejectedValueOnce(new Error('upload failed'))
     await store.updateAvatar('data:image/png;base64,AAAA')

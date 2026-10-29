@@ -11,7 +11,7 @@
  *     - 三层阴影（$shadow-sm / $shadow-base / $shadow-lg）
  *     - 主色深海蓝 + 琥珀金（$color-primary / $color-accent）
  *  4. 响应式：≥992 三栏、<992 自动折叠侧边栏为抽屉
- *  5. A11y：role/aria-label/aria-live + prefers-reduced-motion 支持
+ *  5. A11y：role/aria-label/aria-live
  *  6. 动画：4 套统一过渡（sidebar 滑入 / header 淡入 / route 切换 / loading 出场）
  *     - 全部使用 transform + opacity（合成层，GPU 加速）
  *     - 时长 200-280ms（命中 skill §6 区间）
@@ -19,11 +19,11 @@
  */
 import { computed, nextTick, ref, useSlots, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useTabs } from '@/app/composables/useTabs'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
 import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import AIFloatingBall from '@/features/ai-chat/components/AIFloatingBall.vue'
 import { useGreeting } from '@/features/dashboard/composables/useGreeting'
-import { useTabs } from '@/shared/composables/composables'
 import { useLoadingTip } from '@/shared/composables/useLoadingTip'
 import GreetingToast from '@/shared/ui/GreetingToast.vue'
 import LoadingTipCard from '@/shared/ui/LoadingTipCard.vue'
@@ -155,9 +155,11 @@ watch(isLoading, async (loading) => {
           <!-- 主内容：路由出口 / 自定义内容 -->
           <section class="layout__page-body">
             <router-view v-slot="{ Component, route: routeSlot }">
-              <keep-alive :max="20">
-                <component :is="Component" :key="routeSlot.fullPath" />
-              </keep-alive>
+              <Transition name="layout-route" mode="out-in">
+                <keep-alive :max="20">
+                  <component :is="Component" :key="routeSlot.fullPath" />
+                </keep-alive>
+              </Transition>
             </router-view>
           </section>
 
@@ -225,7 +227,8 @@ watch(isLoading, async (loading) => {
 // =============================================================================
 .layout {
   display: flex;
-  height: 100vh;
+  // dvh 跟随浏览器工具栏收放，避免移动端 100vh 把内容顶到屏幕外
+  height: 100dvh;
   overflow: hidden;
   background-color: var(--el-bg-color-page);
 
@@ -448,6 +451,22 @@ html.dark .layout__loading {
   opacity: 0;
 }
 
+// G. 路由切换 → 纯透明度淡出淡入，无位移
+//    页面级“走位”会让内容整体跳一下；out-in 保证新旧页面不重叠，
+//    避免两页文字同时可见的双重曝光
+.layout-route-enter-active {
+  transition: opacity $duration-base $ease-decelerate;
+}
+
+.layout-route-leave-active {
+  transition: opacity $duration-instant $ease-accelerate;
+}
+
+.layout-route-enter-from,
+.layout-route-leave-to {
+  opacity: 0;
+}
+
 // 关键帧
 @keyframes layout-spin {
   to {
@@ -503,52 +522,6 @@ html.dark .layout__loading {
   }
 }
 
-// =============================================================================
-// 4. 无障碍：尊重用户的减少动画偏好（ui-ux-pro-max skill §3 / §6）
-//    系统层开关：彻底关闭所有过渡 + 动画 + 缩放
-// =============================================================================
-@media (prefers-reduced-motion: reduce) {
-  // 主布局过渡（sidebar margin 切换等）
-  .layout,
-  .layout__main {
-    transition: none !important;
-  }
-
-  // 所有 transition 类：禁用过渡 + 清除初始/结束状态
-  .layout-sidebar-enter-active,
-  .layout-sidebar-leave-active,
-  .layout-mask-enter-active,
-  .layout-mask-leave-active,
-  .layout-fade-enter-active,
-  .layout-fade-leave-active,
-  .layout-loading-enter-active,
-  .layout-loading-leave-active {
-    transition: none !important;
-  }
-
-  // 初始/结束状态：直接显示，无 transform
-  .layout-sidebar-enter-from,
-  .layout-sidebar-leave-to,
-  .layout-mask-enter-from,
-  .layout-mask-leave-to,
-  .layout-fade-enter-from,
-  .layout-fade-leave-to,
-  .layout-route-enter-from,
-  .layout-route-leave-to,
-  .layout-loading-enter-from,
-  .layout-loading-leave-to {
-    transform: none !important;
-    filter: none !important;
-  }
-
-  // spinner 旋转也停掉
-  .layout__loading-spinner {
-    animation: none !important;
-  }
-
-  // 清理由 JS 注入的 will-change（避免残留图层占内存）
-  .layout__loading {
-    will-change: auto !important;
-  }
-}
+// 动效策略：始终启用，不提供 prefers-reduced-motion 降级；
+// 系统开启“减少动效”时也保持完整动画（统一说明见 assets/styles/motion-override.scss）
 </style>

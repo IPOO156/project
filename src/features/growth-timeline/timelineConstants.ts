@@ -48,9 +48,10 @@ export function inferSemester(dateStr: string): string {
   const date = new Date(dateStr)
   const year = date.getFullYear()
   const month = date.getMonth() + 1
-  const isFirstTerm = month >= 9 || month <= 1
-  const startYear = isFirstTerm ? year : year - 1
-  const term = isFirstTerm ? 1 : 2
+  // 学年从 9 月起算：9~12 月属当年第一学期，1 月仍属上一年 9 月开始的第一学期，
+  // 2~8 月属上一学年第二学期。1 月不能按「当年」起算，否则会算出下一学年的编码。
+  const startYear = month >= 9 ? year : year - 1
+  const term = month >= 9 || month <= 1 ? 1 : 2
   return `${startYear}-${startYear + 1}-${term}`
 }
 

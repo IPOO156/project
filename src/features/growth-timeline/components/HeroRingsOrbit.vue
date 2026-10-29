@@ -80,7 +80,7 @@ function parallaxOpacity() {
 }
 
 .hero-rings__ring.is-extinguished {
-  animation: ringExtinguish 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: ringExtinguish 2s $ease-standard forwards;
   animation-delay: 0s !important;
 }
 

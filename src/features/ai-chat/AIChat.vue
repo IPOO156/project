@@ -223,7 +223,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 // fullBleed canonical 高度：HeaderBar 总占 $header-height(56px)，NavTabs 在其内部
 // 根容器固定高度 + overflow hidden，侧栏/消息区各自独立滚动，避免双滚动条
 .ai-chat {
-  height: calc(100vh - #{$header-height});
+  height: calc(100dvh - #{$header-height});
   display: grid;
   grid-template-columns: 280px 1fr;
   overflow: hidden;

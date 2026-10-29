@@ -123,7 +123,7 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover {
       background: var(--el-fill-color-light);

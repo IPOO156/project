@@ -242,7 +242,7 @@ const floatCards = computed(() => {
   pointer-events: none;
   z-index: 0;
   opacity: 0.8;
-  animation: vaultFadeIn 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: vaultFadeIn 1.8s $ease-out-quint forwards;
   transition: transform 0.3s ease-out;
 }
 

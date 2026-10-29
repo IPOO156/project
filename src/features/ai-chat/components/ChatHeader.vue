@@ -185,7 +185,7 @@ function handleExport(format: ExportFormat) {
     font-size: $font-size-sm;
     color: var(--el-text-color-regular);
     cursor: pointer;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover:not(:disabled) {
       border-color: var(--mc-primary);

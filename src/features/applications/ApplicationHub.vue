@@ -305,16 +305,4 @@ function switchModule(key: string) {
   opacity: 0;
   transform: translateY(-6px);
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .application-hub__tab,
-  .application-hub__panel-item {
-    transition: none !important;
-  }
-
-  .module-fade-enter-active,
-  .module-fade-leave-active {
-    transition: none !important;
-  }
-}
 </style>

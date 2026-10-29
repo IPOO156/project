@@ -35,7 +35,7 @@ const form = reactive({
   majorId: undefined as number | undefined,
   classId: undefined as number | undefined,
   grade: '',
-  // TODO 字段级选择需后端扩展导出接口参数
+  // TODO 字段级选择需后端扩展导出接口参数（前端已按 dataTypes 提交，后端未消费该字段）
   dataTypes: ['archives', 'scores'] as string[],
   isAnonymized: true,
   includeMetadata: true,

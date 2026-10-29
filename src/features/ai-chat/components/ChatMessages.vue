@@ -126,7 +126,7 @@ watch(() => props.showThinking, scrollToBottom)
     color: var(--mc-primary);
     font-size: $font-size-sm;
     cursor: pointer;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover {
       border-color: var(--mc-primary);
