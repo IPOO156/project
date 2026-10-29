@@ -83,6 +83,21 @@ textarea {
   font: inherit;
 }
 
+html {
+  /* 去掉移动端点击时的灰色高亮块，反馈交给组件自己的 active 态 */
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+[role='button'],
+a,
+input,
+select,
+textarea {
+  /* 取消双击缩放等待带来的点击延迟 */
+  touch-action: manipulation;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: var(--muted);

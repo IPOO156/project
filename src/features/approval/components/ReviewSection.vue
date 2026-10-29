@@ -508,7 +508,6 @@ onMounted(() => {
     --_easing: var(--mc-row-easing, #{$ease-emphasized});
 
     opacity: 0;
-    will-change: transform, opacity;
     animation: table-row-brush var(--_duration) var(--_easing) both;
   }
 

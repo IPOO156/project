@@ -91,6 +91,24 @@ $ease-standard: cubic-bezier(0.4, 0, 0.2, 1); // Material 标准曲线（默认�
 $ease-decelerate: cubic-bezier(0, 0, 0.2, 1); // 入场（减速）
 $ease-accelerate: cubic-bezier(0.4, 0, 1, 1); // 出场（加速）
 $ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1); // 强调入场（弹性）
+$ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1); // 强减速入场（登录页大面板/文字入场）
+$ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); // 抽屉/边栏滑入（iOS 手感）
+
+/**
+ * 统一 UI 过渡属性
+ * `transition: all` 会把 width/top/margin 等布局属性也卷进来，每帧触发重排；
+ * 这里只过渡颜色、阴影与合成层属性（transform/opacity）。
+ * 组件内不要再写 `transition: all`，统一 @include 本 mixin。
+ */
+@mixin transition-ui($duration: $duration-fast, $ease: $ease-standard) {
+  transition:
+    background-color $duration $ease,
+    border-color $duration $ease,
+    color $duration $ease,
+    box-shadow $duration $ease,
+    transform $duration $ease,
+    opacity $duration $ease;
+}
 
 // =============================================================================
 // 可复用混合宏
@@ -113,7 +131,8 @@ $ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1); // 强调入场（弹性）
     --_easing: var(--mc-row-easing, #{$ease-emphasized});
 
     opacity: 0;
-    will-change: transform, opacity;
+    // 不声明 will-change：表格/列表最多 50 行，常驻合成层会白占显存；
+    // 动画运行期间浏览器会自动提升图层，结束后回收
     animation: table-row-brush var(--_duration) var(--_easing) both;
   }
 
@@ -147,7 +166,8 @@ $ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1); // 强调入场（弹性）
     --_easing: var(--mc-row-easing, #{$ease-emphasized});
 
     opacity: 0;
-    will-change: transform, opacity;
+    // 不声明 will-change：表格/列表最多 50 行，常驻合成层会白占显存；
+    // 动画运行期间浏览器会自动提升图层，结束后回收
     animation: table-row-brush var(--_duration) var(--_easing) both;
   }
 

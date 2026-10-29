@@ -97,7 +97,7 @@ const actionLabel = (action: number) => AUDIT_ACTIONS[action]?.label ?? String(a
     border: 1px solid var(--el-border-color-light);
     border-radius: $radius-base;
     cursor: pointer;
-    transition: all 0.2s;
+    @include transition-ui($duration-base);
 
     &:hover {
       border-color: $color-accent;

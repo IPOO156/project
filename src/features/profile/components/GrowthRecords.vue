@@ -38,11 +38,8 @@ let observer: IntersectionObserver | null = null
 const visibleIds = ref<Set<string>>(new Set())
 
 onMounted(() => {
-  // 兼容旧浏览器 & 用户偏好：默认全部显示
-  if (
-    typeof IntersectionObserver === 'undefined' ||
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  ) {
+  // 兼容旧浏览器：默认全部显示
+  if (typeof IntersectionObserver === 'undefined') {
     visibleIds.value = new Set(sorted.value.map((e) => e.id))
     return
   }
@@ -120,11 +117,10 @@ onBeforeUnmount(() => {
   background: var(--el-bg-color);
   transition:
     border-color 0.2s,
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.5s $ease-emphasized,
     opacity 0.5s ease;
   opacity: 0;
   transform: translateY(14px);
-  will-change: opacity, transform;
 
   &.visible {
     opacity: 1;
@@ -178,14 +174,6 @@ onBeforeUnmount(() => {
     font-size: 13px;
     color: var(--el-text-color-secondary);
     line-height: 1.5;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .growth-item {
-    opacity: 1 !important;
-    transform: none !important;
-    transition: none !important;
   }
 }
 </style>

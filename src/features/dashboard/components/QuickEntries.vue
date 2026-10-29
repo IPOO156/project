@@ -101,6 +101,7 @@ function handleDragEndVisual() {
           'is-drag-over': dragOverIndex === index,
           'is-dragging': dragActiveIndex === index,
         }"
+        :style="{ '--entry-index': index }"
         tabindex="0"
         role="button"
         draggable="true"
@@ -181,7 +182,7 @@ function handleDragEndVisual() {
   gap: 4px;
 
   &__refresh {
-    transition: transform 0.3s $ease-standard;
+    transition: transform $duration-slow $ease-standard;
 
     &:hover {
       transform: rotate(180deg);
@@ -190,6 +191,13 @@ function handleDragEndVisual() {
     .is-spinning {
       animation: quick-refresh-spin 0.6s linear infinite;
     }
+  }
+}
+
+@keyframes quick-entry-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
 }
 
@@ -208,10 +216,13 @@ function handleDragEndVisual() {
   border: 1px solid var(--el-border-color-lighter);
   background: var(--el-bg-color);
   transition:
-    transform 0.2s,
-    box-shadow 0.2s,
-    border-color 0.2s;
-  will-change: transform;
+    transform $duration-base $ease-standard,
+    box-shadow $duration-base $ease-standard,
+    border-color $duration-base $ease-standard;
+  // 首次渲染按索引错峰入场（40ms/个）；backwards 只在动画期间占用 transform，
+  // 结束后交还给 hover/active，避免 fill 锁死后续交互
+  animation: quick-entry-in $duration-slow $ease-decelerate backwards;
+  animation-delay: calc(var(--entry-index, 0) * 40ms);
   position: relative;
 
   &.is-drag-over {
@@ -224,7 +235,26 @@ function handleDragEndVisual() {
     cursor: grabbing;
   }
 
-  &:hover,
+  // 悬停上浮只在精确指针设备生效：触屏点按后 :hover 会“粘住”，
+  // 卡片一直悬空不落回，松手后看起来像卡住了
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      border-color: var(--el-color-primary-light-7);
+
+      .quick-entry__icon {
+        transform: scale(1.08);
+      }
+
+      .quick-entry__arrow {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+  }
+
+  // 键盘聚焦给同样的视觉反馈，但不依赖 hover
   &:focus-visible {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
@@ -241,8 +271,10 @@ function handleDragEndVisual() {
     }
   }
 
+  // 按下即回落 + 轻微内缩，给“点击已被接收”的即时反馈
   &:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.98);
+    transition-duration: $duration-instant;
   }
 
   &__remove {
@@ -261,9 +293,9 @@ function handleDragEndVisual() {
     justify-content: center;
     opacity: 0;
     transition:
-      opacity 0.2s,
-      background-color 0.2s,
-      color 0.2s;
+      opacity $duration-base $ease-standard,
+      background-color $duration-base $ease-standard,
+      color $duration-base $ease-standard;
     z-index: 2;
 
     &:hover {
@@ -275,6 +307,13 @@ function handleDragEndVisual() {
   &:hover &__remove,
   &:focus-visible &__remove {
     opacity: 1;
+  }
+
+  // 触屏没有 hover，删除入口必须常驻，否则入口无法移除
+  @media (hover: none) {
+    &__remove {
+      opacity: 1;
+    }
   }
 
   &__body {
@@ -307,6 +346,10 @@ function handleDragEndVisual() {
     font-size: 14px;
     font-weight: 500;
     color: var(--el-text-color-primary);
+    // 入口名称可能很长，截断而不是换行把卡片撑高
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__badge {
@@ -318,7 +361,9 @@ function handleDragEndVisual() {
   &__arrow {
     opacity: 0;
     transform: translateX(-4px);
-    transition: all 0.2s;
+    transition:
+      opacity $duration-base $ease-standard,
+      transform $duration-base $ease-standard;
     color: var(--el-text-color-secondary);
     flex-shrink: 0;
   }

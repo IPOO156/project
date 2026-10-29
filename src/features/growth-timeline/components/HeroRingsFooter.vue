@@ -51,7 +51,7 @@ const progressPercent = computed(() => {
 <style scoped>
 .hero-rings__footer {
   opacity: 0;
-  animation: fadeSlideUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeSlideUp 1s $ease-emphasized forwards;
   animation-delay: 1.2s;
   pointer-events: auto;
   display: flex;
@@ -138,7 +138,7 @@ const progressPercent = computed(() => {
   height: 100%;
   background: var(--gt-accent, #8b6340);
   border-radius: 2px;
-  transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.5s;
+  transition: width 1.2s $ease-emphasized 0.5s;
 }
 
 .hero-rings__progress-pct {
@@ -147,12 +147,5 @@ const progressPercent = computed(() => {
   color: var(--gt-accent, #8b6340);
   min-width: 32px;
   text-align: right;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-rings__footer {
-    animation: none !important;
-    opacity: 1 !important;
-  }
 }
 </style>
