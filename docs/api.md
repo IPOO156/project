@@ -22,7 +22,7 @@
 ### 0.1 Base URL
 
 ```
-开发环境：Vite proxy /api → http://localhost:8080
+开发环境：Vite proxy /api → http://111.228.56.207:8089
 生产环境：与前端同域 /api
 ```
 
