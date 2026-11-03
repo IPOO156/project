@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import {
   ADMIN_ROLE_CODE,
   getBaselineModuleIds,
+  getTeacherGroupedMenuItems,
   getTeacherMenuItems,
   isAuthzDataMissing,
   isModuleAllowed,
@@ -51,8 +52,11 @@ export function useTeacherAuthz() {
     return isModuleAllowed(moduleId, permissions.value, roles.value)
   }
 
-  /** 侧边栏菜单项（按当前角色 + 权限码过滤） */
+  /** 侧边栏菜单项（按当前角色 + 权限码过滤，平铺） */
   const menuItems = computed(() => getTeacherMenuItems(permissions.value, roles.value))
+
+  /** 侧边栏分组菜单（5 组；空分组已过滤） */
+  const menuGroups = computed(() => getTeacherGroupedMenuItems(permissions.value, roles.value))
 
   /**
    * 是否已按「角色基线菜单」回退展示。
@@ -78,6 +82,7 @@ export function useTeacherAuthz() {
     canAccessAny,
     canAccessModule,
     menuItems,
+    menuGroups,
     baselineFallback,
     roleLabel,
   }

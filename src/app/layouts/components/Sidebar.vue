@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import type { MenuInstance } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { ChevronLeft, ChevronRight, SwitchCamera } from 'lucide-vue-next'
-import { computed, watch } from 'vue'
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
 import logoIcon from '@/assets/logo/logo-icon.png'
@@ -13,7 +14,7 @@ const router = useRouter()
 const appStore = useAppStore()
 const userStore = useUserStore()
 // 教师端菜单按 /auth/me 的权限码过滤（见 teacherModuleRegistry）
-const { menuItems: teacherMenuItems, baselineFallback } = useTeacherAuthz()
+const { menuGroups, baselineFallback } = useTeacherAuthz()
 
 /**
  * 授权数据未就绪时的非阻断提示（每次进入应用至多一次）。
@@ -40,39 +41,56 @@ watch(
 // 是否为教师端
 const isTeacher = computed(() => userStore.isTeacher)
 
-// 当前菜单：学生端/教师端自动切换
-const currentMenuItems = computed(() => {
-  if (isTeacher.value) {
-    return teacherMenuItems.value
-  }
-  return menuItems
-})
+// 当前菜单：学生端保持原平铺菜单；教师端为 5 组折叠菜单
+const currentMenuItems = computed(() => menuItems)
 
-// 当前路由所属的顶级菜单，用于 el-menu 的 default-active
+// 当前路由所属的菜单路径，用于 el-menu 的 default-active
 const activeMenu = computed(() => {
   const path = route.path
   if (isTeacher.value) {
-    if (path.startsWith('/teacher/dashboard')) return '/teacher/dashboard'
+    // 档案详情从「学生档案」进入，侧栏保持该入口高亮
+    if (path.startsWith('/teacher/student-detail')) return '/teacher/archive-view'
     return path
-  }
-  if (path === '/dashboard') {
-    return '/dashboard'
   }
   return path
 })
+
+/** 当前路由所在分组（用于自动展开） */
+const activeGroupKey = computed(() => {
+  const current = activeMenu.value
+  const group = menuGroups.value.find((entry) => entry.items.some((item) => item.path === current))
+  return group ? `group:${group.group.key}` : ''
+})
+
+const menuRef = ref<MenuInstance | null>(null)
+
+// 路由变化后展开当前分组：Element Plus 的 default-openeds 只在初始化时读取，
+// 命令面板跳转 / 深链进入时需要主动 open，否则高亮项藏在折叠分组里看不见。
+watch(
+  activeGroupKey,
+  (key) => {
+    if (!key || appStore.isSidebarCollapsed) return
+    void nextTick(() => menuRef.value?.open(key))
+  },
+  { immediate: true, flush: 'post' },
+)
+
+// 从折叠态展开时补开当前分组
+watch(
+  () => appStore.isSidebarCollapsed,
+  (collapsed) => {
+    if (collapsed || !isTeacher.value || !activeGroupKey.value) return
+    void nextTick(() => menuRef.value?.open(activeGroupKey.value))
+  },
+)
 
 // 侧栏保留统一品牌名；管理员 / 教师身份由顶栏角色标签区分，避免出现不自然的拼接标题。
 const sidebarTitle = '档鉴未来'
 
 function handleMenuSelect(index: string) {
-  if (index === route.fullPath) return
+  // 聚合页点击当前入口时保留页内 ?tab=；仅在不同页面间跳转
+  if (index === route.path) return
   router.push(index)
-}
-
-async function handleSwitchToStudent() {
-  await userStore.logout()
-  // 整页跳转，确保内存中的上一个账号业务数据被清空（见 HeaderBar.handleLogout）
-  window.location.replace('/login')
 }
 </script>
 
@@ -92,7 +110,39 @@ async function handleSwitchToStudent() {
 
     <!-- 菜单：使用 el-menu + router 模式 -->
     <el-scrollbar class="sidebar__menu">
+      <!-- 教师端：5 组折叠菜单 -->
       <el-menu
+        v-if="isTeacher"
+        ref="menuRef"
+        :default-active="activeMenu"
+        :collapse="appStore.isSidebarCollapsed"
+        :collapse-transition="false"
+        :unique-opened="true"
+        class="sidebar__el-menu sidebar__el-menu--grouped"
+        @select="handleMenuSelect"
+      >
+        <el-sub-menu
+          v-for="entry in menuGroups"
+          :key="entry.group.key"
+          :index="`group:${entry.group.key}`"
+          class="sidebar__group"
+        >
+          <template #title>
+            <component :is="entry.group.icon" :size="16" />
+            <span>{{ entry.group.label }}</span>
+          </template>
+          <el-menu-item v-for="item in entry.items" :key="item.path" :index="item.path!">
+            <span class="sidebar__item-dot" />
+            <template #title>
+              <span>{{ item.label }}</span>
+            </template>
+          </el-menu-item>
+        </el-sub-menu>
+      </el-menu>
+
+      <!-- 学生端：保持原平铺菜单 -->
+      <el-menu
+        v-else
         :default-active="activeMenu"
         :collapse="appStore.isSidebarCollapsed"
         :collapse-transition="false"
@@ -130,13 +180,8 @@ async function handleSwitchToStudent() {
       </el-menu>
     </el-scrollbar>
 
-    <!-- 折叠按钮 + 退出当前端 -->
+    <!-- 折叠 -->
     <div class="sidebar__footer">
-      <el-button v-if="isTeacher" text class="sidebar__switch-btn" @click="handleSwitchToStudent">
-        <component :is="SwitchCamera" :size="16" />
-        <!-- 实际行为是退出登录回到登录页；管理员没有学生端，故统一用「切换账号」 -->
-        <span v-show="!appStore.isSidebarCollapsed">切换账号</span>
-      </el-button>
       <el-button text class="sidebar__collapse-btn" @click="appStore.toggleSidebar()">
         <component :is="appStore.isSidebarCollapsed ? ChevronRight : ChevronLeft" :size="16" />
         <span v-show="!appStore.isSidebarCollapsed">收起</span>
@@ -167,7 +212,7 @@ async function handleSwitchToStudent() {
   }
 
   &__logo {
-    height: 80px;
+    height: 56px;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -181,8 +226,8 @@ async function handleSwitchToStudent() {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 56px;
-      height: 56px;
+      width: 32px;
+      height: 32px;
       overflow: hidden;
     }
 
@@ -193,7 +238,7 @@ async function handleSwitchToStudent() {
     }
 
     &-text {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       color: var(--el-text-color-primary);
       white-space: nowrap;
@@ -292,6 +337,72 @@ async function handleSwitchToStudent() {
     padding: 0 16px 0 44px !important;
     font-size: 13px;
     min-width: auto;
+  }
+
+  // ── 教师端分组菜单：更紧凑的行高、无右侧高亮条，子项以圆点引导 ──
+  :deep(.sidebar__el-menu--grouped) {
+    padding: 6px 0;
+
+    .el-sub-menu {
+      margin-bottom: 2px;
+    }
+
+    .el-sub-menu__title {
+      height: 36px;
+      line-height: 36px;
+      margin: 0 8px;
+      padding: 0 10px !important;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--el-text-color-primary);
+
+      .el-sub-menu__icon-arrow {
+        color: var(--el-text-color-placeholder);
+      }
+    }
+
+    .el-menu-item {
+      height: 34px;
+      line-height: 34px;
+      margin: 1px 8px;
+      padding: 0 10px 0 26px !important;
+      border-radius: 4px;
+      font-size: 13px;
+      gap: 0;
+
+      &.is-active {
+        font-weight: 500;
+        background-color: var(--el-color-primary-light-9) !important;
+
+        &::after {
+          display: none;
+        }
+      }
+    }
+
+    .el-menu--collapse & {
+      .el-sub-menu__title {
+        margin: 0;
+      }
+
+      .el-menu-item {
+        margin: 1px 6px;
+        padding: 0 10px !important;
+      }
+    }
+  }
+
+  &__item-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--el-text-color-placeholder);
+    flex-shrink: 0;
+  }
+
+  :deep(.el-menu-item.is-active) .sidebar__item-dot {
+    background: var(--el-color-primary);
   }
 
   &__footer {

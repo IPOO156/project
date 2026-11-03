@@ -2,24 +2,27 @@ import type { RouteRecordRaw } from 'vue-router'
 
 /**
  * 教师端路由配置
- * 所有路由前缀为 /teacher，由 TeacherLayout 包裹
+ * 所有路由前缀为 /teacher，由 DefaultLayout 包裹
  *
  * meta.permission 承载的是**模块 id**（对应 shared/config/teacherModuleRegistry.ts 的 id，
  * 如 'archive-view'），不是后端权限码 —— 守卫据此在注册表里查出该模块所需的权限码再判定。
  * 因此模块 id 写错等于未授权（守卫按未知模块处理，重定向回 /teacher/dashboard）。
+ *
+ * 聚合页统一使用 `?tab=` 承载页内页签，并标记 meta.singleTab（见 useTabs / useTabRoute）。
+ * 合并后原入口的 URL 在文件末尾保留 redirect，旧书签仍能落到对应页签。
  */
 const teacherRoutes: RouteRecordRaw[] = [
   {
     path: 'dashboard',
     name: 'TeacherDashboard',
     component: () => import('@/features/teacher/ops/TeacherDashboard.vue'),
-    meta: { title: '首页', affix: true, teacher: true },
+    meta: { title: '工作台', affix: true, teacher: true },
   },
   {
     path: 'archive-view',
     name: 'TeacherArchiveView',
     component: () => import('@/features/teacher/archive/ArchiveView.vue'),
-    meta: { title: '档案查看', teacher: true, permission: 'archive-view' },
+    meta: { title: '学生档案', teacher: true, permission: 'archive-view' },
   },
   {
     path: 'student-detail/:userId',
@@ -28,22 +31,11 @@ const teacherRoutes: RouteRecordRaw[] = [
     meta: { title: '学生成长档案', teacher: true, permission: 'archive-view' },
   },
   {
+    // 待审核 + 审核记录 + 审批委托合并为单页 Tab（原三个独立入口）。
     path: 'material-review',
-    redirect: '/teacher/material-review/pending',
-    children: [
-      {
-        path: 'pending',
-        name: 'TeacherMaterialReviewPending',
-        component: () => import('@/features/teacher/review/AuditPendingList.vue'),
-        meta: { title: '材料审核', teacher: true, permission: 'material-review' },
-      },
-      {
-        path: 'history',
-        name: 'TeacherMaterialReviewHistory',
-        component: () => import('@/features/teacher/review/AuditHistory.vue'),
-        meta: { title: '审核记录', teacher: true, permission: 'material-review' },
-      },
-    ],
+    name: 'TeacherMaterialReview',
+    component: () => import('@/features/teacher/review/MaterialReview.vue'),
+    meta: { title: '材料审核', teacher: true, permission: 'material-review', singleTab: true },
   },
   {
     path: 'messages',
@@ -64,40 +56,18 @@ const teacherRoutes: RouteRecordRaw[] = [
     meta: { title: '成果热力图', teacher: true, permission: 'heat-map' },
   },
   {
-    // 审批委托：业务口径为「管理员 → 教师」，教师不可互相委托。
-    // 审批委托为教师专属（delegate:manage 仅授给 teacher/counselor），管理员菜单无此入口。
-    path: 'delegation',
-    name: 'TeacherDelegation',
-    component: () => import('@/features/teacher/org/DelegationManage.vue'),
-    meta: { title: '审批委托管理', teacher: true, permission: 'delegation' },
-  },
-  {
-    path: 'log-view',
-    name: 'TeacherLogView',
-    component: () => import('@/features/teacher/ops/LogView.vue'),
-    meta: { title: '日志查看', teacher: true, permission: 'log-view' },
-  },
-  {
-    // 能力维度 + 指标配置合并为单页 Tab（原两个一级菜单，permissions 相同）。
-    // singleTab：页内用 ?tab=xxx 切换，顶栏共用一个标签（见 useTabs.resolveSingleTab）。
+    // 能力维度 + 指标配置 + 评分重算合并为单页 Tab。
     path: 'indicator-system',
     name: 'TeacherIndicatorSystem',
     component: () => import('@/features/teacher/review/IndicatorSystem.vue'),
     meta: { title: '指标体系', teacher: true, permission: 'indicator-system', singleTab: true },
   },
   {
-    path: 'score-recalculate',
-    name: 'TeacherScoreRecalculate',
-    component: () => import('@/features/teacher/review/ScoreRecalculate.vue'),
-    meta: { title: '评分重算', teacher: true, permission: 'score-recalculate' },
-  },
-  {
-    // 档案导出 + 导出模板合并为单页 Tab（原两个一级菜单，同一业务对象的两端）。
-    // singleTab：页内用 ?tab=xxx 切换，顶栏共用一个标签（见 useTabs.resolveSingleTab）。
+    // 档案导出 + 导出模板 + 表单模板合并为单页 Tab。
     path: 'export-center',
     name: 'TeacherExportCenter',
     component: () => import('@/features/teacher/archive/ExportCenter.vue'),
-    meta: { title: '导出中心', teacher: true, permission: 'export-center', singleTab: true },
+    meta: { title: '档案导出', teacher: true, permission: 'export-center', singleTab: true },
   },
   {
     path: 'approval-flow',
@@ -106,37 +76,18 @@ const teacherRoutes: RouteRecordRaw[] = [
     meta: { title: '审批流程', teacher: true, permission: 'approval-flow' },
   },
   {
-    path: 'system-management',
-    name: 'TeacherSystemManagement',
-    component: () => import('@/features/teacher/org/SystemManagement.vue'),
-    meta: { title: '系统管理', teacher: true, permission: 'system-management' },
-  },
-  {
-    // 角色选择（职位调整 / 新增账号）+ 账号管理（学生 / 教师）合并为单页 Tab。
-    // 子页收进页内 Tab，故原侧边栏 el-sub-menu 消失 —— 属预期 IA 变化，功能未减。
-    // singleTab：页内用 ?tab=xxx 切换，顶栏共用一个标签（见 useTabs.resolveSingleTab）。
+    // 学生账号 / 教师账号 / 教师职位调整 / 新增账号 / 角色管理合并为单页 Tab。
     path: 'account-role',
     name: 'TeacherAccountRole',
     component: () => import('@/features/teacher/org/AccountRole.vue'),
     meta: { title: '账号与角色', teacher: true, permission: 'account-role', singleTab: true },
   },
   {
-    path: 'form-customization',
-    name: 'TeacherFormCustomization',
-    component: () => import('@/features/teacher/archive/FormCustomization.vue'),
-    meta: { title: '表单自定义', teacher: true, permission: 'form-customization' },
-  },
-  {
-    path: 'system-config',
-    name: 'TeacherSystemConfig',
-    component: () => import('@/features/teacher/org/SystemConfig.vue'),
-    meta: { title: '系统配置', teacher: true, permission: 'system-config' },
-  },
-  {
-    path: 'scheduled-task',
-    name: 'TeacherScheduledTask',
-    component: () => import('@/features/teacher/ops/ScheduledTask.vue'),
-    meta: { title: '定时任务', teacher: true, permission: 'scheduled-task' },
+    // 数据字典 / 学期 / 系统配置 / 定时任务 / 操作日志合并为单页 Tab。
+    path: 'system-settings',
+    name: 'TeacherSystemSettings',
+    component: () => import('@/features/teacher/org/SystemSettings.vue'),
+    meta: { title: '系统设置', teacher: true, permission: 'system-settings', singleTab: true },
   },
   /* 硬件维护 / 软件维护 / 网络安全 / 数据安全台账 四条路由已删除：
    * 后端无任何对应接口，页面 100% 为写死的假数据（原问题清单 B-15）。
@@ -149,16 +100,38 @@ const teacherRoutes: RouteRecordRaw[] = [
    * 属纯跳转记录：不需要 meta.permission（vue-router 在导航解析阶段先解 redirect，
    * 守卫只对最终目标跑一次，权限判定落在目标路由上）。
    */
+  { path: 'material-review/pending', redirect: '/teacher/material-review?tab=pending' },
+  { path: 'material-review/history', redirect: '/teacher/material-review?tab=history' },
+  { path: 'delegation', redirect: '/teacher/material-review?tab=delegation' },
+
   { path: 'archive-export', redirect: '/teacher/export-center?tab=export' },
   { path: 'export-template', redirect: '/teacher/export-center?tab=template' },
+  { path: 'form-customization', redirect: '/teacher/export-center?tab=forms' },
+
   { path: 'ability-dimension', redirect: '/teacher/indicator-system?tab=dimension' },
   { path: 'indicator', redirect: '/teacher/indicator-system?tab=indicator' },
+  { path: 'score-recalculate', redirect: '/teacher/indicator-system?tab=recalculate' },
+
   { path: 'role-selection', redirect: '/teacher/account-role?tab=adjust' },
   { path: 'role-selection/adjust', redirect: '/teacher/account-role?tab=adjust' },
   { path: 'role-selection/add', redirect: '/teacher/account-role?tab=add' },
   { path: 'account-management', redirect: '/teacher/account-role?tab=student' },
   { path: 'account-management/student', redirect: '/teacher/account-role?tab=student' },
   { path: 'account-management/teacher', redirect: '/teacher/account-role?tab=teacher' },
+
+  {
+    // 原系统管理内含角色 Tab，合并后角色管理迁到「账号与角色」。
+    path: 'system-management',
+    redirect: (to) => {
+      const tab = typeof to.query.tab === 'string' ? to.query.tab : 'dict'
+      return tab === 'role'
+        ? { path: '/teacher/account-role', query: { tab: 'role' } }
+        : { path: '/teacher/system-settings', query: { tab } }
+    },
+  },
+  { path: 'system-config', redirect: '/teacher/system-settings?tab=config' },
+  { path: 'scheduled-task', redirect: '/teacher/system-settings?tab=tasks' },
+  { path: 'log-view', redirect: '/teacher/system-settings?tab=logs' },
 ]
 
 export default teacherRoutes
