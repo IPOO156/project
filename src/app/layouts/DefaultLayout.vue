@@ -27,6 +27,7 @@ import { useGreeting } from '@/features/dashboard/composables/useGreeting'
 import { useLoadingTip } from '@/shared/composables/useLoadingTip'
 import GreetingToast from '@/shared/ui/GreetingToast.vue'
 import LoadingTipCard from '@/shared/ui/LoadingTipCard.vue'
+import bookCursor from '@/shared/utils/bookCursor'
 import HeaderBar from './components/HeaderBar.vue'
 import Sidebar from './components/Sidebar.vue'
 
@@ -41,6 +42,20 @@ const drawerVisible = ref(false)
 
 // 启动 tab 状态监听：路由切换时把已访问页面写入 useTabsStore
 useTabs()
+
+/**
+ * 书册光标只在学生端启用：教师端 / 管理员端采用普通系统指针。
+ * 登录页可能在同一个 SPA 会话内切换账号，故监听 isTeacher 双向切换，
+ * 离开教师端时恢复学生端书册光标。
+ */
+watch(
+  () => userStore.isTeacher,
+  (isTeacher) => {
+    if (isTeacher) bookCursor.disable()
+    else bookCursor.enable()
+  },
+  { immediate: true },
+)
 
 // 人性化问候弹窗（useGreeting 内部已处理挂载与登录状态监听）
 const { visible, dismissing, greeting, theme, dismiss } = useGreeting()
@@ -87,8 +102,10 @@ watch(isLoading, async (loading) => {
   if (!loading) {
     return
   }
-  // 此时路由已切换完成，按新页面的主题重新抽取提示
-  refreshLoadingTip()
+  // 教师端 / 管理员端不展示加载温馨提示，仅在学生端按新页面主题重新抽取
+  if (!userStore.isTeacher) {
+    refreshLoadingTip()
+  }
   await nextTick()
   if (loadingEl.value) {
     loadingEl.value.style.willChange = 'transform, opacity'
@@ -195,7 +212,8 @@ watch(isLoading, async (loading) => {
       >
         <div class="layout__loading-spinner" aria-hidden="true" />
         <span class="layout__loading-text">加载中…</span>
-        <LoadingTipCard :tip="loadingTip" @next="refreshLoadingTip" />
+        <!-- 教师端 / 管理员端保持克制：加载时仅显示进度，不弹温馨提示 -->
+        <LoadingTipCard v-if="!userStore.isTeacher" :tip="loadingTip" @next="refreshLoadingTip" />
       </div>
     </Transition>
 
