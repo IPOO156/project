@@ -397,7 +397,7 @@ async function openGuide(row: any) {
   &__type {
     font-size: 12px;
     font-weight: 500;
-    line-height: 20px;
+    line-height: 1.5;
     padding: 0 8px;
     border-radius: 6px;
     color: var(--el-color-primary);

@@ -57,7 +57,7 @@ withDefaults(defineProps<Props>(), {
   padding: 8px 16px;
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-light);
-  border-radius: 10px;
+  border-radius: 6px;
   margin-bottom: 16px;
 }
 .student-info-bar__icon {

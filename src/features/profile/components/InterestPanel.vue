@@ -156,7 +156,7 @@ async function deleteInterest(id: number) {
 <style scoped lang="scss">
 .section-card {
   border: 1px solid #f1f5f9;
-  border-radius: 10px;
+  border-radius: 6px;
 
   :deep(.el-card__body) {
     padding: 16px 24px;
@@ -187,7 +187,7 @@ async function deleteInterest(id: number) {
 
 .interest-card {
   padding: 12px;
-  border-radius: 10px;
+  border-radius: 6px;
   border: 1px solid #f1f5f9;
   background: #f8fafc;
   transition: border-color 0.2s;
@@ -216,7 +216,7 @@ async function deleteInterest(id: number) {
   margin: 0 0 8px;
   font-size: 13px;
   color: var(--el-text-color-secondary);
-  line-height: 1.4;
+  line-height: 1.6;
 }
 
 .interest-card__acts {

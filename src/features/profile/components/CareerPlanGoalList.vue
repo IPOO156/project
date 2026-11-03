@@ -298,7 +298,7 @@ async function changeActionStatus(action: any, status: number) {
 
 .goal {
   border: 1px solid var(--el-border-color-light);
-  border-radius: 10px;
+  border-radius: 6px;
   padding: 12px 16px;
   background: var(--el-bg-color);
 }
@@ -355,7 +355,7 @@ async function changeActionStatus(action: any, status: number) {
 
 .action {
   padding: 8px 8px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--el-fill-color-light);
 }
 

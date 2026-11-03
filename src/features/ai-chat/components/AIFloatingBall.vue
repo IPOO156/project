@@ -140,12 +140,12 @@ function handleClick() {
     min-width: 18px;
     height: 18px;
     padding: 0 8px;
-    border-radius: 10px;
+    border-radius: 6px;
     background: var(--el-color-danger);
     color: #fff;
     font-size: 12px;
     font-weight: 600;
-    line-height: 20px;
+    line-height: 1.2;
     text-align: center;
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
   }
@@ -160,7 +160,7 @@ function handleClick() {
     background: rgba(0, 0, 0, 0.78);
     color: #fff;
     font-size: 13px;
-    border-radius: 10px;
+    border-radius: 6px;
     pointer-events: none;
     opacity: 0;
     visibility: hidden;

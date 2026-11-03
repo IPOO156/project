@@ -46,7 +46,7 @@ const { isVisible } = useScrollReveal(quoteRef, {
   font-family: 'Cormorant Garamond', serif;
   font-size: 28px;
   color: var(--gt-text-quote, #5a4a3a);
-  line-height: 1.7;
+  line-height: 1.6;
   margin: 0 0 19px;
   letter-spacing: 1px;
 }

@@ -178,7 +178,7 @@ function onInputKeydown(event: KeyboardEvent) {
   width: min(560px, calc(100vw - 32px));
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-light);
-  border-radius: 10px;
+  border-radius: 6px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
   overflow: hidden;
 }
@@ -207,7 +207,7 @@ function onInputKeydown(event: KeyboardEvent) {
   background: transparent;
   color: var(--el-text-color-primary);
   font-size: 14px;
-  line-height: 24px;
+  line-height: 1.5;
 
   &::placeholder {
     color: var(--el-text-color-placeholder);
@@ -254,12 +254,12 @@ function onInputKeydown(event: KeyboardEvent) {
 
   &__label {
     font-size: 13px;
-    line-height: 20px;
+    line-height: 1.5;
   }
 
   &__sub {
     font-size: 12px;
-    line-height: 16px;
+    line-height: 1.5;
     color: var(--el-text-color-secondary);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -315,7 +315,7 @@ kbd {
   background: var(--el-bg-color);
   font-family: inherit;
   font-size: 12px;
-  line-height: 1;
+  line-height: 1.25;
   color: var(--el-text-color-secondary);
 }
 

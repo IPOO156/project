@@ -27,7 +27,7 @@
   --mc-danger: #ef4444;
   --mc-danger-light: #fca5a5;
   --mc-danger-fade: rgba(239, 68, 68, 0.08);
-  --mc-radius: 10px;
+  --mc-radius: 6px;
 
   // 夜间模式覆盖
   html.dark &,
@@ -84,7 +84,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   justify-content: center;
   gap: 8px;
   padding: 8px 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   border: none;
   font-size: 13px;
   font-weight: 500;
@@ -253,7 +253,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   --el-table-row-hover-bg-color: var(--mc-row-hover);
   --el-table-border-color: var(--mc-border);
 
-  border-radius: 10px;
+  border-radius: 6px;
   overflow: hidden;
 
   th.el-table__cell {
@@ -277,7 +277,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   .el-input__wrapper,
   .el-textarea__inner,
   .el-select .el-input__wrapper {
-    border-radius: 10px;
+    border-radius: 6px;
     box-shadow: 0 0 0 1px var(--mc-border) inset;
     background: var(--mc-card);
 

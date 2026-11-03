@@ -476,7 +476,7 @@ const { extinguishedRings } = useRingEffects(
   font-size: clamp(1.1rem, 1.9vw, 1.35rem);
   color: var(--bark-dark, #2d1e12);
   letter-spacing: 0;
-  line-height: 1;
+  line-height: 1.2;
   opacity: 0;
   transform: translateY(-18px);
   animation: charDropIn 0.55s $ease-emphasized forwards;

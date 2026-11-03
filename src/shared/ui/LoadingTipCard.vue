@@ -189,7 +189,7 @@ onBeforeUnmount(stopRotate)
   margin: 0;
   color: var(--el-text-color-primary);
   font-size: $font-size-sm;
-  line-height: 1.75;
+  line-height: 1.6;
 }
 
 .loading-tip__actions {

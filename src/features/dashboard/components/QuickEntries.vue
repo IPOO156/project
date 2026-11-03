@@ -326,7 +326,7 @@ function handleDragEndVisual() {
   &__icon {
     width: 40px;
     height: 40px;
-    border-radius: 10px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -354,7 +354,7 @@ function handleDragEndVisual() {
 
   &__badge {
     font-size: 12px;
-    line-height: 1;
+    line-height: 1.2;
     color: var(--el-color-primary);
   }
 

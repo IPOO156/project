@@ -216,7 +216,7 @@ onUnmounted(() => {
   margin: 24px 0 32px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--login-surface-soft);
   border: 1px solid var(--login-border);
   backdrop-filter: blur(16px);
@@ -262,7 +262,7 @@ onUnmounted(() => {
   margin: 0;
   max-width: 720px;
   font-size: clamp(42px, 5vw, 68px);
-  line-height: 1.15;
+  line-height: 1.25;
   letter-spacing: -0.03em;
   color: var(--login-text);
   animation: fadeUp 1.2s ease both;
@@ -281,7 +281,7 @@ onUnmounted(() => {
   margin: 24px 0 0;
   max-width: 640px;
   font-size: 16px;
-  line-height: 1.8;
+  line-height: 1.6;
   color: var(--login-text-soft);
   animation: fadeUp 1.3s ease both;
   transition: color 0.5s ease;
@@ -303,7 +303,7 @@ onUnmounted(() => {
 .login__feature-card {
   position: relative;
   padding: 24px 24px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--login-surface-soft);
   border: 1px solid var(--login-border);
   backdrop-filter: blur(18px);
@@ -361,7 +361,7 @@ onUnmounted(() => {
   margin-bottom: 16px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 6px;
   color: #fff;
   background: linear-gradient(135deg, var(--login-btn-primary-1), var(--login-btn-primary-2));
   box-shadow: 0 12px 22px var(--login-btn-shadow);
@@ -377,7 +377,7 @@ onUnmounted(() => {
 .login__feature-desc {
   margin: 0;
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.6;
   color: var(--login-text-soft);
   transition: color 0.5s ease;
 }
@@ -408,7 +408,7 @@ onUnmounted(() => {
 .login__stat-icon {
   width: 28px;
   height: 28px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--login-surface-soft);
   display: flex;
   align-items: center;
@@ -424,7 +424,7 @@ onUnmounted(() => {
   font-size: 20px;
   font-weight: 600;
   color: var(--login-text);
-  line-height: 1;
+  line-height: 1.2;
   letter-spacing: -0.02em;
   transition: color 0.5s ease;
 }

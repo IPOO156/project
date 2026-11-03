@@ -140,7 +140,7 @@ watch(avgGrowth, (newVal) => {
 
 .summary-card {
   padding: 32px 24px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--gt-card-bg);
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.22);
   box-shadow:
@@ -211,7 +211,7 @@ watch(avgGrowth, (newVal) => {
   font-size: 3rem;
   font-weight: 600;
   color: #fff;
-  line-height: 1;
+  line-height: 1.2;
   margin-bottom: 12px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
@@ -231,7 +231,7 @@ watch(avgGrowth, (newVal) => {
   color: var(--text-light, #9a8474);
   margin: 48px auto 0;
   max-width: 520px;
-  line-height: 1.8;
+  line-height: 1.6;
   letter-spacing: 1px;
   opacity: 0;
   transform: translateY(24px);

@@ -442,7 +442,7 @@ onMounted(() => void loadList())
   &__content {
     margin: 0;
     font-size: 14px;
-    line-height: 1.7;
+    line-height: 1.6;
     color: var(--el-text-color-regular);
     white-space: pre-wrap;
     word-break: break-word;

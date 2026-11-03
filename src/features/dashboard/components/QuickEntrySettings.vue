@@ -229,7 +229,7 @@ function handleClose() {
   &__icon {
     width: 32px;
     height: 32px;
-    border-radius: 10px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;

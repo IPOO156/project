@@ -67,7 +67,7 @@ defineProps<Props>()
 .review-section__hero-icon {
   width: 48px;
   height: 48px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--mc-wood);
   color: #fff;
   display: flex;
@@ -105,7 +105,7 @@ defineProps<Props>()
   padding: 8px 16px;
   background: var(--mc-bg);
   border: 1px solid var(--mc-border);
-  border-radius: 10px;
+  border-radius: 6px;
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;

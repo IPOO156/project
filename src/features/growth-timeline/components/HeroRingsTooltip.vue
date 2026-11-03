@@ -41,7 +41,7 @@ defineProps<Props>()
     opacity 0.2s ease,
     visibility 0.2s ease;
   padding: 8px 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--gt-tooltip-bg, rgba(45, 30, 18, 0.92));
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -74,7 +74,7 @@ defineProps<Props>()
   font-size: 14px;
   font-weight: 600;
   color: var(--gt-tooltip-text, #fff8e8);
-  line-height: 1.35;
+  line-height: 1.25;
   margin-bottom: 4px;
 }
 

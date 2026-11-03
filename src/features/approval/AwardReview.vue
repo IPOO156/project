@@ -205,7 +205,7 @@ function goTo(path: string) {
   &__icon {
     width: 48px;
     height: 48px;
-    border-radius: 10px;
+    border-radius: 6px;
     background: #f1f5f9;
     color: var(--el-text-color-secondary);
     display: flex;
@@ -253,7 +253,7 @@ function goTo(path: string) {
   align-items: center;
   gap: 8px;
   padding: 16px 8px;
-  border-radius: 10px;
+  border-radius: 6px;
   border: 1px solid var(--el-border-color-lighter);
   background: var(--el-fill-color-light);
   cursor: pointer;

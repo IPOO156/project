@@ -190,13 +190,13 @@ async function handleCopy() {
 
   &__text {
     margin: 0;
-    line-height: 1.7;
+    line-height: 1.6;
   }
 
   &__disclaimer {
     font-size: $font-size-xs;
     color: var(--el-text-color-placeholder);
-    line-height: 1.4;
+    line-height: 1.6;
   }
 
   &__offline {

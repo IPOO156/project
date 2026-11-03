@@ -152,7 +152,7 @@ function restore(category: LoadingTipCategory): void {
   margin: $spacing-xs 0 $spacing-sm;
   color: var(--el-text-color-primary);
   font-size: $font-size-sm;
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
 .study-tips__hidden {

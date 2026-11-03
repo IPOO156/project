@@ -85,7 +85,7 @@ function switchTab(tab: 'activity' | 'submission') {
   &__icon {
     width: 56px;
     height: 56px;
-    border-radius: 10px;
+    border-radius: 6px;
     background: linear-gradient(135deg, var(--mc-wood) 0%, var(--mc-wood-light) 100%);
     color: #fff;
     display: flex;
@@ -115,7 +115,7 @@ function switchTab(tab: 'activity' | 'submission') {
     gap: 8px;
     padding: 8px;
     background: var(--mc-bg);
-    border-radius: 10px;
+    border-radius: 6px;
     border: 1px solid var(--mc-border);
   }
 
@@ -124,7 +124,7 @@ function switchTab(tab: 'activity' | 'submission') {
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    border-radius: 10px;
+    border-radius: 6px;
     border: none;
     background: transparent;
     color: var(--mc-text-secondary);
@@ -148,7 +148,7 @@ function switchTab(tab: 'activity' | 'submission') {
   &__badge {
     min-width: 22px;
     padding: 4px 8px;
-    border-radius: 10px;
+    border-radius: 6px;
     background: var(--mc-cream);
     color: var(--mc-wood);
     font-size: 12px;

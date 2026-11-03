@@ -375,7 +375,7 @@ defineExpose({ openCreate, openEdit })
   }
 
   &__advanced {
-    margin-left: 110px;
+    margin-left: 112px;
     --el-collapse-header-height: 40px;
   }
 }

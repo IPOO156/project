@@ -373,7 +373,7 @@ onMounted(() => void loadList())
 .audit-applicant {
   display: flex;
   flex-direction: column;
-  line-height: 1.4;
+  line-height: 1.5;
 
   &__no {
     font-size: 12px;
@@ -385,7 +385,7 @@ onMounted(() => void loadList())
 .audit-class {
   display: flex;
   flex-direction: column;
-  line-height: 1.4;
+  line-height: 1.5;
 
   &__name {
     overflow: hidden;

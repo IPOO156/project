@@ -300,7 +300,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
 
   &__bubble {
     padding: 8px 16px;
-    border-radius: 10px;
+    border-radius: 6px;
     background: var(--el-fill-color-light);
     color: var(--el-text-color-primary);
     line-height: 1.6;
@@ -311,8 +311,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   &__msg--user &__bubble {
     background: var(--mc-primary);
     color: #fff;
-    border-bottom-left-radius: 14px;
-    border-bottom-right-radius: 4px;
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
   }
 
   &__content {
@@ -404,7 +404,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     flex: 1;
     min-width: 0;
     padding: 8px 16px;
-    border-radius: 10px;
+    border-radius: 6px;
     border: 1px solid var(--el-border-color);
     background: var(--el-fill-color-light);
     color: var(--el-text-color-primary);
@@ -426,7 +426,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   &__send {
     width: 38px;
     height: 38px;
-    border-radius: 10px;
+    border-radius: 6px;
     border: none;
     background: var(--mc-primary);
     color: #fff;

@@ -155,7 +155,7 @@ onMounted(() => {
   :deep(.el-tabs__item) {
     font-size: 16px;
     height: 44px;
-    line-height: 48px;
+    line-height: 1.5;
   }
 
   :deep(.el-tabs__nav-wrap::after) {

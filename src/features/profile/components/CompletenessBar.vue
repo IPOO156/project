@@ -27,7 +27,7 @@ const BAR_COLOR = '#4a7fb5'
   align-items: center;
   gap: 12px;
   padding: 8px 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: #f8fafc;
   border: 1px solid #f1f5f9;
 

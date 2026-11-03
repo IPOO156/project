@@ -113,7 +113,7 @@ function cardSegments(block: CardBlock) {
   flex-direction: column;
   gap: $spacing-sm;
   font-size: $font-size-base;
-  line-height: 1.7;
+  line-height: 1.6;
   color: var(--el-text-color-primary);
 
   &__greeting {

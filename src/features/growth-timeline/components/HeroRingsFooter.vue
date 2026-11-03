@@ -96,7 +96,7 @@ const progressPercent = computed(() => {
   font-size: 2.5rem;
   font-weight: 600;
   color: var(--bark-dark, #2d1e12);
-  line-height: 1;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums lining-nums;
 }
 

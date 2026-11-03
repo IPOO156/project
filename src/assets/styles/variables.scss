@@ -70,12 +70,12 @@ $spacing-2xl: 32px;
 $spacing-3xl: 40px;
 $spacing-4xl: 48px;
 
-// 圆角 —— 只留两档：控件 6px / 容器 10px（头像与胶囊除外，走 50% / 999px）
+// 圆角 —— 卡片/按钮/输入框 6px，标签/徽章 4px；头像 50%、胶囊 999px
 $radius-sm: 6px;
 $radius-base: 6px;
-$radius-lg: 10px;
-$radius-xl: 10px;
-$radius-2xl: 10px;
+$radius-lg: 6px;
+$radius-xl: 6px;
+$radius-2xl: 6px;
 $radius-pill: 999px;
 
 // 阴影

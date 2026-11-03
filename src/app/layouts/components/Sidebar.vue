@@ -262,7 +262,7 @@ function handleMenuSelect(index: string) {
   // 菜单项：Element Plus 未提供对应样式 props，需覆盖内部类名以统一侧边栏尺寸与交互色。
   :deep(.el-menu-item) {
     height: 48px;
-    line-height: 48px;
+    line-height: 1.5;
     padding: 0 16px !important;
     display: flex;
     align-items: center;
@@ -305,7 +305,7 @@ function handleMenuSelect(index: string) {
   // 子菜单标题：Element Plus 未提供对应样式 props，需覆盖内部类名以统一侧边栏尺寸与交互色。
   :deep(.el-sub-menu__title) {
     height: 48px;
-    line-height: 48px;
+    line-height: 1.5;
     padding: 0 16px !important;
     display: flex;
     align-items: center;
@@ -349,7 +349,7 @@ function handleMenuSelect(index: string) {
 
     .el-sub-menu__title {
       height: 40px;
-      line-height: 40px;
+      line-height: 1.5;
       margin: 0 8px;
       padding: 0 8px !important;
       border-radius: 6px;
@@ -364,7 +364,7 @@ function handleMenuSelect(index: string) {
 
     .el-menu-item {
       height: 40px;
-      line-height: 40px;
+      line-height: 1.5;
       margin: 0 8px;
       padding: 0 8px 0 24px !important;
       border-radius: 6px;

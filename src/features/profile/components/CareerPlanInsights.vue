@@ -155,7 +155,7 @@ async function submitReflection() {
 
   &__item {
     padding: 8px 12px;
-    border-radius: 10px;
+    border-radius: 6px;
     background: var(--el-fill-color-light);
   }
 
@@ -193,7 +193,7 @@ async function submitReflection() {
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    border-radius: 10px;
+    border-radius: 6px;
     background: var(--el-fill-color-light);
   }
 

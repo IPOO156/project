@@ -82,7 +82,7 @@
   --el-border-radius-base: #{$radius-base};
   --el-border-radius-small: #{$radius-sm};
   --el-border-radius-large: #{$radius-lg};
-  --el-border-radius-round: 20px;
+  --el-border-radius-round: #{$radius-pill};
 
   // 阴影
   --el-box-shadow-light: #{$shadow-sm};
@@ -156,7 +156,8 @@
 
 #app .el-tag {
   padding: 0 8px;
-  border-radius: $radius-base;
+  border-radius: 4px;
+  line-height: 1.5;
 }
 
 #app .el-input__wrapper,
@@ -172,7 +173,11 @@
 
 #app .el-badge__content {
   padding: 0 4px;
-  border-radius: $radius-pill;
+  border-radius: 4px;
+}
+
+#app .el-badge__content.is-dot {
+  border-radius: 50%;
 }
 
 #app .el-dialog,
@@ -241,6 +246,14 @@
 
 #app .el-range-separator {
   padding: 0 8px;
+}
+
+// 控件内单行文字行高 —— Element Plus 默认按钮 / 下拉触发器为 1、选择器为 20px，
+// 运行时会出现 1 / 1.67 等散值；统一收敛到单行控件档 1.5。
+#app .el-button,
+#app .el-dropdown,
+#app .el-select__selected-item {
+  line-height: 1.5;
 }
 
 // 滚动条美化

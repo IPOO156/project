@@ -178,7 +178,7 @@ function getTypeColor(tag: string): string {
   font-size: 3.5rem;
   font-weight: 600;
   color: var(--gt-accent, #8b6340);
-  line-height: 1;
+  line-height: 1.2;
   text-align: right;
   pointer-events: none;
 }
@@ -288,18 +288,18 @@ function getTypeColor(tag: string): string {
   font-weight: 500;
   color: var(--bark-dark, #2d1e12);
   margin-bottom: 8px;
-  line-height: 1.35;
+  line-height: 1.25;
 }
 
 .card-body {
   font-size: 16px;
   color: var(--text-mid, #6b5443);
-  line-height: 1.9;
-  margin-bottom: 19px;
+  line-height: 1.6;
+  margin-bottom: 20px;
 }
 
 .card-skills {
-  margin-bottom: 19px;
+  margin-bottom: 20px;
 }
 
 .card-skill {

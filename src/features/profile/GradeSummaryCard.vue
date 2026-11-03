@@ -46,7 +46,7 @@ defineProps<{
 // 区块卡片
 .section-card {
   border: 1px solid #f1f5f9;
-  border-radius: 10px;
+  border-radius: 6px;
   :deep(.el-card__body) {
     padding: 16px 24px;
   }

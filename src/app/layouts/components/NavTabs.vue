@@ -383,7 +383,7 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     background: transparent;
     color: var(--el-text-color-regular);
     font-size: $font-size-base;
-    line-height: 1;
+    line-height: 1.25;
     cursor: pointer;
     user-select: none;
     position: relative;
@@ -406,7 +406,7 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     gap: 8px;
     padding: 0 8px 0 12px;
     border: 1px solid rgba(148, 163, 184, 0.16);
-    border-radius: 10px;
+    border-radius: 6px;
     background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(241, 245, 249, 0.82));
     position: relative;
     // 为关闭按钮绝对定位提供锚点

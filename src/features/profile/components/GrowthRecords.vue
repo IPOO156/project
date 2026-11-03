@@ -112,7 +112,7 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 12px;
   padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   border: 1px solid var(--el-border-color-lighter);
   background: var(--el-bg-color);
   transition:

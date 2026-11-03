@@ -72,7 +72,7 @@ async function save() {
 <style scoped lang="scss">
 .section-card {
   border: 1px solid #f1f5f9;
-  border-radius: 10px;
+  border-radius: 6px;
 
   :deep(.el-card__body) {
     padding: 16px 24px;
@@ -100,7 +100,7 @@ async function save() {
   margin: 0;
   font-size: 13px;
   color: #475569;
-  line-height: 1.7;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 

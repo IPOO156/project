@@ -186,7 +186,7 @@ function switchModule(key: string) {
   min-height: 84px;
   padding: 16px 12px;
   border: 1px solid var(--el-border-color-light);
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--el-bg-color);
   display: flex;
   align-items: center;
@@ -219,7 +219,7 @@ function switchModule(key: string) {
   min-width: 20px;
   height: 20px;
   padding: 0 8px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--el-color-primary);
   color: #fff;
   font-size: 12px;
@@ -232,7 +232,7 @@ function switchModule(key: string) {
 .application-hub__tab-icon {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: rgba(var(--el-color-primary-rgb, 30 58 95), 0.06);
   color: var(--el-color-primary);
   display: flex;
@@ -256,7 +256,7 @@ function switchModule(key: string) {
 .application-hub__tab-desc {
   margin-top: 4px;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: 1.6;
   color: var(--el-text-color-secondary);
 }
 

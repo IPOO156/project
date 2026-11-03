@@ -142,7 +142,7 @@ function handleCardClick() {
   align-items: flex-start;
   gap: 12px;
   padding: 16px 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--mc-card);
   border: 1px solid var(--mc-border);
   transition:
@@ -173,7 +173,7 @@ function handleCardClick() {
     flex-shrink: 0;
     width: 36px;
     height: 36px;
-    border-radius: 10px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -206,7 +206,7 @@ function handleCardClick() {
     color: var(--el-color-primary);
     font-size: 12px;
     font-weight: 500;
-    line-height: 16px;
+    line-height: 1.5;
   }
   &__title {
     margin: 0;
@@ -277,7 +277,7 @@ function handleCardClick() {
 .action-icon {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 6px;
   border: none;
   display: flex;
   align-items: center;

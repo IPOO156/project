@@ -485,7 +485,7 @@ defineExpose({
   margin: 0;
   font-size: 10pt;
   color: #475569;
-  line-height: 1.8;
+  line-height: 1.6;
   padding: 8px 12px;
   background: #f8fafc;
   border-radius: 6px;

@@ -273,7 +273,7 @@ async function switchToStudent() {
       background: var(--el-bg-color);
       font-family: inherit;
       font-size: 12px;
-      line-height: 16px;
+      line-height: 1.5;
       color: var(--el-text-color-placeholder);
     }
   }

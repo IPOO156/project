@@ -29,7 +29,7 @@ const visible = ref(true)
 .rejection-banner {
   background: linear-gradient(135deg, #fef3e2, #fff8f0);
   border: 1px solid #fde68a;
-  border-radius: 10px;
+  border-radius: 6px;
   padding: 12px 16px;
   margin-bottom: 16px;
 }

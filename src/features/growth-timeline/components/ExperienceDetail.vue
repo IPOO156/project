@@ -255,13 +255,13 @@ function handleBackdropClick(event: MouseEvent) {
   font-weight: 400;
   color: var(--bark-dark, #2d1e12);
   margin-bottom: 24px;
-  line-height: 1.15;
+  line-height: 1.25;
 }
 
 .detail-desc {
   font-size: 20px;
   color: var(--text-mid, #6b5443);
-  line-height: 2;
+  line-height: 1.6;
   margin-bottom: 40px;
 }
 

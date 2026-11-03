@@ -49,7 +49,7 @@ function goBack() {
     width: min(420px, 100%);
     padding: 40px 32px;
     text-align: center;
-    border-radius: 10px;
+    border-radius: 6px;
     background: var(--el-bg-color, #fff);
     box-shadow: var(--el-box-shadow-light, 0 2px 12px rgb(0 0 0 / 8%));
   }
@@ -61,7 +61,7 @@ function goBack() {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
+    border-radius: 6px;
     color: var(--el-color-primary, #2c5282);
     background: var(--el-color-primary-light-9, #eef4fa);
   }
@@ -82,7 +82,7 @@ function goBack() {
   &__desc {
     margin: 0 0 24px;
     font-size: 14px;
-    line-height: 1.7;
+    line-height: 1.6;
     color: var(--el-text-color-regular, #4b5563);
   }
 

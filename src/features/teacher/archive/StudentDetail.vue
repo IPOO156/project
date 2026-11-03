@@ -414,7 +414,7 @@ onMounted(() => void loadAll())
     padding-top: $spacing-md;
     border-top: 1px solid var(--el-border-color-lighter);
     font-size: 13px;
-    line-height: 1.8;
+    line-height: 1.6;
     color: var(--el-text-color-secondary);
   }
 
@@ -568,7 +568,7 @@ onMounted(() => void loadAll())
 
   &__tl-content {
     font-size: 13px;
-    line-height: 1.7;
+    line-height: 1.6;
     color: var(--el-text-color-secondary);
     display: -webkit-box;
     -webkit-line-clamp: 3;

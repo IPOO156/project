@@ -83,7 +83,7 @@ defineProps<{
   align-items: flex-start;
   gap: 8px;
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: 6px;
   border: 1px solid var(--el-border-color-lighter);
   transition: border-color 0.2s;
 
@@ -94,7 +94,7 @@ defineProps<{
   &__icon {
     width: 32px;
     height: 32px;
-    border-radius: 10px;
+    border-radius: 6px;
     background: rgba(212, 165, 116, 0.1);
     color: #d4a574;
     display: flex;

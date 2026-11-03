@@ -253,7 +253,7 @@ function openAIDrawer() {
 
 .ai-item {
   padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: linear-gradient(180deg, #fff7ed 0%, #ffffff 60%);
   border: 1px solid #fed7aa;
   border-left: 3px solid #f97316;
@@ -296,7 +296,7 @@ function openAIDrawer() {
 // 后端 AI 辅助建议块（绿色系，与本地短板分析橙色区分）
 .ai-suggestion {
   padding: 12px 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 60%);
   border: 1px solid #bbf7d0;
   border-left: 3px solid #22c55e;

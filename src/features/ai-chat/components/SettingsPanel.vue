@@ -194,7 +194,7 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
     border-radius: $radius-lg;
     font-size: $font-size-sm;
     color: var(--el-text-color-regular);
-    line-height: 1.7;
+    line-height: 1.6;
 
     p {
       margin: 0;
@@ -227,7 +227,7 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
     position: absolute;
     inset: 0;
     background: var(--el-border-color);
-    border-radius: 10px;
+    border-radius: 6px;
     transition: background $duration-fast $ease-standard;
 
     &::before {

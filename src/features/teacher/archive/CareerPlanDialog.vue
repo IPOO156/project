@@ -203,7 +203,7 @@ async function handleSubmit() {
   &__text {
     margin: 0;
     font-size: 14px;
-    line-height: 1.8;
+    line-height: 1.6;
     color: var(--el-text-color-primary);
     white-space: pre-wrap;
   }
@@ -243,7 +243,7 @@ async function handleSubmit() {
   &__feedback-text {
     margin: 0;
     font-size: 13px;
-    line-height: 1.7;
+    line-height: 1.6;
     color: var(--el-text-color-primary);
   }
 

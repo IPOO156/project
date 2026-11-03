@@ -307,7 +307,7 @@ const radarOption = computed(() => {
 
 .radar-metric {
   padding: 16px 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
 }

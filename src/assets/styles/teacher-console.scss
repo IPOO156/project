@@ -222,7 +222,7 @@
 
       .cell {
         letter-spacing: 0;
-        line-height: 40px;
+        line-height: 1.5;
       }
     }
 
@@ -303,11 +303,12 @@
       }
     }
 
-    /* 48px 行高：8px 网格，同时保证 45+ 用户点击区域与可读性 */
+    /* 48px 高度：8px 网格，同时保证 45+ 用户点击区域与可读性；
+       行高按单行控件档 1.5（垂直居中由 flex 负责），不随高度写成 px 散值 */
     .el-menu-item,
     .el-sub-menu__title {
       height: $spacing-4xl;
-      line-height: $spacing-4xl;
+      line-height: 1.5;
       font-size: $font-size-base;
       color: var(--el-text-color-secondary);
       font-weight: $font-weight-regular;
@@ -320,7 +321,7 @@
 
     .el-menu--inline .el-menu-item {
       height: $spacing-3xl;
-      line-height: $spacing-3xl;
+      line-height: 1.5;
     }
 
     .el-menu-item.is-active {

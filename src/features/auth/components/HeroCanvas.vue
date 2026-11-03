@@ -171,7 +171,7 @@ const floatCards = computed(() => {
 .login__float-card {
   position: absolute;
   padding: 16px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--login-float-bg);
   border: 1px solid var(--login-border);
   backdrop-filter: blur(10px);
@@ -189,7 +189,7 @@ const floatCards = computed(() => {
 .login__float-icon {
   width: 30px;
   height: 30px;
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--login-surface-soft);
   display: flex;
   align-items: center;
