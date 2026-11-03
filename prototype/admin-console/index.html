@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>管理员 / 教师端重构原型 · 学生档案管理系统</title>
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <div class="app" id="app">
+      <aside class="sidebar" id="sidebar" aria-label="主导航"></aside>
+      <div class="main">
+        <header class="topbar" id="topbar"></header>
+        <main class="content" id="content" tabindex="-1"></main>
+      </div>
+    </div>
+
+    <div id="overlayRoot"></div>
+    <div id="toastRoot" class="toast-root" aria-live="polite"></div>
+
+    <!-- 原型预览控制：不属于最终产品 UI，仅用于评审时切换角色/查看说明 -->
+    <button class="proto-fab" id="protoFab" type="button" aria-label="打开原型控制">
+      <span class="proto-fab__dot"></span>
+      原型预览
+    </button>
+    <div class="proto-panel" id="protoPanel" hidden>
+      <div class="proto-panel__head">
+        <strong>原型预览控制</strong>
+        <button class="icon-btn" type="button" data-action="close-proto" aria-label="关闭">×</button>
+      </div>
+      <div class="proto-panel__body">
+        <p class="proto-panel__label">预览身份</p>
+        <div class="segmented" role="group" aria-label="预览身份">
+          <button type="button" class="segmented__btn is-active" data-action="set-role" data-role="admin">
+            管理员 · 王五
+          </button>
+          <button type="button" class="segmented__btn" data-action="set-role" data-role="teacher">
+            教师 · 李四
+          </button>
+        </div>
+        <p class="proto-panel__hint">
+          教师身份会隐藏管理员专属菜单，并切换工作台数据范围。真实系统按
+          <code>/auth/me</code> 的权限码过滤菜单。
+        </p>
+        <div class="proto-panel__actions">
+          <button class="btn btn-secondary btn-sm" type="button" data-action="open-notes">
+            查看改造说明
+          </button>
+          <button class="btn btn-secondary btn-sm" type="button" data-action="toggle-theme">
+            切换明暗
+          </button>
+        </div>
+        <p class="proto-panel__foot">静态原型 · 数据为演示数据 · 不含后端请求</p>
+      </div>
+    </div>
+
+    <script src="./assets/app.js"></script>
+  </body>
+</html>
