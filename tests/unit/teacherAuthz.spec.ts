@@ -54,23 +54,24 @@ describe('isModuleAllowed 判定顺序', () => {
   })
 
   it('admin 角色直通，即便 permissions 为空', () => {
-    expect(isModuleAllowed('system-config', [], ['admin'])).toBe(true)
-    expect(isModuleAllowed('system-management', [], ['admin'])).toBe(true)
+    expect(isModuleAllowed('system-settings', [], ['admin'])).toBe(true)
+    expect(isModuleAllowed('org-management', [], ['admin'])).toBe(true)
   })
 
   it('命中模块所需任一权限码即放行，缺失则拒绝', () => {
-    expect(isModuleAllowed('system-management', ['semester:manage'], ['teacher'])).toBe(true)
-    expect(isModuleAllowed('system-management', ['log:view'], ['teacher'])).toBe(false)
+    expect(isModuleAllowed('system-settings', ['semester:manage'], ['teacher'])).toBe(true)
+    expect(isModuleAllowed('system-settings', ['org:manage'], ['teacher'])).toBe(false)
   })
 
   it('授权数据为空时按角色基线兜底，非空时不兜底', () => {
-    // teacher 基线：首页 / 档案查看 / 导出中心 / 热力图
+    // teacher 基线：首页 / 消息 / 档案查看 / 导出中心 / 热力图 / 系统设置
     expect(isModuleAllowed('archive-view', [], ['teacher'])).toBe(true)
+    expect(isModuleAllowed('system-settings', [], ['teacher'])).toBe(true)
     expect(isModuleAllowed('material-review', [], ['teacher'])).toBe(false)
     // counselor 基线含材料审核
     expect(isModuleAllowed('material-review', [], ['counselor'])).toBe(true)
     // 下发了权限码但不含所需码：属真实无权，不回退基线
-    expect(isModuleAllowed('archive-view', ['log:view'], ['teacher'])).toBe(false)
+    expect(isModuleAllowed('archive-view', ['org:manage'], ['teacher'])).toBe(false)
   })
 })
 
@@ -84,9 +85,11 @@ describe('授权数据就绪判定与基线', () => {
   it('基线模块按角色去重合并', () => {
     expect(getBaselineModuleIds(['teacher', 'counselor'])).toEqual([
       'teacher-dashboard',
+      'messages',
       'archive-view',
       'export-center',
       'heat-map',
+      'system-settings',
       'material-review',
     ])
     expect(getBaselineModuleIds(['unknown'])).toEqual([])
@@ -96,13 +99,13 @@ describe('授权数据就绪判定与基线', () => {
 describe('getTeacherMenuItems', () => {
   it('按 order 升序返回有权限的菜单项', () => {
     const items = getTeacherMenuItems(['log:view'], ['teacher'])
-    expect(items.map((item) => item.path)).toEqual(['/teacher/log-view'])
+    expect(items.map((item) => item.path)).toEqual(['/teacher/system-settings'])
   })
 
   it('admin 角色拿到全部模块菜单', () => {
     const items = getTeacherMenuItems([], ['admin'])
     expect(items.length).toBeGreaterThanOrEqual(5)
-    expect(items.some((item) => item.path?.startsWith('/teacher/system-management'))).toBe(true)
+    expect(items.some((item) => item.path?.startsWith('/teacher/system-settings'))).toBe(true)
   })
 })
 
@@ -117,8 +120,8 @@ describe('useTeacherAuthz / usePermission', () => {
     expect(authz.isAdmin.value).toBe(false)
     expect(authz.canAccessAny(['system:role:manage'])).toBe(false)
     expect(authz.canAccessAny(['system:role:manage', 'log:view'])).toBe(true)
-    expect(authz.canAccessModule('log-view')).toBe(true)
-    expect(authz.canAccessModule('system-management')).toBe(false)
+    expect(authz.canAccessModule('system-settings')).toBe(true)
+    expect(authz.canAccessModule('org-management')).toBe(false)
     expect(authz.roleLabel.value).toBe('教师')
   })
 
@@ -128,7 +131,7 @@ describe('useTeacherAuthz / usePermission', () => {
 
     expect(authz.isAdmin.value).toBe(true)
     expect(authz.canAccessAny(['anything:code'])).toBe(true)
-    expect(authz.canAccessModule('system-management')).toBe(true)
+    expect(authz.canAccessModule('system-settings')).toBe(true)
     expect(authz.baselineFallback.value).toBe(false)
   })
 
@@ -145,7 +148,7 @@ describe('useTeacherAuthz / usePermission', () => {
     const permission = usePermission()
 
     expect(permission.hasPermission(ADMIN_MENU_CODE)).toBe(true)
-    // system-config 模块只挂 ADMIN_MENU_CODE，持有该码即可访问
-    expect(permission.canAccessModule('system-config')).toBe(true)
+    // system-settings 模块含 ADMIN_MENU_CODE，持有该码即可访问
+    expect(permission.canAccessModule('system-settings')).toBe(true)
   })
 })

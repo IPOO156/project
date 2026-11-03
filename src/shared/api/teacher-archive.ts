@@ -42,11 +42,7 @@ export function getExportJob(jobId: number): Promise<ExportJobItem> {
   return request.get(`/admin/exports/${jobId}`)
 }
 
-/* ===================== 档案管理（/admin/archives）===================== */
-
-export function listArchives(params: ArchiveAdminQuery): Promise<PageResult<ArchiveAdminListItem>> {
-  return request.get('/admin/archives', { params })
-}
+/* ===================== 档案详情 ===================== */
 
 /**
  * 档案详情（GET /teacher/archives/{archiveId}）。
@@ -55,15 +51,6 @@ export function listArchives(params: ArchiveAdminQuery): Promise<PageResult<Arch
  */
 export function getArchiveDetail(archiveId: number): Promise<ArchiveAdminDetail> {
   return request.get(`/teacher/archives/${archiveId}`)
-}
-
-export function getArchiveOverview(params: {
-  semesterId?: number
-  orgType?: number
-  orgId?: number
-  grade?: string
-}): Promise<ArchiveOverviewResult> {
-  return request.get('/admin/archives/overview', { params })
 }
 
 /* ===================== 教师端-档案（/teacher/archives）===================== */
