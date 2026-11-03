@@ -23,7 +23,8 @@ export interface TeacherDashboardRecentAudit {
   title: string
   studentName: string
   studentNo: string
-  action: string
+  /** 审核动作码：1 通过 / 2 退回 / 3 撤回 / 4 转交（后端 Integer） */
+  action: number
   actionLabel: string
   auditedAt: string
 }

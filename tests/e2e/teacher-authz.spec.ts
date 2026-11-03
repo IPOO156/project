@@ -24,30 +24,30 @@ async function overrideMe(page: Page, permissions: string[], roles: string[] = [
 }
 
 test.describe('教师端权限码驱动入口', () => {
-  test('系统管理按 Tab 权限收窄：仅字典权限只显示「字典管理」', async ({ page }) => {
+  test('系统设置按 Tab 权限收窄：仅字典权限只显示「数据字典」', async ({ page }) => {
     await login(page, 'admin', ACCOUNTS.teacher)
     await overrideMe(page, ['dictionary:manage'])
-    await page.goto('/teacher/system-management')
+    await page.goto('/teacher/system-settings')
 
-    const tabs = page.locator('.system-management .el-tabs__item')
+    const tabs = page.locator('.system-settings .el-tabs__item')
     await expect(tabs).toHaveCount(1)
-    await expect(tabs.first()).toHaveText('字典管理')
+    await expect(tabs.first()).toHaveText('数据字典')
   })
 
-  test('仅持学期导入权限时，系统管理只显示「学期管理」Tab', async ({ page }) => {
+  test('仅持学期导入权限时，系统设置只显示「学期设置」Tab', async ({ page }) => {
     await login(page, 'admin', ACCOUNTS.teacher)
     await overrideMe(page, ['semester:import'])
-    await page.goto('/teacher/system-management')
+    await page.goto('/teacher/system-settings')
 
-    const tabs = page.locator('.system-management .el-tabs__item')
+    const tabs = page.locator('.system-settings .el-tabs__item')
     await expect(tabs).toHaveCount(1)
-    await expect(tabs.first()).toHaveText('学期管理')
+    await expect(tabs.first()).toHaveText('学期设置')
   })
 
-  test('组织架构权限不进入系统管理（该页没有组织 Tab）', async ({ page }) => {
+  test('组织架构权限不进入系统设置（该页没有组织 Tab）', async ({ page }) => {
     await login(page, 'admin', ACCOUNTS.teacher)
     await overrideMe(page, ['org:manage'])
-    await page.goto('/teacher/system-management')
+    await page.goto('/teacher/system-settings')
 
     // 模块判定不通过，守卫回落到教师首页；组织架构是独立模块
     await expect(page).toHaveURL(/\/teacher\/dashboard/)
@@ -71,7 +71,7 @@ test.describe('教师端权限码驱动入口', () => {
     await expect(page).toHaveURL(/\/teacher\/dashboard/)
   })
 
-  test('日志查看只认后端真实码 log:view，log:audit 不单独放行', async ({ page }) => {
+  test('操作日志只认后端真实码 log:view，log:audit 不单独放行', async ({ page }) => {
     await login(page, 'admin', ACCOUNTS.teacher)
     await overrideMe(page, ['log:audit'])
     await page.goto('/teacher/log-view')
@@ -79,17 +79,20 @@ test.describe('教师端权限码驱动入口', () => {
 
     await overrideMe(page, ['log:view'])
     await page.goto('/teacher/log-view')
-    await expect(page).toHaveURL(/\/teacher\/log-view/)
+    await expect(page).toHaveURL(/\/teacher\/system-settings/)
+    await expect(page).toHaveURL(/tab=logs/)
   })
 
-  test('管理员（admin 角色）可看到系统管理全部 Tab', async ({ page }) => {
+  test('管理员（admin 角色）可看到系统设置全部 5 个 Tab', async ({ page }) => {
     await login(page, 'admin', ACCOUNTS.admin)
-    await page.goto('/teacher/system-management')
+    await page.goto('/teacher/system-settings')
 
-    const tabs = page.locator('.system-management .el-tabs__item')
-    await expect(tabs).toHaveCount(3)
-    await expect(tabs.nth(0)).toHaveText('字典管理')
-    await expect(tabs.nth(1)).toHaveText('角色管理')
-    await expect(tabs.nth(2)).toHaveText('学期管理')
+    const tabs = page.locator('.system-settings .el-tabs__item')
+    await expect(tabs).toHaveCount(5)
+    await expect(tabs.nth(0)).toHaveText('数据字典')
+    await expect(tabs.nth(1)).toHaveText('学期设置')
+    await expect(tabs.nth(2)).toHaveText('系统配置')
+    await expect(tabs.nth(3)).toHaveText('定时任务')
+    await expect(tabs.nth(4)).toHaveText('操作日志')
   })
 })
