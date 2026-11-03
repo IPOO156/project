@@ -6,16 +6,17 @@ import type {
   TeacherDashboardOverview,
 } from '@/shared/types/teacher'
 /**
- * TeacherDashboard - 教师端首页仪表盘
+ * TeacherDashboard - 教师端工作台
  *
- * 数据来源（能接就接，均为后端真实接口）：
- *   - 欢迎区：userStore（登录后已写入）
- *   - 未读消息：GET /messages（与学生端共用，保持不动）
+ * 数据来源（均为后端真实接口）：
  *   - 数据范围：GET /auth/me 的 scopes
  *   - 待办/今日审核/最近审核动态：GET /teacher/dashboard（教师端）
  *   - 数据概览：GET /teacher/statistics/dashboard（教师端）
  *   - 统计快照刷新：POST /teacher/statistics/refresh（教师端）
  *   - 最近操作：管理员 → GET /admin/logs/system（教师端无等价接口）；其余角色 → 最近消息
+ *
+ * 视觉遵循办公风：页头 → KPI 条 → 数据概览 → 待办/快捷入口 → 最近操作，
+ * 不做渐变欢迎区、图标卡片或入场动画。
  */
 import { ElMessage } from 'element-plus'
 import { RefreshCw } from 'lucide-vue-next'
@@ -34,25 +35,20 @@ import {
 } from '@/shared/api/teacher-api'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+import { AUDIT_ACTIONS } from '@/shared/constants/dict'
 import { useDashboardOption } from './useDashboardOption'
 
 const router = useRouter()
 const userStore = useUserStore()
 const { me } = useTeacherMe()
-// 模块授权与角色名统一取自 /auth/me（permissions / roleNames）
-const { canAccessAny, canAccessModule, roleLabel } = useTeacherAuthz()
+const { canAccessAny, canAccessModule, roleLabel, menuGroups } = useTeacherAuthz()
 
 const userName = computed(() => userStore.userName)
-// 管理端接口按后端真实鉴权码判定（admin 角色直通）：
-//   数据概览/快照刷新 → statistics:view；系统日志 → log:view。
-// 不能用单一「是否管理员」布尔量同时控制两者，也不能裸用 hasPermission（管理员权限码可能为空）。
+// 管理端接口按后端真实鉴权码判定（admin 角色直通）
 const useAdminStats = computed(() => canAccessAny(['statistics:view']))
 const canViewSystemLogs = computed(() => canAccessAny(['log:view']))
 
-// ── 真实统计数据 ──
-const unreadCount = ref<number | null>(null)
 const scopeText = ref('')
-const recentTotal = ref<number | null>(null)
 
 /** 数据范围摘要：从 /auth/me scopes 派生「X 学院 · Y 专业」 */
 function buildScopeText() {
@@ -75,26 +71,6 @@ function buildScopeText() {
   scopeText.value = parts.length ? parts.join(' · ') : '全校'
 }
 
-async function loadStats() {
-  try {
-    const msg = await listMessages({ page: 1, per_page: 1 })
-    unreadCount.value = msg.unread
-  } catch {
-    unreadCount.value = null
-  }
-  buildScopeText()
-  if (canViewSystemLogs.value) {
-    try {
-      const logs = await getSystemLogs({ page: 1, per_page: 1 })
-      recentTotal.value = logs.total
-    } catch {
-      recentTotal.value = null
-    }
-  } else {
-    recentTotal.value = null
-  }
-}
-
 // ── 数据概览（/teacher/statistics/dashboard）──
 const semesters = ref<SemesterItem[]>([])
 const loadingSemesters = ref(false)
@@ -110,6 +86,10 @@ async function loadSemesters() {
   loadingSemesters.value = true
   try {
     semesters.value = await getSemesters()
+    // 默认带出当前学期，避免「刷新快照」前还要先手动选学期
+    if (dashSemesterId.value == null) {
+      dashSemesterId.value = semesters.value.find((s) => s.isCurrent === 1)?.value
+    }
   } catch {
     semesters.value = []
   } finally {
@@ -137,10 +117,13 @@ const dashboardOverview = ref<TeacherDashboardOverview | null>(null)
 const overviewLoading = ref(false)
 
 async function loadDashboardOverview() {
+  overviewLoading.value = true
   try {
     dashboardOverview.value = await getTeacherDashboardOverview()
   } catch {
     dashboardOverview.value = null
+  } finally {
+    overviewLoading.value = false
   }
 }
 
@@ -166,16 +149,132 @@ async function handleRefreshSnapshot() {
   }
 }
 
-// 卡片 / KPI / 快捷入口等展示配置统一由 composable 提供（与原实现逐字一致）
-const { pendingItems, statsCards, quickLinks, todayDate } = useDashboardOption({
-  canViewSystemLogs,
-  unreadCount,
-  scopeText,
-  recentTotal,
-  roleLabel,
+const { pendingItems, quickLinks, todayDate } = useDashboardOption({
   dashboardOverview,
   canAccessModule,
 })
+
+const pendingTotal = computed(() => dashboardOverview.value?.pendingStats.totalPending ?? null)
+
+const pendingMeta = computed(() => {
+  const stats = dashboardOverview.value?.pendingStats
+  if (!stats) return '暂无待办数据'
+  const parts = [
+    stats.archivePending ? `${stats.archivePending} 项档案` : '',
+    stats.awardPending ? `${stats.awardPending} 项奖项` : '',
+    stats.careerPlanPending ? `${stats.careerPlanPending} 项规划` : '',
+  ].filter(Boolean)
+  return parts.length ? parts.join(' · ') : '当前没有待办'
+})
+
+const kpis = computed(() => {
+  const pendingReview = dashboardData.value?.pendingCount ?? null
+  return [
+    {
+      label: '待处理事项',
+      value: pendingTotal.value,
+      unit: '项',
+      meta: pendingMeta.value,
+      tone: 'warning' as const,
+      alert: pendingTotal.value != null && pendingTotal.value > 0,
+    },
+    {
+      label: '在库学生',
+      value: dashboardData.value?.studentCount ?? null,
+      unit: '人',
+      meta: useAdminStats.value ? '全校统计范围' : teacherDash.value?.scopeName || scopeText.value,
+      tone: 'info' as const,
+      alert: false,
+    },
+    {
+      label: '待审核',
+      value: pendingReview,
+      unit: '份',
+      meta: '档案数据概览',
+      tone: 'warning' as const,
+      alert: pendingReview != null && pendingReview > 0,
+    },
+    {
+      label: '今日审核',
+      value: dashboardOverview.value?.todayAudited ?? null,
+      unit: '份',
+      meta: todayDate.value,
+      tone: 'success' as const,
+      alert: false,
+    },
+  ]
+})
+
+const dataMetrics = computed(() => {
+  const rejected = teacherDash.value?.rejectedCount ?? null
+  return [
+    {
+      label: '学生数',
+      value: dashboardData.value?.studentCount ?? null,
+      sub: useAdminStats.value ? '全校在库' : teacherDash.value?.scopeName || '授权范围',
+      alertDanger: false,
+    },
+    {
+      label: useAdminStats.value ? '档案数' : '已提交',
+      value: useAdminStats.value
+        ? (adminDash.value?.archiveCount ?? null)
+        : (teacherDash.value?.submittedCount ?? null),
+      sub: '当前学期',
+      alertDanger: false,
+    },
+    {
+      label: '待审核',
+      value: dashboardData.value?.pendingCount ?? null,
+      sub: '待处理',
+      alertDanger: false,
+    },
+    {
+      label: '已通过',
+      value: dashboardData.value?.approvedCount ?? null,
+      sub: '审核通过',
+      alertDanger: false,
+    },
+    {
+      label: useAdminStats.value ? '奖项数' : '被退回',
+      value: useAdminStats.value ? (adminDash.value?.awardCount ?? null) : rejected,
+      sub: useAdminStats.value ? '全校记录' : '需学生修改',
+      alertDanger: !useAdminStats.value && rejected != null && rejected > 0,
+    },
+    {
+      label: '平均绩点',
+      value: useAdminStats.value
+        ? (adminDash.value?.avgGpa ?? null)
+        : (teacherDash.value?.averageGpa ?? null),
+      sub: '当前学期',
+      alertDanger: false,
+    },
+  ]
+})
+
+/** 审核动作 → 语义色（通过 / 退回 / 撤回 / 转交） */
+function auditTone(action: number): string {
+  return AUDIT_ACTIONS[action]?.tag ?? 'info'
+}
+
+const semesterLabel = computed(
+  () => adminDash.value?.semesterName || dashboardOverview.value?.currentSemesterName || '当前学期',
+)
+
+const availableModuleCount = computed(() =>
+  menuGroups.value.reduce((total, entry) => total + entry.items.length, 0),
+)
+
+const refreshing = ref(false)
+
+async function refreshAll() {
+  refreshing.value = true
+  try {
+    buildScopeText()
+    await Promise.all([loadDashboard(), loadDashboardOverview(), loadRecent()])
+  } finally {
+    refreshing.value = false
+  }
+}
 
 watch(dashSemesterId, () => void loadDashboard())
 
@@ -216,8 +315,12 @@ async function loadRecent() {
   }
 }
 
+function displayValue(value: number | string | null | undefined): string {
+  return value == null || value === '' ? '—' : String(value)
+}
+
 onMounted(() => {
-  void loadStats()
+  buildScopeText()
   void loadRecent()
   void loadSemesters()
   void loadDashboard()
@@ -226,81 +329,57 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="teacher-dashboard">
-    <!-- 欢迎区域 -->
-    <div class="teacher-dashboard__welcome">
-      <div class="teacher-dashboard__welcome-text">
-        <h2 class="teacher-dashboard__greeting">欢迎回来，{{ userName }}</h2>
-        <p class="teacher-dashboard__date">{{ todayDate }}</p>
+  <div class="mc-page teacher-dashboard">
+    <div class="mc-page-head">
+      <div class="mc-page-head__left">
+        <h2 class="mc-page-head__title">工作台</h2>
+        <p class="mc-page-head__desc">
+          {{ userName }}，今天有 {{ pendingTotal ?? 0 }} 项待办需要处理。数据范围：{{ scopeText }}。
+        </p>
       </div>
-      <div class="teacher-dashboard__welcome-role">
-        <span class="teacher-dashboard__role-tag">{{ roleLabel || '教师' }}</span>
+      <div class="mc-page-head__actions">
+        <el-button :icon="RefreshCw" :loading="refreshing" @click="refreshAll">刷新数据</el-button>
+        <el-button
+          v-if="canAccessModule('archive-view')"
+          type="primary"
+          @click="router.push('/teacher/archive-view')"
+        >
+          查看档案
+        </el-button>
       </div>
     </div>
 
-    <!-- 统计卡片 -->
-    <el-row :gutter="16" class="teacher-dashboard__stats">
-      <el-col v-for="card in statsCards" :key="card.label" :xs="12" :sm="6" :md="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-card__body">
-            <div class="stat-card__info">
-              <p class="stat-card__label">{{ card.label }}</p>
-              <p class="stat-card__value">{{ card.value }}</p>
-            </div>
-            <div class="stat-card__icon" :style="{ '--chip': card.color }">
-              <component :is="card.icon" :size="24" />
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+    <!-- 待办提醒：仅有待办时出现，浅琥珀底 + 深琥珀文字 -->
+    <div v-if="pendingTotal" class="dash-notice">
+      你有 {{ pendingTotal }} 项待处理事项，建议优先处理待审核档案。
+    </div>
 
-    <!-- 待办工作台（GET /teacher/dashboard） -->
-    <el-card class="teacher-dashboard__section dash-overview">
-      <template #header>
-        <span class="section-title">待办工作台</span>
-        <span v-if="dashboardOverview?.currentSemesterName" class="dash-overview__scope">
-          当前学期：{{ dashboardOverview.currentSemesterName }}
+    <!-- KPI 条 -->
+    <div class="dash-kpis">
+      <div
+        v-for="item in kpis"
+        :key="item.label"
+        class="dash-kpis__item"
+        :class="`dash-kpis__item--${item.tone}`"
+      >
+        <span class="dash-kpis__label">{{ item.label }}</span>
+        <span class="dash-kpis__value mc-num" :class="{ 'dash-kpis__value--alert': item.alert }">
+          {{ displayValue(item.value) }}<small v-if="item.value != null">{{ item.unit }}</small>
         </span>
-        <div class="dash-overview__tools">
-          <el-button size="small" :loading="overviewLoading" @click="loadDashboardOverview"
-            >刷新</el-button
-          >
-        </div>
-      </template>
-      <div v-loading="overviewLoading">
-        <template v-if="dashboardOverview">
-          <div class="dash-overview__kpis">
-            <div v-for="item in pendingItems" :key="item.label" class="dash-overview__kpi">
-              <span class="dash-overview__label">{{ item.label }}</span>
-              <span class="dash-overview__value mc-num">{{ item.value }}</span>
-            </div>
-          </div>
-          <div v-if="dashboardOverview.recentAudits?.length" class="dash-overview__dims">
-            <span class="dash-overview__dim-label">最近审核动态</span>
-            <el-tag
-              v-for="a in dashboardOverview.recentAudits"
-              :key="a.id"
-              size="small"
-              effect="plain"
-              class="dash-overview__dim"
-            >
-              {{ a.studentName }} · {{ a.title }} · {{ a.actionLabel }}
-            </el-tag>
-          </div>
-        </template>
-        <el-empty v-else-if="!overviewLoading" description="暂无待办数据" :image-size="72" />
+        <span class="dash-kpis__meta">{{ item.meta }}</span>
       </div>
-    </el-card>
+    </div>
 
-    <!-- 档案数据概览（/teacher/statistics/dashboard） -->
-    <el-card class="teacher-dashboard__section dash-overview">
-      <template #header>
-        <span class="section-title">档案数据概览</span>
-        <span v-if="!useAdminStats && teacherDash?.scopeName" class="dash-overview__scope">
-          统计范围：{{ teacherDash.scopeName }}
-        </span>
-        <div class="dash-overview__tools">
+    <!-- 档案数据概览 -->
+    <section class="dash-data">
+      <div class="dash-data__head">
+        <div>
+          <h3 class="dash-data__title">档案数据概览</h3>
+          <p class="dash-data__sub">
+            {{ semesterLabel }} · {{ useAdminStats ? '全校' : teacherDash?.scopeName || scopeText }}
+          </p>
+        </div>
+        <div class="dash-data__tools">
           <el-select
             v-model="dashSemesterId"
             class="u-w-160"
@@ -314,119 +393,161 @@ onMounted(() => {
           <el-button size="small" :loading="dashboardLoading" @click="loadDashboard"
             >刷新</el-button
           >
-          <el-button
-            size="small"
-            :icon="RefreshCw"
-            :loading="overviewLoading"
-            @click="handleRefreshSnapshot"
-            >刷新快照</el-button
-          >
+          <el-button size="small" :loading="overviewLoading" @click="handleRefreshSnapshot">
+            刷新快照
+          </el-button>
         </div>
-      </template>
-      <div v-loading="dashboardLoading">
-        <template v-if="dashboardData">
-          <div class="dash-overview__kpis">
-            <div class="dash-overview__kpi">
-              <span class="dash-overview__label">学生数</span>
-              <span class="dash-overview__value mc-num">{{
-                dashboardData.studentCount ?? '—'
-              }}</span>
-            </div>
-            <div class="dash-overview__kpi">
-              <span class="dash-overview__label">{{ useAdminStats ? '档案数' : '已提交' }}</span>
-              <span class="dash-overview__value mc-num">{{
-                (useAdminStats ? adminDash?.archiveCount : teacherDash?.submittedCount) ?? '—'
-              }}</span>
-            </div>
-            <div class="dash-overview__kpi">
-              <span class="dash-overview__label">待审核</span>
-              <span class="dash-overview__value mc-num">{{
-                dashboardData.pendingCount ?? '—'
-              }}</span>
-            </div>
-            <div class="dash-overview__kpi">
-              <span class="dash-overview__label">已通过</span>
-              <span class="dash-overview__value mc-num">{{
-                dashboardData.approvedCount ?? '—'
-              }}</span>
-            </div>
-            <div v-if="!useAdminStats" class="dash-overview__kpi">
-              <span class="dash-overview__label">被退回</span>
-              <span class="dash-overview__value mc-num">{{
-                teacherDash?.rejectedCount ?? '—'
-              }}</span>
-            </div>
-            <div v-if="useAdminStats" class="dash-overview__kpi">
-              <span class="dash-overview__label">奖项数</span>
-              <span class="dash-overview__value mc-num">{{ adminDash?.awardCount ?? '—' }}</span>
-            </div>
-            <div class="dash-overview__kpi">
-              <span class="dash-overview__label">平均绩点</span>
-              <span class="dash-overview__value mc-num">{{
-                (useAdminStats ? adminDash?.avgGpa : teacherDash?.averageGpa) ?? '—'
-              }}</span>
-            </div>
-          </div>
-          <div v-if="dashboardData.dimensionAvgScores?.length" class="dash-overview__dims">
-            <span class="dash-overview__dim-label">画像维度得分</span>
-            <el-tag
-              v-for="d in dashboardData.dimensionAvgScores"
-              :key="d.dimensionCode"
-              size="small"
-              effect="plain"
-              class="dash-overview__dim"
-            >
-              {{ d.dimensionName }} {{ d.avgScore ?? '-' }}
-            </el-tag>
-          </div>
-        </template>
-        <el-empty v-else-if="!dashboardLoading" description="暂无统计数据" :image-size="72" />
       </div>
-    </el-card>
 
-    <!-- 主体区域 -->
-    <el-row :gutter="16" class="teacher-dashboard__main">
-      <!-- 快捷入口 -->
-      <el-col :span="14" class="teacher-dashboard__col">
-        <el-card class="teacher-dashboard__section">
-          <template #header>
-            <span class="section-title">快捷操作</span>
-          </template>
-          <div class="quick-link-grid">
-            <div
-              v-for="link in quickLinks"
-              :key="link.path"
-              class="quick-link-card"
-              @click="router.push(link.path)"
+      <div v-loading="dashboardLoading" class="dash-data__body">
+        <div class="dash-metrics">
+          <div v-for="metric in dataMetrics" :key="metric.label" class="dash-metric">
+            <span class="dash-metric__label">{{ metric.label }}</span>
+            <span
+              class="dash-metric__value mc-num"
+              :class="{ 'dash-metric__value--danger': metric.alertDanger }"
             >
-              <div class="quick-link-card__icon">
-                <component :is="link.icon" :size="22" />
-              </div>
-              <span class="quick-link-card__label">{{ link.label }}</span>
-              <span class="quick-link-card__desc">{{ link.desc }}</span>
-            </div>
+              {{ displayValue(metric.value) }}
+            </span>
+            <span class="dash-metric__sub">{{ metric.sub }}</span>
           </div>
-        </el-card>
-      </el-col>
+        </div>
 
-      <!-- 最近操作 -->
-      <el-col :span="10" class="teacher-dashboard__col">
-        <el-card class="teacher-dashboard__section">
-          <template #header>
-            <span class="section-title">最近操作</span>
-          </template>
-          <div class="recent-logs">
-            <div v-for="(log, i) in recentLogs" :key="i" class="recent-logs__item">
-              <div class="recent-logs__dot" :class="`recent-logs__dot--${log.status}`" />
-              <div class="recent-logs__content">
-                <p class="recent-logs__action">{{ log.action }}</p>
-                <span class="recent-logs__meta">{{ log.user }} · {{ log.time }}</span>
-              </div>
+        <div v-if="dashboardData?.dimensionAvgScores?.length" class="dash-dims">
+          <span class="dash-dims__label">画像维度平均分</span>
+          <span
+            v-for="d in dashboardData.dimensionAvgScores"
+            :key="d.dimensionCode"
+            class="dash-dims__item"
+          >
+            {{ d.dimensionName }} <b class="mc-num">{{ d.avgScore ?? '-' }}</b>
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 待办 + 快捷入口 / 我的权限 -->
+    <div class="dash-grid">
+      <section class="dash-card dash-card--main">
+        <div class="dash-card__head">
+          <div>
+            <h3 class="dash-card__title">待办工作台</h3>
+            <p class="dash-card__sub">共 {{ pendingTotal ?? 0 }} 项待处理事项</p>
+          </div>
+          <el-button size="small" :loading="overviewLoading" @click="loadDashboardOverview">
+            刷新
+          </el-button>
+        </div>
+
+        <div v-loading="overviewLoading" class="dash-card__body">
+          <div class="dash-todo-stats">
+            <div v-for="item in pendingItems" :key="item.label" class="dash-todo-stat">
+              <span class="dash-todo-stat__label">{{ item.label }}</span>
+              <span class="dash-todo-stat__value mc-num">{{ item.value }}</span>
             </div>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+
+          <div v-if="dashboardOverview?.recentAudits?.length" class="dash-audits">
+            <div class="dash-audits__head">
+              <span>最近审核动态</span>
+              <span v-if="dashboardOverview.currentSemesterName" class="dash-audits__meta">
+                {{ dashboardOverview.currentSemesterName }}
+              </span>
+            </div>
+            <ul class="dash-audits__list">
+              <li
+                v-for="audit in dashboardOverview.recentAudits.slice(0, 5)"
+                :key="audit.id"
+                class="dash-audits__item"
+              >
+                <span class="dash-audits__name">{{ audit.studentName }}</span>
+                <span class="dash-audits__title">{{ audit.title }}</span>
+                <span
+                  class="dash-audits__action"
+                  :class="`dash-audits__action--${auditTone(audit.action)}`"
+                >
+                  {{ audit.actionLabel }}
+                </span>
+              </li>
+            </ul>
+          </div>
+          <p v-else-if="!overviewLoading" class="dash-empty">暂无待办数据。</p>
+        </div>
+      </section>
+
+      <aside class="dash-side">
+        <section class="dash-card">
+          <div class="dash-card__head">
+            <h3 class="dash-card__title">快捷入口</h3>
+          </div>
+          <div class="dash-card__body">
+            <div class="quick-grid">
+              <button
+                v-for="link in quickLinks"
+                :key="link.path"
+                type="button"
+                class="quick-link"
+                @click="router.push(link.path)"
+              >
+                <component :is="link.icon" :size="16" class="quick-link__icon" />
+                <span class="quick-link__main">
+                  <span class="quick-link__label">{{ link.label }}</span>
+                  <span class="quick-link__desc">{{ link.desc }}</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="dash-card">
+          <div class="dash-card__head">
+            <h3 class="dash-card__title">我的角色与数据范围</h3>
+          </div>
+          <div class="dash-card__body">
+            <dl class="dash-info">
+              <div class="dash-info__row">
+                <dt>当前角色</dt>
+                <dd>{{ roleLabel || '教师' }}</dd>
+              </div>
+              <div class="dash-info__row">
+                <dt>数据范围</dt>
+                <dd>{{ scopeText }}</dd>
+              </div>
+              <div class="dash-info__row">
+                <dt>可用模块</dt>
+                <dd>{{ availableModuleCount }} 项</dd>
+              </div>
+              <div class="dash-info__row">
+                <dt>当前学期</dt>
+                <dd>{{ semesterLabel }}</dd>
+              </div>
+            </dl>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <!-- 最近操作 -->
+    <section class="dash-card">
+      <div class="dash-card__head">
+        <div>
+          <h3 class="dash-card__title">最近操作</h3>
+          <p class="dash-card__sub">
+            {{ canViewSystemLogs ? '系统操作记录' : '最近消息' }}
+          </p>
+        </div>
+      </div>
+      <div class="dash-card__body">
+        <ul v-if="recentLogs.length" class="recent-list">
+          <li v-for="(log, index) in recentLogs" :key="index" class="recent-list__item">
+            <span class="recent-list__dot" :class="`recent-list__dot--${log.status}`" />
+            <span class="recent-list__action">{{ log.action }}</span>
+            <span class="recent-list__meta">{{ log.user }} · {{ log.time }}</span>
+          </li>
+        </ul>
+        <p v-else class="dash-empty">暂无最近操作。</p>
+      </div>
+    </section>
   </div>
 </template>
 

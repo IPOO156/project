@@ -264,7 +264,7 @@ function updateVisible(value: boolean) {
   &__preview {
     display: flex;
     justify-content: center;
-    background: #f5f5f5;
+    background: var(--el-fill-color-light);
     border-radius: $radius-base;
     overflow: hidden;
     min-height: 60vh;
