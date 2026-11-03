@@ -453,7 +453,7 @@ onMounted(() => void loadList())
   }
 
   &__no {
-    margin-left: 6px;
+    margin-left: 8px;
     font-size: 12px;
     color: var(--el-text-color-placeholder);
   }

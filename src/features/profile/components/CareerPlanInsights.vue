@@ -142,7 +142,7 @@ async function submitReflection() {
 .insight {
   &__title {
     margin: 0 0 8px;
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     color: #d4a574;
   }
@@ -150,12 +150,12 @@ async function submitReflection() {
   &__list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
   }
 
   &__item {
-    padding: 10px 12px;
-    border-radius: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
     background: var(--el-fill-color-light);
   }
 
@@ -191,9 +191,9 @@ async function submitReflection() {
   &__version {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     padding: 8px 12px;
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--el-fill-color-light);
   }
 

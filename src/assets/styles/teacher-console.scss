@@ -8,8 +8,9 @@
 //
 // 设计约束（对应重构原型 frontend/prototype/admin-console）：
 //   - 主色：墨蓝 #1d4ed8；页面底 #f6f7f9，面板白底，1px #e5e7eb 边框
-//   - 圆角 4–6px，无渐变、无装饰高光、无卡片悬浮位移
-//   - 14px 基准字号、13px 辅助字号，44px 表格行高，数字等宽
+//   - 圆角两档：控件 6px / 容器 10px；无渐变、无装饰高光、无卡片悬浮位移
+//   - 文字六级：28 页标题 / 20 区块 / 16 卡片 / 14 正文 / 13 辅助 / 12 单位；字重 400/500/600
+//   - 间距走 8px 主网格（4 / 12 为紧凑档）；表格行高 48px，数字等宽
 //   - 动效只保留 120–160ms 的悬停与浮层反馈；书册光标由 DefaultLayout 关闭
 // =============================================================================
 
@@ -24,7 +25,8 @@
   --el-color-primary-dark-2: #1e40af;
 
   --mc-ink: #111827;
-  --mc-muted: #6b7280;
+  // 辅助文字：管理员灰底(#f4f5f7) 4.95:1、白底 5.4:1，过 WCAG AA
+  --mc-muted: #5f6b7d;
   --mc-page-bg: #f6f7f9;
   --mc-border: #e5e7eb;
 
@@ -47,8 +49,8 @@
   --el-bg-color-overlay: #ffffff;
   --el-text-color-primary: #111827;
   --el-text-color-regular: #374151;
-  --el-text-color-secondary: #6b7280;
-  --el-text-color-placeholder: #6b7280;
+  --el-text-color-secondary: #5f6b7d;
+  --el-text-color-placeholder: #5f6b7d;
   --el-border-color: #e5e7eb;
   --el-border-color-light: #e5e7eb;
   --el-border-color-lighter: #f0f1f3;
@@ -56,7 +58,10 @@
   --el-fill-color-light: #f9fafb;
   --el-fill-color-lighter: #fbfbfc;
   --el-fill-color-blank: #ffffff;
-  --el-border-radius-base: 4px;
+  // 圆角两档：控件 6px / 容器 10px
+  --el-border-radius-base: #{$radius-base};
+  --el-border-radius-small: #{$radius-base};
+  --el-border-radius-large: #{$radius-lg};
 
   font-size: 14px;
 
@@ -64,12 +69,12 @@
   .layout__content {
     background-color: var(--mc-page-bg);
     background-image: none;
-    padding: 20px 24px;
-    font-size: 14px;
+    padding: 24px;
+    font-size: $font-size-base;
   }
 
   .layout__content-inner {
-    gap: 20px;
+    gap: $spacing-xl;
   }
 
   // 顶栏与侧栏：白 / 极浅灰，1px 分割线
@@ -87,8 +92,8 @@
      一、按钮 —— 扁平实色，4px 圆角，无渐变 / 投影
      ============================================================ */
   .el-button {
-    border-radius: 4px;
-    font-weight: 500;
+    border-radius: $radius-base;
+    font-weight: $font-weight-medium;
     box-shadow: none;
     transition:
       background-color 0.12s $ease-standard,
@@ -151,7 +156,7 @@
   .el-card,
   .el-card.is-always-shadow,
   .el-card.is-hover-shadow {
-    border-radius: 6px;
+    border-radius: $radius-lg;
     border-color: var(--mc-border);
     box-shadow: none;
     transition: none;
@@ -163,7 +168,7 @@
   }
 
   .el-card__header {
-    padding: 12px 16px;
+    padding: $spacing-lg;
     border-bottom: 1px solid var(--el-border-color-lighter);
 
     &::before {
@@ -172,12 +177,13 @@
   }
 
   .el-card__body {
-    padding: 16px;
+    padding: $spacing-lg;
   }
 
   .section-title {
-    font-size: 14px;
-    font-weight: 600;
+    font-size: $font-size-xl;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-title;
     letter-spacing: 0;
   }
 
@@ -198,19 +204,19 @@
   }
 
   /* ============================================================
-     三、表格 —— 浅灰表头、44px 行高、发丝分割线
+     三、表格 —— 浅灰表头、48px 行高、极淡斑马纹、发丝分割线
      ============================================================ */
   .el-table {
     --el-table-header-bg-color: #f9fafb;
     --el-table-row-hover-bg-color: #f9fafb;
     --el-table-border-color: var(--el-border-color-lighter);
     --el-table-text-color: var(--el-text-color-regular);
-    font-size: 14px;
+    font-size: $font-size-base;
 
     th.el-table__cell {
       height: 40px;
       padding: 0;
-      font-weight: 600;
+      font-weight: $font-weight-semibold;
       color: #4b5563;
       background-color: var(--el-table-header-bg-color);
 
@@ -221,10 +227,10 @@
     }
 
     td.el-table__cell {
-      padding: 11px 0;
+      padding: $spacing-md 0;
 
       .cell {
-        line-height: 22px;
+        line-height: $spacing-xl;
       }
     }
 
@@ -232,8 +238,9 @@
       transition: none;
     }
 
+    /* 斑马纹：白底上叠 3% 深色，只做极淡的行分组，不干扰扫读 */
     .el-table__row--striped td.el-table__cell {
-      background-color: #fcfcfd;
+      background-color: #f7f8fa;
     }
 
     .el-table-fixed-column--left,
@@ -243,8 +250,8 @@
   }
 
   .el-tag {
-    border-radius: 3px;
-    font-size: 13px;
+    border-radius: $radius-base;
+    font-size: $font-size-xs;
   }
 
   /* 状态标签：浅底 + 深色文字，避免 Element Plus 默认浅色字对比度不足 */
@@ -291,19 +298,19 @@
       border-bottom-color: var(--mc-border);
 
       &-text {
-        font-size: 15px;
+        font-size: $font-size-lg;
         letter-spacing: 0;
       }
     }
 
-    /* 46px 行高，保证 45+ 用户点击区域与可读性 */
+    /* 48px 行高：8px 网格，同时保证 45+ 用户点击区域与可读性 */
     .el-menu-item,
     .el-sub-menu__title {
-      height: 46px;
-      line-height: 46px;
-      font-size: 14px;
+      height: $spacing-4xl;
+      line-height: $spacing-4xl;
+      font-size: $font-size-base;
       color: var(--el-text-color-secondary);
-      font-weight: 400;
+      font-weight: $font-weight-regular;
 
       &:hover {
         background-color: var(--el-fill-color-light) !important;
@@ -312,14 +319,14 @@
     }
 
     .el-menu--inline .el-menu-item {
-      height: 42px;
-      line-height: 42px;
+      height: $spacing-3xl;
+      line-height: $spacing-3xl;
     }
 
     .el-menu-item.is-active {
       color: var(--el-color-primary) !important;
       background-color: var(--el-color-primary-light-9) !important;
-      font-weight: 500;
+      font-weight: $font-weight-medium;
 
       &::after {
         display: none;
@@ -340,8 +347,8 @@
   }
 
   .el-tabs__item {
-    height: 40px;
-    font-size: 14px;
+    height: $spacing-3xl;
+    font-size: $font-size-base;
     color: var(--el-text-color-secondary);
 
     &:hover {
@@ -350,7 +357,7 @@
 
     &.is-active {
       color: var(--el-color-primary);
-      font-weight: 500;
+      font-weight: $font-weight-medium;
     }
   }
 
@@ -361,8 +368,8 @@
 
   // 聚合页内的子页签（如系统设置里的公告管理、操作日志的日志类型）保持次级视觉
   .el-tabs .el-tabs .el-tabs__item {
-    height: 36px;
-    font-size: 13px;
+    height: $spacing-3xl;
+    font-size: $font-size-sm;
   }
 
   /* ============================================================
@@ -371,9 +378,9 @@
   .mc-page {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: $spacing-xl;
     min-width: 0;
-    font-size: 14px;
+    font-size: $font-size-base;
   }
 
   .mc-page-head {
@@ -381,7 +388,7 @@
     flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 12px 20px;
+    gap: $spacing-lg $spacing-xl;
     padding-bottom: 0;
 
     &__left {
@@ -395,19 +402,19 @@
 
     &__title {
       margin: 0;
-      font-size: 20px;
-      line-height: 1.4;
-      font-weight: 600;
-      letter-spacing: 0;
+      font-size: $font-size-2xl;
+      line-height: $line-height-title;
+      font-weight: $font-weight-semibold;
+      letter-spacing: -0.01em;
       color: var(--el-text-color-primary);
       background: none;
       -webkit-text-fill-color: currentcolor;
     }
 
     &__desc {
-      margin: 6px 0 0;
-      font-size: 14px;
-      line-height: 1.6;
+      margin: $spacing-sm 0 0;
+      font-size: $font-size-sm;
+      line-height: $line-height-body;
       color: var(--el-text-color-secondary);
       max-width: 680px;
     }
@@ -417,14 +424,14 @@
       flex-wrap: wrap;
       align-items: center;
       justify-content: flex-end;
-      gap: 8px;
+      gap: $spacing-sm;
       flex-shrink: 0;
     }
 
     @media (max-width: 768px) {
       flex-direction: column;
       align-items: stretch;
-      gap: 10px;
+      gap: $spacing-sm;
 
       /* 桌面端写的是 flex: 1 1 420px（行轴基准宽度）；
          竖排后这条 basis 会被当成「高度 420px」，页头被撑出大片空白 */
@@ -459,24 +466,24 @@
   }
 
   .mc-filter-bar {
-    padding: 14px 16px 0;
-    border-radius: 6px;
+    padding: $spacing-lg $spacing-lg 0;
+    border-radius: $radius-lg;
     background: var(--el-bg-color);
     border: 1px solid var(--mc-border);
     box-shadow: none;
 
     .el-form-item {
-      margin-bottom: 14px;
+      margin-bottom: $spacing-lg;
     }
 
     .el-form-item__label {
       color: var(--el-text-color-secondary);
-      font-weight: 500;
+      font-weight: $font-weight-medium;
     }
 
     .el-select__wrapper,
     .el-input__wrapper {
-      border-radius: 4px;
+      border-radius: $radius-base;
       box-shadow: 0 0 0 1px var(--mc-border) inset;
       transition: box-shadow 0.12s $ease-standard;
 
@@ -490,7 +497,7 @@
 
   .mc-card {
     position: relative;
-    border-radius: 6px;
+    border-radius: $radius-lg;
     background: var(--el-bg-color);
     border: 1px solid var(--mc-border);
     box-shadow: none;
@@ -506,19 +513,20 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 12px 16px;
+      gap: $spacing-md;
+      padding: $spacing-lg;
       border-bottom: 1px solid var(--el-border-color-lighter);
     }
 
     &__title {
-      font-size: 16px;
-      font-weight: 600;
+      font-size: $font-size-lg;
+      line-height: $line-height-title;
+      font-weight: $font-weight-semibold;
       letter-spacing: 0;
       color: var(--el-text-color-primary);
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: $spacing-sm;
 
       &::before {
         display: none;
@@ -526,7 +534,7 @@
     }
 
     &__body {
-      padding: 16px;
+      padding: $spacing-lg;
     }
 
     @media (max-width: 768px) {
@@ -545,7 +553,7 @@
   .mc-skeleton {
     position: relative;
     overflow: hidden;
-    border-radius: 4px;
+    border-radius: $radius-base;
     background: var(--el-fill-color);
 
     &::after {
@@ -558,14 +566,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 40px 24px;
+    gap: $spacing-sm;
+    padding: $spacing-3xl $spacing-xl;
     text-align: center;
 
     &__icon {
       width: 40px;
       height: 40px;
-      border-radius: 6px;
+      border-radius: $radius-base;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -575,14 +583,15 @@
     }
 
     &__title {
-      font-size: 14px;
-      font-weight: 600;
+      font-size: $font-size-lg;
+      font-weight: $font-weight-semibold;
+      line-height: $line-height-title;
       color: var(--el-text-color-primary);
     }
 
     &__desc {
-      font-size: 13px;
-      line-height: 1.6;
+      font-size: $font-size-sm;
+      line-height: $line-height-aux;
       color: var(--el-text-color-secondary);
       max-width: 420px;
     }
@@ -815,72 +824,72 @@ html:not(.dark) #app .layout--admin {
 }
 
 #app .layout--admin {
-  /* 治理页信息密度更高：区块间距收紧 16 → 12 */
+  /* 治理页信息密度更高：区块间距走紧凑档 12px（4px 子网格） */
   .mc-page {
-    gap: 12px;
+    gap: $spacing-md;
   }
 
   .mc-card {
     &__head {
-      padding: 10px 14px;
+      padding: $spacing-md $spacing-lg;
     }
 
     &__body {
-      padding: 14px;
+      padding: $spacing-lg;
     }
   }
 
-  /* 紧凑表格：行高从默认 48px 级别压到 36px 级别，首屏可多看到 2–3 行 */
+  /* 紧凑表格：40px 行高（24px 行内高 + 上下 8px），首屏可多看到 2–3 行 */
   .el-table {
-    font-size: 13px;
+    font-size: $font-size-base;
 
     th.el-table__cell {
-      padding: 7px 0;
-      font-weight: 600;
-      color: var(--el-text-color-regular);
+      padding: $spacing-sm 0;
+      font-weight: $font-weight-semibold;
+      color: #4b5563;
       background: var(--el-fill-color-lighter);
     }
 
     td.el-table__cell {
-      padding: 7px 0;
+      padding: $spacing-sm 0;
     }
 
     .cell {
-      line-height: 1.45;
+      line-height: $spacing-xl;
     }
 
     .el-button.is-link,
     .el-button.is-text {
-      padding: 2px 4px;
-      font-size: 13px;
+      padding: $spacing-2xs $spacing-sm;
+      font-size: $font-size-sm;
     }
   }
 
   .el-tag {
-    font-size: 12px;
+    font-size: $font-size-xs;
   }
 
   /* 管理员空态：一句说明 + 错误码/请求 ID + 重试，不用学生口吻 */
   .mc-empty {
-    padding: 32px 20px;
-    gap: 8px;
+    padding: $spacing-2xl $spacing-xl;
+    gap: $spacing-sm;
 
     &__title {
-      font-size: 14px;
+      font-size: $font-size-lg;
     }
 
     &__desc {
-      font-size: 13px;
+      font-size: $font-size-sm;
     }
   }
 
   .mc-empty__meta {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 12px;
+    font-size: $font-size-xs;
     color: var(--el-text-color-placeholder);
     background: var(--el-fill-color-light);
-    border-radius: 4px;
-    padding: 2px 6px;
+    border-radius: $radius-base;
+    padding: $spacing-2xs $spacing-sm;
     user-select: all;
   }
 }

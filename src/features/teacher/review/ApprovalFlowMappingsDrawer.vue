@@ -355,7 +355,7 @@ function handleClosed() {
 <style scoped lang="scss">
 .flow-mappings {
   &__filter {
-    padding: 0 0 14px;
+    padding: 0 0 16px;
     margin-bottom: 4px;
     background: transparent;
     border: none;

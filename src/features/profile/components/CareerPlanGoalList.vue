@@ -299,7 +299,7 @@ async function changeActionStatus(action: any, status: number) {
 .goal {
   border: 1px solid var(--el-border-color-light);
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 12px 16px;
   background: var(--el-bg-color);
 }
 
@@ -319,7 +319,7 @@ async function changeActionStatus(action: any, status: number) {
 }
 
 .goal__title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #d4a574;
 }
@@ -333,7 +333,7 @@ async function changeActionStatus(action: any, status: number) {
 .action__ops {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -347,15 +347,15 @@ async function changeActionStatus(action: any, status: number) {
 .actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 8px;
   padding-left: 8px;
   border-left: 2px solid var(--el-border-color-light);
 }
 
 .action {
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 8px 8px;
+  border-radius: 10px;
   background: var(--el-fill-color-light);
 }
 
@@ -377,7 +377,7 @@ async function changeActionStatus(action: any, status: number) {
 }
 
 .action__desc {
-  margin: 6px 0 4px;
+  margin: 8px 0 4px;
   font-size: 13px;
   color: var(--el-text-color-regular);
   line-height: 1.6;
@@ -386,7 +386,7 @@ async function changeActionStatus(action: any, status: number) {
 .action__range {
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .action__progress {
@@ -398,7 +398,7 @@ async function changeActionStatus(action: any, status: number) {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   font-size: 12px;
 }
 
@@ -413,7 +413,7 @@ async function changeActionStatus(action: any, status: number) {
 .milestones {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin: 8px 0;
 }
 
@@ -447,13 +447,13 @@ async function changeActionStatus(action: any, status: number) {
 .milestone__ops {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   margin-left: auto;
 }
 
 .goal__add,
 .action__add {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .goals__add {

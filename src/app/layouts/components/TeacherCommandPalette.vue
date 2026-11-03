@@ -112,7 +112,7 @@ function onInputKeydown(event: KeyboardEvent) {
       <div v-if="modelValue" class="cmd-overlay" @click.self="close">
         <div class="cmd-panel" role="dialog" aria-modal="true" aria-label="页内搜索">
           <div class="cmd-input-row">
-            <Search :size="17" class="cmd-input-row__icon" aria-hidden="true" />
+            <Search :size="20" class="cmd-input-row__icon" aria-hidden="true" />
             <input
               ref="inputRef"
               v-model="query"
@@ -142,7 +142,7 @@ function onInputKeydown(event: KeyboardEvent) {
                 <span class="cmd-item__label">{{ item.label }}</span>
                 <span class="cmd-item__sub">{{ item.sub }}</span>
               </span>
-              <CornerDownLeft :size="14" class="cmd-item__enter" aria-hidden="true" />
+              <CornerDownLeft :size="16" class="cmd-item__enter" aria-hidden="true" />
             </button>
 
             <div v-if="!results.length" class="cmd-empty">
@@ -178,7 +178,7 @@ function onInputKeydown(event: KeyboardEvent) {
   width: min(560px, calc(100vw - 32px));
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
   overflow: hidden;
 }
@@ -186,8 +186,8 @@ function onInputKeydown(event: KeyboardEvent) {
 .cmd-input-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: 8px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--el-border-color-lighter);
 
   &__icon {
@@ -207,7 +207,7 @@ function onInputKeydown(event: KeyboardEvent) {
   background: transparent;
   color: var(--el-text-color-primary);
   font-size: 14px;
-  line-height: 22px;
+  line-height: 24px;
 
   &::placeholder {
     color: var(--el-text-color-placeholder);
@@ -217,17 +217,17 @@ function onInputKeydown(event: KeyboardEvent) {
 .cmd-list {
   max-height: 360px;
   overflow-y: auto;
-  padding: 6px;
+  padding: 8px;
 }
 
 .cmd-item {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 8px;
+  padding: 8px 8px;
   border: 0;
-  border-radius: 4px;
+  border-radius: 6px;
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -282,7 +282,7 @@ function onInputKeydown(event: KeyboardEvent) {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 28px 12px;
+  padding: 24px 12px;
   font-size: 13px;
   color: var(--el-text-color-secondary);
 
@@ -296,7 +296,7 @@ function onInputKeydown(event: KeyboardEvent) {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-top: 1px solid var(--el-border-color-lighter);
   background: var(--el-fill-color-lighter);
   font-size: 12px;
@@ -311,10 +311,10 @@ kbd {
   height: 18px;
   padding: 0 4px;
   border: 1px solid var(--el-border-color);
-  border-radius: 3px;
+  border-radius: 6px;
   background: var(--el-bg-color);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
   color: var(--el-text-color-secondary);
 }

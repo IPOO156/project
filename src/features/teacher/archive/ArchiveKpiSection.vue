@@ -79,7 +79,7 @@ defineProps<Props>()
   }
   &__kpi {
     position: relative;
-    padding: 14px 16px 13px;
+    padding: 16px 16px 16px;
     border-radius: 6px;
     background: var(--el-bg-color);
     border: 1px solid var(--el-border-color-lighter);
@@ -130,8 +130,8 @@ defineProps<Props>()
     letter-spacing: 0;
   }
   &__kpi-value {
-    margin: 4px 0 2px;
-    font-size: 24px;
+    margin: 4px 0 4px;
+    font-size: 28px;
     font-weight: 600;
     color: var(--el-text-color-primary);
     line-height: 1.2;

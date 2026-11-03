@@ -93,7 +93,7 @@ function handleCardClick(path?: string) {
 
   &__value {
     font-size: $font-size-3xl;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--el-text-color-primary);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;

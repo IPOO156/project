@@ -20,7 +20,7 @@ withDefaults(defineProps<Props>(), {
 <template>
   <div class="student-info-bar">
     <div class="student-info-bar__icon">
-      <GraduationCap :size="18" /><span class="student-info-bar__label">学籍信息</span>
+      <GraduationCap :size="20" /><span class="student-info-bar__label">学籍信息</span>
     </div>
     <div class="student-info-bar__items">
       <span class="student-info-bar__item"
@@ -54,16 +54,16 @@ withDefaults(defineProps<Props>(), {
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
+  border-radius: 10px;
   margin-bottom: 16px;
 }
 .student-info-bar__icon {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--el-color-primary);
   flex-shrink: 0;
 }

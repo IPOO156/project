@@ -107,7 +107,7 @@ watch(avgGrowth, (newVal) => {
 .summary-section {
   position: relative;
   z-index: 2;
-  padding: 6rem 2rem;
+  padding: 96px 32px;
 }
 
 .summary-inner {
@@ -118,29 +118,29 @@ watch(avgGrowth, (newVal) => {
 
 .summary-header h2 {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 12px;
   letter-spacing: 8px;
   text-transform: uppercase;
   color: var(--gt-accent, #8b6340);
-  margin-bottom: 0.8rem;
+  margin-bottom: 16px;
 }
 
 .summary-header p {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.2rem;
+  font-size: 20px;
   color: var(--text-light, #9a8474);
-  margin-bottom: 3rem;
+  margin-bottom: 48px;
 }
 
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
+  gap: 24px;
 }
 
 .summary-card {
-  padding: 2.25rem 1.5rem;
-  border-radius: 16px;
+  padding: 32px 24px;
+  border-radius: 10px;
   background: var(--gt-card-bg);
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.22);
   box-shadow:
@@ -212,13 +212,13 @@ watch(avgGrowth, (newVal) => {
   font-weight: 600;
   color: #fff;
   line-height: 1;
-  margin-bottom: 0.75rem;
+  margin-bottom: 12px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .summary-label {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
+  font-size: 12px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.92);
@@ -227,9 +227,9 @@ watch(avgGrowth, (newVal) => {
 
 .summary-closing {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.1rem;
+  font-size: 20px;
   color: var(--text-light, #9a8474);
-  margin: 3rem auto 0;
+  margin: 48px auto 0;
   max-width: 520px;
   line-height: 1.8;
   letter-spacing: 1px;
@@ -254,8 +254,8 @@ watch(avgGrowth, (newVal) => {
   }
 
   .summary-closing {
-    font-size: 1rem;
-    margin-top: 2rem;
+    font-size: 16px;
+    margin-top: 32px;
   }
 }
 

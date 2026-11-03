@@ -199,7 +199,7 @@ function handleBackdropClick(event: MouseEvent) {
 .detail-content {
   max-width: 720px;
   margin: 0 auto;
-  padding: 12vh 2rem 6rem;
+  padding: 12vh 32px 96px;
   opacity: 0;
   transform: translateY(30px);
   transition:
@@ -217,35 +217,35 @@ function handleBackdropClick(event: MouseEvent) {
 .detail-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .detail-semester {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
+  font-size: 12px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--gt-accent-mid, #5c3d28);
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
-  padding: 6px 14px;
-  border-radius: 100px;
+  padding: 8px 16px;
+  border-radius: 999px;
 }
 
 .detail-status {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
+  font-size: 12px;
   letter-spacing: 2px;
   color: #3a7a4f;
   border: 1px solid rgba(58, 122, 79, 0.35);
-  padding: 6px 14px;
-  border-radius: 100px;
+  padding: 8px 16px;
+  border-radius: 999px;
   background: rgba(58, 122, 79, 0.08);
 }
 
 .detail-date {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
+  font-size: 12px;
   color: var(--text-light, #9a8474);
 }
 
@@ -254,41 +254,41 @@ function handleBackdropClick(event: MouseEvent) {
   font-size: clamp(2.5rem, 6vw, 4.5rem);
   font-weight: 400;
   color: var(--bark-dark, #2d1e12);
-  margin-bottom: 1.5rem;
+  margin-bottom: 24px;
   line-height: 1.15;
 }
 
 .detail-desc {
-  font-size: 1.15rem;
+  font-size: 20px;
   color: var(--text-mid, #6b5443);
   line-height: 2;
-  margin-bottom: 2.5rem;
+  margin-bottom: 40px;
 }
 
 .detail-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 3rem;
+  gap: 8px;
+  margin-bottom: 48px;
 }
 
 .detail-tag {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
+  font-size: 12px;
   letter-spacing: 1.5px;
-  padding: 8px 14px;
+  padding: 8px 16px;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
-  border-radius: 100px;
+  border-radius: 999px;
   color: var(--text-mid, #6b5443);
 }
 
 .detail-subtitle {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
+  font-size: 12px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--gt-accent, #8b6340);
-  margin-bottom: 1.5rem;
+  margin-bottom: 24px;
 }
 
 .detail-skills {
@@ -296,31 +296,31 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .detail-skill {
-  margin-bottom: 1.5rem;
+  margin-bottom: 24px;
 }
 
 .skill-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
 }
 
 .skill-name {
-  font-size: 0.9rem;
+  font-size: 14px;
   color: var(--text-mid, #6b5443);
 }
 
 .skill-value {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--text-light, #9a8474);
 }
 
 .skill-track {
   height: 6px;
   background: rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
-  border-radius: 3px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
@@ -328,14 +328,14 @@ function handleBackdropClick(event: MouseEvent) {
   width: var(--skill-growth, 0%);
   height: 100%;
   background: linear-gradient(to right, var(--gt-accent, #8b6340), var(--gt-gold, #c8943e));
-  border-radius: 3px;
+  border-radius: 6px;
   transition: width 1s ease;
 }
 
 .detail-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 3rem;
+  margin-top: 48px;
 }
 
 .detail-delete {
@@ -370,11 +370,11 @@ function handleBackdropClick(event: MouseEvent) {
   }
 
   .detail-content {
-    padding: 10vh 1.25rem 4rem;
+    padding: 10vh 24px 64px;
   }
 
   .detail-actions {
-    margin-top: 2.5rem;
+    margin-top: 40px;
   }
 
   .detail-delete {

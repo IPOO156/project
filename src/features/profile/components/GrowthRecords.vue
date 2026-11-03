@@ -112,7 +112,7 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 12px;
   padding: 12px 16px;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--el-border-color-lighter);
   background: var(--el-bg-color);
   transition:
@@ -136,7 +136,7 @@ onBeforeUnmount(() => {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    margin-top: 5px;
+    margin-top: 8px;
   }
 
   &__body {
@@ -147,7 +147,7 @@ onBeforeUnmount(() => {
   &__header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin-bottom: 4px;
     font-size: 12px;
   }
@@ -163,7 +163,7 @@ onBeforeUnmount(() => {
   }
 
   &__title {
-    margin: 0 0 2px;
+    margin: 0 0 4px;
     font-size: 14px;
     font-weight: 600;
     color: var(--el-text-color-primary);

@@ -323,7 +323,7 @@ const { extinguishedRings } = useRingEffects(
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 2rem;
+  padding: 32px;
   overflow: hidden;
 }
 
@@ -413,7 +413,7 @@ const { extinguishedRings } = useRingEffects(
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: 5rem 3rem 4.5rem;
+  padding: 80px 48px 72px;
   pointer-events: none;
 }
 
@@ -459,7 +459,7 @@ const { extinguishedRings } = useRingEffects(
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
+  gap: 16px;
   transform: translateY(-50%);
 }
 
@@ -496,7 +496,7 @@ const { extinguishedRings } = useRingEffects(
 
 @media (max-width: 768px) {
   .hero-rings__poem-scroll {
-    gap: 0.55rem;
+    gap: 8px;
   }
 
   .hero-rings__poem-scroll--left {
@@ -508,7 +508,7 @@ const { extinguishedRings } = useRingEffects(
   }
 
   .hero-rings__char {
-    font-size: 0.9rem;
+    font-size: 14px;
   }
 }
 
@@ -519,7 +519,7 @@ const { extinguishedRings } = useRingEffects(
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
   background: transparent;
   border: none;
   color: var(--bark-light, #8b6340);

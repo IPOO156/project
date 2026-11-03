@@ -57,7 +57,7 @@ const progressPercent = computed(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
+  gap: 24px;
 }
 
 @keyframes fadeSlideUp {
@@ -75,7 +75,7 @@ const progressPercent = computed(() => {
   display: flex;
   justify-content: center;
   align-items: stretch;
-  gap: 3rem;
+  gap: 48px;
 }
 
 .hero-rings__data-item {
@@ -83,7 +83,7 @@ const progressPercent = computed(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 12px;
   min-width: 80px;
 }
 
@@ -102,7 +102,7 @@ const progressPercent = computed(() => {
 
 .hero-rings__data-unit {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
+  font-size: 12px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--text-light, #9a8474);
@@ -117,7 +117,7 @@ const progressPercent = computed(() => {
 
 .hero-rings__progress-label {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 12px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--text-light, #9a8474);
@@ -130,20 +130,20 @@ const progressPercent = computed(() => {
   max-width: 140px;
   height: 4px;
   background: rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
-  border-radius: 2px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
 .hero-rings__progress-fill {
   height: 100%;
   background: var(--gt-accent, #8b6340);
-  border-radius: 2px;
+  border-radius: 6px;
   transition: width 1.2s $ease-emphasized 0.5s;
 }
 
 .hero-rings__progress-pct {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 12px;
   color: var(--gt-accent, #8b6340);
   min-width: 32px;
   text-align: right;

@@ -81,7 +81,7 @@ function handleDragEndVisual() {
             aria-label="刷新快捷入口"
             @click="handleRefresh"
           >
-            <RefreshCw :size="18" :class="{ 'is-spinning': isRefreshing }" />
+            <RefreshCw :size="20" :class="{ 'is-spinning': isRefreshing }" />
           </el-button>
           <el-button
             text
@@ -118,7 +118,7 @@ function handleDragEndVisual() {
           aria-label="删除快捷入口"
           @click.stop="emit('toggleHidden', entry.id)"
         >
-          <X :size="12" />
+          <X :size="16" />
         </button>
         <div class="quick-entry__body">
           <div class="quick-entry__icon" :style="{ background: entry.bgColor, color: entry.color }">
@@ -128,7 +128,7 @@ function handleDragEndVisual() {
             <span class="quick-entry__label">{{ entry.label }}</span>
             <span v-if="entry.isRecent" class="quick-entry__badge">最近使用</span>
           </div>
-          <ArrowRight :size="14" class="quick-entry__arrow" />
+          <ArrowRight :size="16" class="quick-entry__arrow" />
         </div>
       </div>
     </div>
@@ -319,7 +319,7 @@ function handleDragEndVisual() {
   &__body {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     padding: 12px;
   }
 
@@ -353,7 +353,7 @@ function handleDragEndVisual() {
   }
 
   &__badge {
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1;
     color: var(--el-color-primary);
   }
@@ -376,7 +376,7 @@ function handleDragEndVisual() {
 
   .quick-entry {
     &__body {
-      padding: 14px 12px;
+      padding: 16px 12px;
       min-height: 44px;
     }
 

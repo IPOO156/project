@@ -84,8 +84,8 @@ onMounted(() => {
       :aria-label="themeStore.isDark ? '切换至日间模式' : '切换至夜间模式'"
       @click="handleThemeToggle"
     >
-      <Sun v-if="themeStore.isDark" :size="18" class="login__theme-icon" />
-      <Moon v-else :size="18" class="login__theme-icon" />
+      <Sun v-if="themeStore.isDark" :size="20" class="login__theme-icon" />
+      <Moon v-else :size="20" class="login__theme-icon" />
     </button>
     <LoginHero :login-type="loginType" :mouse-x="mouseX" :mouse-y="mouseY" />
     <section class="login__panel">
@@ -233,7 +233,7 @@ onMounted(() => {
               </el-button>
             </el-form>
             <div class="login__security">
-              <Shield :size="13" /><span>全程加密传输 · 数据安全有保障</span>
+              <Shield :size="16" /><span>全程加密传输 · 数据安全有保障</span>
             </div>
           </div>
         </div>
@@ -266,7 +266,7 @@ onMounted(() => {
       padding: 72px 16px 12px;
     }
     &__card-inner {
-      padding: 30px 22px 24px;
+      padding: 32px 24px 24px;
     }
     &__theme-toggle {
       top: 16px;

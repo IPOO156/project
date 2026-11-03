@@ -121,7 +121,7 @@ async function switchToStudent() {
           aria-label="打开页内搜索（Ctrl+K）"
           @click="commandVisible = true"
         >
-          <Search :size="15" />
+          <Search :size="16" />
           <span class="header__search-text">搜索页面…</span>
           <kbd>Ctrl K</kbd>
         </button>
@@ -133,7 +133,7 @@ async function switchToStudent() {
       <!-- 通知铃铛：学生端跳 /messages；教师端跳 /teacher/messages（各自 Store 维护角标） -->
       <el-badge :value="unreadBadge" :hidden="unreadBadge === 0" class="header__action">
         <el-button text :aria-label="`消息中心，未读消息 ${unreadBadge} 条`" @click="openMessages">
-          <Bell :size="18" />
+          <Bell :size="20" />
         </el-button>
       </el-badge>
 
@@ -149,7 +149,7 @@ async function switchToStudent() {
           :aria-label="themeStore.isDark ? '切换至日间模式' : '切换至夜间模式'"
           @click="toggleThemeWithRipple"
         >
-          <component :is="themeStore.isDark ? Sun : Moon" :size="18" />
+          <component :is="themeStore.isDark ? Sun : Moon" :size="20" />
         </el-button>
       </el-tooltip>
 
@@ -164,26 +164,26 @@ async function switchToStudent() {
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item v-if="!isTeacher" @click="tipsDialogVisible = true">
-              <Lightbulb :size="14" /> 学习建议
+              <Lightbulb :size="16" /> 学习建议
             </el-dropdown-item>
             <template v-if="isTeacher">
               <el-dropdown-item @click="router.push('/teacher/dashboard')">
-                <LayoutDashboard :size="14" /> 工作台
+                <LayoutDashboard :size="16" /> 工作台
               </el-dropdown-item>
               <el-dropdown-item divided @click="switchToStudent">
-                <SwitchCamera :size="14" /> 切换账号
+                <SwitchCamera :size="16" /> 切换账号
               </el-dropdown-item>
             </template>
             <template v-else>
               <el-dropdown-item @click="router.push('/profile/info')">
-                <User :size="14" /> 个人中心
+                <User :size="16" /> 个人中心
               </el-dropdown-item>
               <el-dropdown-item @click="router.push('/profile/edit-password')">
-                <Settings :size="14" /> 修改密码
+                <Settings :size="16" /> 修改密码
               </el-dropdown-item>
             </template>
             <el-dropdown-item divided @click="handleLogout">
-              <LogOut :size="14" /> 退出登录
+              <LogOut :size="16" /> 退出登录
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -241,9 +241,9 @@ async function switchToStudent() {
     width: 260px;
     height: 32px;
     margin-left: auto;
-    padding: 0 10px;
+    padding: 0 8px;
     border: 1px solid var(--el-border-color-light);
-    border-radius: 4px;
+    border-radius: 6px;
     background: var(--el-fill-color-lighter);
     color: var(--el-text-color-secondary);
     font-size: 13px;
@@ -269,10 +269,10 @@ async function switchToStudent() {
       flex-shrink: 0;
       padding: 1px 4px;
       border: 1px solid var(--el-border-color);
-      border-radius: 3px;
+      border-radius: 6px;
       background: var(--el-bg-color);
       font-family: inherit;
-      font-size: 11px;
+      font-size: 12px;
       line-height: 16px;
       color: var(--el-text-color-placeholder);
     }

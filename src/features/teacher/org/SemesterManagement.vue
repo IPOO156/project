@@ -467,7 +467,7 @@ function openImportResult() {
             accept=".xlsx"
           >
             <div class="semester-management__upload">
-              <Upload :size="36" class="semester-management__upload-icon" />
+              <Upload :size="32" class="semester-management__upload-icon" />
               <p class="semester-management__upload-title">拖拽文件到此处，或点击选择</p>
               <p class="semester-management__upload-desc">仅支持 .xlsx 格式</p>
             </div>
@@ -557,7 +557,7 @@ function openImportResult() {
 
     &-icon {
       color: var(--el-color-primary);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
     &-title {

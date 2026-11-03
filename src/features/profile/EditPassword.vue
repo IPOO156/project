@@ -106,7 +106,7 @@ async function handleSubmit() {
 }
 
 .edit-password__form {
-  padding-top: 20px;
+  padding-top: 24px;
 }
 
 .form-input--password {

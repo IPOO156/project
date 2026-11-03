@@ -217,7 +217,7 @@ function semesterDisplay(): string {
 
   &__type-tag {
     flex-shrink: 0;
-    padding: 2px 10px;
+    padding: 4px 8px;
     border-radius: $radius-lg;
     background: $color-primary-lightest;
     color: $color-primary;

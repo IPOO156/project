@@ -338,7 +338,7 @@ onMounted(() => void loadAnnouncements())
 
     <div class="mc-card">
       <div class="mc-card__head">
-        <span class="mc-card__title"><Megaphone :size="15" /> 公告列表</span>
+        <span class="mc-card__title"><Megaphone :size="16" /> 公告列表</span>
         <el-button :icon="Plus" type="primary" @click="openAnnCreate">新建公告</el-button>
       </div>
       <div class="mc-card__body">

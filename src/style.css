@@ -3,20 +3,23 @@
   --bg: #f8fafc;
   --panel: #ffffff;
   --text: #1e293b;
-  --muted: #64748b;
+  --muted: #5f6b7d;
   --border: #e2e8f0;
   --accent: #3b82f6;
   --accent-light: #dbeafe;
   --accent-dark: #1d4ed8;
   --link: #2563eb;
 
-  /* 功能色 */
+  /* 功能色：实色仅用于图形/进度；文字与小面积一律用 -text 版本（≥4.5:1） */
   --success: #10b981;
   --success-light: #d1fae5;
+  --success-text: #047857;
   --warning: #f59e0b;
   --warning-light: #fef3c7;
+  --warning-text: #b45309;
   --danger: #ef4444;
   --danger-light: #fee2e2;
+  --danger-text: #b91c1c;
   --info: #06b6d4;
   --info-light: #cffafe;
 
@@ -121,7 +124,7 @@ textarea::placeholder {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 3px;
+  border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

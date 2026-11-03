@@ -286,7 +286,7 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
             <component
               :is="getTabIcon(tab)"
               v-if="getTabIcon(tab)"
-              :size="14"
+              :size="16"
               class="nav-tabs__icon"
               aria-hidden="true"
             />
@@ -298,7 +298,7 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
               :aria-label="`关闭标签：${tab.title}`"
               @click="close(tab.path, $event)"
             >
-              <X :size="12" />
+              <X :size="16" />
             </button>
           </div>
         </div>
@@ -359,7 +359,7 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     scrollbar-width: none;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding: 0 4px;
     overscroll-behavior-x: contain;
     contain: layout style;
@@ -403,10 +403,10 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     height: 100%;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 0 10px 0 12px;
+    gap: 8px;
+    padding: 0 8px 0 12px;
     border: 1px solid rgba(148, 163, 184, 0.16);
-    border-radius: 8px;
+    border-radius: 10px;
     background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(241, 245, 249, 0.82));
     position: relative;
     // 为关闭按钮绝对定位提供锚点
@@ -448,7 +448,7 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     flex: 1 1 auto;
     min-width: 0;
     // 为关闭按钮预留空间，避免 hover 时文字被挤压
-    margin-right: 26px;
+    margin-right: 24px;
   }
 
   &__close {
@@ -513,11 +513,11 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
   }
 
   .nav-tabs__surface {
-    padding: 0 8px 0 10px;
+    padding: 0 8px 0 8px;
   }
 
   .nav-tabs__title {
-    margin-right: 22px;
+    margin-right: 24px;
   }
 }
 
@@ -528,12 +528,12 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
   }
 
   .nav-tabs__surface {
-    padding: 0 6px 0 8px;
+    padding: 0 8px 0 8px;
   }
 
   .nav-tabs__title {
     font-size: $font-size-sm;
-    margin-right: 18px;
+    margin-right: 16px;
   }
 
   .nav-tabs__close {

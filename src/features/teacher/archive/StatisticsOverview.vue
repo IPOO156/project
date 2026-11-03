@@ -310,7 +310,7 @@ onMounted(async () => {
     margin-left: $spacing-sm;
   }
   &__filter {
-    padding: 12px 20px 0;
+    padding: 12px 24px 0;
     border-bottom: 1px solid var(--el-border-color-lighter);
 
     .el-form-item {
@@ -333,7 +333,7 @@ onMounted(async () => {
     margin-bottom: $spacing-lg;
   }
   &__tag {
-    margin: 2px 6px 2px 0;
+    margin: 4px 8px 4px 0;
   }
 
   .kpi-item {
@@ -353,11 +353,11 @@ onMounted(async () => {
     &__value-row {
       display: flex;
       align-items: baseline;
-      gap: 2px;
+      gap: 4px;
     }
     &__value {
       font-size: $font-size-2xl;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--el-text-color-primary);
     }
     &__unit {

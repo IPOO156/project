@@ -51,12 +51,12 @@ const showGroup = computed(
   <nav class="teacher-crumb" aria-label="面包屑">
     <template v-if="showGroup">
       <span class="teacher-crumb__group">{{ groupLabel }}</span>
-      <ChevronRight :size="13" class="teacher-crumb__sep" aria-hidden="true" />
+      <ChevronRight :size="16" class="teacher-crumb__sep" aria-hidden="true" />
     </template>
 
     <template v-if="parentPath && parentLabel !== currentTitle">
       <router-link :to="parentPath" class="teacher-crumb__link">{{ parentLabel }}</router-link>
-      <ChevronRight :size="13" class="teacher-crumb__sep" aria-hidden="true" />
+      <ChevronRight :size="16" class="teacher-crumb__sep" aria-hidden="true" />
     </template>
 
     <span class="teacher-crumb__current" aria-current="page">{{ currentTitle }}</span>
@@ -67,7 +67,7 @@ const showGroup = computed(
 .teacher-crumb {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
   font-size: 13px;
   color: var(--el-text-color-secondary);

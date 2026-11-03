@@ -66,18 +66,21 @@ withDefaults(defineProps<Props>(), {
     gap: $spacing-md;
     margin: 0;
     color: var(--el-text-color-primary);
-    font-weight: 600;
-    line-height: 1.4;
+    font-weight: $font-weight-semibold;
+    line-height: $line-height-title;
+    letter-spacing: -0.01em;
   }
 
+  /* 页面标题只有一档：28px（sm 用于卡片/弹窗内的紧凑页头，lg 留给大标题场景） */
   &--sm &__title {
-    font-size: $font-size-lg;
+    font-size: $font-size-xl;
+    letter-spacing: 0;
   }
   &--md &__title {
-    font-size: $font-size-xl;
+    font-size: $font-size-2xl;
   }
   &--lg &__title {
-    font-size: $font-size-2xl;
+    font-size: $font-size-4xl;
   }
 
   &__bar {
@@ -89,15 +92,15 @@ withDefaults(defineProps<Props>(), {
       var(--el-color-primary) 0%,
       var(--el-color-primary-light) 100%
     );
-    border-radius: 2px;
+    border-radius: $radius-base;
     flex-shrink: 0;
   }
 
   &__subtitle {
     margin: $spacing-sm 0 0;
     color: var(--el-text-color-secondary);
-    font-size: $font-size-base;
-    line-height: 1.5;
+    font-size: $font-size-sm;
+    line-height: $line-height-aux;
   }
 
   &__actions {

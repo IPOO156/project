@@ -33,12 +33,12 @@ defineProps<{
 <style scoped lang="scss">
 .gd-card {
   :deep(.el-card__body) {
-    padding: 16px 20px;
+    padding: 16px 24px;
   }
 }
 
 .card-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #1e293b;
 }
@@ -46,29 +46,29 @@ defineProps<{
 .plan-progress {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 
   &__stat {
     display: flex;
     align-items: baseline;
-    gap: 6px;
+    gap: 8px;
   }
 
   &__num {
     font-size: 28px;
-    font-weight: 700;
+    font-weight: 600;
     color: #d4a574;
   }
 
   &__total {
     font-size: 14px;
-    color: #64748b;
+    color: var(--el-text-color-secondary);
   }
 
   &__hint {
     margin: 0;
     font-size: 13px;
-    color: #94a3b8;
+    color: var(--el-text-color-secondary);
   }
 }
 

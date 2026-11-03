@@ -23,7 +23,7 @@ const { isVisible } = useScrollReveal(quoteRef, {
 .growth-quote {
   position: relative;
   z-index: 2;
-  padding: 5rem 2rem;
+  padding: 80px 32px;
   text-align: center;
 }
 
@@ -44,16 +44,16 @@ const { isVisible } = useScrollReveal(quoteRef, {
 
 .quote-text {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.6rem;
+  font-size: 28px;
   color: var(--gt-text-quote, #5a4a3a);
   line-height: 1.7;
-  margin: 0 0 1.2rem;
+  margin: 0 0 19px;
   letter-spacing: 1px;
 }
 
 .quote-attribution {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 12px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--text-light, #9a8474);
@@ -62,11 +62,11 @@ const { isVisible } = useScrollReveal(quoteRef, {
 
 @media (max-width: 768px) {
   .growth-quote {
-    padding: 3.5rem 1.5rem;
+    padding: 56px 24px;
   }
 
   .quote-text {
-    font-size: 1.25rem;
+    font-size: 20px;
   }
 }
 </style>

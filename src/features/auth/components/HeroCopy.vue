@@ -135,7 +135,7 @@ onUnmounted(() => {
     <div class="login__feature-grid">
       <article v-for="feature in sceneFeatures" :key="feature.title" class="login__feature-card">
         <div class="login__feature-icon">
-          <component :is="feature.icon" :size="18" />
+          <component :is="feature.icon" :size="20" />
         </div>
         <div>
           <h3 class="login__feature-title">{{ feature.title }}</h3>
@@ -149,7 +149,7 @@ onUnmounted(() => {
       <div class="login__stats-row">
         <div v-for="stat in statsData" :key="stat.label" class="login__stat-item">
           <div class="login__stat-icon">
-            <component :is="stat.icon" :size="14" />
+            <component :is="stat.icon" :size="16" />
           </div>
           <div class="login__stat-num">{{ stat.num }}</div>
           <div class="login__stat-label">{{ stat.label }}</div>
@@ -157,7 +157,7 @@ onUnmounted(() => {
       </div>
       <div class="login__footer-info">
         <span class="login__footer-clock">
-          <Clock :size="12" />
+          <Clock :size="16" />
           <span>{{ currentTime }}</span>
         </span>
         <span class="login__footer-dot"></span>
@@ -184,8 +184,8 @@ onUnmounted(() => {
 .login__brand-chip {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
+  gap: 8px;
+  padding: 8px 16px;
   border-radius: 999px;
   background: var(--login-surface-soft);
   border: 1px solid var(--login-border);
@@ -213,10 +213,10 @@ onUnmounted(() => {
   position: relative;
   width: 112px;
   height: 112px;
-  margin: 28px 0 36px;
+  margin: 24px 0 32px;
   display: grid;
   place-items: center;
-  border-radius: 34px;
+  border-radius: 10px;
   background: var(--login-surface-soft);
   border: 1px solid var(--login-border);
   backdrop-filter: blur(16px);
@@ -245,11 +245,11 @@ onUnmounted(() => {
 .login__hero-copy {
   position: relative;
   z-index: 3;
-  margin-bottom: 42px;
+  margin-bottom: 40px;
 }
 
 .login__hero-kicker {
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   font-size: 13px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -280,7 +280,7 @@ onUnmounted(() => {
 .login__hero-subtitle {
   margin: 24px 0 0;
   max-width: 640px;
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1.8;
   color: var(--login-text-soft);
   animation: fadeUp 1.3s ease both;
@@ -297,13 +297,13 @@ onUnmounted(() => {
 .login__feature-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: 16px;
 }
 
 .login__feature-card {
   position: relative;
-  padding: 22px 20px;
-  border-radius: 24px;
+  padding: 24px 24px;
+  border-radius: 10px;
   background: var(--login-surface-soft);
   border: 1px solid var(--login-border);
   backdrop-filter: blur(18px);
@@ -358,17 +358,17 @@ onUnmounted(() => {
 .login__feature-icon {
   width: 40px;
   height: 40px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   display: grid;
   place-items: center;
-  border-radius: 14px;
+  border-radius: 10px;
   color: #fff;
   background: linear-gradient(135deg, var(--login-btn-primary-1), var(--login-btn-primary-2));
   box-shadow: 0 12px 22px var(--login-btn-shadow);
 }
 
 .login__feature-title {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-size: 16px;
   color: var(--login-text);
   transition: color 0.5s ease;
@@ -384,8 +384,8 @@ onUnmounted(() => {
 
 /* ---- 底部信息 ---- */
 .login__hero-footer {
-  margin-top: 36px;
-  padding-top: 28px;
+  margin-top: 32px;
+  padding-top: 24px;
   border-top: 1px solid var(--login-border);
   animation: fadeUp 1.5s ease both;
   transition: border-color 0.6s ease;
@@ -394,7 +394,7 @@ onUnmounted(() => {
 .login__stats-row {
   display: flex;
   gap: 40px;
-  margin-bottom: 22px;
+  margin-bottom: 24px;
 }
 
 .login__stat-item {
@@ -408,20 +408,20 @@ onUnmounted(() => {
 .login__stat-icon {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--login-surface-soft);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--login-accent);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   transition:
     background-color 0.6s ease,
     color 0.6s ease;
 }
 
 .login__stat-num {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--login-text);
   line-height: 1;
@@ -430,7 +430,7 @@ onUnmounted(() => {
 }
 
 .login__stat-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--login-text-faint);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -441,7 +441,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--login-text-faint);
   letter-spacing: 0.3px;
 }
@@ -449,7 +449,7 @@ onUnmounted(() => {
 .login__footer-clock {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--login-text-soft);
   font-family: 'SF Mono', 'Cascadia Code', Consolas, monospace;
   font-size: 12px;
@@ -544,7 +544,7 @@ onUnmounted(() => {
   .login__brand-mark {
     width: 64px;
     height: 64px;
-    margin: 16px 0 20px;
+    margin: 16px 0 24px;
   }
 
   .login__hero-copy {
@@ -562,7 +562,7 @@ onUnmounted(() => {
   }
 
   .login__stat-num {
-    font-size: 18px;
+    font-size: 20px;
   }
 
   .login__footer-info {

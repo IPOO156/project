@@ -154,7 +154,7 @@ function goTo(path: string) {
           >
         </div>
       </template>
-      <el-row :gutter="12">
+      <el-row :gutter="16">
         <el-col v-for="item in completenessList" :key="item.key" :span="8" class="completeness-col">
           <div
             class="completeness-item"
@@ -162,8 +162,8 @@ function goTo(path: string) {
             @click="goTo(item.path)"
           >
             <div class="completeness-item__icon">
-              <Check v-if="item.hasData" :size="18" class="check" />
-              <X v-else :size="18" class="cross" />
+              <Check v-if="item.hasData" :size="20" class="check" />
+              <X v-else :size="20" class="cross" />
             </div>
             <div class="completeness-item__label">{{ item.label }}</div>
             <el-button
@@ -173,7 +173,7 @@ function goTo(path: string) {
               @click.stop="goTo(item.path)"
             >
               {{ item.hasData ? '查看' : '去报名' }}
-              <Plus class="u-ml-2" :size="12" />
+              <Plus class="u-ml-2" :size="16" />
             </el-button>
           </div>
         </el-col>
@@ -199,15 +199,15 @@ function goTo(path: string) {
   }
   &__value {
     font-size: 28px;
-    font-weight: 700;
+    font-weight: 600;
     color: #1e293b;
   }
   &__icon {
     width: 48px;
     height: 48px;
-    border-radius: 12px;
+    border-radius: 10px;
     background: #f1f5f9;
-    color: #64748b;
+    color: var(--el-text-color-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -236,7 +236,7 @@ function goTo(path: string) {
   justify-content: space-between;
 }
 .completeness-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #1e293b;
 }
@@ -251,9 +251,9 @@ function goTo(path: string) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 14px 8px;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 16px 8px;
+  border-radius: 10px;
   border: 1px solid var(--el-border-color-lighter);
   background: var(--el-fill-color-light);
   cursor: pointer;
@@ -275,7 +275,7 @@ function goTo(path: string) {
     }
   }
   .cross {
-    color: #94a3b8;
+    color: var(--el-text-color-secondary);
   }
   &__icon {
     display: flex;

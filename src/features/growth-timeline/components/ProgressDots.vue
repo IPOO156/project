@@ -133,7 +133,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.8rem;
+  gap: 16px;
 }
 
 .progress-dot {
@@ -179,7 +179,7 @@ onBeforeUnmount(() => {
 }
 
 .progress-indicator.is-dense {
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .progress-indicator.is-dense .progress-dot {
@@ -200,7 +200,7 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .progress-indicator {
     right: 1rem;
-    gap: 0.5rem;
+    gap: 8px;
   }
 
   .progress-dot {

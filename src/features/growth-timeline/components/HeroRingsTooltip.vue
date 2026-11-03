@@ -40,7 +40,7 @@ defineProps<Props>()
   transition:
     opacity 0.2s ease,
     visibility 0.2s ease;
-  padding: 0.55rem 0.85rem;
+  padding: 8px 16px;
   border-radius: 10px;
   background: var(--gt-tooltip-bg, rgba(45, 30, 18, 0.92));
   backdrop-filter: blur(10px);
@@ -71,18 +71,18 @@ defineProps<Props>()
 }
 
 .hero-rings__tooltip-title {
-  font-size: 0.85rem;
+  font-size: 14px;
   font-weight: 600;
   color: var(--gt-tooltip-text, #fff8e8);
   line-height: 1.35;
-  margin-bottom: 0.2rem;
+  margin-bottom: 4px;
 }
 
 .hero-rings__tooltip-meta {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.7rem;
+  gap: 8px;
+  font-size: 12px;
   color: var(--gt-tooltip-muted, rgba(244, 239, 230, 0.72));
   font-family: 'JetBrains Mono', monospace;
   letter-spacing: 0.3px;

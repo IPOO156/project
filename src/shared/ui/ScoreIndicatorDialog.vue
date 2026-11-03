@@ -360,7 +360,7 @@ watch(
 
   &__th {
     text-align: left;
-    padding: 10px 8px;
+    padding: 8px 8px;
     font-size: 13px;
     color: #606266;
     background: #f5f7fa;
@@ -373,7 +373,7 @@ watch(
   }
 
   &__td {
-    padding: 10px 8px;
+    padding: 8px 8px;
     font-size: 14px;
     color: #303133;
     border-bottom: 1px solid #ebeef5;
@@ -385,8 +385,8 @@ watch(
 
   &__score {
     display: inline-block;
-    padding: 2px 10px;
-    border-radius: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
     font-weight: 600;
 
     &--high {
@@ -409,7 +409,7 @@ watch(
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin-top: 16px;
     padding-top: 12px;
     border-top: 2px solid #409eff;
@@ -421,9 +421,9 @@ watch(
     }
 
     &-value {
-      font-size: 18px;
+      font-size: 20px;
       color: #409eff;
-      font-weight: 700;
+      font-weight: 600;
     }
   }
 }
@@ -453,7 +453,7 @@ watch(
   &__meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 20px;
+    gap: 8px 24px;
     margin-bottom: 12px;
     font-size: 12px;
     color: #909399;
@@ -490,8 +490,8 @@ watch(
   }
 
   &__tag {
-    margin-right: 6px;
-    margin-bottom: 2px;
+    margin-right: 8px;
+    margin-bottom: 4px;
   }
 
   &__empty {
@@ -506,13 +506,13 @@ watch(
 
   &__meta {
     display: flex;
-    gap: 20px;
+    gap: 24px;
     margin-bottom: 12px;
     padding: 8px 12px;
     font-size: 13px;
     color: #606266;
     background: #f5f7fa;
-    border-radius: 4px;
+    border-radius: 6px;
   }
 }
 

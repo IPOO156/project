@@ -9,7 +9,7 @@ const visible = ref(true)
 <template>
   <div v-if="reason && visible" class="rejection-banner">
     <div class="rejection-banner__inner">
-      <div class="rejection-banner__icon"><AlertTriangle :size="18" /></div>
+      <div class="rejection-banner__icon"><AlertTriangle :size="20" /></div>
       <div class="rejection-banner__content">
         <div class="rejection-banner__title">教师驳回原因：</div>
         <div class="rejection-banner__reason">{{ reason }}</div>
@@ -29,14 +29,14 @@ const visible = ref(true)
 .rejection-banner {
   background: linear-gradient(135deg, #fef3e2, #fff8f0);
   border: 1px solid #fde68a;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 16px;
 }
 .rejection-banner__inner {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
 }
 .rejection-banner__icon {
   color: #f59e0b;

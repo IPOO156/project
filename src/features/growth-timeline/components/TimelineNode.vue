@@ -66,7 +66,7 @@ const { isVisible } = useScrollReveal(nodeRef, {
   display: grid;
   grid-template-columns: 1fr 80px 1fr;
   align-items: start;
-  margin-bottom: 5rem;
+  margin-bottom: 80px;
   cursor: pointer;
   user-select: none;
 }
@@ -103,7 +103,7 @@ const { isVisible } = useScrollReveal(nodeRef, {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 2rem;
+  padding-top: 32px;
   grid-column: 2;
   grid-row: 1;
 }
@@ -180,14 +180,14 @@ const { isVisible } = useScrollReveal(nodeRef, {
 @media (max-width: 768px) {
   .growth-node {
     grid-template-columns: 44px 1fr;
-    gap: 0 0.75rem;
-    margin-bottom: 3rem;
+    gap: 0 12px;
+    margin-bottom: 48px;
   }
 
   .ring-marker {
     grid-column: 1 !important;
     grid-row: 1;
-    padding-top: 1.25rem;
+    padding-top: 24px;
   }
 
   :deep(.growth-card) {

@@ -26,7 +26,7 @@
 <style scoped lang="scss">
 .growth-footer {
   text-align: center;
-  padding: 3rem 2rem 4rem;
+  padding: 48px 32px 64px;
   position: relative;
   z-index: 2;
 }
@@ -34,8 +34,8 @@
 .footer-leaf-row {
   display: flex;
   justify-content: center;
-  gap: 0.8rem;
-  margin-bottom: 2rem;
+  gap: 16px;
+  margin-bottom: 32px;
   opacity: 0.15;
 }
 
@@ -47,14 +47,14 @@
 
 .footer-text {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 0.85rem;
+  font-size: 14px;
   color: var(--text-light, #9a8474);
   font-style: italic;
 }
 
 @media (max-width: 768px) {
   .growth-footer {
-    padding: 2rem 1rem 3rem;
+    padding: 32px 16px 48px;
   }
 }
 </style>

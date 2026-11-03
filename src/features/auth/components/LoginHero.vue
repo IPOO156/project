@@ -39,7 +39,7 @@ defineProps<{
 @media (max-width: 768px) {
   .login__hero {
     min-height: auto;
-    padding: 20px 20px 16px;
+    padding: 24px 24px 16px;
   }
 }
 </style>

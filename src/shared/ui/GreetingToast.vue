@@ -35,7 +35,7 @@ interface Props {
           aria-label="关闭"
           @click="emit('close')"
         >
-          <X :size="14" />
+          <X :size="16" />
         </button>
       </div>
     </Transition>
@@ -53,7 +53,7 @@ interface Props {
   align-items: center;
   gap: 12px;
   max-width: 340px;
-  padding: 10px 10px 10px 16px;
+  padding: 8px 8px 8px 16px;
   border-radius: $radius-lg;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-light);
@@ -118,7 +118,7 @@ interface Props {
 html:has(.layout--teacher) .greeting-toast {
   right: auto;
   left: 24px;
-  border-radius: 4px;
+  border-radius: 6px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 
   &::before {

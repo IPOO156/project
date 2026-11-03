@@ -201,7 +201,7 @@ onBeforeUnmount(stopRotate)
 }
 
 .loading-tip__action {
-  padding: 2px 4px;
+  padding: 4px 4px;
   border: 0;
   background: transparent;
   color: var(--el-text-color-secondary);

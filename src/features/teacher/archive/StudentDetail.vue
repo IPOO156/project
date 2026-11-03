@@ -251,7 +251,7 @@ onMounted(() => void loadAll())
         <!-- 能力画像 -->
         <div class="mc-card">
           <div class="mc-card__head">
-            <span class="mc-card__title"><UserRound :size="15" /> 能力画像</span>
+            <span class="mc-card__title"><UserRound :size="16" /> 能力画像</span>
           </div>
           <div class="mc-card__body">
             <div v-if="profile.dimensionProfile?.length" class="student-detail__dims">
@@ -278,7 +278,7 @@ onMounted(() => void loadAll())
         <!-- 成长时间轴 -->
         <div class="mc-card">
           <div class="mc-card__head">
-            <span class="mc-card__title"><GraduationCap :size="15" /> 成长时间轴</span>
+            <span class="mc-card__title"><GraduationCap :size="16" /> 成长时间轴</span>
             <el-radio-group v-model="eventTypeFilter" size="small">
               <el-radio-button
                 v-for="o in TEACHER_EVENT_TYPE_OPTIONS"
@@ -336,7 +336,7 @@ onMounted(() => void loadAll())
         <!-- 短板分析与改进建议 -->
         <div class="mc-card">
           <div class="mc-card__head">
-            <span class="mc-card__title"><ListChecks :size="15" /> 短板分析与改进建议</span>
+            <span class="mc-card__title"><ListChecks :size="16" /> 短板分析与改进建议</span>
           </div>
           <div class="mc-card__body">
             <el-table v-if="weaknesses.length" :data="weaknesses" stripe>
@@ -428,7 +428,7 @@ onMounted(() => void loadAll())
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     font-size: 13px;
     color: var(--el-text-color-secondary);
   }
@@ -452,7 +452,7 @@ onMounted(() => void loadAll())
 
   &__summary-value {
     font-size: $font-size-2xl;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--el-color-primary);
   }
 
@@ -492,7 +492,7 @@ onMounted(() => void loadAll())
   &__tl-dot {
     position: relative;
     z-index: 1;
-    margin-top: 6px;
+    margin-top: 8px;
     width: 12px;
     height: 12px;
     border-radius: 50%;
@@ -560,7 +560,7 @@ onMounted(() => void loadAll())
   }
 
   &__tl-name {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--el-text-color-primary);
     margin-bottom: 4px;

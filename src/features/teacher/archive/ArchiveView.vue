@@ -328,20 +328,20 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    padding: 8px 14px;
+    padding: 8px 16px;
     border-radius: $radius-lg;
     background: var(--el-bg-color);
     border: 1px solid var(--el-border-color-lighter);
     min-width: 96px;
   }
   &__head-chip-label {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--el-text-color-secondary);
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
   &__head-chip-value {
-    margin-top: 2px;
+    margin-top: 4px;
     font-size: 14px;
     font-weight: 600;
     color: var(--el-color-primary);

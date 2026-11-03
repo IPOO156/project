@@ -28,7 +28,7 @@ const emit = defineEmits<{
   <section class="mc-card archive-view__detail-list">
     <div class="mc-card__head">
       <span class="mc-card__title">
-        <FileSearch :size="14" />
+        <FileSearch :size="16" />
         档案明细
       </span>
       <span class="archive-view__count">{{ total }} 条</span>
@@ -144,10 +144,10 @@ const emit = defineEmits<{
   &__doc {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
   }
   &__doc-type {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--el-text-color-secondary);
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -163,7 +163,7 @@ const emit = defineEmits<{
   &__student {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
   }
   &__student-name {
     font-size: 13px;
@@ -181,7 +181,7 @@ const emit = defineEmits<{
   }
   &__org-node {
     display: inline-flex;
-    padding: 2px 8px;
+    padding: 4px 8px;
     font-size: 12px;
     border-radius: $radius-base;
     background: var(--el-color-primary-light-9);

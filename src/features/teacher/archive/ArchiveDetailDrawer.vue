@@ -139,7 +139,7 @@ const detailEntries = computed(() => {
     gap: $spacing-xl;
   }
   &__drawer-hero {
-    padding: 20px 22px;
+    padding: 24px 24px;
     border-radius: $radius-lg;
     background: linear-gradient(
       135deg,
@@ -168,14 +168,14 @@ const detailEntries = computed(() => {
     margin-bottom: 8px;
   }
   &__drawer-type {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--el-text-color-secondary);
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
   &__drawer-title {
     margin: 0;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 600;
     color: var(--el-text-color-primary);
     letter-spacing: -0.01em;
@@ -186,7 +186,7 @@ const detailEntries = computed(() => {
     color: var(--el-text-color-secondary);
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
   }
   &__drawer-dot {
@@ -206,7 +206,7 @@ const detailEntries = computed(() => {
       display: inline-block;
       width: 3px;
       height: 12px;
-      border-radius: 0 3px 3px 0;
+      border-radius: 0 6px 6px 0;
       background: var(--el-color-primary);
     }
   }
@@ -222,7 +222,7 @@ const detailEntries = computed(() => {
     }
   }
   &__rejected {
-    color: $color-danger;
+    color: $color-danger-text;
   }
 
   /* 扩展字段：定义列表样式 */
@@ -239,7 +239,7 @@ const detailEntries = computed(() => {
     display: grid;
     grid-template-columns: 200px 1fr;
     gap: $spacing-lg;
-    padding: 12px 18px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--el-border-color-lighter);
 
     &:last-child {

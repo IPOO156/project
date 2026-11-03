@@ -103,7 +103,7 @@ function handleClose() {
         >
           <GripVertical :size="16" class="entry-item__handle" />
           <div class="entry-item__icon" :style="{ background: entry.bgColor, color: entry.color }">
-            <component :is="entry.icon" :size="18" />
+            <component :is="entry.icon" :size="20" />
           </div>
           <span class="entry-item__label">{{ entry.label }}</span>
           <el-tag v-if="entry.isRecent" size="small" type="primary" class="entry-item__tag">
@@ -134,7 +134,7 @@ function handleClose() {
         <div v-for="entry in hiddenList" :key="entry.id" class="entry-item entry-item--hidden">
           <div class="entry-item__placeholder" />
           <div class="entry-item__icon" :style="{ background: entry.bgColor, color: entry.color }">
-            <component :is="entry.icon" :size="18" />
+            <component :is="entry.icon" :size="20" />
           </div>
           <span class="entry-item__label">{{ entry.label }}</span>
           <el-button
@@ -182,7 +182,7 @@ function handleClose() {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: $radius-lg;
   border: 1px solid var(--el-border-color-lighter);
   background: var(--el-bg-color);
@@ -229,7 +229,7 @@ function handleClose() {
   &__icon {
     width: 32px;
     height: 32px;
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -252,7 +252,7 @@ function handleClose() {
 }
 
 .entry-section {
-  margin-top: 20px;
+  margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid var(--el-border-color-light);
 

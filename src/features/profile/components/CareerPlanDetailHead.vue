@@ -51,19 +51,19 @@ const emit = defineEmits<{
   border-bottom: 1px solid var(--el-border-color-light);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .head-title-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .head-title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
@@ -86,7 +86,7 @@ const emit = defineEmits<{
 }
 
 .head-progress {
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .head-audit {

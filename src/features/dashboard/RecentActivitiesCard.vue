@@ -61,7 +61,7 @@ const emit = defineEmits<{
 .activity-item {
   display: flex;
   gap: 12px;
-  padding: 10px 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--el-border-color-light);
 
   &:last-child {
@@ -72,7 +72,7 @@ const emit = defineEmits<{
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    margin-top: 6px;
+    margin-top: 8px;
     flex-shrink: 0;
 
     &--draft {
@@ -96,7 +96,7 @@ const emit = defineEmits<{
     p {
       font-size: 14px;
       color: var(--el-text-color-primary);
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
   }
 

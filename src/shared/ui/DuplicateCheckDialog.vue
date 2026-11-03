@@ -68,8 +68,8 @@ const emit = defineEmits<{
 .dup-list__item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 8px;
+  padding: 8px 12px;
   border: 1px solid #fde68a;
   border-radius: 6px;
   background: #fffbeb;
@@ -87,7 +87,7 @@ html.dark .dup-list__item {
 .dup-list__icon {
   color: #f59e0b;
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 .dup-list__info {
   flex: 1;

@@ -105,12 +105,12 @@ async function handleSubmit() {
 <style scoped lang="scss">
 .gd-card {
   :deep(.el-card__body) {
-    padding: 16px 20px;
+    padding: 16px 24px;
   }
 }
 
 .card-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   color: #1e293b;
 }

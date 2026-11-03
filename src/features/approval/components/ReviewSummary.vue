@@ -18,7 +18,7 @@ defineProps<Props>()
   <header class="review-section__hero">
     <div class="review-section__hero-main">
       <div class="review-section__hero-icon">
-        <FileText :size="28" />
+        <FileText :size="32" />
       </div>
       <div>
         <h1 class="review-section__hero-title">申报审核</h1>
@@ -30,7 +30,7 @@ defineProps<Props>()
     <div class="review-section__hero-stats">
       <div v-for="stat in stats" :key="stat.label" class="review-section__hero-stat">
         <div class="review-section__hero-stat-main" :style="{ color: stat.color }">
-          <component :is="stat.icon" :size="18" />
+          <component :is="stat.icon" :size="20" />
           <span class="review-section__hero-stat-value">{{ stat.value }}</span>
         </div>
         <span class="review-section__hero-stat-label">{{ stat.label }}</span>
@@ -49,11 +49,11 @@ defineProps<Props>()
   background: var(--mc-card);
   border: 1px solid var(--mc-border);
   border-radius: var(--mc-radius);
-  padding: 24px 28px;
+  padding: 24px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 24px;
   flex-wrap: wrap;
   box-shadow: var(--mc-shadow);
 }
@@ -78,8 +78,8 @@ defineProps<Props>()
 
 .review-section__hero-title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
@@ -102,10 +102,10 @@ defineProps<Props>()
   align-items: center;
   gap: 4px;
   min-width: 90px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   background: var(--mc-bg);
   border: 1px solid var(--mc-border);
-  border-radius: 8px;
+  border-radius: 10px;
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -119,12 +119,12 @@ defineProps<Props>()
 .review-section__hero-stat-main {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .review-section__hero-stat-value {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--el-text-color-primary);
 }
 

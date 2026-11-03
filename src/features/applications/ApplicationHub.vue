@@ -145,7 +145,7 @@ function switchModule(key: string) {
       >
         <div v-if="item.count > 0" class="application-hub__tab-badge">{{ item.count }}</div>
         <div class="application-hub__tab-icon">
-          <component :is="item.icon" :size="18" />
+          <component :is="item.icon" :size="20" />
         </div>
         <div class="application-hub__tab-body">
           <div class="application-hub__tab-title">{{ item.label }}</div>
@@ -184,13 +184,13 @@ function switchModule(key: string) {
 .application-hub__tab {
   position: relative;
   min-height: 84px;
-  padding: 14px 12px;
+  padding: 16px 12px;
   border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--el-bg-color);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   text-align: left;
   cursor: pointer;
   transition:
@@ -218,11 +218,11 @@ function switchModule(key: string) {
   right: 8px;
   min-width: 20px;
   height: 20px;
-  padding: 0 5px;
+  padding: 0 8px;
   border-radius: 10px;
   background: var(--el-color-primary);
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -232,7 +232,7 @@ function switchModule(key: string) {
 .application-hub__tab-icon {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(var(--el-color-primary-rgb, 30 58 95), 0.06);
   color: var(--el-color-primary);
   display: flex;
@@ -254,7 +254,7 @@ function switchModule(key: string) {
 }
 
 .application-hub__tab-desc {
-  margin-top: 3px;
+  margin-top: 4px;
   font-size: 12px;
   line-height: 1.4;
   color: var(--el-text-color-secondary);

@@ -17,12 +17,17 @@ $color-accent-light: #e3c4a0;
 $color-success: #10b981;
 $color-warning: #f59e0b;
 $color-danger: #ef4444;
-$color-info: #64748b;
+// 语义色的「文字/小面积」版本：保证白底与浅色底上均 ≥4.5:1
+$color-success-text: #047857;
+$color-warning-text: #b45309;
+$color-danger-text: #b91c1c;
+$color-info: #5f6b7d;
 
 // 中性色
 $color-text-primary: #1e293b;
-$color-text-secondary: #64748b;
-$color-text-placeholder: #64748b;
+// 辅助文字：日间白底 5.4:1 / 管理员灰底(#f4f5f7) 4.95:1，均过 WCAG AA 4.5:1
+$color-text-secondary: #5f6b7d;
+$color-text-placeholder: #5f6b7d;
 $color-bg: #f1f5f9;
 $color-bg-page: #f8fafc;
 $color-border: #e2e8f0;
@@ -31,30 +36,47 @@ $color-border: #e2e8f0;
 $font-family-base: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
 $font-family-title: Georgia, 'Times New Roman', serif;
 
-// 字号
-$font-size-xs: 12px;
-$font-size-sm: 13px;
-$font-size-base: 14px;
-$font-size-lg: 16px;
-$font-size-xl: 20px;
-$font-size-2xl: 24px;
+// 字号 —— 六级文字阶梯（全站唯一来源，2026-11 第二轮地基）
+// L1 页标题 28 / L2 区块标题 20 / L3 卡片标题 16 / L4 正文 14 / L5 辅助 13 / L6 单位与标签 12
+// 数字显示档（KPI 主数值等）单独为 32，不参与文字阶梯
+$font-size-xs: 12px; // L6 单位 / 标签 / 角标
+$font-size-sm: 13px; // L5 辅助文字
+$font-size-base: 14px; // L4 正文
+$font-size-lg: 16px; // L3 卡片标题
+$font-size-xl: 20px; // L2 区块标题
+$font-size-2xl: 28px; // L1 页面标题（原 24px 上提一档，避免与 20 挤压）
 $font-size-3xl: 28px;
-$font-size-4xl: 32px;
+$font-size-4xl: 32px; // 数字显示档
+$font-size-display: 32px;
 
-// 间距
+// 字重 —— 只保留三档
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+
+// 行高 —— 按字号成比例（标题紧、正文松、辅助居中）
+$line-height-title: 1.25;
+$line-height-body: 1.6;
+$line-height-aux: 1.5;
+
+// 间距 —— 8px 主网格；4/12 为紧凑档（4px 子网格，仅用于卡片内密集排布）
+$spacing-2xs: 4px;
 $spacing-xs: 4px;
 $spacing-sm: 8px;
 $spacing-md: 12px;
 $spacing-lg: 16px;
 $spacing-xl: 24px;
 $spacing-2xl: 32px;
+$spacing-3xl: 40px;
+$spacing-4xl: 48px;
 
-// 圆角
-$radius-sm: 4px;
+// 圆角 —— 只留两档：控件 6px / 容器 10px（头像与胶囊除外，走 50% / 999px）
+$radius-sm: 6px;
 $radius-base: 6px;
-$radius-lg: 8px;
-$radius-xl: 12px;
-$radius-2xl: 16px;
+$radius-lg: 10px;
+$radius-xl: 10px;
+$radius-2xl: 10px;
+$radius-pill: 999px;
 
 // 阴影
 $shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);

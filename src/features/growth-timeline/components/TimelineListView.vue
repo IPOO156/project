@@ -203,7 +203,7 @@ function handleDelete(id: string) {
           title="撤回"
           @click.stop="handleDelete(exp.id)"
         >
-          <Trash2 :size="14" />
+          <Trash2 :size="16" />
         </button>
       </li>
     </ul>
@@ -216,23 +216,23 @@ function handleDelete(id: string) {
   z-index: 2;
   max-width: 760px;
   margin: 0 auto;
-  padding: 5rem 1.5rem 6rem;
+  padding: 80px 24px 96px;
 }
 
 .tlv-header {
-  margin-bottom: 2rem;
+  margin-bottom: 32px;
 }
 
 .tlv-title {
   font-family: 'Instrument Serif', serif;
-  font-size: 2rem;
+  font-size: 32px;
   font-weight: 500;
   color: var(--bark-dark, #2d1e12);
-  margin: 0 0 0.5rem;
+  margin: 0 0 8px;
 }
 
 .tlv-subtitle {
-  font-size: 0.9rem;
+  font-size: 14px;
   color: var(--text-mid, #6b5443);
   margin: 0;
 }
@@ -240,19 +240,19 @@ function handleDelete(id: string) {
 .tlv-filters {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  margin-bottom: 2rem;
+  gap: 24px;
+  margin-bottom: 32px;
 }
 
 .tlv-filter-group {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 8px;
 }
 
 .tlv-filter-label {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 12px;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--text-light, #9a8474);
@@ -261,16 +261,16 @@ function handleDelete(id: string) {
 .tlv-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .tlv-chip {
-  padding: 0.4rem 0.9rem;
-  border-radius: 100px;
+  padding: 8px 16px;
+  border-radius: 999px;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
   background: rgba(var(--gt-card-rgb, 255 252 247), 0.7);
   color: var(--text-mid, #6b5443);
-  font-size: 0.8rem;
+  font-size: 13px;
   cursor: pointer;
   transition:
     background 0.2s ease,
@@ -286,11 +286,11 @@ function handleDelete(id: string) {
 .tlv-chip--active {
   background: var(--gt-accent, #d4a574);
   border-color: var(--gt-accent, #d4a574);
-  color: #fff;
+  color: #3d2b1f;
 }
 
 .tlv-chip--active:hover {
-  color: #fff;
+  color: #3d2b1f;
   border-color: var(--gt-accent, #d4a574);
 }
 
@@ -300,14 +300,14 @@ function handleDelete(id: string) {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 /* 列表行：记录卡片 + 撤回按钮并排（记录占满剩余宽度） */
 .tlv-row {
   display: flex;
   align-items: stretch;
-  gap: 0.5rem;
+  gap: 8px;
 
   .tlv-item {
     flex: 1;
@@ -373,8 +373,8 @@ function handleDelete(id: string) {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
+  gap: 16px;
+  padding: 16px 24px;
   border-radius: $radius-xl;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
   background: rgba(var(--gt-card-rgb, 255 252 247), 0.75);
@@ -402,11 +402,11 @@ function handleDelete(id: string) {
   min-width: 2.5rem;
   text-align: center;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
+  font-size: 12px;
   letter-spacing: 1px;
-  padding: 0.3rem 0.6rem;
+  padding: 8px 8px;
   border: 1px solid;
-  border-radius: 100px;
+  border-radius: 999px;
 }
 
 .tlv-main {
@@ -414,11 +414,11 @@ function handleDelete(id: string) {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 4px;
 }
 
 .tlv-item-title {
-  font-size: 1rem;
+  font-size: 16px;
   color: var(--bark-dark, #2d1e12);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -427,7 +427,7 @@ function handleDelete(id: string) {
 
 .tlv-item-date {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
+  font-size: 12px;
   letter-spacing: 1px;
   color: var(--text-light, #9a8474);
 }
@@ -435,7 +435,7 @@ function handleDelete(id: string) {
 .tlv-item-semester {
   flex-shrink: 0;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
+  font-size: 12px;
   letter-spacing: 1px;
   color: var(--text-light, #9a8474);
 }
@@ -444,8 +444,8 @@ function handleDelete(id: string) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding: 4rem 1.5rem;
+  gap: 16px;
+  padding: 64px 24px;
   text-align: center;
 }
 
@@ -457,27 +457,27 @@ function handleDelete(id: string) {
   align-items: center;
   justify-content: center;
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.5rem;
+  font-size: 28px;
   color: var(--gt-accent, #d4a574);
   border: 1.5px dashed rgba(var(--gt-bark-rgb, 61 43 31), 0.25);
 }
 
 .tlv-empty-text {
   color: var(--text-mid, #6b5443);
-  font-size: 0.95rem;
+  font-size: 16px;
   margin: 0;
 }
 
 .tlv-add-primary {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.65rem 1.4rem;
-  border-radius: 100px;
+  gap: 8px;
+  padding: 8px 24px;
+  border-radius: 999px;
   border: 1px solid var(--gt-accent, #d4a574);
   background: var(--gt-accent, #d4a574);
-  color: #fff;
-  font-size: 0.85rem;
+  color: #3d2b1f;
+  font-size: 14px;
   cursor: pointer;
   transition:
     background 0.2s ease,
@@ -502,16 +502,16 @@ function handleDelete(id: string) {
 
 @media (max-width: 768px) {
   .timeline-list-view {
-    padding: 6.5rem 1rem 4rem;
+    padding: 104px 16px 64px;
   }
 
   .tlv-title {
-    font-size: 1.6rem;
+    font-size: 28px;
   }
 
   .tlv-item {
-    gap: 0.75rem;
-    padding: 0.9rem 1rem;
+    gap: 12px;
+    padding: 16px 16px;
   }
 
   .tlv-item-semester {

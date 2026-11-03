@@ -240,7 +240,7 @@ async function handleExportResume() {
 .archive-overview {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   user-select: none;
 }
 
@@ -254,13 +254,13 @@ async function handleExportResume() {
 }
 .page-head__title {
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   color: $color-text-primary;
-  margin: 0 0 2px;
+  margin: 0 0 4px;
 }
 .page-head__desc {
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--el-text-color-secondary);
   margin: 0;
 }
 .page-head__actions {

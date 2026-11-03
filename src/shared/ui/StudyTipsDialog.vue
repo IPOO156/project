@@ -118,7 +118,7 @@ function restore(category: LoadingTipCategory): void {
   justify-content: center;
   min-width: 20px;
   height: 20px;
-  padding: 0 6px;
+  padding: 0 8px;
   border-radius: 999px;
   background: var(--el-fill-color);
   color: var(--el-text-color-secondary);

@@ -285,7 +285,7 @@ onMounted(() => void load())
           @command="(cmd: number) => handleBatchStatus(cmd)"
         >
           <el-button :loading="batching" :disabled="!selectedIndicators.length || batching">
-            批量操作<ChevronDown :size="14" class="indicator-page__caret" />
+            批量操作<ChevronDown :size="16" class="indicator-page__caret" />
           </el-button>
           <template #dropdown>
             <el-dropdown-menu>
@@ -458,6 +458,6 @@ onMounted(() => void load())
 }
 
 .indicator-page__caret {
-  margin-left: 2px;
+  margin-left: 4px;
 }
 </style>
