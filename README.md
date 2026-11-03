@@ -131,4 +131,4 @@ archive-system-student/
 
 ## 代理配置
 
-开发环境下，接口请求以 `/api` 开头会被代理到 `http://localhost:8080`，详见 [`vite.config.ts`](./vite.config.ts)。
+开发环境下，接口请求以 `/api` 开头会被代理到已部署的后端 `http://111.228.56.207:8089`，详见 [`vite.config.ts`](./vite.config.ts)。
