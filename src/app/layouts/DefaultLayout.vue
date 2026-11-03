@@ -25,6 +25,7 @@ import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import AIFloatingBall from '@/features/ai-chat/components/AIFloatingBall.vue'
 import { useGreeting } from '@/features/dashboard/composables/useGreeting'
 import { useLoadingTip } from '@/shared/composables/useLoadingTip'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import GreetingToast from '@/shared/ui/GreetingToast.vue'
 import LoadingTipCard from '@/shared/ui/LoadingTipCard.vue'
 import bookCursor from '@/shared/utils/bookCursor'
@@ -39,6 +40,14 @@ const userStore = useUserStore()
 const slots = useSlots()
 
 const drawerVisible = ref(false)
+
+/**
+ * 管理员端与教师端共用同一套路由，但视觉语言要分开：
+ * 管理员＝治理总览（石墨蓝 + 中性灰 + 紧凑表格），教师＝待审队列（墨蓝 + 琥珀）。
+ * 这里只落一个 layout--admin 类，具体差异集中在 teacher-console.scss；
+ * 学生端 isAdmin 恒为 false，不会命中任何管理员样式。
+ */
+const { isAdmin } = useTeacherAuthz()
 
 // 启动 tab 状态监听：路由切换时把已访问页面写入 useTabsStore
 useTabs()
@@ -127,6 +136,7 @@ watch(isLoading, async (loading) => {
       'layout--mobile': appStore.isMobile,
       'layout--has-footer': hasFooter,
       'layout--teacher': userStore.isTeacher,
+      'layout--admin': isAdmin,
     }"
   >
     <!-- 侧边栏（折叠/展开动画：280ms 横向滑入） -->

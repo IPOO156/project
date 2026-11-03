@@ -18,14 +18,22 @@
   line-height: 1.5;
 }
 
-/* ── KPI 条：单个面板内四列，左侧 3px 状态色条 ── */
+/* ── KPI 条：1 个主指标 + 3 个次要指标，主指标更宽、更大，不再四等分 ── */
 .dash-kpis {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.35fr) repeat(3, minmax(0, 1fr));
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-light);
   border-radius: 6px;
   overflow: hidden;
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
 
   &__item {
     --kpi-tone: var(--el-border-color);
@@ -36,6 +44,15 @@
     min-width: 0;
     padding: 14px 16px 14px 13px;
     border-left: 3px solid var(--kpi-tone);
+
+    /* 主指标：浅底 + 更大字号，靠字号与底色分层，不靠阴影 */
+    &--lead {
+      background: var(--el-fill-color-lighter);
+
+      .dash-kpis__value {
+        font-size: 32px;
+      }
+    }
 
     &--warning {
       --kpi-tone: var(--mc-warning);

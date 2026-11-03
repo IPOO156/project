@@ -112,6 +112,20 @@ interface Props {
     transform 0.2s ease;
 }
 
+/* 教师端 / 管理员端：挪到左下角并压平。
+   右下角 (right:24px) 会正好压住表格最后一列操作（导出页的「下载 / 删除」），
+   而教师/管理员没有 AI 悬浮球需要避让，左下角是安全区。 */
+html:has(.layout--teacher) .greeting-toast {
+  right: auto;
+  left: 24px;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+
+  &::before {
+    background: var(--mc-info, #1d4ed8);
+  }
+}
+
 .greeting-toast-enter-from,
 .greeting-toast-leave-to {
   opacity: 0;
@@ -123,6 +137,13 @@ interface Props {
     right: 12px;
     bottom: 76px;
     max-width: calc(100vw - 24px);
+  }
+
+  /* 窄屏上浮层无论放哪都会压住卡片内容，教师/管理员直接不弹，改用更省地方的提示 */
+  html:has(.layout--teacher) .greeting-toast {
+    right: auto;
+    left: 12px;
+    display: none;
   }
 }
 </style>

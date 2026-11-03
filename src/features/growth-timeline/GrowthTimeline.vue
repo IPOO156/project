@@ -50,9 +50,9 @@ const pendingDeleteId = ref<string | null>(null)
 
 type ViewMode = 'rings' | 'list'
 
-// 首屏按设备初始选择：小屏（<=768px）默认列表视图，桌面默认年轮视图；
-// 之后只响应用户手动切换，不再随窗口尺寸变化。
-const viewMode = ref<ViewMode>(window.innerWidth <= 768 ? 'list' : 'rings')
+// 首屏统一默认列表视图（年轮默认只有装饰、首屏看不到记录）；
+// 年轮保留为用户可切换的选项，之后只响应用户手动切换，不随窗口尺寸变化。
+const viewMode = ref<ViewMode>('list')
 
 function setViewMode(mode: ViewMode) {
   viewMode.value = mode
