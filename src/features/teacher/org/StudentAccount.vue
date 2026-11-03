@@ -248,24 +248,35 @@ onMounted(() => {
         <span class="student-account__total">共 {{ total }} 条</span>
       </div>
       <div class="mc-card__body">
-        <el-table v-loading="loading" class="u-w-full" :data="users" stripe max-height="600">
-          <el-table-column type="index" label="序号" width="55" />
-          <el-table-column prop="userNo" label="学号" width="120" />
-          <el-table-column prop="name" label="姓名" width="100" />
-          <el-table-column label="性别" width="60">
-            <template #default="{ row }">{{ row.genderLabel ?? '-' }}</template>
+        <el-table v-loading="loading" class="u-w-full" :data="users" max-height="600">
+          <el-table-column type="index" label="序号" width="56" align="right" />
+          <el-table-column prop="userNo" label="学号" width="120" class-name="col-secondary" />
+          <el-table-column label="姓名" width="112">
+            <template #default="{ row }">
+              <span class="col-primary">{{ row.name }}</span>
+            </template>
           </el-table-column>
-          <el-table-column label="学院 / 专业 / 班级" min-width="180" show-overflow-tooltip>
+          <el-table-column label="性别" width="64">
+            <template #default="{ row }">
+              <span class="col-secondary">{{ row.genderLabel ?? '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="学院 / 专业 / 班级"
+            min-width="180"
+            show-overflow-tooltip
+            class-name="col-secondary"
+          >
             <template #default="{ row }">{{ row.departmentPath ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="状态" width="70">
+          <el-table-column label="状态" width="88">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
                 {{ row.statusLabel }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="180" align="center" fixed="right">
+          <el-table-column label="操作" width="176" align="right" fixed="right">
             <template #default="{ row }">
               <RowActions>
                 <el-button

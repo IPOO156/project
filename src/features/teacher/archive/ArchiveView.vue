@@ -23,6 +23,7 @@ import { ElMessage } from 'element-plus'
 
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import DensitySwitch from '@/app/layouts/components/DensitySwitch.vue'
 import {
   getArchiveDetail,
   getSemesters,
@@ -256,6 +257,7 @@ onMounted(async () => {
         </p>
       </div>
       <div class="mc-page-head__actions archive-view__head-actions">
+        <DensitySwitch />
         <div class="archive-view__head-chip">
           <span class="archive-view__head-chip-label">维度</span>
           <span class="archive-view__head-chip-value">{{ dimension }}</span>

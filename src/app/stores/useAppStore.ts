@@ -1,6 +1,15 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
+export type TableDensity = 'comfortable' | 'compact'
+
+const TABLE_DENSITY_KEY = 'table_density'
+
+function readTableDensity(): TableDensity {
+  if (typeof localStorage === 'undefined') return 'comfortable'
+  return localStorage.getItem(TABLE_DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable'
+}
+
 /**
  * 全局应用级状态
  *  - 侧边栏折叠 / 移动端检测
@@ -13,6 +22,8 @@ export const useAppStore = defineStore('app', () => {
   const isMobile = ref(false)
   const pageLoading = ref(false)
   const breadcrumbList = ref<{ label: string; path?: string }[]>([])
+  /** 列表密度：只有两档，紧凑档只收紧表格行的上下内边距 */
+  const tableDensity = ref<TableDensity>(readTableDensity())
 
   // getters
   const isSidebarCollapsed = computed(() => sidebarCollapsed.value)
@@ -20,6 +31,16 @@ export const useAppStore = defineStore('app', () => {
   // actions
   function toggleSidebar() {
     sidebarCollapsed.value = !sidebarCollapsed.value
+  }
+
+  function setTableDensity(val: string | number | boolean | undefined) {
+    const next: TableDensity = val === 'compact' ? 'compact' : 'comfortable'
+    tableDensity.value = next
+    try {
+      localStorage.setItem(TABLE_DENSITY_KEY, next)
+    } catch {
+      /* 隐私模式下忽略持久化失败 */
+    }
   }
 
   function setSidebarCollapsed(val: boolean) {
@@ -62,8 +83,10 @@ export const useAppStore = defineStore('app', () => {
     isMobile,
     pageLoading,
     breadcrumbList,
+    tableDensity,
     isSidebarCollapsed,
     toggleSidebar,
+    setTableDensity,
     setSidebarCollapsed,
     setBreadcrumb,
     setPageLoading,

@@ -36,9 +36,9 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
       <span class="archive-view__count">{{ rows.length }} 个组织</span>
     </div>
     <div class="mc-card__body">
-      <el-table v-loading="loading" class="u-w-full" :data="rows" stripe>
+      <el-table v-loading="loading" class="u-w-full" :data="rows">
         <el-table-column prop="orgName" label="组织" min-width="160" />
-        <el-table-column label="学生数" width="90" align="center">
+        <el-table-column label="学生数" width="88" align="right">
           <template #default="{ row }">
             <span class="mc-num">{{ row.studentCount ?? '-' }}</span>
           </template>

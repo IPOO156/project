@@ -3,6 +3,7 @@ import type { AuditPendingItem, AuditPendingQuery } from '@/shared/types/teacher
 import { ElMessage } from 'element-plus'
 import { CheckCheck, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
+import DensitySwitch from '@/app/layouts/components/DensitySwitch.vue'
 import { batchApproveAuditTasks, listAuditPending } from '@/shared/api/teacher-api'
 import { useDebounce } from '@/shared/composables/useDebounce'
 import { AUDIT_BUSINESS_TYPES } from '@/shared/constants/dict'
@@ -171,6 +172,9 @@ onMounted(() => void loadList())
           审核授权范围内学生提交的档案 / 奖项 / 职业规划申报材料，处理结果将实时反馈给学生。
         </p>
       </div>
+      <div class="mc-page-head__actions">
+        <DensitySwitch />
+      </div>
     </div>
 
     <div class="mc-filter-bar">
@@ -223,7 +227,6 @@ onMounted(() => void loadList())
         <el-table
           v-loading="loading"
           :data="list"
-          stripe
           row-key="taskId"
           @selection-change="onSelectionChange"
         >
@@ -238,15 +241,15 @@ onMounted(() => void loadList())
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="申请人" width="130">
+          <el-table-column label="申请人" width="128">
             <template #default="{ row }">
               <div class="audit-applicant">
-                <span>{{ (row as AuditPendingItem).applicantName }}</span>
+                <span class="col-primary">{{ (row as AuditPendingItem).applicantName }}</span>
                 <span class="audit-applicant__no">{{ (row as AuditPendingItem).applicantNo }}</span>
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="班级 / 专业" min-width="185">
+          <el-table-column label="班级 / 专业" min-width="184">
             <template #default="{ row }">
               <div class="audit-class">
                 <span class="audit-class__name">{{
@@ -261,17 +264,17 @@ onMounted(() => void loadList())
               (row as AuditPendingItem).semesterName ?? '-'
             }}</template>
           </el-table-column>
-          <el-table-column label="提交时间" width="155" class-name="audit-time">
+          <el-table-column label="提交时间" width="156" class-name="audit-time">
             <template #default="{ row }">{{ submitTime(row as AuditPendingItem) }}</template>
           </el-table-column>
-          <el-table-column label="状态" width="90" align="center">
+          <el-table-column label="状态" width="88">
             <template #default="{ row }">
               <el-tag :type="statusTagType((row as AuditPendingItem).status)" size="small">
                 {{ (row as AuditPendingItem).statusLabel }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="重复" width="70" align="center">
+          <el-table-column label="重复" width="72">
             <template #default="{ row }">
               <el-tag
                 v-if="(row as AuditPendingItem).duplicateCheckStatus === 1"
@@ -284,7 +287,7 @@ onMounted(() => void loadList())
               <span v-else class="audit-nodata">-</span>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="90" align="center" fixed="right">
+          <el-table-column label="操作" width="96" align="right" fixed="right">
             <template #default="{ row }">
               <el-button
                 text
@@ -376,8 +379,8 @@ onMounted(() => void loadList())
   line-height: 1.5;
 
   &__no {
-    font-size: 12px;
-    color: var(--el-text-color-placeholder);
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
   }
 }
 

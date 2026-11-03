@@ -114,6 +114,29 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* 列层级：主标识列（姓名/学号/状态）600，辅助信息 13px 辅助色 */
+  .col-primary {
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  .col-secondary {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+  }
+
+  /* 扫读只留横向分隔线：不画竖线，也不做整格网格 */
+  &.el-table--border,
+  &.el-table--border .el-table__inner-wrapper::before,
+  &.el-table--border .el-table__cell {
+    border: none;
+  }
+
+  /* 斑马纹与 hover 只留一种：条纹行与普通行同底色，高亮交给 hover */
+  .el-table__row--striped td.el-table__cell {
+    background-color: var(--el-bg-color);
+  }
+
   th.el-table__cell {
     background-color: var(--el-fill-color-light);
     font-weight: 600;
@@ -122,10 +145,6 @@
 
   .el-table__row {
     transition: background-color 0.15s;
-
-    &:hover > td.el-table__cell {
-      background-color: var(--el-fill-color-lighter);
-    }
   }
 }
 

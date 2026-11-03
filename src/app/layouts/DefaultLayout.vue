@@ -131,6 +131,7 @@ watch(isLoading, async (loading) => {
 <template>
   <div
     class="layout"
+    :data-density="appStore.tableDensity"
     :class="{
       'layout--collapsed': appStore.isSidebarCollapsed,
       'layout--mobile': appStore.isMobile,
