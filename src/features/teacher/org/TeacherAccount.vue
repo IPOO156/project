@@ -240,7 +240,7 @@ onMounted(() => void load())
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="180" align="center" fixed="right">
+          <el-table-column label="操作" width="300" align="center" fixed="right">
             <template #default="{ row }">
               <RowActions>
                 <el-button
@@ -254,18 +254,22 @@ onMounted(() => void load())
                 <el-button text type="primary" size="small" @click="openEdit(row as UserListItem)">
                   编辑
                 </el-button>
-                <template #more>
-                  <el-dropdown-item @click="openPasswordDialog(row as UserListItem)">
-                    重置密码
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    divided
-                    :class="{ 'row-actions__danger': row.status === 1 }"
-                    @click="handleToggleStatus(row as UserListItem)"
-                  >
-                    {{ row.status === 1 ? '禁用账号' : '启用账号' }}
-                  </el-dropdown-item>
-                </template>
+                <el-button
+                  text
+                  type="warning"
+                  size="small"
+                  @click="openPasswordDialog(row as UserListItem)"
+                >
+                  重置密码
+                </el-button>
+                <el-button
+                  text
+                  :type="row.status === 1 ? 'danger' : 'success'"
+                  size="small"
+                  @click="handleToggleStatus(row as UserListItem)"
+                >
+                  {{ row.status === 1 ? '禁用账号' : '启用账号' }}
+                </el-button>
               </RowActions>
             </template>
           </el-table-column>
