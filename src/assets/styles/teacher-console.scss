@@ -642,8 +642,10 @@ html.dark #app .layout--teacher {
   --el-color-primary-light-9: #172554;
   --el-color-primary-dark-2: #2563eb;
 
-  --mc-page-bg: #0f1115;
-  --mc-border: #2b3038;
+  // 页面/卡片/边框统一沿用 themes.css 的夜间 token（#0b1120 / #0f172a），
+  // 不再单独起一套 #0f1115 / #17191e 深灰，避免与学生壳、年轮页出现色相断层
+  --mc-page-bg: var(--el-bg-color-page);
+  --mc-border: #3d4c63;
 
   /* 深色语义状态色：兼顾深底对比度 */
   --mc-success: #4ade80;
@@ -659,21 +661,24 @@ html.dark #app .layout--teacher {
   --mc-info-bg: #121d31;
   --mc-info-border: #24406b;
 
-  --el-bg-color-page: #0f1115;
-  --el-bg-color: #17191e;
-  --el-bg-color-overlay: #1f2329;
-  --el-text-color-primary: #e5e7eb;
-  --el-text-color-regular: #d1d5db;
-  --el-text-color-secondary: #9ca3af;
-  --el-text-color-placeholder: #9ca3af;
-  --el-text-color-disabled: #4b5563;
-  --el-border-color: #2b3038;
-  --el-border-color-light: #2b3038;
-  --el-border-color-lighter: #23272e;
-  --el-fill-color: #23272e;
-  --el-fill-color-light: #1c1f25;
-  --el-fill-color-lighter: #191c21;
-  --el-fill-color-blank: #17191e;
+  /* 背景/边框/文字色阶：数值与 themes.css 夜间 token 对齐（页面 #0b1120 / 卡片 #0f172a）。
+     必须在此显式重设：上方 `#app .layout--teacher` 亮色块已在元素级写入 #fff/#f6f7f9，
+     仅靠 html 上的变量继承会被元素级亮色值盖住。 */
+  --el-bg-color-page: #0b1120;
+  --el-bg-color: #0f172a;
+  --el-bg-color-overlay: #1e293b;
+  --el-text-color-primary: #f1f5f9;
+  --el-text-color-regular: #cbd5e1;
+  --el-text-color-secondary: #94a3b8;
+  --el-text-color-placeholder: #7c8ba1;
+  --el-text-color-disabled: #475569;
+  --el-border-color: #3d4c63;
+  --el-border-color-light: #3d4c63;
+  --el-border-color-lighter: #2b394d;
+  --el-fill-color: #1e293b;
+  --el-fill-color-light: #1a2433;
+  --el-fill-color-lighter: #151d2b;
+  --el-fill-color-blank: #0f172a;
 
   .layout__content {
     background-color: var(--mc-page-bg);
@@ -681,7 +686,7 @@ html.dark #app .layout--teacher {
   }
 
   .sidebar {
-    background-color: #14161a;
+    background-color: var(--el-bg-color-page);
     border-right-color: var(--mc-border);
 
     /* 深色底选中项：浅蓝文字（--el-color-primary-light-3 = #60a5fa） */
@@ -759,8 +764,8 @@ html.dark #app .layout--teacher {
   }
 
   .el-table {
-    --el-table-header-bg-color: #1c1f25;
-    --el-table-row-hover-bg-color: #1c1f25;
+    --el-table-header-bg-color: #1e293b;
+    --el-table-row-hover-bg-color: #1a2433;
     --el-table-border-color: var(--el-border-color-lighter);
 
     th.el-table__cell {
@@ -772,7 +777,7 @@ html.dark #app .layout--teacher {
     }
 
     .el-table__row--striped td.el-table__cell {
-      background-color: #191c21;
+      background-color: #151d2b;
     }
   }
 
@@ -781,9 +786,9 @@ html.dark #app .layout--teacher {
   }
 
   .el-tag--info:not(.el-tag--dark) {
-    --el-tag-text-color: #d1d5db;
-    --el-tag-bg-color: #23272e;
-    --el-tag-border-color: #353b45;
+    --el-tag-text-color: #cbd5e1;
+    --el-tag-bg-color: #1e293b;
+    --el-tag-border-color: #3d4c63;
   }
 
   .mc-filter-bar {

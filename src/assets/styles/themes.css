@@ -75,18 +75,20 @@
   --z-ripple: 400;
 }
 
-[data-theme='dark'] {
-  /* Element Plus 变量覆盖（夜间） */
+html[data-theme='dark'] {
+  /* Element Plus 变量覆盖（夜间）
+     选择器用 html[data-theme='dark']（0,1,1）压过 EP 的 html.dark（0,1,0 类+元素=0,1,1），
+     并与 main.ts 引入的 dark/css-vars.css 同级、靠后加载取胜 */
   --el-bg-color: #0f172a;
   --el-bg-color-page: #0b1120;
   --el-bg-color-overlay: #1e293b;
   --el-text-color-primary: #f1f5f9;
   --el-text-color-secondary: #94a3b8;
-  --el-text-color-placeholder: #64748b;
+  --el-text-color-placeholder: #7c8ba1;
   --el-text-color-disabled: #475569;
-  --el-border-color: #334155;
-  --el-border-color-light: #334155;
-  --el-border-color-lighter: #1e293b;
+  --el-border-color: #3d4c63;
+  --el-border-color-light: #3d4c63;
+  --el-border-color-lighter: #2b394d;
   --el-fill-color: #1e293b;
   --el-fill-color-light: #1a2433;
   --el-fill-color-lighter: #151d2b;
@@ -112,8 +114,8 @@
   --text-mid: #cbd5e1;
   --bg-parchment: #0f172a;
 
-  --gt-bg-page: #0f172a;
-  --gt-bg-page-rgb: 15 23 42;
+  --gt-bg-page: var(--el-bg-color-page);
+  --gt-bg-page-rgb: 11 17 32;
   --gt-card: #1e293b;
   --gt-card-rgb: 30 41 59;
   --gt-bark-rgb: 96 165 250;
