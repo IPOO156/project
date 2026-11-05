@@ -154,7 +154,7 @@ const { pendingItems, quickLinks, todayDate } = useDashboardOption({
   canAccessModule,
 })
 
-const pendingTotal = computed(() => dashboardOverview.value?.pendingStats.totalPending ?? null)
+const pendingTotal = computed(() => dashboardOverview.value?.pendingStats?.totalPending ?? null)
 
 const pendingMeta = computed(() => {
   const stats = dashboardOverview.value?.pendingStats
