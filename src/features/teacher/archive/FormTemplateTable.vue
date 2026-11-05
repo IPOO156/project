@@ -106,7 +106,7 @@ const keyword = defineModel<string>('keyword', { required: true })
         <el-table-column label="更新时间" width="145">
           <template #default="{ row }">{{ formatDateTime(row.updatedAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="132" align="center" fixed="right">
+        <el-table-column label="操作" width="240" align="center" fixed="right">
           <template #default="{ row }">
             <RowActions>
               <el-button
@@ -116,22 +116,23 @@ const keyword = defineModel<string>('keyword', { required: true })
                 @click="emit('edit', row as FormTemplateItem)"
                 >编辑</el-button
               >
-              <template #more>
-                <el-dropdown-item
-                  v-if="row.isDefault !== 1"
-                  @click="emit('setDefault', row as FormTemplateItem)"
-                >
-                  设为默认
-                </el-dropdown-item>
-                <el-dropdown-item
-                  divided
-                  class="row-actions__danger"
-                  :disabled="deletingId !== null"
-                  @click="emit('delete', row as FormTemplateItem)"
-                >
-                  {{ deletingId === (row as FormTemplateItem).id ? '删除中…' : '删除' }}
-                </el-dropdown-item>
-              </template>
+              <el-button
+                v-if="row.isDefault !== 1"
+                text
+                type="primary"
+                size="small"
+                @click="emit('setDefault', row as FormTemplateItem)"
+                >设为默认</el-button
+              >
+              <el-button
+                text
+                type="danger"
+                size="small"
+                :disabled="deletingId !== null"
+                @click="emit('delete', row as FormTemplateItem)"
+              >
+                {{ deletingId === (row as FormTemplateItem).id ? '删除中…' : '删除' }}
+              </el-button>
             </RowActions>
           </template>
         </el-table-column>

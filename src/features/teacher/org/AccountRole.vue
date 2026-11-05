@@ -106,7 +106,7 @@ const { activeTab } = useTabRoute<TabKey>(availableKeys, 'student')
         :name="tab.key"
         lazy
       >
-        <component :is="tab.component" />
+        <component :is="tab.component" :embed="true" />
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -114,11 +114,7 @@ const { activeTab } = useTabRoute<TabKey>(availableKeys, 'student')
 
 <style scoped lang="scss">
 .account-role {
-  // 子页面自带 mc-page-head（含标题与操作按钮），Tabs 内容区顶部留白衔接
-  &__tabs {
-    :deep(.el-tabs__content) {
-      padding-top: $spacing-md;
-    }
-  }
+  // 子页面作为 hub 嵌入时不再渲染自己的 mc-page-head，
+  // tab 内容直接跟下方的搜索栏 / 卡片衔接，无需额外 padding。
 }
 </style>

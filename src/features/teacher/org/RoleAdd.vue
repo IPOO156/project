@@ -2,15 +2,18 @@
 /**
  * RoleAdd - 管理权限 · 新增账号
  *
- * 对接后端 POST /admin/users 创建管理员 / 审核员（辅导员）/ 课任教师 / 学生账号。
+ * 对接后端 POST /admin/users 创建管理员 / 教师 / 学生账号。
+ *
+ * 账号类型 radio 与后端角色码严格对齐（admin / teacher / student 三种）；
+ * 后端角色表里没有"审核员"这个角色码——审核能力由审批流程节点配置里决定
+ * 哪个角色可以审核（见"审批流程"页的步骤配置）。前端不再暴露审核相关开关。
+ *
  * schoolId 取登录者 /auth/me 的 schoolId；学院下拉来自登录者授权范围（scopeType=2）；
  * 学生需指定班级（后端 UserManageService.createUser：roleCodes 含 student 时
  * classId 必填，缺则报「学生角色必须指定班级ID」）。
  *
- * ⚠️ roleIds 按**角色编码**解析（GET /admin/roles），不再只依赖硬编码数字 id：
- *   后端判定学生/教师看的是 roles.code（isStudent = roleCodes.contains("student")），
- *   按码取 id 才能与库内实际角色一一对应；解析失败时退回历史硬编码口径（不含学生）。
- * 审核员 = 教师 + 辅导员双角色（辅导员也是教师，与 RoleAdjust 口径一致）。
+ * roleIds 按**角色编码**解析（GET /admin/roles），后端按角色码判定身份。
+ * 任一编码在 /admin/roles 里找不到即视为解析失败，兜底退回 ROLE_ID_FALLBACK。
  */
 import { ElMessage } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
@@ -18,12 +21,13 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { createUser, listAllClasses, listAllRoles } from '@/shared/api/teacher-api'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 
+const props = defineProps<{ embed?: boolean }>()
+
 const { me } = useTeacherMe()
 
-/** 账号类型 → 后端角色编码（后端按编码判定身份，teacher/counselor/student/admin） */
+/** 账号类型 → 后端角色编码（与 /admin/roles 下发的 roleCode 严格对齐） */
 const ROLE_CODES: Record<string, string[]> = {
   admin: ['admin'],
-  reviewer: ['teacher', 'counselor'], // 审核员 = 教师 + 辅导员
   teacher: ['teacher'],
   student: ['student'],
 }
@@ -34,14 +38,12 @@ const ROLE_CODES: Record<string, string[]> = {
  */
 const ROLE_ID_FALLBACK: Record<string, number[]> = {
   admin: [2],
-  reviewer: [3, 4],
   teacher: [3],
 }
 
 const ROLE_LABELS: Record<string, string> = {
   admin: '管理员',
-  reviewer: '审核员',
-  teacher: '课任教师',
+  teacher: '教师',
   student: '学生',
 }
 
@@ -108,7 +110,7 @@ onMounted(async () => {
 
 async function handleAdd() {
   if (!form.userNo.trim() || !form.name.trim()) {
-    ElMessage.warning('请填写用户名和真实姓名')
+    ElMessage.warning('请填写学号/工号和真实姓名')
     return
   }
   if (!form.password) {
@@ -124,7 +126,7 @@ async function handleAdd() {
     return
   }
   if (form.role === 'teacher' && !form.collegeId) {
-    ElMessage.warning('课任教师账号需选择所属学院')
+    ElMessage.warning('教师账号需选择所属学院')
     return
   }
   // 后端对含 student 编码的角色强制要求 classId（写入 student_profiles.class_id）
@@ -175,13 +177,13 @@ async function handleAdd() {
 
 <template>
   <div class="mc-page">
-    <div class="mc-page-head">
+    <div v-if="!props.embed" class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">新增账号</h2>
         <p class="mc-page-head__desc">
-          添加管理员、审核员（辅导员）、课任教师、学生账号，数据写入后端 /admin/users。
-          学生账号需选择所属班级；目前仅支持逐个创建，批量导入学生尚未提供（后端无导入接口），
-          已有的学生账号请在「学生账号」页查看与维护。
+          添加管理员、教师、学生账号，数据写入后端 /admin/users。 账号类型严格对齐后端角色码（admin
+          / teacher / student）。 审核能力由管理员在"审批流程 → 步骤配置"里指定哪个角色可以审核，
+          创建账号页不暴露独立的审核开关。学生账号需选择所属班级。
         </p>
       </div>
     </div>
@@ -194,8 +196,8 @@ async function handleAdd() {
         <el-form :model="form" label-width="100px" class="role-add__form">
           <el-row :gutter="16">
             <el-col :span="12">
-              <el-form-item label="用户名" required>
-                <el-input v-model="form.userNo" placeholder="登录用户名（学号/工号）" />
+              <el-form-item label="学号 / 工号" required>
+                <el-input v-model="form.userNo" placeholder="学号（学生）或工号（教师/管理员）" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -224,8 +226,7 @@ async function handleAdd() {
           <el-form-item label="账号类型" required>
             <el-radio-group v-model="form.role">
               <el-radio value="admin">管理员</el-radio>
-              <el-radio value="reviewer">审核员</el-radio>
-              <el-radio value="teacher">课任教师</el-radio>
+              <el-radio value="teacher">教师</el-radio>
               <el-radio value="student">学生</el-radio>
             </el-radio-group>
           </el-form-item>

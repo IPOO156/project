@@ -282,7 +282,7 @@ onMounted(() => void loadList())
             </template>
           </el-table-column>
           <!-- 1024 宽下表格横向滚动时，操作列固定在右侧，避免看不到行操作 -->
-          <el-table-column label="操作" width="130" align="center" fixed="right">
+          <el-table-column label="操作" width="300" align="center" fixed="right">
             <template #default="{ row }">
               <RowActions>
                 <el-button
@@ -293,28 +293,32 @@ onMounted(() => void loadList())
                 >
                   详情
                 </el-button>
-                <template #more>
-                  <el-dropdown-item @click="handleEdit(row as ScheduledTaskItem)">
-                    编辑
-                  </el-dropdown-item>
-                  <!-- 手动执行会真实跑一次任务，属低频且影响面较大的操作，收进「更多」。 -->
-                  <el-dropdown-item
-                    :disabled="triggeringId !== null"
-                    @click="handleTrigger(row as ScheduledTaskItem)"
-                  >
-                    {{
-                      triggeringId === (row as ScheduledTaskItem).taskId ? '执行中…' : '立即执行'
-                    }}
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    divided
-                    class="row-actions__danger"
-                    :disabled="deletingId !== null"
-                    @click="handleDelete(row as ScheduledTaskItem)"
-                  >
-                    {{ deletingId === (row as ScheduledTaskItem).taskId ? '删除中…' : '删除' }}
-                  </el-dropdown-item>
-                </template>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="handleEdit(row as ScheduledTaskItem)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  :disabled="triggeringId !== null"
+                  @click="handleTrigger(row as ScheduledTaskItem)"
+                >
+                  {{ triggeringId === (row as ScheduledTaskItem).taskId ? '执行中…' : '立即执行' }}
+                </el-button>
+                <el-button
+                  text
+                  type="danger"
+                  size="small"
+                  :disabled="deletingId !== null"
+                  @click="handleDelete(row as ScheduledTaskItem)"
+                >
+                  {{ deletingId === (row as ScheduledTaskItem).taskId ? '删除中…' : '删除' }}
+                </el-button>
               </RowActions>
             </template>
           </el-table-column>
