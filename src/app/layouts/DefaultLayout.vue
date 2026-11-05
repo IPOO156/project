@@ -43,7 +43,7 @@ const drawerVisible = ref(false)
 
 /**
  * 管理员端与教师端共用同一套路由，但视觉语言要分开：
- * 管理员＝治理总览（石墨蓝 + 中性灰 + 紧凑表格），教师＝待审队列（墨蓝 + 琥珀）。
+ * 管理员＝治理总览（石墨蓝 + 中性灰），教师＝待审队列（墨蓝 + 琥珀）。
  * 这里只落一个 layout--admin 类，具体差异集中在 teacher-console.scss；
  * 学生端 isAdmin 恒为 false，不会命中任何管理员样式。
  */
@@ -131,7 +131,6 @@ watch(isLoading, async (loading) => {
 <template>
   <div
     class="layout"
-    :data-density="appStore.tableDensity"
     :class="{
       'layout--collapsed': appStore.isSidebarCollapsed,
       'layout--mobile': appStore.isMobile,
@@ -600,7 +599,7 @@ html.dark .layout__loading {
   }
 }
 
-// 移动端竖屏：375px 以下（紧凑间距，禁止横向滚动）
+// 移动端竖屏：375px 以下（小间距，禁止横向滚动）
 @media (max-width: 375px) {
   .layout__content {
     padding: $spacing-sm;

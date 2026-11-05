@@ -338,7 +338,7 @@ function handleMenuSelect(index: string) {
     min-width: auto;
   }
 
-  // ── 教师端分组菜单：更紧凑的行高、无右侧高亮条，子项以圆点引导 ──
+  // ── 教师端分组菜单：较小的行高、无右侧高亮条，子项以圆点引导 ──
   :deep(.sidebar__el-menu--grouped) {
     padding: 8px 0;
 

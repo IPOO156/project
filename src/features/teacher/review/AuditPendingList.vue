@@ -3,7 +3,6 @@ import type { AuditPendingItem, AuditPendingQuery } from '@/shared/types/teacher
 import { ElMessage } from 'element-plus'
 import { CheckCheck, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
-import DensitySwitch from '@/app/layouts/components/DensitySwitch.vue'
 import { batchApproveAuditTasks, listAuditPending } from '@/shared/api/teacher-api'
 import { useDebounce } from '@/shared/composables/useDebounce'
 import { AUDIT_BUSINESS_TYPES } from '@/shared/constants/dict'
@@ -171,9 +170,6 @@ onMounted(() => void loadList())
         <p class="mc-page-head__desc">
           审核授权范围内学生提交的档案 / 奖项 / 职业规划申报材料，处理结果将实时反馈给学生。
         </p>
-      </div>
-      <div class="mc-page-head__actions">
-        <DensitySwitch />
       </div>
     </div>
 

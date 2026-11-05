@@ -10,7 +10,7 @@
 //   - 主色：墨蓝 #1e3a5f（与按钮 token 同源）；页面底 #f6f7f9，面板白底，1px #e5e7eb 边框
 //   - 圆角两档：控件 6px / 容器 10px；无渐变、无装饰高光、无卡片悬浮位移
 //   - 文字六级：28 页标题 / 20 区块 / 16 卡片 / 14 正文 / 13 辅助 / 12 单位；字重 400/500/600
-//   - 间距走 8px 主网格（4 / 12 为紧凑档）；表格行高 1.5 档（舒适 45px / 紧凑 37px），数字等宽
+//   - 间距走 8px 主网格（4 / 12 为小间距）；表格行高 1.5 档（教师 45px / 管理员 37px），数字等宽
 //   - 动效只保留 120–160ms 的悬停与浮层反馈；书册光标由 DefaultLayout 关闭
 // =============================================================================
 
@@ -196,11 +196,6 @@
     .el-table-fixed-column--right {
       background-color: var(--el-bg-color);
     }
-  }
-
-  /* 紧凑档：行内高与上下内边距同步收紧（表格行高 12 → 8，45px → 37px） */
-  @at-root #app .layout.layout--teacher[data-density='compact'] .el-table td.el-table__cell {
-    padding: $spacing-sm 0;
   }
 
   .el-tag {
@@ -687,7 +682,7 @@ html.dark #app .layout--teacher {
 }
 
 // =============================================================================
-// 管理员端 —— 石墨蓝 + 中性灰 + 紧凑表格
+// 管理员端 —— 石墨蓝 + 中性灰
 // 与教师端共用路由，但治理者的心理模型是「看全局 / 查异常 / 下发权限」，
 // 不是「逐条审材料」，所以主色更冷、留白更紧、表格行高更矮。
 // 学生端 isAdmin 恒 false，不会命中本节任何规则。
@@ -712,7 +707,7 @@ html:not(.dark) #app .layout--admin {
 }
 
 #app .layout--admin {
-  /* 治理页信息密度更高：区块间距走紧凑档 12px（4px 子网格） */
+  /* 治理页区块间距走 12px（4px 子网格） */
   .mc-page {
     gap: $spacing-md;
   }
@@ -727,7 +722,7 @@ html:not(.dark) #app .layout--admin {
     }
   }
 
-  /* 紧凑表格：37px 行高（21px 行内高 + 上下 8px），首屏可多看到 2–3 行 */
+  /* 表格：37px 行高（21px 行内高 + 上下 8px），首屏可多看到 2–3 行 */
   .el-table {
     font-size: $font-size-base;
     --el-table-header-bg-color: #f9fafb;
@@ -754,11 +749,6 @@ html:not(.dark) #app .layout--admin {
     &.el-table--border .el-table__cell {
       border: none;
     }
-  }
-
-  /* 管理员固定紧凑档；教师端可通过开关在舒适/紧凑之间切换 */
-  &[data-density='compact'] .el-table th.el-table__cell {
-    height: 40px;
   }
 
   .el-tag {
