@@ -435,19 +435,6 @@
       color: var(--el-text-color-secondary);
       font-weight: $font-weight-medium;
     }
-
-    .el-select__wrapper,
-    .el-input__wrapper {
-      border-radius: $radius-base;
-      box-shadow: 0 0 0 1px var(--mc-border) inset;
-      transition: box-shadow 0.12s $ease-standard;
-
-      &.is-focus {
-        box-shadow:
-          0 0 0 1px var(--el-color-primary) inset,
-          0 0 0 3px rgba(29, 78, 216, 0.1);
-      }
-    }
   }
 
   .mc-card {
@@ -549,17 +536,6 @@
       line-height: $line-height-aux;
       color: var(--el-text-color-secondary);
       max-width: 420px;
-    }
-  }
-
-  /* ── 键盘可达性：墨蓝焦点环（按钮已在 _buttons.scss 统一，这里只管表单控件） ── */
-  .el-input__wrapper,
-  .el-select__wrapper,
-  .el-radio-button__inner,
-  .el-checkbox-button__inner {
-    &:focus-visible {
-      outline: 2px solid var(--mc-btn-focus);
-      outline-offset: 2px;
     }
   }
 
@@ -692,17 +668,6 @@ html.dark #app .layout--teacher {
   .mc-filter-bar {
     background: var(--el-bg-color);
     border-color: var(--mc-border);
-
-    .el-select__wrapper,
-    .el-input__wrapper {
-      box-shadow: 0 0 0 1px var(--el-border-color) inset;
-
-      &.is-focus {
-        box-shadow:
-          0 0 0 1px var(--el-color-primary) inset,
-          0 0 0 3px rgba(59, 130, 246, 0.18);
-      }
-    }
   }
 
   .mc-empty__icon {
@@ -830,17 +795,6 @@ html:not(.dark) #app .layout--admin {
     padding: 0 8px;
     border-radius: 4px;
     line-height: 1.5;
-  }
-
-  .el-input__wrapper,
-  .el-select__wrapper,
-  .el-textarea__inner {
-    border-radius: 6px;
-  }
-
-  .el-input__wrapper,
-  .el-select__wrapper {
-    padding: 1px 12px;
   }
 
   .el-badge__content {

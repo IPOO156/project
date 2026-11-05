@@ -179,6 +179,42 @@
   --mc-btn-weight-strong: 600;
   --mc-btn-duration: 120ms;
   --mc-btn-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── 控制层（批 1）：输入 / 选择 / 标签 / 复选单选 ── */
+  --mc-ctl-h: 32px;
+  --mc-ctl-h-touch: 40px;
+  --mc-ctl-px: 12px;
+  --mc-ctl-radius: 6px;
+  --mc-ctl-font: 14px;
+
+  --mc-ctl-surface: #ffffff;
+  --mc-ctl-line: #adbacb;
+  --mc-ctl-line-hover: #8695a9;
+  --mc-ctl-line-active: #56657a;
+  --mc-ctl-line-focus: #1e3a5f;
+  --mc-ctl-line-float: #8695a9;
+  --mc-ctl-line-error: #b91c1c;
+  --mc-ctl-hover: #f1f5f9;
+
+  --mc-ctl-text: #1e293b;
+  --mc-ctl-label: #334155;
+  --mc-ctl-placeholder: #5f6b7d;
+
+  --mc-ctl-disabled-surface: #f1f5f9;
+  --mc-ctl-disabled-line: #e2e8f0;
+  --mc-ctl-disabled-text: #94a3b8;
+  --mc-ctl-focus: #1e3a5f;
+
+  --mc-ctl-duration: 120ms;
+  --mc-ctl-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --mc-tag-h: 24px;
+  --mc-tag-px: 8px;
+  --mc-tag-font: 12px;
+
+  --mc-choice-size: 16px;
+  --mc-choice-fill: #1e3a5f;
+  --mc-choice-on: #ffffff;
 }
 
 [data-theme='dark'] {
@@ -207,4 +243,27 @@
   --mc-btn-disabled-surface: #141d2c;
   --mc-btn-disabled-line: #26334a;
   --mc-btn-disabled-label: #5a6b82;
+}
+
+:root[data-theme='dark'] {
+  --mc-ctl-surface: #111b2c;
+  --mc-ctl-line: #3d4c63;
+  --mc-ctl-line-hover: #556882;
+  --mc-ctl-line-active: #8296ae;
+  --mc-ctl-line-focus: #93c5fd;
+  --mc-ctl-line-float: #556882;
+  --mc-ctl-line-error: #f87171;
+  --mc-ctl-hover: #1a2638;
+
+  --mc-ctl-text: #f1f5f9;
+  --mc-ctl-label: #cbd5e1;
+  --mc-ctl-placeholder: #7c8ba1;
+
+  --mc-ctl-disabled-surface: #141d2c;
+  --mc-ctl-disabled-line: #26334a;
+  --mc-ctl-disabled-text: #5a6b82;
+  --mc-ctl-focus: #93c5fd;
+
+  --mc-choice-fill: #24466f;
+  --mc-choice-on: #f1f5f9;
 }

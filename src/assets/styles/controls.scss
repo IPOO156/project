@@ -1,0 +1,224 @@
+/**
+ * 控制层「素面」—— 教师端 / 管理员端专用（批 1）
+ *
+ * 作用域：只在 #app :is(.layout--teacher, .layout--admin) 下生效。
+ * 学生端壳没有这两个类（DefaultLayout.vue:136-141），因此不会命中，零泄漏。
+ * 浮层（teleport 到 body）用 html:has(#app :is(...)) 兜住，禁止裸写 .el-popper。
+ * 语言：平涂面 + 1px 实边 + 2px 实描边焦点框；桌面 32 / ≤768 40；圆角 6；过渡 120ms。
+ */
+
+/* ══════════════════════════════════════════════════════════════════
+   A. 输入框 —— el-input（el-input-number / el-date-picker 共用外壳）
+
+   EP 把 --el-input-* 声明在 .el-input 自身选择器上（el-input.css），
+   写在 .layout--teacher 父级只能命中少数「未被组件声明」的变量，
+   所以必须下压到 .el-input 元素本身。
+   ══════════════════════════════════════════════════════════════════ */
+
+#app :is(.layout--teacher, .layout--admin) .el-input {
+  --el-input-height: var(--mc-ctl-h);
+  --el-input-text-color: var(--mc-ctl-text);
+  --el-input-placeholder-color: var(--mc-ctl-placeholder);
+  --el-input-icon-color: var(--mc-ctl-placeholder);
+  --el-input-clear-hover-color: var(--mc-ctl-line-hover);
+  --el-input-border-color: var(--mc-ctl-line);
+  --el-input-hover-border-color: var(--mc-ctl-line-hover);
+  --el-input-focus-border-color: var(--mc-ctl-line-focus);
+  --el-input-border-radius: var(--mc-ctl-radius);
+  --el-input-bg-color: var(--mc-ctl-surface);
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-input__wrapper {
+  padding: 1px var(--mc-ctl-px);
+  transition:
+    box-shadow var(--mc-ctl-duration) var(--mc-ctl-ease),
+    background-color var(--mc-ctl-duration) var(--mc-ctl-ease);
+}
+
+/* 焦点：1px 面线 + 2px 实描边。:focus-within 保证鼠标点击也显示，
+   .is-focus 兜住 EP 自身的类名切换。 */
+#app :is(.layout--teacher, .layout--admin) .el-input__wrapper:focus-within,
+#app :is(.layout--teacher, .layout--admin) .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px var(--mc-ctl-line-focus) inset;
+  outline: 2px solid var(--mc-ctl-focus);
+  outline-offset: 2px;
+}
+
+/* 禁用：面 / 边 / 字三档独立，不用 EP 默认蓝灰 */
+#app :is(.layout--teacher, .layout--admin) .el-input.is-disabled .el-input__wrapper {
+  background-color: var(--mc-ctl-disabled-surface);
+  box-shadow: 0 0 0 1px var(--mc-ctl-disabled-line) inset;
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-input.is-disabled .el-input__inner {
+  color: var(--mc-ctl-disabled-text);
+  -webkit-text-fill-color: var(--mc-ctl-disabled-text);
+}
+
+/* 文本域：EP 用独立元素 .el-textarea__inner，不吃 .el-input 的变量，必须单写。 */
+#app :is(.layout--teacher, .layout--admin) .el-textarea__inner {
+  border-radius: var(--mc-ctl-radius);
+  box-shadow: 0 0 0 1px var(--mc-ctl-line) inset;
+  background-color: var(--mc-ctl-surface);
+  color: var(--mc-ctl-text);
+  padding: 8px var(--mc-ctl-px);
+  transition: box-shadow var(--mc-ctl-duration) var(--mc-ctl-ease);
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px var(--mc-ctl-line-hover) inset;
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px var(--mc-ctl-line-focus) inset;
+  outline: 2px solid var(--mc-ctl-focus);
+  outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   B. 选择器 —— el-select（含 el-select-v2 的 __wrapper 结构）
+
+   .el-select__wrapper 的静止边在 EP 里写死 box-shadow: 0 0 0 1px
+   var(--el-border-color) inset，没有 select 专属的「静止边」变量；
+   因此这里显式写 box-shadow，不通过 --el-border-color 全局改（会波及卡片/表格）。
+   ══════════════════════════════════════════════════════════════════ */
+
+#app :is(.layout--teacher, .layout--admin) .el-select {
+  --el-select-border-color-hover: var(--mc-ctl-line-hover);
+  --el-select-input-focus-border-color: var(--mc-ctl-line-focus);
+  --el-select-disabled-border: var(--mc-ctl-disabled-line);
+  --el-select-disabled-color: var(--mc-ctl-disabled-text);
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-select__wrapper {
+  min-height: var(--mc-ctl-h);
+  padding: 0 var(--mc-ctl-px);
+  background-color: var(--mc-ctl-surface);
+  box-shadow: 0 0 0 1px var(--mc-ctl-line) inset;
+  transition:
+    box-shadow var(--mc-ctl-duration) var(--mc-ctl-ease),
+    background-color var(--mc-ctl-duration) var(--mc-ctl-ease);
+}
+
+/* 悬停：EP 的类名是 .is-hovering（不是 :hover），且被 .is-focused 互斥 */
+#app :is(.layout--teacher, .layout--admin) .el-select__wrapper.is-hovering:not(.is-focused) {
+  box-shadow: 0 0 0 1px var(--mc-ctl-line-hover) inset;
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-select__wrapper.is-focused {
+  box-shadow: 0 0 0 1px var(--mc-ctl-line-focus) inset;
+  outline: 2px solid var(--mc-ctl-focus);
+  outline-offset: 2px;
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-select__wrapper.is-disabled {
+  background-color: var(--mc-ctl-disabled-surface);
+  box-shadow: 0 0 0 1px var(--mc-ctl-disabled-line) inset;
+  color: var(--mc-ctl-disabled-text);
+}
+
+/* 下拉浮层：teleport 到 body，壳前缀够不到，只有 html:has() 能兜住。
+   EP 的 .el-popper.is-light 是 0,2,0，单独写 .el-popper 压不住 12px 投影。 */
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-popper.is-light {
+  border: 1px solid var(--mc-ctl-line-float);
+  border-radius: var(--mc-ctl-radius);
+  box-shadow: none;
+}
+
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-select-dropdown__item.is-hovering,
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-select-dropdown__item:hover {
+  background-color: var(--mc-ctl-hover);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   C. 标签 —— el-tag
+   teacher-console.scss 内的两处圆角（6 / 4）保持原样：本文件后引入，
+   同权重（1,2,0）按源序后来居上 → 这里写 6 即生效。
+   ══════════════════════════════════════════════════════════════════ */
+
+#app :is(.layout--teacher, .layout--admin) .el-tag {
+  height: var(--mc-tag-h);
+  padding: 0 var(--mc-tag-px);
+  border-radius: var(--mc-ctl-radius);
+  font-size: var(--mc-tag-font);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* 中性标签：EP 默认 type 是 primary（蓝底），模板写 type="info"；
+   把 info 的底 / 边 / 字收到纸面，避免灰块压在表头里。 */
+#app :is(.layout--teacher, .layout--admin) .el-tag--info:not(.el-tag--dark) {
+  --el-tag-text-color: var(--mc-ctl-label);
+  --el-tag-bg-color: var(--mc-ctl-surface);
+  --el-tag-border-color: var(--mc-ctl-line);
+}
+
+/* success / warning / danger / primary 四态沿用 teacher-console.scss 的 --mc-* 语义色。 */
+
+/* ══════════════════════════════════════════════════════════════════
+   D. 复选框 / 单选 —— el-checkbox / el-radio
+   ══════════════════════════════════════════════════════════════════ */
+
+#app :is(.layout--teacher, .layout--admin) .el-checkbox {
+  --el-checkbox-input-width: var(--mc-choice-size);
+  --el-checkbox-input-height: var(--mc-choice-size);
+  --el-checkbox-border-radius: var(--mc-ctl-radius);
+  --el-checkbox-text-color: var(--mc-ctl-label);
+  --el-checkbox-checked-text-color: var(--mc-ctl-label);
+  --el-checkbox-checked-bg-color: var(--mc-choice-fill);
+  --el-checkbox-checked-input-border-color: var(--mc-choice-fill);
+  --el-checkbox-checked-icon-color: var(--mc-choice-on);
+  --el-checkbox-input-border-color-hover: var(--mc-ctl-line-hover);
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-radio {
+  --el-radio-input-width: var(--mc-choice-size);
+  --el-radio-input-height: var(--mc-choice-size);
+  --el-radio-text-color: var(--mc-ctl-label);
+  --el-radio-input-border-color: var(--mc-ctl-line);
+  --el-radio-input-border-color-hover: var(--mc-ctl-line-hover);
+  --el-radio-input-bg-color: var(--mc-ctl-surface);
+}
+
+/* EP 的单选选中点固定取 --el-color-primary（改主色会连带按钮 / 链接），
+   所以只对选中态直接改面，不动主色。 */
+#app :is(.layout--teacher, .layout--admin) .el-radio__input.is-checked .el-radio__inner {
+  background-color: var(--mc-choice-fill);
+  border-color: var(--mc-choice-fill);
+}
+
+/* 键盘焦点：落在原生 input 的兄弟 __inner 上，与输入框共用同一焦点色 */
+#app :is(.layout--teacher, .layout--admin) .el-checkbox input:focus-visible + .el-checkbox__inner,
+#app :is(.layout--teacher, .layout--admin) .el-radio__original:focus-visible + .el-radio__inner {
+  outline: 2px solid var(--mc-ctl-focus);
+  outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   E. 表单标签 —— el-form-item__label（只改颜色与字重）
+   间距（margin-bottom / label-width）留给批 2。
+   ══════════════════════════════════════════════════════════════════ */
+
+#app :is(.layout--teacher, .layout--admin) .el-form-item__label {
+  color: var(--mc-ctl-label);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   F. 移动端 —— 高度提到 40（触屏可点），与按钮触屏档同源
+   ══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  #app :is(.layout--teacher, .layout--admin) .el-input {
+    --el-input-height: var(--mc-ctl-h-touch);
+  }
+
+  #app :is(.layout--teacher, .layout--admin) .el-select__wrapper {
+    min-height: var(--mc-ctl-h-touch);
+  }
+
+  #app :is(.layout--teacher, .layout--admin) .el-textarea__inner {
+    min-height: var(--mc-ctl-h-touch);
+  }
+}
