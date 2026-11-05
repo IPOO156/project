@@ -15,6 +15,7 @@ import './assets/styles/global.scss'
 import './assets/styles/motion-override.scss'
 import './assets/styles/teacher-console.scss'
 import './assets/styles/controls.scss'
+import './assets/styles/containers.scss'
 import './shared/utils/echarts-setup'
 
 // 项目动画策略：始终启用，不受系统 prefers-reduced-motion 影响
