@@ -30,4 +30,7 @@ vite.config.d.ts
 # Trae AI 配置目录（本地规则，不入库）
 .trae/
 
+# Trae HTML 分享产物（IDE 生成的打包 zip，不入库）
+.trae-html-share-packages/
+
 # package.json 由开发者维护，正常入库（保留）
