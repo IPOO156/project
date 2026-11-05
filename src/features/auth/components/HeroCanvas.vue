@@ -170,8 +170,8 @@ const floatCards = computed(() => {
 
 .login__float-card {
   position: absolute;
-  padding: 16px;
-  border-radius: 6px;
+  padding: 14px;
+  border-radius: 14px;
   background: var(--login-float-bg);
   border: 1px solid var(--login-border);
   backdrop-filter: blur(10px);
@@ -189,12 +189,12 @@ const floatCards = computed(() => {
 .login__float-icon {
   width: 30px;
   height: 30px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--login-surface-soft);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   color: var(--login-accent);
 }
 
@@ -211,22 +211,22 @@ const floatCards = computed(() => {
 }
 
 .login__float-meta {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--login-text-faint);
-  margin-top: 4px;
+  margin-top: 3px;
   letter-spacing: 0.3px;
   transition: color 0.5s ease;
 }
 
 .login__float-lines {
-  margin-top: 8px;
+  margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 
   span {
     height: 3px;
-    border-radius: 6px;
+    border-radius: 2px;
     background: var(--login-border);
     display: block;
   }
@@ -309,17 +309,17 @@ const floatCards = computed(() => {
   opacity: 0.8;
 
   &--one {
-    margin: -2.8px 0 0 277.8px;
+    margin: -2.5px 0 0 277.5px;
     animation: vaultSpin 90s linear infinite;
   }
 
   &--two {
-    margin: -232.8px 0 0 -2.8px;
+    margin: -232.5px 0 0 -2.5px;
     animation: vaultSpinReverse 70s linear infinite;
   }
 
   &--three {
-    margin: -2.8px 0 0 -182.8px;
+    margin: -2.5px 0 0 -182.5px;
     animation: vaultSpin 55s linear infinite reverse;
   }
 }
