@@ -22,6 +22,8 @@ import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
 
+const props = defineProps<{ embed?: boolean }>()
+
 const loading = ref(false)
 const users = ref<UserListItem[]>([])
 const total = ref(0)
@@ -178,7 +180,7 @@ onMounted(() => void load())
 
 <template>
   <div class="mc-page teacher-account">
-    <div class="mc-page-head">
+    <div v-if="!props.embed" class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">教师账号管理</h2>
         <p class="mc-page-head__desc">查看教师账号信息与数据范围，处理密码重置和账号启停。</p>
