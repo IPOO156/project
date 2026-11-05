@@ -44,6 +44,11 @@ export interface LoginResponse {
     roles: string[]
     roleNames: string[]
     avatar: string | null
+    /**
+     * 是否需首次登录强制改密：新建账号 / 批量导入 / 管理员重置密码后为 true。
+     * 为 true 时后端仅放行 /auth/password、/auth/me、/auth/logout，前端须跳转改密页。
+     */
+    mustChangePassword?: boolean
   }
 }
 

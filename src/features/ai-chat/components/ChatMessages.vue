@@ -54,7 +54,7 @@ watch(() => props.showThinking, scrollToBottom)
 </script>
 
 <template>
-  <div ref="scrollRef" class="cm">
+  <div ref="scrollRef" class="cm" role="log" aria-live="polite" aria-label="对话消息">
     <div class="cm__inner">
       <MessageBubble
         v-for="msg in props.messages"
@@ -97,8 +97,6 @@ watch(() => props.showThinking, scrollToBottom)
   scroll-behavior: smooth;
 
   &__inner {
-    max-width: 880px;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
