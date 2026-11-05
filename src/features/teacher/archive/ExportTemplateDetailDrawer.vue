@@ -187,12 +187,12 @@ function handleClosed() {
       max-width: 240px;
       max-height: 320px;
       border: 1px solid var(--el-border-color-light);
-      border-radius: $radius-sm;
+      border-radius: 6px;
     }
     &-empty {
       padding: 32px 40px;
       border: 1px dashed var(--el-border-color);
-      border-radius: $radius-sm;
+      border-radius: 6px;
       color: var(--el-text-color-secondary);
       font-size: 13px;
     }
@@ -201,7 +201,7 @@ function handleClosed() {
     margin: 0;
     padding: $spacing-sm;
     background: var(--el-fill-color-light);
-    border-radius: $radius-sm;
+    border-radius: 6px;
     font-size: 12px;
     line-height: 1.6;
     max-height: 280px;

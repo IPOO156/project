@@ -93,8 +93,8 @@ function handleCardClick() {
 
       <div class="message-card__meta">
         <span class="message-card__time">
-          <MailOpen v-if="item.isRead === 1" :size="12" />
-          <Mail v-else :size="12" />
+          <MailOpen v-if="item.isRead === 1" :size="16" />
+          <Mail v-else :size="16" />
           {{ formatDateTime(item.createdAt) }}
         </span>
         <span v-if="item.deadline" class="message-card__extra">
@@ -104,7 +104,7 @@ function handleCardClick() {
       </div>
 
       <div v-if="item.jumpUrl && item.isArchived !== 1" class="message-card__link-hint">
-        查看详情<ChevronRight :size="12" />
+        查看详情<ChevronRight :size="16" />
       </div>
     </div>
 
@@ -141,8 +141,8 @@ function handleCardClick() {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px 16px;
-  border-radius: 8px;
+  padding: 16px 16px;
+  border-radius: 6px;
   background: var(--mc-card);
   border: 1px solid var(--mc-border);
   transition:
@@ -173,7 +173,7 @@ function handleCardClick() {
     flex-shrink: 0;
     width: 36px;
     height: 36px;
-    border-radius: 8px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -187,26 +187,26 @@ function handleCardClick() {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
   }
   &__category {
     flex-shrink: 0;
-    padding: 1px 7px;
-    border-radius: 4px;
+    padding: 1px 8px;
+    border-radius: 6px;
     background: var(--mc-bg);
     color: var(--mc-text-secondary);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
   }
   &__unread {
     flex-shrink: 0;
-    padding: 0 5px;
-    border-radius: 3px;
+    padding: 0 8px;
+    border-radius: 6px;
     background: rgba(30, 58, 95, 0.08);
     color: var(--el-color-primary);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
-    line-height: 17px;
+    line-height: 1.5;
   }
   &__title {
     margin: 0;
@@ -216,10 +216,10 @@ function handleCardClick() {
     line-height: 1.5;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
   &__content {
-    margin: 0 0 6px;
+    margin: 0 0 8px;
     font-size: 13px;
     color: var(--mc-text-secondary);
     line-height: 1.5;
@@ -228,7 +228,7 @@ function handleCardClick() {
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    padding-top: 2px;
+    padding-top: 4px;
     input[type='checkbox'] {
       width: 16px;
       height: 16px;
@@ -261,7 +261,7 @@ function handleCardClick() {
   &__link-hint {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
     margin-top: 4px;
     font-size: 12px;
     color: var(--el-color-primary);
@@ -277,7 +277,7 @@ function handleCardClick() {
 .action-icon {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: none;
   display: flex;
   align-items: center;
@@ -311,7 +311,7 @@ function handleCardClick() {
     &__actions {
       width: 100%;
       justify-content: flex-end;
-      padding-top: 10px;
+      padding-top: 8px;
       border-top: 1px solid var(--mc-border);
     }
   }

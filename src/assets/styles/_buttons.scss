@@ -1,0 +1,241 @@
+// =============================================================================
+// 按钮语言「素面」—— 教师端 / 管理员端唯一实现源
+//
+// 作用域：只挂在 `#app .layout--teacher` / `#app .layout--admin` 两个壳上，
+// 学生端（无上述类名）不会命中任何一条，保持改造前的 Element Plus 原生按钮。
+//
+// 设计值全部来自 themes.css 的 --mc-btn-* token；本文件只做 Element Plus 映射，
+// 不在这里写任何色值，避免出现第二套规格。
+//
+// 权重策略：
+//   - Element Plus 的类型/状态规则最高只到 (0,2,0)（.el-button--primary:hover）；
+//   - 本文件所有覆盖都带 `#app` + 壳层类（1,2,0 起），因此与 EP 的 index.css /
+//     dark css-vars.css 的加载顺序无关；
+//   - 深色设计值集中在 themes.css 的 [data-theme='dark'] 块。
+//
+// 形态约定：一张平涂面 + 一道 1px 实边 + 2px 实描边焦点；无渐变 / 无投影 / 无光晕，
+// hover 只换面与边，按下不位移。
+// =============================================================================
+
+#app {
+  .layout--teacher,
+  .layout--admin {
+    /* =========================================================================
+       1. 结构 —— 所有类型共用（圆角、1px 边、零投影、三色过渡）
+       ========================================================================= */
+    .el-button {
+      padding: 0 var(--mc-btn-px-control);
+      border-width: 1px;
+      border-style: solid;
+      border-radius: var(--mc-btn-radius);
+      box-shadow: none;
+      background-image: none;
+      transition:
+        background-color var(--mc-btn-duration) var(--mc-btn-ease),
+        border-color var(--mc-btn-duration) var(--mc-btn-ease),
+        color var(--mc-btn-duration) var(--mc-btn-ease);
+    }
+
+    /* 档位：24 / 32 / 40，由 size 属性决定；高度沿用 EP 的组件尺寸，不在此重写 */
+    .el-button--small:not(.is-link):not(.is-text):not(.is-circle) {
+      padding: 0 var(--mc-btn-px-inline);
+      font-size: var(--mc-btn-font-inline);
+    }
+
+    .el-button--large:not(.is-link):not(.is-text):not(.is-circle) {
+      padding: 0 var(--mc-btn-px-emphasis);
+      font-weight: var(--mc-btn-weight-strong);
+    }
+
+    /* 图标按钮：方形描边，与其他按钮共用同一套边线（不再使用圆形） */
+    .el-button.is-circle {
+      width: var(--mc-btn-h-control);
+      height: var(--mc-btn-h-control);
+      padding: 0;
+      border-radius: var(--mc-btn-radius);
+    }
+
+    /* =========================================================================
+       2. 次按钮（无 type）—— 纸面 + 可见细边，hover 走灰度阶梯
+       ========================================================================= */
+    .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(
+        .el-button--danger
+      ):not(.el-button--info) {
+      --el-button-text-color: var(--mc-btn-label);
+      --el-button-bg-color: var(--mc-btn-surface);
+      --el-button-border-color: var(--mc-btn-line);
+      --el-button-hover-text-color: var(--mc-btn-label-strong);
+      --el-button-hover-bg-color: var(--mc-btn-surface-hover);
+      --el-button-hover-border-color: var(--mc-btn-line-hover);
+      --el-button-active-text-color: var(--mc-btn-label-strong);
+      --el-button-active-bg-color: var(--mc-btn-surface-active);
+      --el-button-active-border-color: var(--mc-btn-line-active);
+      --el-button-hover-link-text-color: var(--mc-btn-label-strong);
+      --el-button-disabled-text-color: var(--mc-btn-disabled-label);
+      --el-button-disabled-bg-color: var(--mc-btn-disabled-surface);
+      --el-button-disabled-border-color: var(--mc-btn-disabled-line);
+      --el-button-outline-color: var(--mc-btn-focus);
+    }
+
+    /* =========================================================================
+       3. 主按钮 —— 一屏一个：面深、边再深一档，字加粗
+       ========================================================================= */
+    .el-button--primary {
+      --el-button-text-color: var(--mc-btn-on-brand);
+      --el-button-bg-color: var(--mc-btn-brand);
+      --el-button-border-color: var(--mc-btn-brand-line);
+      --el-button-hover-text-color: var(--mc-btn-on-brand);
+      --el-button-hover-bg-color: var(--mc-btn-brand-hover);
+      --el-button-hover-border-color: var(--mc-btn-brand-hover);
+      --el-button-active-text-color: var(--mc-btn-on-brand);
+      --el-button-active-bg-color: var(--mc-btn-brand-active);
+      --el-button-active-border-color: var(--mc-btn-brand-active);
+      --el-button-disabled-text-color: var(--mc-btn-disabled-label);
+      --el-button-disabled-bg-color: var(--mc-btn-disabled-surface);
+      --el-button-disabled-border-color: var(--mc-btn-disabled-line);
+      --el-button-outline-color: var(--mc-btn-focus);
+      font-weight: var(--mc-btn-weight-strong);
+    }
+
+    /* 主按钮的描边/文字形态：保留语义，不填实色 */
+    .el-button--primary.is-plain {
+      --el-button-text-color: var(--mc-btn-brand);
+      --el-button-bg-color: var(--mc-btn-surface);
+      --el-button-border-color: var(--mc-btn-line);
+      --el-button-hover-text-color: var(--mc-btn-brand-hover);
+      --el-button-hover-bg-color: var(--mc-btn-surface-hover);
+      --el-button-hover-border-color: var(--mc-btn-line-hover);
+      --el-button-active-text-color: var(--mc-btn-brand);
+      --el-button-active-bg-color: var(--mc-btn-surface-active);
+      --el-button-active-border-color: var(--mc-btn-line-active);
+    }
+
+    .el-button--primary.is-text,
+    .el-button--primary.is-link {
+      --el-button-text-color: var(--mc-btn-label-soft);
+      --el-button-hover-text-color: var(--mc-btn-label-strong);
+      --el-button-hover-link-text-color: var(--mc-btn-label-strong);
+      --el-button-active-text-color: var(--mc-btn-label-strong);
+    }
+
+    /* =========================================================================
+       4. 危险按钮 —— 实心只用于不可逆确认；表内删除走描边/文字
+       ========================================================================= */
+    .el-button--danger:not(.is-text):not(.is-link):not(.is-plain) {
+      --el-button-text-color: var(--mc-btn-on-danger);
+      --el-button-bg-color: var(--mc-btn-danger-solid);
+      --el-button-border-color: var(--mc-btn-danger-solid);
+      --el-button-hover-text-color: var(--mc-btn-on-danger);
+      --el-button-hover-bg-color: var(--mc-btn-danger-solid-hover);
+      --el-button-hover-border-color: var(--mc-btn-danger-solid-hover);
+      --el-button-active-text-color: var(--mc-btn-on-danger);
+      --el-button-active-bg-color: var(--mc-btn-danger-solid-active);
+      --el-button-active-border-color: var(--mc-btn-danger-solid-active);
+      --el-button-disabled-text-color: var(--mc-btn-disabled-label);
+      --el-button-disabled-bg-color: var(--mc-btn-disabled-surface);
+      --el-button-disabled-border-color: var(--mc-btn-disabled-line);
+      --el-button-outline-color: var(--mc-btn-focus);
+      font-weight: var(--mc-btn-weight-strong);
+    }
+
+    .el-button--danger.is-plain {
+      --el-button-text-color: var(--mc-btn-danger);
+      --el-button-bg-color: var(--mc-btn-surface);
+      --el-button-border-color: var(--mc-btn-danger-line);
+      --el-button-hover-text-color: var(--mc-btn-danger);
+      --el-button-hover-bg-color: var(--mc-btn-danger-hover-bg);
+      --el-button-hover-border-color: var(--mc-btn-danger-line);
+      --el-button-active-text-color: var(--mc-btn-danger);
+      --el-button-active-bg-color: var(--mc-btn-danger-hover-bg);
+      --el-button-active-border-color: var(--mc-btn-danger-line);
+    }
+
+    /* =========================================================================
+       5. 文字 / 链接按钮 —— 裸底，只靠字重与灰度区分
+       ========================================================================= */
+    .el-button.is-text {
+      --el-button-text-color: var(--mc-btn-label-soft);
+      --el-button-hover-text-color: var(--mc-btn-label-strong);
+      --el-button-hover-link-text-color: var(--mc-btn-label-strong);
+      --el-button-active-text-color: var(--mc-btn-label-strong);
+      padding: 0 var(--mc-btn-px-inline);
+      border-color: transparent;
+      background-color: transparent;
+      font-size: var(--mc-btn-font-inline);
+      font-weight: var(--mc-btn-weight);
+    }
+
+    .el-button.is-text:not(.is-disabled):hover {
+      background-color: var(--mc-btn-surface-hover);
+      border-color: transparent;
+      color: var(--mc-btn-label-strong);
+    }
+
+    .el-button.is-text:not(.is-disabled):active {
+      background-color: var(--mc-btn-surface-active);
+      border-color: transparent;
+      color: var(--mc-btn-label-strong);
+    }
+
+    .el-button--danger.is-text,
+    .el-button--danger.is-link {
+      --el-button-text-color: var(--mc-btn-danger);
+      --el-button-hover-text-color: var(--mc-btn-danger);
+      --el-button-hover-link-text-color: var(--mc-btn-danger);
+      --el-button-active-text-color: var(--mc-btn-danger);
+    }
+
+    .el-button--danger.is-text:not(.is-disabled):hover {
+      background-color: var(--mc-btn-danger-hover-bg);
+      color: var(--mc-btn-danger);
+    }
+
+    .el-button--danger.is-text:not(.is-disabled):active {
+      background-color: var(--mc-btn-danger-hover-bg);
+      color: var(--mc-btn-danger);
+    }
+
+    .el-button.is-link {
+      padding: 0;
+      height: auto;
+      border-color: transparent;
+      background-color: transparent;
+      font-size: var(--mc-btn-font-inline);
+    }
+
+    .el-button.is-link:not(.is-disabled):hover {
+      background-color: transparent;
+      border-color: transparent;
+    }
+
+    /* =========================================================================
+       6. 焦点 —— 教师 / 管理员端唯一的「铅笔框」：2px 实线 + 2px 间隙
+       ========================================================================= */
+    .el-button:focus-visible {
+      outline: 2px solid var(--mc-btn-focus);
+      outline-offset: 2px;
+    }
+
+    /* =========================================================================
+       7. 移动端 —— 只抬高度，不改字号与排布（32 / 40 / 44）
+       ========================================================================= */
+    @media (max-width: 768px) {
+      .el-button:not(.is-link) {
+        height: var(--mc-btn-h-emphasis);
+      }
+
+      .el-button--small:not(.is-link) {
+        height: var(--mc-btn-h-control);
+      }
+
+      .el-button--large:not(.is-link) {
+        height: var(--mc-btn-h-touch);
+      }
+    }
+
+    /* 用户在系统层要求减弱动效时，颜色反馈保留、时长减半（不做 0ms 切断） */
+    @media (prefers-reduced-motion: reduce) {
+      --mc-btn-duration: 60ms;
+    }
+  }
+}

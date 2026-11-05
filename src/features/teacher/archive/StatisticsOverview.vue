@@ -244,18 +244,18 @@ onMounted(async () => {
           </el-col>
         </el-row>
 
-        <el-table v-if="hasRows" class="u-w-full" :data="statsRows" stripe>
+        <el-table v-if="hasRows" class="u-w-full" :data="statsRows">
           <el-table-column prop="orgName" label="组织" min-width="140" />
-          <el-table-column prop="studentCount" label="学生数" width="80" align="center" />
-          <el-table-column prop="archiveCount" label="档案数" width="80" align="center" />
-          <el-table-column prop="awardCount" label="获奖数" width="80" align="center" />
-          <el-table-column label="平均绩点" width="90" align="center">
+          <el-table-column prop="studentCount" label="学生数" width="80" align="right" />
+          <el-table-column prop="archiveCount" label="档案数" width="80" align="right" />
+          <el-table-column prop="awardCount" label="获奖数" width="80" align="right" />
+          <el-table-column label="平均绩点" width="88" align="right">
             <template #default="{ row }">{{ formatAvg(row.avgGpa) }}</template>
           </el-table-column>
-          <el-table-column label="平均得分" width="90" align="center">
+          <el-table-column label="平均得分" width="88" align="right">
             <template #default="{ row }">{{ formatAvg(row.avgScore) }}</template>
           </el-table-column>
-          <el-table-column prop="practiceCount" label="实践次数" width="90" align="center" />
+          <el-table-column prop="practiceCount" label="实践次数" width="88" align="right" />
           <el-table-column label="兴趣 TOP" min-width="180">
             <template #default="{ row }">
               <template v-if="row.topInterests?.length">
@@ -310,7 +310,7 @@ onMounted(async () => {
     margin-left: $spacing-sm;
   }
   &__filter {
-    padding: 12px 20px 0;
+    padding: 12px 24px 0;
     border-bottom: 1px solid var(--el-border-color-lighter);
 
     .el-form-item {
@@ -333,7 +333,7 @@ onMounted(async () => {
     margin-bottom: $spacing-lg;
   }
   &__tag {
-    margin: 2px 6px 2px 0;
+    margin: 4px 8px 4px 0;
   }
 
   .kpi-item {
@@ -341,7 +341,7 @@ onMounted(async () => {
     margin-bottom: $spacing-md;
     padding: $spacing-md $spacing-lg;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: $radius-lg;
+    border-radius: 6px;
     background: var(--el-fill-color-lighter);
 
     &__label {
@@ -353,11 +353,11 @@ onMounted(async () => {
     &__value-row {
       display: flex;
       align-items: baseline;
-      gap: 2px;
+      gap: 4px;
     }
     &__value {
-      font-size: $font-size-2xl;
-      font-weight: 700;
+      font-size: 28px;
+      font-weight: 600;
       color: var(--el-text-color-primary);
     }
     &__unit {

@@ -470,7 +470,7 @@ onMounted(() => {
     flex-wrap: wrap;
     gap: 12px;
     align-items: center;
-    padding: 14px 16px;
+    padding: 16px 16px;
     background: var(--mc-card);
     border: 1px solid var(--mc-border);
     border-radius: var(--mc-radius);

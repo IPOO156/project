@@ -230,24 +230,33 @@ onMounted(() => void load())
         <span class="role-adjust__total">共 {{ total }} 条</span>
       </div>
       <div class="mc-card__body">
-        <el-table v-loading="loading" class="u-w-full" :data="users" stripe max-height="600">
-          <el-table-column type="index" label="序号" width="60" />
-          <el-table-column prop="userNo" label="工号" width="140" />
-          <el-table-column prop="name" label="姓名" width="120" />
-          <el-table-column label="当前职位" width="170">
+        <el-table v-loading="loading" class="u-w-full" :data="users" max-height="600">
+          <el-table-column type="index" label="序号" width="56" align="right" />
+          <el-table-column prop="userNo" label="工号" width="128" class-name="col-secondary" />
+          <el-table-column label="姓名" width="112">
+            <template #default="{ row }">
+              <span class="col-primary">{{ row.name }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="当前职位" width="170" class-name="col-secondary">
             <template #default="{ row }">{{ displayTitleOf(row as UserListItem) }}</template>
           </el-table-column>
-          <el-table-column label="所属学院" min-width="160" show-overflow-tooltip>
+          <el-table-column
+            label="所属学院"
+            min-width="160"
+            show-overflow-tooltip
+            class-name="col-secondary"
+          >
             <template #default="{ row }">{{ row.departmentPath ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="状态" width="90">
+          <el-table-column label="状态" width="88">
             <template #default="{ row }">
               <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
                 {{ row.statusLabel }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="180" align="center" fixed="right">
+          <el-table-column label="操作" width="176" align="right" fixed="right">
             <template #default="{ row }">
               <el-button
                 text

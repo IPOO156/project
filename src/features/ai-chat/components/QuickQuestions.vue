@@ -47,7 +47,7 @@ function getIcon(icon: string): Component {
             class="qq__chip"
             @click="emit('ask', q.question)"
           >
-            <component :is="getIcon(q.icon)" :size="14" />
+            <component :is="getIcon(q.icon)" :size="16" />
             <span>{{ q.label }}</span>
           </button>
         </div>

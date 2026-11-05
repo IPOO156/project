@@ -229,7 +229,7 @@ onMounted(async () => {
           <span class="heat-map__legend-text">热</span>
           <span class="heat-map__legend-divider" />
           <span class="heat-map__legend-hint">
-            <ArrowDownAZ :size="14" />
+            <ArrowDownAZ :size="16" />
             最新
           </span>
         </div>
@@ -246,7 +246,7 @@ onMounted(async () => {
             <div class="heat-map__corner">
               <span class="heat-map__corner-label">组织</span>
               <span class="heat-map__corner-hint">
-                <Sigma :size="12" />
+                <Sigma :size="16" />
                 合计
               </span>
             </div>

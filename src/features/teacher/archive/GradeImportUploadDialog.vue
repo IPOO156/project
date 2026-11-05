@@ -50,7 +50,7 @@ function handleFileRemove() {
           accept=".xlsx,.csv"
         >
           <div class="grade-import__upload">
-            <Upload :size="36" class="grade-import__upload-icon" />
+            <Upload :size="32" class="grade-import__upload-icon" />
             <p class="grade-import__upload-title">拖拽文件到此处，或点击选择</p>
             <p class="grade-import__upload-desc">仅支持 .xlsx / .csv 格式</p>
           </div>
@@ -77,7 +77,7 @@ function handleFileRemove() {
     text-align: center;
     &-icon {
       color: var(--el-color-primary);
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
     &-title {
       font-size: 14px;

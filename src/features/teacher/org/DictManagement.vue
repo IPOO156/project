@@ -508,7 +508,7 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
 
   &__items {
     &-filter {
-      padding: 0 0 14px;
+      padding: 0 0 16px;
       margin-bottom: 4px;
       background: transparent;
       border: none;

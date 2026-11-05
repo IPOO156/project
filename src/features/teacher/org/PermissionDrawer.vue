@@ -259,7 +259,7 @@ function handleClosed() {
 
   /* 权限码：与权限名称同显，用于和接口文档/代码里的权限码对照 */
   &__code {
-    margin-left: 6px;
+    margin-left: 8px;
     font-size: 12px;
     color: var(--el-text-color-secondary);
   }

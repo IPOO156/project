@@ -18,15 +18,15 @@ export function useDashboardOption(params: {
   const pendingItems = computed(() => [
     {
       label: '档案待审',
-      value: dashboardOverview.value?.pendingStats.archivePending ?? '—',
+      value: dashboardOverview.value?.pendingStats?.archivePending ?? '—',
     },
     {
       label: '奖项待审',
-      value: dashboardOverview.value?.pendingStats.awardPending ?? '—',
+      value: dashboardOverview.value?.pendingStats?.awardPending ?? '—',
     },
     {
       label: '规划待审',
-      value: dashboardOverview.value?.pendingStats.careerPlanPending ?? '—',
+      value: dashboardOverview.value?.pendingStats?.careerPlanPending ?? '—',
     },
     {
       label: '今日审核',

@@ -83,7 +83,7 @@ async function handleCopy() {
   <div class="mb" :class="{ 'mb--ai': isAi, 'mb--user': !isAi }">
     <!-- 头像 -->
     <div class="mb__avatar" :class="isAi ? 'mb__avatar--ai' : 'mb__avatar--user'">
-      <Sparkles v-if="isAi" :size="18" />
+      <Sparkles v-if="isAi" :size="20" />
       <span v-else>{{ userInitial }}</span>
     </div>
 
@@ -111,7 +111,7 @@ async function handleCopy() {
             aria-label="标记为有用"
             @click="emit('feedback', 'useful')"
           >
-            <ThumbsUp :size="14" />
+            <ThumbsUp :size="16" />
           </button>
           <button
             class="mb__action"
@@ -120,10 +120,10 @@ async function handleCopy() {
             aria-label="标记为无用"
             @click="emit('feedback', 'useless')"
           >
-            <ThumbsDown :size="14" />
+            <ThumbsDown :size="16" />
           </button>
           <button class="mb__action" title="复制" aria-label="复制回复内容" @click="handleCopy">
-            <Copy :size="14" />
+            <Copy :size="16" />
           </button>
         </div>
       </div>
@@ -195,20 +195,20 @@ async function handleCopy() {
 
   &__text {
     margin: 0;
-    line-height: 1.7;
+    line-height: 1.6;
   }
 
   &__disclaimer {
     font-size: $font-size-xs;
     color: var(--el-text-color-placeholder);
-    line-height: 1.4;
+    line-height: 1.6;
   }
 
   &__offline {
     display: inline-block;
     margin: 0 0 $spacing-xs;
-    padding: 0 6px;
-    border-radius: 100px;
+    padding: 0 8px;
+    border-radius: 999px;
     background: rgba($color-warning, 0.12);
     color: $color-warning;
     font-size: $font-size-xs;
@@ -229,7 +229,7 @@ async function handleCopy() {
 
   &__actions {
     display: flex;
-    gap: 2px;
+    gap: 4px;
     opacity: 0;
     transition: opacity $duration-fast $ease-standard;
   }

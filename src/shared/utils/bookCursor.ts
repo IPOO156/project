@@ -63,28 +63,18 @@ const THEMES: Record<BookCursorPalette, { ink: string; paper: string; back: stri
   night: { ink: '#f1f5f9', paper: '#1e293b', back: '#60a5fa' },
 }
 
-type CursorState =
-  'default' | 'hover' | 'text' | 'left' | 'right' | 'middle' | 'wait' | 'not-allowed'
+// 按下态（原包的 left/right/middle 换图）已移除：按下瞬间换一张从未显示过的
+// SVG 光标图，Windows/Edge 在首次解码该图时会先回退到 auto（系统箭头），
+// 且与「按下期间保持 hover 手型 / I-beam」的要求冲突。按下期间沿用当前元素的自绘态。
+type CursorState = 'default' | 'hover' | 'text' | 'wait' | 'not-allowed'
 
-const CURSOR_STATES: CursorState[] = [
-  'default',
-  'hover',
-  'text',
-  'left',
-  'right',
-  'middle',
-  'wait',
-  'not-allowed',
-]
+const CURSOR_STATES: CursorState[] = ['default', 'hover', 'text', 'wait', 'not-allowed']
 
 /** 状态名 → CSS 变量后缀（not-allowed 对应原设计的 --bc-na） */
 const VAR_SUFFIX: Record<CursorState, string> = {
   default: 'default',
   hover: 'hover',
   text: 'text',
-  left: 'left',
-  right: 'right',
-  middle: 'middle',
   wait: 'wait',
   'not-allowed': 'na',
 }
@@ -93,9 +83,6 @@ const HOTSPOT: Record<CursorState, string> = {
   default: '5 3',
   hover: '5 3',
   text: '16 16',
-  left: '5 3',
-  right: '5 3',
-  middle: '5 3',
   wait: '1 5',
   'not-allowed': '5 3',
 }
@@ -131,18 +118,13 @@ function buildStates(palette: {
   return {
     default: wrap24(book(12)),
     hover: wrap24(book(16)),
-    right: wrap24(book(20)),
-    left: wrap24(
-      `<g transform="translate(4 2) scale(.93) translate(-4 -2)"><path d="${BOOK}" fill="${ink}"/></g>`,
-    ),
+    // 文本态 I-beam 收小减细：画布仍 32×32、viewBox 24×24（scale=1.333）。
+    // 竖线 5.8→18.2（本体 12.4 单位）+ 1.05 单位圆头描边 = 可见高 13.45 单位 ≈ 18px；
+    // 上下衬线可见宽 6.75 单位 ≈ 9px；描边 1.05 单位 ≈ 1.4px，接近系统 beam_r.cur。
+    // 字形中心仍为 (12,12)，映射到画布 (16,16)，故 HOTSPOT.text 保持 16 16 不偏移。
     text: wrap24(
-      `<path d="M12 2.8V21.2" fill="none" stroke="${ink}" stroke-width="2.1" stroke-linecap="round"/>` +
-        `<path d="M8.7 2.8h6.6M8.7 21.2h6.6" fill="none" stroke="${ink}" stroke-width="2.1" stroke-linecap="round"/>`,
-    ),
-    middle: wrap24(
-      `${book(12)}<path d="M15.6 9.4V15.4" fill="none" stroke="${paper}" stroke-width="1.9" stroke-linecap="round"/>` +
-        `<path d="M13.9 10.4 15.6 8.7 17.3 10.4" fill="none" stroke="${paper}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>` +
-        `<path d="M13.9 14.4 15.6 16.1 17.3 14.4" fill="none" stroke="${paper}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>`,
+      `<path d="M12 5.8V18.2" fill="none" stroke="${ink}" stroke-width="1.05" stroke-linecap="round"/>` +
+        `<path d="M9.15 5.8h5.7M9.15 18.2h5.7" fill="none" stroke="${ink}" stroke-width="1.05" stroke-linecap="round"/>`,
     ),
     'not-allowed': wrap24(
       `<path d="${BOOK}${notch(12)}" fill="${ink}" fill-rule="nonzero" opacity=".5"/>` +
@@ -222,8 +204,15 @@ const HOVER_SELECTOR = [
 
 const CURSOR_CSS = [
   'html{cursor:var(--bc-default),auto;}',
-  `${HOVER_SELECTOR}{cursor:var(--bc-hover),pointer;}`,
-  'input,textarea,.el-input__wrapper,.el-textarea__inner,[contenteditable=""],[contenteditable="true"]{cursor:var(--bc-text),text;}',
+  // Element Plus 的 .el-button{cursor:pointer} 与组件内 scoped 的 .xxx{cursor:pointer}
+  // 与这条规则同权重，dev 下加载顺序不可控（实测 EP 后置会赢）。加 !important
+  // 保证 hover 手型不依赖运行时标记，也避免按下/重渲染时回落到系统指针。
+  // 禁用/加载态规则位于其后，同权重后置仍可正常覆盖。
+  `${HOVER_SELECTOR}{cursor:var(--bc-hover),pointer!important;}`,
+  // 文本输入态继续使用自绘书册 I-beam（字形已在 buildStates 中收小减细到 9×18px）。
+  // 加 !important 是为了压过 Element Plus 后置的 .el-textarea__inner{cursor:auto}，
+  // 否则文本域会退回系统光标；禁用/加载态规则位于其后，仍可正常覆盖。
+  'input,textarea,.el-input__wrapper,.el-textarea__inner,[contenteditable=""],[contenteditable="true"]{cursor:var(--bc-text),text!important;}',
   // 运行时归一化规则放在 disabled 之前：元素被禁用时由后面的 disabled 规则覆盖
   `[${DATA_CURSOR_ATTR}='hover']{cursor:var(--bc-hover),pointer!important;}`,
   `[${DATA_CURSOR_ATTR}='text']{cursor:var(--bc-text),text!important;}`,
@@ -255,7 +244,6 @@ let rafId: number | null = null
 let startTs = 0
 let lastFrameIdx = -1
 let waitTarget: Element | null = null
-let pressing = false
 let styleEl: HTMLStyleElement | null = null
 let observer: MutationObserver | null = null
 
@@ -311,45 +299,51 @@ function setWaitCursor(value: string): void {
   document.documentElement.style.setProperty('--bc-wait', `${value} ${HOTSPOT.wait}`)
 }
 
-function setPress(name: 'left' | 'right' | 'middle'): void {
-  pressing = true
-  document.documentElement.style.cursor = `var(--bc-${name}),auto`
-}
-
-function release(): void {
-  if (!pressing) return
-  pressing = false
-  document.documentElement.style.cursor = ''
-}
-
-function onMouseDown(event: MouseEvent): void {
-  if (!enabled) return
-  if (event.button === 0) setPress('left')
-  else if (event.button === 2) setPress('right')
-  else if (event.button === 1) setPress('middle')
-}
-
 /**
- * 悬停归一化：项目里大量可点区域是 div/span + 自定义 CSS（登录端切换、
+ * 单个元素归一化：项目里大量可点区域是 div/span + 自定义 CSS（登录端切换、
  * 卡片、时间轴节点等），无法靠选择器穷举。
  * 这里读取元素「实际计算光标」，只把原生 pointer / text / not-allowed
  * 映射为书册状态；grab、resize 等特殊光标保持原样。
  */
-function onPointerOver(event: PointerEvent): void {
+function normalizeElement(el: Element): void {
   if (!enabled) return
-  const target = event.target
-  if (!(target instanceof Element)) return
   // 已经归一化过的元素不再重复判断（避免每次进入都读一次计算样式）
-  if (target.hasAttribute(DATA_CURSOR_ATTR)) return
+  if (el.hasAttribute(DATA_CURSOR_ATTR)) return
 
-  const cursor = getComputedStyle(target).cursor
+  const cursor = getComputedStyle(el).cursor
   // 已命中自定义光标（含 data URI）时直接跳过
   if (cursor.includes('data:image/svg+xml')) return
 
   // computed 形如 "pointer" 或 "url(...) 5 3, pointer"，取首个 token 判断
   const primary = cursor.split(',')[0]?.trim() ?? ''
   const state = NATIVE_CURSOR_STATES[primary]
-  if (state) target.setAttribute(DATA_CURSOR_ATTR, state)
+  if (state) el.setAttribute(DATA_CURSOR_ATTR, state)
+}
+
+function onPointerOver(event: PointerEvent): void {
+  if (!(event.target instanceof Element)) return
+  normalizeElement(event.target)
+}
+
+/**
+ * 按屏幕坐标重新打标：按下/抬起时浏览器会按命中点重建光标，且 :active 形变、
+ * 点击引发的 loading/弹窗/路由重渲染都会让触点换成未打标的新元素。
+ */
+function normalizeAt(x: number, y: number): void {
+  const hit = document.elementFromPoint(x, y)
+  if (hit) normalizeElement(hit)
+}
+
+function onMouseDown(event: MouseEvent): void {
+  if (event.button !== 0) return
+  normalizeAt(event.clientX, event.clientY)
+}
+
+function onMouseUp(event: MouseEvent): void {
+  if (event.button !== 0) return
+  const { clientX, clientY } = event
+  // 延迟到下一轮事件循环，等点击处理函数（可能触发重渲染）先完成
+  window.setTimeout(() => normalizeAt(clientX, clientY), 0)
 }
 
 /** 清除所有运行期归一化标记（禁用/销毁/拖拽开始时调用） */
@@ -398,7 +392,6 @@ function stopWait(): void {
 function applyEnabled(on: boolean): void {
   if (!on) {
     stopWait()
-    release()
     clearHoverMarks()
     document.documentElement.classList.add(OFF_CLASS)
   } else {
@@ -435,11 +428,10 @@ function init(options: BookCursorOptions = {}): void {
   setTheme(options.theme ?? 'auto')
 
   document.addEventListener('mousedown', onMouseDown, true)
-  document.addEventListener('mouseup', release, true)
+  document.addEventListener('mouseup', onMouseUp, true)
   document.addEventListener('pointerover', onPointerOver, true)
+  // 拖拽时浏览器会接管光标（grab/grabbing），这里清掉标记避免自绘 hover 手型残留
   document.addEventListener('dragstart', clearHoverMarks, true)
-  document.addEventListener('dragend', release, true)
-  window.addEventListener('blur', release)
 
   applyEnabled(enabled)
 
@@ -455,13 +447,10 @@ function init(options: BookCursorOptions = {}): void {
 
 function destroy(): void {
   stopWait()
-  release()
   document.removeEventListener('mousedown', onMouseDown, true)
-  document.removeEventListener('mouseup', release, true)
+  document.removeEventListener('mouseup', onMouseUp, true)
   document.removeEventListener('pointerover', onPointerOver, true)
   document.removeEventListener('dragstart', clearHoverMarks, true)
-  document.removeEventListener('dragend', release, true)
-  window.removeEventListener('blur', release)
   clearHoverMarks()
   if (observer) {
     observer.disconnect()

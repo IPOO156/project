@@ -146,7 +146,7 @@ watch(
   &__switches {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 24px;
   }
 
   &__switch {

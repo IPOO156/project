@@ -531,7 +531,7 @@ function handleRefresh() {
 
   /* 「是否匿名」筛选旁的说明图标：解释匿名导出的业务来源（研究数据导出） */
   &__hint-icon {
-    margin-left: 6px;
+    margin-left: 8px;
     color: var(--el-text-color-secondary);
     cursor: help;
   }

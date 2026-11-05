@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 
 /**
  * 全局应用级状态
@@ -47,11 +47,15 @@ export const useAppStore = defineStore('app', () => {
     }
     update(mql)
     mql.addEventListener('change', update)
-    onBeforeUnmount(() => mql.removeEventListener('change', update))
   }
 
-  // 立即绑定（store 第一次被使用即生效）
-  onMounted(bindResponsive)
+  /**
+   * 立即绑定（store 第一次被使用即生效）。
+   * 原先挂在 onMounted 上，但 store 是在模块作用域第一次 useAppStore() 时创建的，
+   * 此时没有活跃组件实例，onMounted 直接被丢弃 → isMobile 永远 false，
+   * 窄屏（<992px）侧栏不会收成抽屉，会把内容挤到只剩一半宽度。
+   */
+  bindResponsive()
 
   return {
     sidebarCollapsed,

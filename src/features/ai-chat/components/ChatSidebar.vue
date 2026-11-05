@@ -80,7 +80,7 @@ function formatConvTime(conv: Conversation): string {
     <!-- 品牌标识 -->
     <div class="cs__brand">
       <div class="cs__brand-icon">
-        <Sparkles :size="18" />
+        <Sparkles :size="20" />
       </div>
       <div class="cs__brand-text">
         <div class="cs__brand-title">档案智能助手</div>
@@ -97,7 +97,7 @@ function formatConvTime(conv: Conversation): string {
     <!-- 历史列表 -->
     <div class="cs__history">
       <div class="cs__history-label">
-        <MessageSquare :size="13" />
+        <MessageSquare :size="16" />
         历史对话
       </div>
 
@@ -136,7 +136,7 @@ function formatConvTime(conv: Conversation): string {
               aria-label="重命名对话"
               @click="handleRenameStart($event, conv)"
             >
-              <Pencil :size="14" />
+              <Pencil :size="16" />
             </button>
             <button
               class="cs__item-btn cs__item-btn--del"
@@ -144,7 +144,7 @@ function formatConvTime(conv: Conversation): string {
               aria-label="删除对话"
               @click="handleDelete($event, conv.id)"
             >
-              <Trash2 :size="13" />
+              <Trash2 :size="16" />
             </button>
           </div>
         </li>
@@ -210,7 +210,7 @@ function formatConvTime(conv: Conversation): string {
   }
 
   &__brand-sub {
-    font-size: 10px;
+    font-size: 12px;
     color: var(--el-text-color-secondary);
     letter-spacing: 0.3px;
   }
@@ -267,7 +267,7 @@ function formatConvTime(conv: Conversation): string {
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
   }
 
   &__item {
@@ -279,7 +279,7 @@ function formatConvTime(conv: Conversation): string {
     transition: background $duration-fast $ease-standard;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
 
     &:hover {
       background: var(--el-fill-color-light);
@@ -297,7 +297,7 @@ function formatConvTime(conv: Conversation): string {
         width: 3px;
         height: 60%;
         background: var(--mc-accent);
-        border-radius: 2px;
+        border-radius: 6px;
       }
     }
   }
@@ -306,7 +306,7 @@ function formatConvTime(conv: Conversation): string {
     width: 100%;
     border: 1px solid var(--mc-accent);
     border-radius: $radius-sm;
-    padding: 2px 6px;
+    padding: 4px 8px;
     font-size: $font-size-sm;
     background: var(--el-bg-color);
     outline: none;
@@ -369,7 +369,7 @@ function formatConvTime(conv: Conversation): string {
 
     &--del:hover {
       background: rgba($color-danger, 0.1);
-      color: $color-danger;
+      color: $color-danger-text;
     }
   }
 

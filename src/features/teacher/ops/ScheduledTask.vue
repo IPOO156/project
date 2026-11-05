@@ -237,7 +237,7 @@ onMounted(() => void loadList())
 
     <div class="mc-card">
       <div class="mc-card__head">
-        <span class="mc-card__title"><Clock :size="15" /> 任务列表</span>
+        <span class="mc-card__title"><Clock :size="16" /> 任务列表</span>
         <span class="scheduled-task__total">共 {{ total }} 条</span>
       </div>
       <div class="mc-card__body">

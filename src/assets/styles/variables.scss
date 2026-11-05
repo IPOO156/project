@@ -29,7 +29,6 @@ $color-border: #e2e8f0;
 
 // 字体
 $font-family-base: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-$font-family-title: Georgia, 'Times New Roman', serif;
 
 // 字号
 $font-size-xs: 12px;
@@ -55,6 +54,28 @@ $radius-base: 6px;
 $radius-lg: 8px;
 $radius-xl: 12px;
 $radius-2xl: 16px;
+
+// =============================================================================
+// 追加 token —— 仅教师端 / 管理员端使用；学生端基线不依赖这些变量
+// （学生端一律用上方 BASE 值，保证与改造前渲染一致）
+// =============================================================================
+$color-success-text: #047857;
+$color-warning-text: #b45309;
+$color-danger-text: #b91c1c;
+
+$font-size-display: 32px;
+$font-weight-regular: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$line-height-title: 1.25;
+$line-height-body: 1.6;
+$line-height-aux: 1.5;
+
+$spacing-2xs: 4px;
+$spacing-3xl: 40px;
+$spacing-4xl: 48px;
+
+$radius-pill: 999px;
 
 // 阴影
 $shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);

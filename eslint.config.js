@@ -20,6 +20,8 @@ export default antfu({
     'login-result.json',
     '*.result.json',
     'dist/**',
+    // 运行检查脚本/截图/报告，非产品代码
+    '.runtime-check/**',
     // 参考手册、文档与修改记录中的代码片段不参与 ESLint 校验
     'claude.md',
     '开发手册.md',
