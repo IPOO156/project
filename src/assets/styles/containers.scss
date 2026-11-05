@@ -24,24 +24,34 @@
 
 #app :is(.layout--teacher, .layout--admin),
 html:has(#app :is(.layout--teacher, .layout--admin)) {
+  // 容器组加强档取值（浅色）。
+  // 为什么不再复用按钮 token：上一版 hover 与表面差 1–2/255、表头差 8/255，
+  // 肉眼几乎无感。这里把「表面 → 表头 → hover」拉开成三级冷灰阶梯，
+  // 并把分隔线/页签基线/空态文案各加深一档；尺寸与字号一律不动。
+  // 暗色覆盖见文件末尾 :root[data-theme='dark'] 块（同权重更高，逐项覆盖）。
+  --mc-container-header-bg: #eef2f7;
+  --mc-container-row-hover: #e7eff6;
+  --mc-container-line: #cfd9e6;
+  --mc-container-tabs-baseline: #d5dde7;
+  --mc-container-empty-text: #475569;
+
   // -------------------------------------------------
   // 1. el-table —— 只换色，不动尺寸
   // -------------------------------------------------
 
   // EP 表格根节点变量。
   // 为什么这么写：
-  // - 表头底色取 --mc-btn-disabled-surface（浅 #f1f5f9 / 暗 #141d2c），
-  //   与按钮 hover 面 #f2f6fa 同属冷灰阶梯，比纯白高一级、又不会抢正文。
-  // - hover 直接复用按钮 hover 面 --mc-btn-surface-hover（#f2f6fa / #1a2638）。
-  // - 分隔线用 --mc-ctl-disabled-line（#e2e8f0 / #26334a），保证 1px 实线可见，
-  //   替换旧值 --el-border-color-lighter（#f1f5f9）过淡的问题。
-  // - 表面/行底色统一到 --mc-ctl-surface（#ffffff / #111b2c），暗色不再混用两档灰。
+  // - 表头底色取加强档 --mc-container-header-bg（浅 #eef2f7 / 暗 #1a2437），
+  //   与表面 #ffffff / #111b2c 至少差 9/255，和行 hover 仍保持一档差距。
+  // - hover 取 --mc-container-row-hover（#e7eff6 / #223149），比上一版拉开明显。
+  // - 分隔线取 --mc-container-line（#cfd9e6 / #32405a），1px 实线清晰可见。
+  // - 表面/行底色统一到 --mc-ctl-surface（#ffffff / #111b2c）。
   // - 三个固定列阴影变量置 none，落实「无投影」。
   // 作用域边界：只在教师/管理员 layout 内命中；学生端无这两个类。
   .el-table.el-table[class] {
-    --el-table-header-bg-color: var(--mc-btn-disabled-surface);
-    --el-table-row-hover-bg-color: var(--mc-btn-surface-hover);
-    --el-table-border-color: var(--mc-ctl-disabled-line);
+    --el-table-header-bg-color: var(--mc-container-header-bg);
+    --el-table-row-hover-bg-color: var(--mc-container-row-hover);
+    --el-table-border-color: var(--mc-container-line);
     --el-table-text-color: var(--mc-ctl-label);
     --el-table-header-text-color: var(--mc-btn-label);
     --el-table-bg-color: var(--mc-ctl-surface);
@@ -59,7 +69,7 @@ html:has(#app :is(.layout--teacher, .layout--admin)) {
   // 行高、padding 一律不写，保持现状（教师 12px / 管理员 8px 的既有口径）。
   .el-table.el-table[class] th.el-table__cell {
     color: var(--mc-btn-label);
-    background-color: var(--mc-btn-disabled-surface);
+    background-color: var(--mc-container-header-bg);
   }
 
   // 斑马纹退化为「仅 hover 高亮」。
@@ -79,7 +89,7 @@ html:has(#app :is(.layout--teacher, .layout--admin)) {
     .el-table__body
     tr.hover-row.el-table__row--striped
     > td.el-table__cell {
-    background-color: var(--mc-btn-surface-hover);
+    background-color: var(--mc-container-row-hover);
   }
 
   // 固定列底色归一。
@@ -211,10 +221,11 @@ html:has(#app :is(.layout--teacher, .layout--admin)) {
     background-color: var(--mc-btn-label-strong);
   }
 
-  // 页签栏基线：1px 实线，颜色与表格分隔线同一档；不改 header 高度与 margin。
+  // 页签栏基线：1px 实线，加强档单独取值（浅 #d5dde7 / 暗 #32405a）；
+  // 只改颜色，header 高度与 margin 不动。
   .el-tabs.el-tabs[class] .el-tabs__nav-wrap::after {
     height: 1px;
-    background-color: var(--mc-ctl-disabled-line);
+    background-color: var(--mc-container-tabs-baseline);
   }
 
   // 键盘焦点：EP 默认用品牌蓝 inset 阴影，这里换成统一 2px 实描边。
@@ -228,13 +239,31 @@ html:has(#app :is(.layout--teacher, .layout--admin)) {
   // 4. el-empty —— 仅统一文案色，尺寸/插画不动
   // -------------------------------------------------
 
-  // 空态描述文案：从 --el-text-color-secondary（#64748b）收敛到按钮次级文字
-  // --mc-btn-label-soft（#5f6b7d / #94a3b8）。字号、行高、间距全部保持 EP 默认。
+  // 空态描述文案：加强档取 --mc-container-empty-text（浅 #475569 / 暗 #cbd5e1）。
+  // 上一版写 --mc-btn-label-soft（#5f6b7d / #94a3b8）与 EP 默认几乎同色，
+  // 实测为零变化；这里加深（浅）/ 提亮（暗），字号、行高、间距仍为 EP 默认。
   // 为什么用直接属性：EP 2.14.5 没有 --el-empty-text-color，描述色来自全局
   // --el-text-color-secondary，只能对 .el-empty__description p 直接覆盖。
   // 插画 --el-empty-fill-color-* 不动：EP 自带浅/暗两套灰阶，强行重排会有
   // SVG 明暗层错位风险，故保留，详见规格文档「已知残差」。
   .el-empty.el-empty[class] .el-empty__description p {
-    color: var(--mc-btn-label-soft);
+    color: var(--mc-container-empty-text);
   }
+}
+
+// -------------------------------------------------
+// 5. 暗色覆盖 —— 只覆盖加强档 5 个局部变量
+// -------------------------------------------------
+// 为什么单独成块：暗色下需要另一套色阶，且 teleport 到 body 的浮层不在 #app 内，
+// 必须同时命中 :root（html）以让变量继承到 body 子树。
+// 为什么不沿用上一版的「表头取 surface 上一档」：#141d2c 与表面 #111b2c 仅差
+// 3/255，再深到 #131c2c 只有 2/255（且比表面更暗，层级倒置）；故取 #1a2437
+// （26,36,55），与表面差 9/255、与 hover #223149（34,49,73）仍留一档。
+:root[data-theme='dark'] #app :is(.layout--teacher, .layout--admin),
+:root[data-theme='dark']:has(#app :is(.layout--teacher, .layout--admin)) {
+  --mc-container-header-bg: #1a2437;
+  --mc-container-row-hover: #223149;
+  --mc-container-line: #32405a;
+  --mc-container-tabs-baseline: #32405a;
+  --mc-container-empty-text: #cbd5e1;
 }
