@@ -29,7 +29,7 @@ html:has(#app :is(.layout--teacher, .layout--admin)) {
   // 肉眼几乎无感。这里把「表面 → 表头 → hover」拉开成三级冷灰阶梯，
   // 并把分隔线/页签基线/空态文案各加深一档；尺寸与字号一律不动。
   // 暗色覆盖见文件末尾 :root[data-theme='dark'] 块（同权重更高，逐项覆盖）。
-  --mc-container-header-bg: #eef2f7;
+  --mc-container-header-bg: #e7edf5;
   --mc-container-row-hover: #e7eff6;
   --mc-container-line: #cfd9e6;
   --mc-container-tabs-baseline: #d5dde7;
@@ -41,8 +41,8 @@ html:has(#app :is(.layout--teacher, .layout--admin)) {
 
   // EP 表格根节点变量。
   // 为什么这么写：
-  // - 表头底色取加强档 --mc-container-header-bg（浅 #eef2f7 / 暗 #1a2437），
-  //   与表面 #ffffff / #111b2c 至少差 9/255，和行 hover 仍保持一档差距。
+  // - 表头底色取加强档 --mc-container-header-bg（浅 #e7edf5 / 暗 #1a2437），
+  //   与表面 #ffffff / #111b2c 至少差 15/255，和行 hover #e7eff6 仍保持一档差距。
   // - hover 取 --mc-container-row-hover（#e7eff6 / #223149），比上一版拉开明显。
   // - 分隔线取 --mc-container-line（#cfd9e6 / #32405a），1px 实线清晰可见。
   // - 表面/行底色统一到 --mc-ctl-surface（#ffffff / #111b2c）。
