@@ -116,9 +116,9 @@ describe('useUserStore 资料与密码', () => {
     })
   })
 
-  it('updateUserInfo 整体提交联系信息，不回写账号邮箱', async () => {
+  it('updateUserInfo 整体提交联系信息，并回写同源邮箱/手机号', async () => {
     const store = useUserStore()
-    store.setUserInfo(userInfo({ email: 'account@example.com' }))
+    store.setUserInfo(userInfo({ email: 'old@example.com', phone: '13700000000' }))
 
     await store.updateUserInfo({
       email: 'contact@example.com',
@@ -130,7 +130,12 @@ describe('useUserStore 资料与密码', () => {
     })
 
     expect(mocks.updateProfileContact).toHaveBeenCalled()
-    expect(store.userInfo?.email).toBe('account@example.com')
+    // 后端只有一份邮箱/手机号（user_contact_info），保存后 userInfo 同步为最新值并落缓存
+    expect(store.userInfo?.email).toBe('contact@example.com')
+    expect(store.userInfo?.phone).toBe('13800000000')
+    expect(JSON.parse(localStorage.getItem('user_info_cache') as string).email).toBe(
+      'contact@example.com',
+    )
   })
 
   it('updateAvatar 非 data URL 直接缓存，接口失败时保留本地值', async () => {

@@ -63,9 +63,8 @@ export function mapAwards(profile: any): Award[] | null {
 
 /**
  * 学籍信息同步到 userStore（档案概览页「基本资料」的展示来源）。
- * 只同步学籍与头像：联系邮箱/手机号属 /profile/contact 的数据，展示直接读 profileData.contactInfo，
- * 不写入 userInfo —— 否则会把「联系邮箱」覆盖到账号邮箱（userInfo.email）上，
- * 用户误以为注册邮箱已改，忘记密码却仍提示「邮箱未注册」。
+ * 只同步学籍与头像：/profile/info 的联系邮箱/手机号是脱敏值，不能写入 userInfo；
+ * 未脱敏的最新联系方式由「保存联系信息」后 updateUserInfo 回写到 userInfo。
  */
 export function syncAcademicToUser(profile: any): void {
   const a = profile?.academicInfo ?? {}

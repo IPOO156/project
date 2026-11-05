@@ -61,10 +61,5 @@ describe('字典集中维护', () => {
     }
   })
 
-  it('学期选项按学年升序生成且不重复', () => {
-    const values = dict.SEMESTER_OPTIONS.map((item) => String(item.value))
-    expect(new Set(values).size).toBe(values.length)
-    const years = values.map((value) => Number(value.slice(0, 4)))
-    expect(years[0]).toBeLessThanOrEqual(years[years.length - 1])
-  })
+  // 学期选项已改由 useSemesters 从后端获取，dict 不再内置学期列表。
 })
