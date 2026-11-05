@@ -100,7 +100,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
         <div class="ai-drawer__panel">
           <header class="ai-drawer__header">
             <div class="ai-drawer__header-left">
-              <div class="ai-drawer__avatar"><Sparkles :size="20" /></div>
+              <div class="ai-drawer__avatar"><Sparkles :size="18" /></div>
               <span class="ai-drawer__title">{{ aiName }}</span>
             </div>
             <div class="ai-drawer__header-right">
@@ -113,7 +113,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
                 aria-label="关闭"
                 @click="emit('close')"
               >
-                <X :size="20" />
+                <X :size="18" />
               </button>
             </div>
           </header>
@@ -138,7 +138,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
             <div v-if="loading" class="ai-drawer__msg ai-drawer__msg--loading">
               <ChatAvatar role="ai" />
               <div class="ai-drawer__bubble ai-drawer__bubble--loading">
-                <Sparkles :size="16" class="ai-drawer__thinking-icon" />
+                <Sparkles :size="14" class="ai-drawer__thinking-icon" />
                 <span>AI Thinking...</span>
               </div>
             </div>
@@ -214,7 +214,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 16px;
+    padding: 14px 16px;
     flex-shrink: 0;
     background: linear-gradient(135deg, var(--mc-primary) 0%, var(--mc-primary-light) 100%);
     color: #fff;
@@ -223,7 +223,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   &__header-left {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
   &__avatar {
     width: 32px;
@@ -235,7 +235,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     justify-content: center;
   }
   &__title {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
   }
   &__header-right {
@@ -245,7 +245,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   }
 
   &__expand {
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: $radius-sm;
     border: 1px solid rgba(255, 255, 255, 0.4);
     background: transparent;
@@ -287,7 +287,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   &__msg {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    gap: 10px;
     max-width: 88%;
     &--user {
       align-self: flex-end;
@@ -299,8 +299,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   }
 
   &__bubble {
-    padding: 8px 16px;
-    border-radius: 6px;
+    padding: 10px 14px;
+    border-radius: 14px;
     background: var(--el-fill-color-light);
     color: var(--el-text-color-primary);
     line-height: 1.6;
@@ -311,8 +311,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   &__msg--user &__bubble {
     background: var(--mc-primary);
     color: #fff;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 4px;
   }
 
   &__content {
@@ -323,16 +323,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     display: inline-block;
     margin-bottom: 4px;
     padding: 1px 8px;
-    border-radius: 999px;
+    border-radius: 100px;
     background: color-mix(in srgb, var(--mc-accent) 14%, transparent);
     color: var(--mc-accent);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
   }
   &__time {
     display: block;
     margin-top: 4px;
-    font-size: 12px;
+    font-size: 10px;
     opacity: 0.5;
   }
 
@@ -364,15 +364,15 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 8px 16px;
+    padding: 10px 16px;
     border-top: 1px solid var(--el-border-color-light);
     background: var(--el-fill-color-light);
     flex-shrink: 0;
   }
 
   &__quick-btn {
-    padding: 8px 8px;
-    border-radius: 999px;
+    padding: 5px 10px;
+    border-radius: 100px;
     border: 1px solid var(--el-border-color);
     background: var(--el-bg-color);
     color: var(--el-text-color-secondary);
@@ -403,8 +403,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   &__input {
     flex: 1;
     min-width: 0;
-    padding: 8px 16px;
-    border-radius: 6px;
+    padding: 10px 14px;
+    border-radius: 10px;
     border: 1px solid var(--el-border-color);
     background: var(--el-fill-color-light);
     color: var(--el-text-color-primary);
@@ -426,7 +426,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   &__send {
     width: 38px;
     height: 38px;
-    border-radius: 6px;
+    border-radius: 10px;
     border: none;
     background: var(--mc-primary);
     color: #fff;

@@ -91,7 +91,7 @@ function cardSegments(block: CardBlock) {
       <!-- 信息卡 -->
       <div v-else-if="block.type === 'card'" class="rc__card">
         <div class="rc__card-title">
-          <component :is="getCardIcon(block.icon)" :size="16" />
+          <component :is="getCardIcon(block.icon)" :size="15" />
           <span>{{ block.title }}</span>
         </div>
         <div class="rc__card-body">
@@ -113,7 +113,7 @@ function cardSegments(block: CardBlock) {
   flex-direction: column;
   gap: $spacing-sm;
   font-size: $font-size-base;
-  line-height: 1.6;
+  line-height: 1.7;
   color: var(--el-text-color-primary);
 
   &__greeting {
@@ -137,7 +137,7 @@ function cardSegments(block: CardBlock) {
   }
 
   &__chip {
-    padding: 4px 8px;
+    padding: 2px 8px;
     border-radius: $radius-lg;
     font-size: $font-size-xs;
     color: var(--mc-primary);

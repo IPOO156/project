@@ -1,3 +1,5 @@
+import type { NotificationCategory } from '@/shared/types/types'
+
 // 各申报模块的中文映射
 export const APPLICATION_TYPE_MAP: Record<string, string> = {
   competition: '学科竞赛',
@@ -60,6 +62,28 @@ export const NOTIFICATION_CATEGORY = {
   dynamic_remind: { label: '动态提醒', color: 'success' },
   private_message: { label: '私信', color: 'primary' },
 } as const
+
+/** 未知分类的通用兜底文案（绝不把 snake_case 枚举键暴露到界面） */
+export const NOTIFICATION_CATEGORY_FALLBACK = '其他通知'
+
+/**
+ * 通知分类文案的唯一归一入口。
+ * 1. 字典命中时用字典中文；2. categoryLabel 仅在包含中文时视为有效；
+ * 3. 未知枚举（含 snake_case 键名 / 英文 token）一律落到通用兜底。
+ */
+export function notificationCategoryLabel(
+  category: string | null | undefined,
+  rawLabel?: string | null,
+): string {
+  const key = category?.trim().toLowerCase()
+  const localized = key ? NOTIFICATION_CATEGORY[key as NotificationCategory]?.label : undefined
+  if (localized) return localized
+
+  const label = rawLabel?.trim()
+  if (label && /[\u4E00-\u9FFF]/.test(label)) return label
+
+  return NOTIFICATION_CATEGORY_FALLBACK
+}
 
 // 通知状态
 export const NOTIFICATION_STATUS = {

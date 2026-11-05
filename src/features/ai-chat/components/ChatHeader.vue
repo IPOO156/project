@@ -54,7 +54,7 @@ function handleExport(format: ExportFormat) {
 
     <div class="ch__right">
       <button class="ch__btn" :disabled="messageCount <= 1" title="清空对话" @click="emit('clear')">
-        <Trash2 :size="16" />
+        <Trash2 :size="15" />
         <span>清空</span>
       </button>
 
@@ -65,9 +65,9 @@ function handleExport(format: ExportFormat) {
           title="导出对话"
           @click="toggleExportMenu"
         >
-          <Download :size="16" />
+          <Download :size="15" />
           <span>导出</span>
-          <ChevronDown :size="16" class="ch__caret" :class="{ 'is-open': exportMenuVisible }" />
+          <ChevronDown :size="13" class="ch__caret" :class="{ 'is-open': exportMenuVisible }" />
         </button>
         <ExportMenu
           :visible="exportMenuVisible"
@@ -137,7 +137,7 @@ function handleExport(format: ExportFormat) {
     font-size: $font-size-xs;
     color: var(--mc-accent);
     background: color-mix(in srgb, var(--mc-accent) 12%, transparent);
-    padding: 1px 8px;
+    padding: 1px 6px;
     border-radius: $radius-sm;
     font-weight: 500;
   }
@@ -152,10 +152,10 @@ function handleExport(format: ExportFormat) {
     display: inline-flex;
     align-items: center;
     gap: $spacing-xs;
-    padding: 4px $spacing-sm;
+    padding: 3px $spacing-sm;
     border-radius: $radius-2xl;
     background: rgba($color-success, 0.1);
-    color: $color-success-text;
+    color: $color-success;
     font-size: $font-size-xs;
     font-weight: 500;
     margin-left: $spacing-sm;

@@ -303,9 +303,9 @@ onMounted(() => {
             />
           </el-select>
           <el-button type="primary" size="default" @click="handleActivitySearch">
-            <Filter class="u-mr-4" :size="16" />筛选
+            <Filter class="u-mr-4" :size="14" />筛选
           </el-button>
-          <el-button @click="handleActivityReset"> <X class="u-mr-4" :size="16" />重置 </el-button>
+          <el-button @click="handleActivityReset"> <X class="u-mr-4" :size="14" />重置 </el-button>
         </div>
       </div>
 
@@ -405,10 +405,10 @@ onMounted(() => {
             />
           </el-select>
           <el-button type="primary" size="default" @click="handleSubmissionSearch">
-            <Filter class="u-mr-4" :size="16" />筛选
+            <Filter class="u-mr-4" :size="14" />筛选
           </el-button>
           <el-button @click="handleSubmissionReset">
-            <X class="u-mr-4" :size="16" />重置
+            <X class="u-mr-4" :size="14" />重置
           </el-button>
         </div>
       </div>
@@ -527,7 +527,7 @@ onMounted(() => {
   gap: 16px;
   flex-wrap: wrap;
   margin-top: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 
   &__filters {
     display: flex;

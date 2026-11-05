@@ -139,13 +139,13 @@ function handleClick() {
     right: -2px;
     min-width: 18px;
     height: 18px;
-    padding: 0 8px;
-    border-radius: 6px;
+    padding: 0 5px;
+    border-radius: 9px;
     background: var(--el-color-danger);
     color: #fff;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 18px;
     text-align: center;
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
   }
@@ -156,11 +156,11 @@ function handleClick() {
     bottom: calc(100% + 10px);
     right: 0;
     white-space: nowrap;
-    padding: 8px 16px;
+    padding: 8px 14px;
     background: rgba(0, 0, 0, 0.78);
     color: #fff;
     font-size: 13px;
-    border-radius: 6px;
+    border-radius: 8px;
     pointer-events: none;
     opacity: 0;
     visibility: hidden;

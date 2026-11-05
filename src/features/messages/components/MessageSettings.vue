@@ -94,7 +94,7 @@ watch(
         :image-size="80"
       />
       <div v-for="item in settings" :key="item.category" class="message-settings__item">
-        <div class="message-settings__label">{{ item.categoryLabel || item.category }}</div>
+        <div class="message-settings__label">{{ item.categoryLabel }}</div>
         <div class="message-settings__switches">
           <div v-for="channel in CHANNELS" :key="channel.key" class="message-settings__switch">
             <span class="message-settings__switch-label">{{ channel.label }}</span>
@@ -146,7 +146,7 @@ watch(
   &__switches {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 20px;
   }
 
   &__switch {

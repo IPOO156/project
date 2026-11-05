@@ -79,7 +79,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
     z-index: $z-popover;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
   }
 
   &__item {

@@ -112,7 +112,7 @@ const option = computed(() => ({
   margin-bottom: 16px;
 
   .trend-title {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: #1e293b;
   }

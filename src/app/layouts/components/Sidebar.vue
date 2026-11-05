@@ -7,7 +7,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
 import logoIcon from '@/assets/logo/logo-icon.png'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
-import { menuItems } from '@/shared/constants/menu'
+import { findMenuItemByRoute, menuItems } from '@/shared/constants/menu'
 
 const route = useRoute()
 const router = useRouter()
@@ -52,7 +52,9 @@ const activeMenu = computed(() => {
     if (path.startsWith('/teacher/student-detail')) return '/teacher/archive-view'
     return path
   }
-  return path
+  // 学生端菜单入口未必与路由一一对应（入口可能指向模块内其它页面），
+  // 按模块 routePrefix 兜底解析成真实菜单项索引，避免高亮整块丢失。
+  return findMenuItemByRoute(path)?.path ?? path
 })
 
 /** 当前路由所在分组（用于自动展开） */

@@ -136,11 +136,11 @@ function handleVoiceClick() {
     <Transition name="attach">
       <div v-if="attachments.length" class="ci__attach">
         <div v-for="(file, i) in attachments" :key="i" class="ci__attach-item">
-          <Paperclip :size="16" />
+          <Paperclip :size="13" />
           <span class="ci__attach-name" :title="file.name">{{ file.name }}</span>
           <span class="ci__attach-size">{{ formatSize(file.size) }}</span>
           <button class="ci__attach-remove" title="移除" @click="removeAttachment(i)">
-            <X :size="16" />
+            <X :size="12" />
           </button>
         </div>
       </div>
@@ -150,7 +150,7 @@ function handleVoiceClick() {
     <div class="ci__bar" :class="{ 'is-recording': isRecording }">
       <!-- 附件按钮 -->
       <button class="ci__btn" title="添加附件" @click="fileInputRef?.click()">
-        <Paperclip :size="20" />
+        <Paperclip :size="18" />
       </button>
       <input
         ref="fileInputRef"
@@ -167,7 +167,7 @@ function handleVoiceClick() {
         :title="voiceSupported ? '语音输入' : voiceUnsupportedHint"
         @click="handleVoiceClick"
       >
-        <Mic :size="20" />
+        <Mic :size="18" />
       </button>
 
       <!-- textarea -->
@@ -183,7 +183,7 @@ function handleVoiceClick() {
 
       <!-- 发送按钮 -->
       <button class="ci__send" :disabled="!canSend" title="发送" @click="handleSend">
-        <Send :size="20" />
+        <Send :size="18" />
       </button>
     </div>
   </div>
@@ -205,7 +205,7 @@ function handleVoiceClick() {
     background: rgba($color-danger, 0.08);
     border-radius: $radius-base;
     font-size: $font-size-sm;
-    color: $color-danger-text;
+    color: $color-danger;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -260,7 +260,7 @@ function handleVoiceClick() {
     padding: 0;
 
     &:hover {
-      color: $color-danger-text;
+      color: $color-danger;
     }
   }
 
@@ -307,7 +307,7 @@ function handleVoiceClick() {
     }
 
     &.is-recording {
-      color: $color-danger-text;
+      color: $color-danger;
       background: rgba($color-danger, 0.1);
     }
   }

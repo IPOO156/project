@@ -4,6 +4,7 @@ import {
   Clock,
   Compass,
   FilePen,
+  FileText,
   GraduationCap,
   Home,
   IdCard,
@@ -124,10 +125,10 @@ export const registeredModules: AppModule[] = [
     icon: FilePen,
     order: 30,
     routePrefix: '/applications',
-    description: '个人档案申报情况总览与档案完整度',
-    // 入口直接落到「申报看板」：/applications 是无 tab 参数的申报表单 hub，
-    // 会静默回落到首个分类（学科竞赛），点「个人档案信息申报」却进了竞赛填报表单。
-    menuItems: [{ label: '个人档案信息申报', icon: FilePen, path: '/approval/pending' }],
+    description: '各类档案信息申报入口',
+    // 入口回到申报 hub 本身（/applications 无 tab 参数时按首个分类渲染，与基线一致）。
+    // 需要直达「申报看板」时走「我的申报 → 申报看板」，两个入口各自独立索引，避免双高亮。
+    menuItems: [{ label: '个人档案信息申报', icon: FilePen, path: '/applications' }],
   },
   {
     id: 'awards',
@@ -135,7 +136,7 @@ export const registeredModules: AppModule[] = [
     icon: Star,
     order: 40,
     routePrefix: '/awards',
-    description: '三类之星奖项报名（总览见「我的奖项」）',
+    description: '三类之星奖项报名（总览见「我的申报 - 奖项看板」）',
     menuItems: [
       {
         label: '奖项报名',
@@ -150,14 +151,21 @@ export const registeredModules: AppModule[] = [
   },
   {
     id: 'approval',
-    label: '我的奖项',
-    icon: Star,
+    label: '我的申报',
+    icon: FileText,
     order: 50,
     routePrefix: '/approval',
-    description: '奖项看板：查看与管理奖项报名记录',
-    // 「申报看板」入口已由「个人档案信息申报」承担，只剩子项的折叠组属于结构冗余，
-    // 因此降级为扁平项，避免两个入口同指一页（双高亮 + 标签与内容不符）。
-    menuItems: [{ label: '我的奖项', icon: Star, path: '/approval/award-review' }],
+    description: '查看与管理个人申报与奖项报名记录',
+    menuItems: [
+      {
+        label: '我的申报',
+        icon: FileText,
+        children: [
+          { label: '申报看板', icon: Clock, path: '/approval/pending' },
+          { label: '奖项看板', icon: Star, path: '/approval/award-review' },
+        ],
+      },
+    ],
   },
 ]
 
@@ -175,4 +183,18 @@ export function getMenuItems(): MenuItem[] {
  */
 export function findModuleById(id: string): AppModule | undefined {
   return registeredModules.find((module) => module.id === id)
+}
+
+/**
+ * 按路由前缀匹配模块（取最长前缀，避免 /applications 误命中 /apply）。
+ *
+ * 菜单项的 path 与路由 path 并不保证一一对应：同一个模块可能把菜单入口指向模块内的
+ * 某个子页面（如申报模块的入口指向申报看板），此时 `findMenuItemByPath('/applications')`
+ * 会取空，导致侧栏高亮、页签图标丢失。这里以注册表里的 routePrefix 为准做兜底映射，
+ * 不硬编码任何具体路径，菜单再次调整时无需同步改 UI 组件。
+ */
+export function findModuleByRoutePrefix(path: string): AppModule | undefined {
+  return [...registeredModules]
+    .filter((module) => path === module.routePrefix || path.startsWith(`${module.routePrefix}/`))
+    .sort((a, b) => b.routePrefix.length - a.routePrefix.length)[0]
 }

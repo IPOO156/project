@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ApplicationType } from '@/shared/types/types'
 import {
   Award,
   BarChart3,
@@ -11,8 +12,9 @@ import {
   Trophy,
   Users,
 } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useSubmissionStore } from '@/app/stores/stores'
 import BookReportList from './book-report/BookReportList.vue'
 import CertificateList from './certificate/CertificateList.vue'
 import CompetitionList from './competition/CompetitionList.vue'
@@ -26,6 +28,7 @@ import TrainingList from './training/TrainingList.vue'
 
 const route = useRoute()
 const router = useRouter()
+const submissionStore = useSubmissionStore()
 
 const modules = [
   {
@@ -34,7 +37,6 @@ const modules = [
     icon: Trophy,
     component: CompetitionList,
     desc: '竞赛成果与过程材料',
-    count: 0,
   },
   {
     key: 'innovation',
@@ -42,7 +44,6 @@ const modules = [
     icon: Lightbulb,
     component: InnovationList,
     desc: '双创项目与实践记录',
-    count: 0,
   },
   {
     key: 'research',
@@ -50,7 +51,6 @@ const modules = [
     icon: FlaskConical,
     component: ResearchList,
     desc: '科研成果与研究经历',
-    count: 0,
   },
   {
     key: 'scholarship',
@@ -58,7 +58,6 @@ const modules = [
     icon: Medal,
     component: ScholarshipList,
     desc: '奖助学金申报信息',
-    count: 0,
   },
   {
     key: 'certificate',
@@ -66,7 +65,6 @@ const modules = [
     icon: Award,
     component: CertificateList,
     desc: '荣誉与资格证明',
-    count: 0,
   },
   {
     key: 'internship',
@@ -74,7 +72,6 @@ const modules = [
     icon: Briefcase,
     component: InternshipList,
     desc: '岗位实践与企业经历',
-    count: 0,
   },
   {
     key: 'organization',
@@ -82,7 +79,6 @@ const modules = [
     icon: Users,
     component: OrganizationList,
     desc: '学生工作与组织任职',
-    count: 0,
   },
   {
     key: 'training',
@@ -90,7 +86,6 @@ const modules = [
     icon: BarChart3,
     component: TrainingList,
     desc: '课程实训与项目训练',
-    count: 0,
   },
   {
     key: 'social-practice',
@@ -98,7 +93,6 @@ const modules = [
     icon: HeartHandshake,
     component: SocialPracticeList,
     desc: '社会实践与志愿服务',
-    count: 0,
   },
   {
     key: 'book-report',
@@ -106,9 +100,34 @@ const modules = [
     icon: BookOpen,
     component: BookReportList,
     desc: '阅读记录与心得沉淀',
-    count: 0,
   },
 ] as const
+
+/**
+ * 模块 key → 申报记录 type。
+ * 菜单/页签用连字符（social-practice / book-report），记录类型为 camelCase，
+ * 其余 8 个 key 与 ApplicationType 一一对应。
+ */
+const RECORD_TYPE_OF_MODULE: Record<string, ApplicationType> = {
+  'social-practice': 'socialPractice',
+  'book-report': 'bookReport',
+}
+
+/**
+ * 各分类已提交记录数，用于页签徽标。
+ * 数据源与「我的申报 / 消息中心」一致，均为 useSubmissionStore 的 /activities 全量记录；
+ * 徽标仅在 count > 0 时渲染（0 即隐藏，与顶栏消息徽标 :hidden="unreadBadge === 0" 同一口径）。
+ */
+function countOf(key: string): number {
+  const recordType = RECORD_TYPE_OF_MODULE[key] ?? (key as ApplicationType)
+  return submissionStore.records.filter((r) => r.type === recordType).length
+}
+
+onMounted(() => {
+  // store 内部有 60s TTL：缓存新鲜时直接复用，过期或为空才重新拉取全量（最多 20 页 / 2000 条），
+  // 因此每次进入申报中心都能拿到较新的计数，且不会给每个分类各发一次请求。
+  void submissionStore.fetchRecords()
+})
 
 function resolveKeyFromRoute(tab: unknown): string {
   const key = typeof tab === 'string' ? tab : 'competition'
@@ -143,7 +162,9 @@ function switchModule(key: string) {
         :class="{ 'is-active': item.key === activeKey }"
         @click="switchModule(item.key)"
       >
-        <div v-if="item.count > 0" class="application-hub__tab-badge">{{ item.count }}</div>
+        <div v-if="countOf(item.key) > 0" class="application-hub__tab-badge">
+          {{ countOf(item.key) }}
+        </div>
         <div class="application-hub__tab-icon">
           <component :is="item.icon" :size="18" />
         </div>

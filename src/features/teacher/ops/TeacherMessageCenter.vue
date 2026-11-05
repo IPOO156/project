@@ -5,7 +5,7 @@ import { Inbox, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useTeacherMessageStore } from '@/app/stores/stores'
 import { useDebounce } from '@/shared/composables/useDebounce'
-import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
+import { NOTIFICATION_CATEGORY, notificationCategoryLabel } from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
@@ -80,11 +80,7 @@ function categoryTagType(item: MessageItem): 'success' | 'warning' | 'danger' | 
 }
 
 function categoryLabel(item: MessageItem): string {
-  return (
-    item.categoryLabel ||
-    NOTIFICATION_CATEGORY[item.category as MessageCategory]?.label ||
-    item.category
-  )
+  return notificationCategoryLabel(item.category, item.categoryLabel)
 }
 
 function isImportant(item: MessageItem): boolean {

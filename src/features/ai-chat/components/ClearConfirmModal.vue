@@ -22,7 +22,7 @@ const emit = defineEmits<{
     <div v-if="visible" class="ccm" @click.self="emit('cancel')">
       <div class="ccm__dialog">
         <div class="ccm__icon">
-          <AlertTriangle :size="32" />
+          <AlertTriangle :size="28" />
         </div>
         <h3 class="ccm__title">清空当前对话？</h3>
         <p class="ccm__desc">
@@ -64,7 +64,7 @@ const emit = defineEmits<{
     margin: 0 auto $spacing-md;
     border-radius: 50%;
     background: rgba($color-warning, 0.12);
-    color: $color-warning-text;
+    color: $color-warning;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -108,7 +108,7 @@ const emit = defineEmits<{
     }
 
     &--primary {
-      background: $color-danger-text;
+      background: $color-danger;
       color: #fff;
 
       &:hover {
