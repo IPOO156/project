@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
-import type { ChatSettings } from '../types'
+import type { ChatSettings } from '../ai-chat.types'
 /**
  * SettingsPanel - 右侧滑入设置面板
  *
@@ -43,7 +43,7 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
       <header class="sp__header">
         <h3 class="sp__title">助手设置</h3>
         <button class="sp__close" title="关闭" @click="emit('close')">
-          <X :size="18" />
+          <X :size="20" />
         </button>
       </header>
 
@@ -52,7 +52,7 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
           <h4 class="sp__section-title">显示偏好</h4>
           <div class="sp__list">
             <div v-for="item in toggles" :key="item.key" class="sp__item">
-              <div class="sp__item-icon"><component :is="item.icon" :size="18" /></div>
+              <div class="sp__item-icon"><component :is="item.icon" :size="20" /></div>
               <div class="sp__item-text">
                 <span class="sp__item-label">{{ item.label }}</span>
                 <span class="sp__item-desc">{{ item.desc }}</span>
@@ -123,7 +123,7 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all $duration-fast $ease-standard;
+    @include transition-ui;
 
     &:hover {
       background: var(--el-fill-color-light);
@@ -194,7 +194,7 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
     border-radius: $radius-lg;
     font-size: $font-size-sm;
     color: var(--el-text-color-regular);
-    line-height: 1.7;
+    line-height: 1.6;
 
     p {
       margin: 0;
@@ -227,7 +227,7 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
     position: absolute;
     inset: 0;
     background: var(--el-border-color);
-    border-radius: 11px;
+    border-radius: 6px;
     transition: background $duration-fast $ease-standard;
 
     &::before {

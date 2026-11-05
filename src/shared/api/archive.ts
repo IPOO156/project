@@ -28,9 +28,9 @@ export interface TimelineEventPayload {
   coverImage?: string
   /** 发生时间，格式 YYYY-MM-DD */
   eventAt: string
-  /** 来源记录 ID（与 sourceType 配对，来源记录必填，须关联已有来源记录） */
+  /** 来源记录 ID（后端必填，与 sourceType 同时提供，须关联已有且归属本人的来源记录） */
   sourceId?: number
-  /** 来源模型类型（与 sourceId 配对，如 archive_social_practices / award_applications） */
+  /** 来源模型类型（后端必填，与 sourceId 配对，如 archives / award_applications） */
   sourceType?: string
   /** 业务去重键，同用户下唯一（uk_gt_event_key） */
   eventKey?: string
@@ -64,8 +64,8 @@ export interface TimelineEventDetail {
 
 /**
  * 新增成长时间轴事件（4.2.1 POST /profile/growth-timeline）
- * 后端 create：status 不传时默认 0=草稿（列表接口不按状态过滤，刷新可见）；
- * sourceId+sourceType 可空，但携带 sourceType 时必须同时提供 sourceId（uk_gt_source 唯一）
+ * 后端 create 强制要求 sourceId+sourceType（须对应已有且归属本人的来源记录），
+ * 并对同一来源做 uk_gt_source 唯一校验；status 由后端强制置为已通过。
  */
 export function addTimelineEvent(data: TimelineEventPayload): Promise<TimelineEventDetail> {
   return request.post('/profile/growth-timeline', data)
@@ -98,10 +98,53 @@ export function deleteTimelineEvent(id: number | string): Promise<void> {
 
 /**
  * 获取多维度画像
- * 对接后端 GET /archive/dimensions（见 docs/api.md 3.4）
+ * 对接后端 GET /archive/dimensions（见 docs/api.md 3.4）。
+ * 后端返回 { userId, semesterId, totalScore, dimensions: [{ dimensionCode, dimensionName,
+ * score, ratio, sort }] }，此处映射为页面使用的 ProfileDimension：
+ * label=dimensionName、current=score。响应不含单项满分，target 记 0（页面据此只显示原始分，
+ * 不编造得分率）；previous 无数据同样记 0。
  */
-export function getDimensions(): Promise<ProfileDimension[]> {
-  return request.get('/archive/dimensions')
+export async function getDimensions(): Promise<ProfileDimension[]> {
+  const res = (await request.get('/archive/dimensions')) as unknown as {
+    dimensions?: Array<{
+      dimensionCode?: string
+      dimensionName?: string
+      score?: number | string | null
+      ratio?: number | string | null
+    }>
+  } | null
+  const list = Array.isArray(res?.dimensions) ? res.dimensions : []
+  return list.map((d) => ({
+    label: d.dimensionName || d.dimensionCode || '',
+    current: Number(d.score ?? 0),
+    target: 0,
+    previous: 0,
+  }))
+}
+
+/**
+ * 获取能力维度选项（GET /archive/dimensions）。
+ * 成长时间轴写接口的 abilityData 要求传 dimensionCode（对应 ability_dimensions.dimension_code），
+ * 页面不能把用户自由输入的能力名称直接当编码提交，故此处保留编码供下拉选择。
+ */
+export async function getAbilityDimensionOptions(): Promise<
+  Array<{ dimensionCode: string; dimensionName: string; description?: string }>
+> {
+  const res = (await request.get('/archive/dimensions')) as unknown as {
+    dimensions?: Array<{
+      dimensionCode?: string
+      dimensionName?: string
+      description?: string
+    }>
+  } | null
+  const list = Array.isArray(res?.dimensions) ? res.dimensions : []
+  return list
+    .filter((d) => Boolean(d.dimensionCode))
+    .map((d) => ({
+      dimensionCode: d.dimensionCode as string,
+      dimensionName: d.dimensionName || (d.dimensionCode as string),
+      description: d.description,
+    }))
 }
 
 /** 后端 eventType(1-6) → 前端 TimelineNode.type 映射（与档案概览时间线面板共用口径） */

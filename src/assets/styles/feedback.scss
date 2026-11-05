@@ -1,0 +1,219 @@
+/* =============================================================================
+ * EP 反馈与浮层「素面」—— 批 3（el-message / ElMessageBox / el-tooltip / el-switch）
+ *
+ * 落地方式（本文件未接入 main.ts，由批 3 负责人在合并时执行）：
+ *   src/main.ts:17 `import './assets/styles/controls.scss'` 之后追加
+ *   `import './assets/styles/feedback.scss'`
+ *
+ * 作用域：
+ *   - 所有规则统一前置 `#app :is(.layout--teacher, .layout--admin)` 或
+ *     `html:has(#app :is(.layout--teacher, .layout--admin))`。
+ *   - 后者用于 teleport 到 <body> 的浮层：message / messageBox / tooltip，
+ *     以及可能被 append-to-body 装进 body 的 dialog 内的 switch。
+ *   - 学生壳不输出这两个类（DefaultLayout.vue:136-141），因此本文件对学生端零命中。
+ *
+ * 变量：只消费 src/assets/styles/themes.css 已定义的 --mc-btn-* / --mc-ctl-* /
+ *   --mc-choice-*；不新增任何变量，不新增根级 --el-* 覆盖。
+ *   深色切换完全靠 html[data-theme] 下的根级 token 继承，无需 `:root[data-theme='dark']`。
+ *   若未来必须新增根级 --el-* 深色值，只能写 `:root[data-theme='dark']`（0,2,0），
+ *   不能写 `[data-theme='dark']`（0,1,0），否则被 EP 的 `html.dark`（0,1,1）压掉。
+ * ============================================================================= */
+
+/* ══════════════════════════════════════════════════════════════════
+   ① el-message —— 只收紧内边距，不碰颜色
+
+   对应组件：el-message（ElMessage.success / error / warning / info）
+   为什么这么写：
+     - EP 把 `--el-message-padding: 11px 15px` 声明在 `.el-message` 基类自身
+       （element-plus/theme-chalk/el-message.css），覆盖必须落在同一个元素上，
+       写父级变量不生效。
+     - 目标 8px 12px：内容 14px（.el-message__content 的 line-height:1）
+       + 上下 8px + 1px 边框 = 32px，与批 1 的 `--mc-ctl-h: 32px` 同档；
+       原值 11px 15px = 38px，偏高。
+     - 颜色一律不动：四态色写在 `.el-message--success / --warning / --info / --error`
+       上，而 `.el-message-icon--{type}` 与 `.el-message__content` 共用
+       `--el-message-text-color`，在基类重声明会把图标色一起抹平。
+     - 圆角/边框保持现状：圆角来自 `--el-border-radius-base`（global.scss:52 已设 6px）；
+       1px 边框来自 EP 自带的三件套（border-width/style/color），无需重写。
+   作用域：html:has(...) 权重 (1,2,1)，高于 EP 基类 (0,1,0)，与加载顺序无关。
+   ══════════════════════════════════════════════════════════════════ */
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-message {
+  --el-message-padding: 8px 12px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ② ElMessageBox —— 面板：圆角 / 内边距 / 单层克制投影 / 1px 边框
+
+   对应组件：ElMessageBox.confirm / alert / prompt（grep 实测 55 处 / 47 文件）
+   为什么这么写：
+     - 圆角：EP 用 `--el-messagebox-border-radius: 4px`（el-message-box.css），改为
+       `var(--mc-ctl-radius)`（6px，themes.css:187），与批 1/批 2 的控件圆角同源。
+     - 内边距：EP 用 `--el-messagebox-padding-primary: 12px`，它同时驱动
+       `.el-message-box__header` 的 padding-bottom、`.el-message-box__btns` 的
+       padding-top 与面板自身 padding；改一处即整体统一。
+     - 投影：EP 默认 `--el-messagebox-box-shadow: var(--el-box-shadow)`（多层叠加、
+       大半径）。这里换成单层克制投影，只交代「浮在遮罩之上」的厚度：
+       浅色 0 10px 30px rgba(15,23,42,0.10)，深色 0 14px 36px rgba(0,0,0,0.50)。
+       约束：单层、模糊 ≤36px、不压过 1px 实边（边仍取 --mc-ctl-line-float）。
+     - 保留 1px 实边：投影只做层次，不做边界；边界仍由实边交代，避免只靠投影时
+       在浅色遮罩上失去轮廓。
+     - 不写 background-color：底色继续走 EP 的 `var(--el-bg-color)`，避免在浮层上
+       另起第二套面值（深色下与壳内卡片有一档差异，见规格文档「已知偏差」）。
+   作用域：MessageBox 的面板与遮罩都挂在 body，只有 html:has 能命中。
+   ══════════════════════════════════════════════════════════════════ */
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-message-box {
+  --el-messagebox-border-radius: var(--mc-ctl-radius); /* 4px → 6px */
+  --el-messagebox-padding-primary: 16px; /* 12px → 16px */
+  --el-messagebox-box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+  border: 1px solid var(--mc-ctl-line-float);
+}
+
+/* 深色投影单独加深：遮罩本身是黑的，浅色那层 10% 会被吃掉，看不出厚度。
+   权重 (1,3,1) > 上面的 (1,2,1)；不写成根级 --el-* 覆盖，避免外溢到学生端。 */
+html[data-theme='dark']:has(#app :is(.layout--teacher, .layout--admin)) .el-message-box {
+  --el-messagebox-box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+}
+
+/* ── ②b 面板内按钮 —— 把 _buttons.scss 的素面语言下沉到浮层
+
+   _buttons.scss 的作用域是 `#app .layout--teacher/.layout--admin`，浮层按钮在 body 下，
+   吃不到那套映射，默认仍是 EP 蓝（主按钮 #409eff）。这里用同一批 --mc-btn-* 复制
+   三个最小必要块：结构（零投影/1px 边/6px 圆角/120ms）＋ 次按钮 ＋ 主按钮。
+   EP 把按钮的颜色全部声明在 `.el-button--primary` 自身（含 hover/active/disabled 变量），
+   所以只需要在同一元素上按更高权重重声明变量，不必写 :hover / :active 分支。 */
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-message-box .el-button {
+  padding: 0 var(--mc-btn-px-control);
+  border-width: 1px;
+  border-style: solid;
+  border-radius: var(--mc-btn-radius);
+  box-shadow: none;
+  background-image: none;
+  transition:
+    background-color var(--mc-btn-duration) var(--mc-btn-ease),
+    border-color var(--mc-btn-duration) var(--mc-btn-ease),
+    color var(--mc-btn-duration) var(--mc-btn-ease);
+}
+
+/* 次按钮（无 type，确认框的「取消」）：纸面 + 1px 可见边 */
+html:has(#app :is(.layout--teacher, .layout--admin))
+  .el-message-box
+  .el-button:not(.el-button--primary):not(.el-button--success):not(.el-button--warning):not(
+    .el-button--danger
+  ):not(.el-button--info):not(.is-text):not(.is-link) {
+  --el-button-text-color: var(--mc-btn-label);
+  --el-button-bg-color: var(--mc-btn-surface);
+  --el-button-border-color: var(--mc-btn-line);
+  --el-button-hover-text-color: var(--mc-btn-label-strong);
+  --el-button-hover-bg-color: var(--mc-btn-surface-hover);
+  --el-button-hover-border-color: var(--mc-btn-line-hover);
+  --el-button-active-text-color: var(--mc-btn-label-strong);
+  --el-button-active-bg-color: var(--mc-btn-surface-active);
+  --el-button-active-border-color: var(--mc-btn-line-active);
+  --el-button-disabled-text-color: var(--mc-btn-disabled-label);
+  --el-button-disabled-bg-color: var(--mc-btn-disabled-surface);
+  --el-button-disabled-border-color: var(--mc-btn-disabled-line);
+  --el-button-outline-color: var(--mc-btn-focus);
+}
+
+/* 主按钮（确认框的「确定」）：墨蓝实心 + 深一档边 */
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-message-box .el-button--primary {
+  --el-button-text-color: var(--mc-btn-on-brand);
+  --el-button-bg-color: var(--mc-btn-brand);
+  --el-button-border-color: var(--mc-btn-brand-line);
+  --el-button-outline-color: var(--mc-btn-focus);
+  --el-button-hover-text-color: var(--mc-btn-on-brand);
+  --el-button-hover-bg-color: var(--mc-btn-brand-hover);
+  --el-button-hover-border-color: var(--mc-btn-brand-hover);
+  --el-button-active-text-color: var(--mc-btn-on-brand);
+  --el-button-active-bg-color: var(--mc-btn-brand-active);
+  --el-button-active-border-color: var(--mc-btn-brand-active);
+  --el-button-disabled-text-color: var(--mc-btn-disabled-label);
+  --el-button-disabled-bg-color: var(--mc-btn-disabled-surface);
+  --el-button-disabled-border-color: var(--mc-btn-disabled-line);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ③ el-tooltip —— 深色气泡：墨蓝面 + 深一档边 + 6px 圆角
+
+   对应组件：el-tooltip（grep 7 处 / 4 文件；placement 全部 top）
+   为什么这么写：
+     - EP 2.14 的 tooltip 自己没有 CSS 文件（el-tooltip.css 为空），样式全在
+       .el-popper.is-dark（el-popper.css）：
+         background: var(--el-popper-bg-color-dark)  ← 默认 var(--el-text-color-primary)
+         border: 1px solid var(--el-text-color-primary)（与面同色 → 视觉无边）
+         color: var(--el-bg-color)
+         --el-popper-border-radius: var(--el-popover-border-radius, 4px)
+       ⇒ 改前浅色是 #303133 面 + 同色边 + 白字；深色是 #e5eaf3 面 + 深字（EP 反色）。
+     - 改后用品牌三件套：面 --mc-btn-brand（浅 #1e3a5f / 深 #24466f）、
+       边 --mc-btn-brand-line（浅 #172f4a / 深 #34577f）、字 --mc-btn-on-brand
+       （浅 #ffffff / 深 #f1f5f9）。浅深都不再反色，气泡始终是「墨蓝底 + 浅字」。
+     - 圆角改 --mc-ctl-radius（4px → 6px），与批 1 控件/批 2 容器同源。
+     - 箭头：`.el-popper__arrow::before` 单独写了 background + border，
+       EP 不是从 CSS 变量继承的（虽然变量也能生效，但 :before 里写死了 var 引用），
+       所以必须显式重写；两个「透明边」由 EP 的 `!important` 规则保留，无需处理。
+     - 投影：.el-popper 基类本身没有 box-shadow，无需置 none。
+     - 内边距/字号（5px 11px / 12px）不动：tooltip 是纯提示文本，收紧会截断长文案。
+   作用域：tooltip 挂 body，只有 html:has 能命中；禁止裸写 .el-popper。
+   ══════════════════════════════════════════════════════════════════ */
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-popper.is-dark {
+  --el-popper-bg-color-dark: var(--mc-btn-brand);
+  --el-popper-border-radius: var(--mc-ctl-radius); /* 4px → 6px */
+  border: 1px solid var(--mc-btn-brand-line);
+  color: var(--mc-btn-on-brand);
+}
+
+html:has(#app :is(.layout--teacher, .layout--admin))
+  .el-popper.is-dark
+  > .el-popper__arrow::before {
+  border: 1px solid var(--mc-btn-brand-line);
+  background: var(--mc-btn-brand);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ④ el-switch —— 选中/未选中配色 + 轨道 6px 圆角 + 焦点框
+
+   对应组件：el-switch（grep 24 处 / 17 文件；教师端 22 处，profile 2 处）
+   为什么这么写：
+     - EP 用两个变量驱动轨道：--el-switch-on-color（默认 --el-color-primary）、
+       --el-switch-off-color（默认 --el-border-color）。选中面改 --mc-choice-fill，
+       与批 1 的 checkbox/radio 选中面同源（浅 #1e3a5f / 深 #24466f）；
+       未选中改 --mc-ctl-line，与控件静止边同值，避免默认 #dcdfe6 在白底上几乎看不见。
+     - 轨道圆角：EP 写死 `border-radius: 10px`（.el-switch__core），无专属变量。
+       teacher-console.scss:809-812 已给 `.el-checkbox__inner, .el-switch__core` 设 6px，
+       但那段只包在 `.layout--teacher` 里（`.layout--admin` 漏了），且深色块内无重复；
+       这里用 html:has 前缀补两壳，权重 (1,3,1) 同时压过 EP (0,1,0) 与
+       teacher-console 的 (1,2,0)，一处封口。
+     - 轨道边：EP 的 border-color 走 `var(--el-switch-border-color, 当前态 color)`。
+       若不写该变量，选中态边=面（无边差）；素面要 1px 实边，故分态显式写：
+       未选中 --mc-ctl-line，选中 --mc-btn-brand-line。
+     - 滑块（.el-switch__action）保持 EP 的圆形与白面：它是「指示点」不是「面」，
+       改成方形会破坏开关的可读性。
+     - 焦点：EP 默认 `outline: 2px solid var(--el-switch-on-color); offset 1px`，
+       统一到批 1 的焦点口径 --mc-ctl-focus + offset 2px。
+     - 高度不写：默认轨道 40×20、容器高 32，与批 1 的 32px 控件档自洽。
+   作用域：用 html:has 而非 #app 前缀 —— 部分 switch 位于 append-to-body 的 dialog，
+   会被 teleport 到 body，壳前缀会漏掉它们。
+   ══════════════════════════════════════════════════════════════════ */
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-switch {
+  --el-switch-on-color: var(--mc-choice-fill);
+  --el-switch-off-color: var(--mc-ctl-line);
+}
+
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-switch__core {
+  border-radius: var(--mc-ctl-radius); /* 10px → 6px */
+}
+
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-switch:not(.is-checked) .el-switch__core {
+  border-color: var(--mc-ctl-line);
+}
+
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-switch.is-checked .el-switch__core {
+  border-color: var(--mc-btn-brand-line);
+}
+
+html:has(#app :is(.layout--teacher, .layout--admin))
+  .el-switch__input:focus-visible
+  ~ .el-switch__core {
+  outline: 2px solid var(--mc-ctl-focus);
+  outline-offset: 2px;
+}

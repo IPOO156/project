@@ -1,0 +1,269 @@
+/* =============================================================================
+ * EP 组件「素面」· 批 2-A · 容器组（仅教师端 / 管理员端）
+ * -----------------------------------------------------------------------------
+ * 覆盖：el-table / el-pagination / el-tabs / el-empty
+ * 不做：el-dialog / el-drawer / el-descriptions / el-switch / el-tooltip / el-alert
+ *
+ * 接入要求：
+ *   1. 本文件必须排在 teacher-console.scss 之后引入，建议 main.ts 第 18 行：
+ *      import './assets/styles/containers.scss'   // 放在 echarts-setup 之前
+ *   2. 不在本文件里声明任何根级 --el-*；EP 变量全部下压到组件根节点。
+ *   3. 仅复用 themes.css 已存在的 --mc-btn-* / --mc-ctl-* token，不新增全局变量。
+ *
+ * 作用域说明：
+ *   - #app :is(.layout--teacher, .layout--admin)：页面内（含默认不 teleport 的抽屉/弹窗）。
+ *   - html:has(#app :is(.layout--teacher, .layout--admin))：覆盖 append-to-body 后挂到 body
+ *     的浮层内容。只在教师/管理员壳存在时成立，学生壳没有这两个 layout 类，永不命中。
+ *   - 未使用裸 .el-popper / .el-overlay / :root / html 级别选择器。
+ *
+ * 提权说明：
+ *   teacher-console.scss 里已有同权（甚至带 html.dark 的 (1,3,1)）表格变量规则。
+ *   因此表格根节点使用 .el-table.el-table[class]（重复类名 + 属性）把基础权重提到
+ *   (1,4,0)，暗色规则也能被覆盖；重复类名不改变匹配对象，仅用于稳定压过旧规则。
+ * ============================================================================= */
+
+#app :is(.layout--teacher, .layout--admin),
+html:has(#app :is(.layout--teacher, .layout--admin)) {
+  // 容器组加强档取值（浅色）。
+  // 为什么不再复用按钮 token：上一版 hover 与表面差 1–2/255、表头差 8/255，
+  // 肉眼几乎无感。这里把「表面 → 表头 → hover」拉开成三级冷灰阶梯，
+  // 并把分隔线/页签基线/空态文案各加深一档；尺寸与字号一律不动。
+  // 暗色覆盖见文件末尾 :root[data-theme='dark'] 块（同权重更高，逐项覆盖）。
+  --mc-container-header-bg: #e7edf5;
+  --mc-container-row-hover: #e7eff6;
+  --mc-container-line: #cfd9e6;
+  --mc-container-tabs-baseline: #d5dde7;
+  --mc-container-empty-text: #475569;
+
+  // -------------------------------------------------
+  // 1. el-table —— 只换色，不动尺寸
+  // -------------------------------------------------
+
+  // EP 表格根节点变量。
+  // 为什么这么写：
+  // - 表头底色取加强档 --mc-container-header-bg（浅 #e7edf5 / 暗 #1a2437），
+  //   与表面 #ffffff / #111b2c 至少差 15/255，和行 hover #e7eff6 仍保持一档差距。
+  // - hover 取 --mc-container-row-hover（#e7eff6 / #223149），比上一版拉开明显。
+  // - 分隔线取 --mc-container-line（#cfd9e6 / #32405a），1px 实线清晰可见。
+  // - 表面/行底色统一到 --mc-ctl-surface（#ffffff / #111b2c）。
+  // - 三个固定列阴影变量置 none，落实「无投影」。
+  // 作用域边界：只在教师/管理员 layout 内命中；学生端无这两个类。
+  .el-table.el-table[class] {
+    --el-table-header-bg-color: var(--mc-container-header-bg);
+    --el-table-row-hover-bg-color: var(--mc-container-row-hover);
+    --el-table-border-color: var(--mc-container-line);
+    --el-table-text-color: var(--mc-ctl-label);
+    --el-table-header-text-color: var(--mc-btn-label);
+    --el-table-bg-color: var(--mc-ctl-surface);
+    --el-table-tr-bg-color: var(--mc-ctl-surface);
+    --el-table-expanded-cell-bg-color: var(--mc-ctl-surface);
+    --el-table-current-row-bg-color: var(--mc-btn-surface-hover);
+    --el-table-fixed-box-shadow: none;
+    --el-table-fixed-left-column: none;
+    --el-table-fixed-right-column: none;
+  }
+
+  // 表头文字色 + 底色。
+  // 为什么用直接属性：teacher-console.scss 在 th.el-table__cell 上写了直接颜色，
+  // 只改 --el-table-header-text-color 打不过它，必须同层直接覆盖。
+  // 行高、padding 一律不写，保持现状（教师 12px / 管理员 8px 的既有口径）。
+  .el-table.el-table[class] th.el-table__cell {
+    color: var(--mc-btn-label);
+    background-color: var(--mc-container-header-bg);
+  }
+
+  // 斑马纹退化为「仅 hover 高亮」。
+  // 实测 28 个教师端表格带 stripe；EP 默认条纹是 --el-fill-color-lighter（#f8fafc）。
+  // 这里把条纹行压回表面色（#ffffff / #111b2c），视觉上等同取消斑马纹。
+  // 不写 padding/height，尺寸零变化。
+  .el-table.el-table[class] .el-table__body tr.el-table__row--striped > td.el-table__cell {
+    background-color: var(--mc-ctl-surface);
+  }
+
+  // 行 hover（含条纹行）。
+  // 为什么带 .hover-row：EP 同时用 tr:hover 与 JS 加的 .hover-row 两种触发，
+  // 且 stripe 规则的权重更高，必须显式补一条 .hover-row 才不会被条纹盖住。
+  .el-table.el-table[class] .el-table__body tr:hover > td.el-table__cell,
+  .el-table.el-table[class] .el-table__body tr.hover-row > td.el-table__cell,
+  .el-table.el-table[class]
+    .el-table__body
+    tr.hover-row.el-table__row--striped
+    > td.el-table__cell {
+    background-color: var(--mc-container-row-hover);
+  }
+
+  // 固定列底色归一。
+  // teacher-console.scss 的暗色块把固定列写成 --el-bg-color（#0f172a），
+  // 会和表格表面 --mc-ctl-surface（#111b2c）差一档；这里统一，避免横向滚动时露色差。
+  // 只动 background-color，不动宽度/阴影（阴影已由上面的变量置 none）。
+  .el-table.el-table[class] .el-table__body tr > td.el-table-fixed-column--left,
+  .el-table.el-table[class] .el-table__body tr > td.el-table-fixed-column--right {
+    background-color: var(--mc-ctl-surface);
+  }
+
+  // -------------------------------------------------
+  // 2. el-pagination —— 32px 高度不变，补 1px 实边
+  // -------------------------------------------------
+
+  // EP 分页根节点变量。
+  // 为什么这么写：
+  // - 表面色、文字色、hover 色全部复用按钮 token，active 不再用品牌蓝。
+  // - 圆角沿用 6px（与现有 teacher-console 的 6px 一致）。
+  // - 不改 font-size / button-width / button-height，32×32 尺寸保持原样。
+  .el-pagination.el-pagination[class] {
+    --el-pagination-bg-color: var(--mc-ctl-surface);
+    --el-pagination-button-bg-color: var(--mc-ctl-surface);
+    --el-pagination-button-disabled-bg-color: var(--mc-btn-disabled-surface);
+    --el-pagination-button-disabled-color: var(--mc-btn-disabled-label);
+    --el-pagination-button-color: var(--mc-ctl-label);
+    --el-pagination-text-color: var(--mc-btn-label-soft);
+    --el-pagination-hover-color: var(--mc-btn-label-strong);
+    --el-pagination-border-radius: var(--mc-ctl-radius);
+  }
+
+  // 翻页按钮 / 页码按钮：加 1px 实线边。
+  // EP 自身 box-sizing:border-box，所以加边后外框仍是 32×32，不产生尺寸变化。
+  // 禁止位移/投影，只保留 120ms 颜色过渡。
+  .el-pagination.el-pagination[class] .btn-prev,
+  .el-pagination.el-pagination[class] .btn-next,
+  .el-pagination.el-pagination[class] .el-pager li {
+    border: 1px solid var(--mc-ctl-disabled-line);
+    background-color: var(--mc-ctl-surface);
+    color: var(--mc-ctl-label);
+    transition:
+      background-color var(--mc-ctl-duration) var(--mc-ctl-ease),
+      border-color var(--mc-ctl-duration) var(--mc-ctl-ease),
+      color var(--mc-ctl-duration) var(--mc-ctl-ease);
+  }
+
+  // hover：面提亮一档 + 边加深一档，不改文字位置。
+  .el-pagination.el-pagination[class] .btn-prev:not(:disabled):hover,
+  .el-pagination.el-pagination[class] .btn-next:not(:disabled):hover,
+  .el-pagination.el-pagination[class] .el-pager li:not(.is-disabled):hover {
+    color: var(--mc-btn-label-strong);
+    border-color: var(--mc-btn-line-hover);
+    background-color: var(--mc-btn-surface-hover);
+  }
+
+  // 当前页：文字加重 + 浅面 + 实边，替代原来的品牌蓝底白字。
+  .el-pagination.el-pagination[class] .el-pager li.is-active {
+    color: var(--mc-btn-label-strong);
+    font-weight: var(--mc-btn-weight-strong);
+    border-color: var(--mc-btn-line);
+    background-color: var(--mc-btn-surface-hover);
+  }
+
+  // 9 处分页带 background 属性：EP 会把 active 涂成品牌蓝，这里全部压回灰度。
+  // 权重：本条远高于 EP 的 .is-background 规则 (0,4,1)。
+  .el-pagination.el-pagination[class].is-background .el-pager li.is-active,
+  .el-pagination.el-pagination[class].is-background .btn-prev.is-active,
+  .el-pagination.el-pagination[class].is-background .btn-next.is-active {
+    color: var(--mc-btn-label-strong);
+    border-color: var(--mc-btn-line);
+    background-color: var(--mc-btn-surface-hover);
+  }
+
+  // 禁用态：EP 的禁用色权重低于我们的基础按钮规则，必须显式写回。
+  .el-pagination.el-pagination[class] .btn-prev:disabled,
+  .el-pagination.el-pagination[class] .btn-next:disabled,
+  .el-pagination.el-pagination[class] .el-pager li.is-disabled {
+    color: var(--mc-btn-disabled-label);
+    background-color: var(--mc-btn-disabled-surface);
+    border-color: var(--mc-btn-disabled-line);
+    cursor: not-allowed;
+  }
+
+  // 键盘焦点框：2px 实描边 + 2px 偏移，沿用按钮的焦点语言。
+  .el-pagination.el-pagination[class] .btn-prev:focus-visible,
+  .el-pagination.el-pagination[class] .btn-next:focus-visible,
+  .el-pagination.el-pagination[class] .el-pager li:focus-visible {
+    outline: 2px solid var(--mc-ctl-focus);
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  // 总数 / 条数选择 / 跳页文案：与表格表头文字同一灰度。
+  .el-pagination.el-pagination[class] .el-pagination__total,
+  .el-pagination.el-pagination[class] .el-pagination__sizes,
+  .el-pagination.el-pagination[class] .el-pagination__jump {
+    color: var(--mc-btn-label-soft);
+  }
+
+  // -------------------------------------------------
+  // 3. el-tabs —— 下划线 + 字重区分，去品牌蓝
+  // -------------------------------------------------
+
+  // 未选中页签：走次级文字色，字重保持 EP 默认 500。
+  // 为什么用直接属性：EP 2.14.5 的 el-tabs 只声明 --el-tabs-header-height，
+  // 没有任何 --el-tabs-color / --el-tabs-active-color 变量，只能写直接属性。
+  .el-tabs.el-tabs[class] .el-tabs__item {
+    color: var(--mc-btn-label-soft);
+  }
+
+  // hover：升到主文字色，不做底色/位移。
+  .el-tabs.el-tabs[class] .el-tabs__item:hover {
+    color: var(--mc-btn-label);
+  }
+
+  // 选中态：深色文字 + 600 字重 + 下方 2px 实线，不用品牌蓝填充。
+  .el-tabs.el-tabs[class] .el-tabs__item.is-active {
+    color: var(--mc-btn-label-strong);
+    font-weight: var(--mc-btn-weight-strong);
+  }
+
+  // 选中下划线（EP 的 active-bar）：由品牌蓝改为主文字色，高度仍为 2px。
+  .el-tabs.el-tabs[class] .el-tabs__active-bar {
+    background-color: var(--mc-btn-label-strong);
+  }
+
+  // 滚动隐藏 active-bar 的兜底伪元素，也一并去蓝。
+  .el-tabs.el-tabs[class] .el-tabs__active-bar.is-hidden ~ .el-tabs__item.is-active::after {
+    background-color: var(--mc-btn-label-strong);
+  }
+
+  // 页签栏基线：1px 实线，加强档单独取值（浅 #d5dde7 / 暗 #32405a）；
+  // 只改颜色，header 高度与 margin 不动。
+  .el-tabs.el-tabs[class] .el-tabs__nav-wrap::after {
+    height: 1px;
+    background-color: var(--mc-container-tabs-baseline);
+  }
+
+  // 键盘焦点：EP 默认用品牌蓝 inset 阴影，这里换成统一 2px 实描边。
+  .el-tabs.el-tabs[class] .el-tabs__item:focus-visible {
+    outline: 2px solid var(--mc-ctl-focus);
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+
+  // -------------------------------------------------
+  // 4. el-empty —— 仅统一文案色，尺寸/插画不动
+  // -------------------------------------------------
+
+  // 空态描述文案：加强档取 --mc-container-empty-text（浅 #475569 / 暗 #cbd5e1）。
+  // 上一版写 --mc-btn-label-soft（#5f6b7d / #94a3b8）与 EP 默认几乎同色，
+  // 实测为零变化；这里加深（浅）/ 提亮（暗），字号、行高、间距仍为 EP 默认。
+  // 为什么用直接属性：EP 2.14.5 没有 --el-empty-text-color，描述色来自全局
+  // --el-text-color-secondary，只能对 .el-empty__description p 直接覆盖。
+  // 插画 --el-empty-fill-color-* 不动：EP 自带浅/暗两套灰阶，强行重排会有
+  // SVG 明暗层错位风险，故保留，详见规格文档「已知残差」。
+  .el-empty.el-empty[class] .el-empty__description p {
+    color: var(--mc-container-empty-text);
+  }
+}
+
+// -------------------------------------------------
+// 5. 暗色覆盖 —— 只覆盖加强档 5 个局部变量
+// -------------------------------------------------
+// 为什么单独成块：暗色下需要另一套色阶，且 teleport 到 body 的浮层不在 #app 内，
+// 必须同时命中 :root（html）以让变量继承到 body 子树。
+// 为什么不沿用上一版的「表头取 surface 上一档」：#141d2c 与表面 #111b2c 仅差
+// 3/255，再深到 #131c2c 只有 2/255（且比表面更暗，层级倒置）；故取 #1a2437
+// （26,36,55），与表面差 9/255、与 hover #223149（34,49,73）仍留一档。
+:root[data-theme='dark'] #app :is(.layout--teacher, .layout--admin),
+:root[data-theme='dark']:has(#app :is(.layout--teacher, .layout--admin)) {
+  --mc-container-header-bg: #1a2437;
+  --mc-container-row-hover: #223149;
+  --mc-container-line: #32405a;
+  --mc-container-tabs-baseline: #32405a;
+  --mc-container-empty-text: #cbd5e1;
+}

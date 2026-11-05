@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/app/stores/stores'
 import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
+import StudyTipInline from '@/shared/ui/StudyTipInline.vue'
 import MessageCard from './components/MessageCard.vue'
 import MessageSettings from './components/MessageSettings.vue'
 
@@ -219,24 +220,26 @@ onMounted(() => {
     <header class="message-header">
       <div class="message-header__main">
         <div class="message-header__icon">
-          <Bell :size="28" />
+          <Bell :size="32" />
         </div>
         <div>
           <h1 class="message-header__title">消息中心</h1>
-          <p class="message-header__subtitle">集中查看系统通知、审批提醒与动态记录</p>
+          <p class="message-header__subtitle">
+            系统通知、审批结果和动态提醒都在这里；打开详情后会标记为已读。
+          </p>
         </div>
       </div>
 
       <div class="message-header__stats">
         <div v-for="stat in stats" :key="stat.label" class="message-header__stat">
           <div class="message-header__stat-main">
-            <component :is="stat.icon" :size="18" />
+            <component :is="stat.icon" :size="20" />
             <span class="message-header__stat-value">{{ stat.value }}</span>
           </div>
           <span class="message-header__stat-label">{{ stat.label }}</span>
         </div>
         <el-button type="primary" :disabled="filteredUnreadCount === 0" @click="markAllAsRead">
-          <CheckCheck :size="16" style="margin-right: 4px" />一键已读
+          <CheckCheck class="u-mr-4" :size="16" />一键已读
         </el-button>
         <el-button class="message-header__settings-btn" @click="openSettings">
           <Settings :size="16" />消息设置
@@ -299,47 +302,45 @@ onMounted(() => {
           />
         </el-select>
         <el-button type="primary" size="default" @click="handleSearch">
-          <Filter :size="14" style="margin-right: 4px" />筛选
+          <Filter class="u-mr-4" :size="16" />筛选
         </el-button>
-        <el-button @click="handleReset"> <X :size="14" style="margin-right: 4px" />重置 </el-button>
+        <el-button @click="handleReset"> <X class="u-mr-4" :size="16" />重置 </el-button>
       </div>
 
-      <div class="panel-toolbar__batch">
-        <el-button v-if="!batchMode" size="small" @click="batchMode = true"> 批量操作 </el-button>
-        <template v-else>
-          <span class="panel-toolbar__batch-count">已选 {{ selectedIds.length }} 条</span>
-          <el-button size="small" @click="handleCancelBatchMode">取消</el-button>
-          <el-button
-            size="small"
-            type="primary"
-            :loading="batchReading"
-            :disabled="selectedIds.length === 0 || batchReading"
-            @click="handleBatchRead"
-          >
-            批量已读
-          </el-button>
-          <el-button
-            size="small"
-            :loading="batchArchiving"
-            :disabled="selectedIds.length === 0 || batchArchiving"
-            @click="handleBatchArchive"
-          >
-            <Archive :size="14" style="margin-right: 4px" />批量归档
-          </el-button>
-        </template>
-      </div>
+      <div class="panel-toolbar__actions">
+        <div class="panel-toolbar__batch">
+          <el-button v-if="!batchMode" size="small" @click="batchMode = true"> 批量操作 </el-button>
+          <template v-else>
+            <span class="panel-toolbar__batch-count">已选 {{ selectedIds.length }} 条</span>
+            <el-button size="small" @click="handleCancelBatchMode">取消</el-button>
+            <el-button
+              size="small"
+              type="primary"
+              :loading="batchReading"
+              :disabled="selectedIds.length === 0 || batchReading"
+              @click="handleBatchRead"
+            >
+              批量已读
+            </el-button>
+            <el-button
+              size="small"
+              :loading="batchArchiving"
+              :disabled="selectedIds.length === 0 || batchArchiving"
+              @click="handleBatchArchive"
+            >
+              <Archive class="u-mr-4" :size="16" />批量归档
+            </el-button>
+          </template>
+        </div>
 
-      <el-button @click="navigateToActivities">
-        <Mail :size="16" style="margin-right: 4px" />查看动态记录
-      </el-button>
+        <el-button @click="navigateToActivities">
+          <Mail class="u-mr-4" :size="16" />查看动态记录
+        </el-button>
+      </div>
     </div>
 
     <!-- 通知列表 -->
-    <div
-      :key="listKey"
-      v-loading="notificationStore.loading"
-      class="mc-card message-list message-list--staggered"
-    >
+    <div :key="listKey" v-loading="notificationStore.loading" class="mc-card message-list">
       <MessageCard
         v-for="item in paginatedList"
         :key="item.id"
@@ -370,7 +371,9 @@ onMounted(() => {
           notificationStore.loadError ? '消息加载失败，请检查网络后重试' : '暂无通知消息'
         "
         class="mc-empty"
-      />
+      >
+        <StudyTipInline compact />
+      </el-empty>
     </div>
 
     <MessageSettings v-model:visible="settingsVisible" />
@@ -394,11 +397,11 @@ onMounted(() => {
   background: var(--mc-card);
   border: 1px solid var(--mc-border);
   border-radius: var(--mc-radius);
-  padding: 24px 28px;
+  padding: 24px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 24px;
   flex-wrap: wrap;
   margin-bottom: 16px;
 
@@ -411,7 +414,7 @@ onMounted(() => {
   &__icon {
     width: 48px;
     height: 48px;
-    border-radius: 10px;
+    border-radius: 6px;
     background: var(--el-color-primary);
     color: #fff;
     display: flex;
@@ -421,8 +424,8 @@ onMounted(() => {
 
   &__title {
     margin: 0;
-    font-size: 22px;
-    font-weight: 700;
+    font-size: 20px;
+    font-weight: 600;
     color: var(--el-text-color-primary);
   }
 
@@ -435,7 +438,7 @@ onMounted(() => {
   &__stats {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
   }
 
@@ -445,22 +448,22 @@ onMounted(() => {
     align-items: center;
     gap: 4px;
     min-width: 80px;
-    padding: 10px 14px;
+    padding: 8px 16px;
     background: var(--mc-bg);
     border: 1px solid var(--mc-border);
-    border-radius: 8px;
+    border-radius: 6px;
   }
 
   &__stat-main {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     color: #1e3a5f;
   }
 
   &__stat-value {
     font-size: 20px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--el-text-color-primary);
   }
 
@@ -488,13 +491,23 @@ onMounted(() => {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 
   &__filters {
     display: flex;
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
+  }
+
+  // 批量操作与「查看动态记录」同属页面动作，放在同一组内换行，
+  // 避免在 1366/1440 宽度下变成右侧孤零零一个按钮。
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-left: auto;
   }
 
   &__batch {
@@ -547,10 +560,10 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .message-header {
-    padding: 20px;
+    padding: 24px;
 
     &__title {
-      font-size: 22px;
+      font-size: 20px;
     }
 
     &__stats {

@@ -1,8 +1,8 @@
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import { computed, ref } from 'vue'
-import { useActivityStore } from '@/app/stores/activity'
 import { useArchiveStore, useSubmissionStore } from '@/app/stores/stores'
-import { inferSemester } from '../timeline-constants'
+import { useActivityStore } from '@/app/stores/useActivityStore'
+import { inferSemester } from '../timelineConstants'
 
 interface SyncOptions {
   /** 是否只同步已审核通过的数据 */

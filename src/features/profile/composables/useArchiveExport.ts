@@ -172,7 +172,9 @@ export function useArchiveExport() {
         fileType: 'pdf',
         purpose: chosen.purpose,
       })
-      window.open(result.downloadUrl, '_blank')
+      // 下载地址为后端预签名 URL：新窗口不得通过 window.opener 反向操作本页，
+      // 也不应把来源页/来源地址通过 Referer 带出去。
+      window.open(result.downloadUrl, '_blank', 'noopener,noreferrer')
       ElMessage.success(`档案导出任务已创建，链接有效期至 ${formatExpireAt(result.expireAt)}`)
     } catch {
       ElMessage.error('档案导出失败，请稍后重试')

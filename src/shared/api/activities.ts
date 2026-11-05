@@ -55,9 +55,16 @@ export function getActivities(params?: {
   semesterId?: number
   keyword?: string
   page?: number
-  per_page?: number
+  perPage?: number
 }): Promise<ActivityListResult> {
-  return request.get('/activities', { params })
+  // 后端 ActivityListRequest 继承 PageParam，Spring 按 JavaBean 属性名绑定查询参数，
+  // 实际读取的是 perPage（@JsonProperty("per_page") 只影响 JSON 序列化，对 query 绑定无效）。
+  // 传 per_page 会被静默忽略并回落默认 20 条。后端 @Max(100) 限制，超出会被校验拒绝。
+  const { perPage, ...rest } = params ?? {}
+  const safePerPage = perPage == null ? undefined : Math.min(Math.max(perPage, 1), 100)
+  return request.get('/activities', {
+    params: { ...rest, ...(safePerPage == null ? {} : { perPage: safePerPage }) },
+  })
 }
 
 /** 获取动态详情（GET /activities/{type}/{activityId}） */

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 interface Props {
@@ -142,7 +142,7 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   border: 1.5px solid var(--gt-accent, #8b6340);
   background: transparent;
-  transition: all 0.4s ease;
+  @include transition-ui($duration-base);
   cursor: pointer;
   position: relative;
   padding: 0;

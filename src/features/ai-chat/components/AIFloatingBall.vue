@@ -96,7 +96,7 @@ function handleClick() {
   justify-content: center;
   cursor: pointer;
   user-select: none;
-  z-index: 9999;
+  z-index: $z-ai;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
   transition:
     box-shadow $duration-base $ease-standard,
@@ -139,13 +139,13 @@ function handleClick() {
     right: -2px;
     min-width: 18px;
     height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
+    padding: 0 8px;
+    border-radius: 6px;
     background: var(--el-color-danger);
     color: #fff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
-    line-height: 18px;
+    line-height: 1.2;
     text-align: center;
     box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
   }
@@ -156,11 +156,11 @@ function handleClick() {
     bottom: calc(100% + 10px);
     right: 0;
     white-space: nowrap;
-    padding: 8px 14px;
+    padding: 8px 16px;
     background: rgba(0, 0, 0, 0.78);
     color: #fff;
     font-size: 13px;
-    border-radius: 8px;
+    border-radius: 6px;
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
@@ -203,22 +203,6 @@ function handleClick() {
 
     &__tooltip {
       display: none;
-    }
-  }
-}
-
-// 减少动画偏好
-@media (prefers-reduced-motion: reduce) {
-  .ai-fb {
-    animation: none;
-    transition: none;
-
-    &:hover {
-      transform: none;
-    }
-
-    &__tooltip {
-      transition: none;
     }
   }
 }

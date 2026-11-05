@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import type { ColumnDef, TypeColumnConfig } from './review-columns'
+import type { ColumnDef, TypeColumnConfig } from './reviewColumns'
 import { computed, reactive, ref, watch } from 'vue'
 import { useReviewStore } from '@/app/stores/stores'
 import StatusTag from '@/shared/ui/StatusTag.vue'
-import { REVIEW_COLUMNS } from './review-columns'
+import { REVIEW_COLUMNS } from './reviewColumns'
 
 interface Props {
   modelValue: boolean

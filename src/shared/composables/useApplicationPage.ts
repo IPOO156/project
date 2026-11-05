@@ -1,13 +1,15 @@
+import type { ApplicationType } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, reactive, ref, toRaw, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getActivityDetail, withdrawActivity } from '@/shared/api/activities'
+import { deleteActivity, getActivityDetail, withdrawActivity } from '@/shared/api/activities'
 import { duplicateCheck } from '@/shared/api/applications'
 import { awardDuplicateCheck } from '@/shared/api/awards'
 import { getProfileInfo } from '@/shared/api/student'
 import {
   activityCategoryOf,
   ARCHIVE_TYPE_ALIASES,
+  awardTypeCodeOf,
   deriveRecordTitle,
   mapDetailToForm,
   submitApplication,
@@ -47,6 +49,8 @@ export function useApplicationPage(
   const effectiveDraftKey = draftKey || type
 
   const form = reactive(emptyForm())
+  // 申报类型 key 由页面常量传入（对应 ApplicationType），activityCategoryOf 参数类型收窄为 ApplicationType
+  const appType = type as ApplicationType
   const submitting = ref(false)
 
   // ── 学期-日期联动 ──
@@ -82,9 +86,17 @@ export function useApplicationPage(
     removeRecord: _removeRecord,
   } = useFormRecords(type, `form_draft_${effectiveDraftKey}`)
 
-  /** 删除记录：本地草稿一并清空 localStorage（草稿仅本地持久化，无后端删除接口） */
-  function removeRecord(id: string) {
-    if (id === DRAFT_LOCAL_ID) clearDraft()
+  /**
+   * 删除记录：后端真实记录调用 DELETE /activities/{type}/{id}，成功后才从列表移除；
+   * 本地草稿（draft-local）仅清空 localStorage，临时 id（rec-*）只存在于内存。
+   * 失败时由请求拦截器提示，记录保留在列表中，避免「提示已删除、刷新又出现」。
+   */
+  async function removeRecord(id: string) {
+    if (id === DRAFT_LOCAL_ID) {
+      clearDraft()
+    } else if (/^\d+$/.test(id)) {
+      await deleteActivity(Number(id), activityCategoryOf(appType))
+    }
     _removeRecord(id)
   }
   const {
@@ -136,9 +148,10 @@ export function useApplicationPage(
       const title = deriveRecordTitle(data)
       // 奖项报名走 8.1.2 POST /awards/duplicate-check；档案申报走 POST /applications/duplicate-check
       const r: any =
-        activityCategoryOf(type as any) === 'award'
+        activityCategoryOf(appType) === 'award'
           ? await awardDuplicateCheck({
-              awardType: type,
+              // 后端按 award_type 枚举码严格相等匹配（competition_star / innovation_star / research_star）
+              awardType: awardTypeCodeOf(type),
               certificateNo: data.certNumber,
               title,
               participatedTime:
@@ -150,20 +163,29 @@ export function useApplicationPage(
             })
           : await duplicateCheck({
               archiveType: ARCHIVE_TYPE_ALIASES[type]?.[0] ?? type,
-              certificateNo: data.certNumber,
-              title,
-              obtainedTime: data.acquisitionDate,
+              // 后端 DuplicateCheckRequest 为 { archiveType, fields: Map }，检测字段取自
+              // duplicate_detection_rules.detect_fields，需放在 fields 内；平铺字段会被忽略。
+              fields: {
+                ...(data.certNumber ? { certificateNo: data.certNumber } : {}),
+                ...(data.acquisitionDate ? { obtainTime: data.acquisitionDate } : {}),
+                title,
+              },
             })
       // 奖项(8.x)返回 isDuplicate/duplicateRecords；档案(7.0.1)实测返回 hasDuplicate/similarItems/suggestion，统一归一化读取
       const hasDuplicate = r?.isDuplicate ?? r?.hasDuplicate
-      const duplicateList = (r?.duplicateRecords ?? r?.similarItems ?? []) as any[]
+      const duplicateList = (r?.duplicateRecords ?? r?.similarItems ?? []) as {
+        title: string
+        similarity?: number
+      }[]
       if (hasDuplicate) {
+        // title/suggestion 均为后端/用户输入，禁止拼进 HTML：改用纯文本弹窗，
+        // 由文本节点自动转义，避免 dangerouslyUseHTMLString 引入 XSS。
         const items = duplicateList
           .map((d) => `${d.title}${d.similarity != null ? `（相似度 ${d.similarity}%）` : ''}`)
-          .join('<br/>')
-        const suggestion = r?.suggestion ? `<br/>建议：${r.suggestion}` : ''
-        ElMessageBox.alert((items || '检测到可能重复的申报记录') + suggestion, '检测到重复申报', {
-          dangerouslyUseHTMLString: true,
+          .join('；')
+        const suggestion = r?.suggestion ? `。建议：${r.suggestion}` : ''
+        const content = `${items || '检测到可能重复的申报记录'}${suggestion}`
+        ElMessageBox.alert(content, '检测到重复申报', {
           confirmButtonText: '知道了',
           type: 'warning',
         }).catch(() => {})
@@ -241,7 +263,7 @@ export function useApplicationPage(
     // 必填项校验：后端对应档案扩展表多为 NOT NULL 字段，空值会被 buildContractPayload 跳过，
     // 直接 POST 会触发后端非空约束 → 409「数据校验失败」。这里在本地拦截并明确提示缺哪个字段。
     const missing = requiredFields.filter((f) => {
-      const v = (form as any)[f.key]
+      const v = (form as Record<string, unknown>)[f.key]
       return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)
     })
     if (missing.length > 0) {
@@ -252,7 +274,7 @@ export function useApplicationPage(
     if (semesterMonthConfig) {
       const { monthField, monthFieldLabel } = semesterMonthConfig
       sanitizeSemesterMonthPair(form, monthField, 'semester')
-      if (!isMonthInSemester((form as any)[monthField], form.semester)) {
+      if (!isMonthInSemester((form as Record<string, unknown>)[monthField], form.semester)) {
         ElMessage.error(`${monthFieldLabel}与学期不匹配，请重新选择`)
         return
       }
@@ -279,7 +301,7 @@ export function useApplicationPage(
   async function handleWithdraw(row: any) {
     try {
       await ElMessageBox.confirm('确定撤回？', '撤回确认', { type: 'warning' })
-      await withdrawActivity(Number(row.id), activityCategoryOf(type as any))
+      await withdrawActivity(Number(row.id), activityCategoryOf(appType))
       updateRecord(row.id, { status: 'withdrawn' })
       ElMessage.success('已撤回')
     } catch {
@@ -295,7 +317,7 @@ export function useApplicationPage(
     setRecordId(isBackendRecord ? Number(row.id) : null)
     if (isBackendRecord) {
       try {
-        const detail = await getActivityDetail(Number(row.id), activityCategoryOf(type as any))
+        const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))
         // 后端业务字段嵌在 detail.detail（后端字段名），按类型逆向映射为前端表单字段后并入 row，
         // 否则 emptyForm() 循环全部落空 → 表单空白（2026-08-31 修复）。
         // 注意不能用 {...row, ...detail} 直接展开：会把 row.status 覆盖成后端数字状态码
@@ -309,7 +331,7 @@ export function useApplicationPage(
       }
     }
     Object.keys(emptyForm()).forEach((key) => {
-      if (key in row) (form as any)[key] = row[key] ?? ''
+      if (key in row) (form as Record<string, unknown>)[key] = row[key] ?? ''
     })
     extendedForm.role = row.role || ''
     extendedForm.certNumber = row.certNumber || ''
@@ -373,7 +395,7 @@ export function useApplicationPage(
     if (!isBackendRecord) return
     detailLoading.value = true
     try {
-      const detail = await getActivityDetail(Number(row.id), activityCategoryOf(type as any))
+      const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))
       // mapDetailToForm 仅映射业务字段（不含 status），避免覆盖行上的前端状态/退回原因
       if (detail) _viewRecord({ ...row, ...mapDetailToForm(type, detail) })
     } catch {

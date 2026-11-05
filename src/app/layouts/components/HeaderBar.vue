@@ -1,22 +1,26 @@
 <script setup lang="ts">
 /**
  * HeaderBar - 顶部栏
- *  - 左侧：移动端菜单按钮 + 已访问页面 tab 栏（NavTabs）
+ *  - 左侧：移动端菜单按钮 + 教师端面包屑 / 学生端已访问页面标签栏
+ *  - 教师端：页内搜索（Ctrl / ⌘ + K）
  *  - 右侧：通知 + 用户下拉（个人中心 / 修改密码 / 退出登录）
  */
 import {
   Bell,
   LayoutDashboard,
+  Lightbulb,
   LogOut,
   Menu,
   Moon,
+  Search,
   Settings,
   Sun,
   SwitchCamera,
   User,
 } from 'lucide-vue-next'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useThemeRipple } from '@/app/composables/useThemeRipple'
 import {
   useAppStore,
   useNotificationStore,
@@ -25,8 +29,10 @@ import {
   useUserStore,
 } from '@/app/stores/stores'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
-import { useThemeRipple } from '@/shared/composables/useThemeRipple'
+import StudyTipsDialog from '@/shared/ui/StudyTipsDialog.vue'
 import NavTabs from './NavTabs.vue'
+import TeacherBreadcrumb from './TeacherBreadcrumb.vue'
+import TeacherCommandPalette from './TeacherCommandPalette.vue'
 
 const userStore = useUserStore()
 const appStore = useAppStore()
@@ -36,6 +42,8 @@ const themeStore = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 const { toggleThemeWithRipple } = useThemeRipple()
+const tipsDialogVisible = ref(false)
+const commandVisible = ref(false)
 // 角色中文名取自 /auth/me 的 roleNames，不再由前端角色枚举映射
 const { roleLabel } = useTeacherAuthz()
 const isGrowthTimeline = computed(() => route.path.startsWith('/growth-timeline'))
@@ -50,7 +58,20 @@ onMounted(() => {
   if (isTeacher.value) {
     teacherMessageStore.refreshUnread()
   }
+  window.addEventListener('keydown', handleCommandHotkey)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleCommandHotkey)
+})
+
+/** 教师端页内搜索：Ctrl / ⌘ + K */
+function handleCommandHotkey(event: KeyboardEvent) {
+  if (!isTeacher.value) return
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'k') return
+  event.preventDefault()
+  commandVisible.value = !commandVisible.value
+}
 
 function openMessages() {
   if (isTeacher.value) {
@@ -62,7 +83,9 @@ function openMessages() {
 
 async function handleLogout() {
   await userStore.logout()
-  router.push('/login')
+  // 整页跳转而非 router.push：Pinia 中的档案/申报/消息等业务数据仍驻留内存，
+  // 仅切路由会让下一个登录账号在刷新前读到上一个账号的数据。整页跳转可彻底重置。
+  window.location.replace('/login')
 }
 
 function openSidebar() {
@@ -71,7 +94,7 @@ function openSidebar() {
 
 async function switchToStudent() {
   await userStore.logout()
-  router.push('/login')
+  window.location.replace('/login')
 }
 </script>
 
@@ -89,15 +112,28 @@ async function switchToStudent() {
         <Menu :size="20" />
       </el-button>
 
-      <!-- 已访问页面 tab 栏 -->
-      <NavTabs />
+      <!-- 教师端：面包屑 + 页内搜索；学生端：已访问页面标签栏 -->
+      <template v-if="isTeacher">
+        <TeacherBreadcrumb />
+        <button
+          type="button"
+          class="header__search"
+          aria-label="打开页内搜索（Ctrl+K）"
+          @click="commandVisible = true"
+        >
+          <Search :size="16" />
+          <span class="header__search-text">搜索页面…</span>
+          <kbd>Ctrl K</kbd>
+        </button>
+      </template>
+      <NavTabs v-else />
     </div>
 
     <div class="header__right">
       <!-- 通知铃铛：学生端跳 /messages；教师端跳 /teacher/messages（各自 Store 维护角标） -->
       <el-badge :value="unreadBadge" :hidden="unreadBadge === 0" class="header__action">
         <el-button text :aria-label="`消息中心，未读消息 ${unreadBadge} 条`" @click="openMessages">
-          <Bell :size="18" />
+          <Bell :size="isTeacher ? 20 : 18" />
         </el-button>
       </el-badge>
 
@@ -113,7 +149,7 @@ async function switchToStudent() {
           :aria-label="themeStore.isDark ? '切换至日间模式' : '切换至夜间模式'"
           @click="toggleThemeWithRipple"
         >
-          <component :is="themeStore.isDark ? Sun : Moon" :size="18" />
+          <component :is="themeStore.isDark ? Sun : Moon" :size="isTeacher ? 20 : 18" />
         </el-button>
       </el-tooltip>
 
@@ -121,24 +157,21 @@ async function switchToStudent() {
         <span class="header__user">
           <el-avatar :size="32" :src="userStore.avatar" :icon="User" />
           <span class="header__user-name">{{ userStore.userName || '用户' }}</span>
-          <el-tag
-            v-if="isTeacher"
-            size="small"
-            type="warning"
-            effect="light"
-            class="header__role-tag"
-          >
+          <el-tag v-if="isTeacher" size="small" type="info" effect="light" class="header__role-tag">
             {{ roleLabel }}
           </el-tag>
         </span>
         <template #dropdown>
           <el-dropdown-menu>
+            <el-dropdown-item v-if="!isTeacher" @click="tipsDialogVisible = true">
+              <Lightbulb :size="14" /> 学习建议
+            </el-dropdown-item>
             <template v-if="isTeacher">
               <el-dropdown-item @click="router.push('/teacher/dashboard')">
-                <LayoutDashboard :size="14" /> 首页
+                <LayoutDashboard :size="16" /> 工作台
               </el-dropdown-item>
               <el-dropdown-item divided @click="switchToStudent">
-                <SwitchCamera :size="14" /> 切换学生端
+                <SwitchCamera :size="16" /> 切换账号
               </el-dropdown-item>
             </template>
             <template v-else>
@@ -150,12 +183,18 @@ async function switchToStudent() {
               </el-dropdown-item>
             </template>
             <el-dropdown-item divided @click="handleLogout">
-              <LogOut :size="14" /> 退出登录
+              <LogOut :size="isTeacher ? 16 : 14" /> 退出登录
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
     </div>
+
+    <!-- 学习建议管理：仅学生端（教师端不展示该入口） -->
+    <StudyTipsDialog v-if="!isTeacher" v-model="tipsDialogVisible" />
+
+    <!-- 教师端页内搜索 -->
+    <TeacherCommandPalette v-if="isTeacher" v-model="commandVisible" />
   </header>
 </template>
 
@@ -192,6 +231,51 @@ async function switchToStudent() {
     // 让按钮视觉中心 ≈ tab 视觉中心
     height: 32px;
     padding: 0 $spacing-xs;
+  }
+
+  // 教师端页内搜索：点击 / Ctrl+K 打开页内搜索
+  &__search {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: 260px;
+    height: 32px;
+    margin-left: auto;
+    padding: 0 8px;
+    border: 1px solid var(--el-border-color-light);
+    border-radius: 6px;
+    background: var(--el-fill-color-lighter);
+    color: var(--el-text-color-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition:
+      border-color $duration-fast $ease-standard,
+      background-color $duration-fast $ease-standard;
+
+    &:hover {
+      border-color: var(--el-border-color);
+      background: var(--el-bg-color);
+    }
+
+    &-text {
+      flex: 1;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    kbd {
+      flex-shrink: 0;
+      padding: 1px 4px;
+      border: 1px solid var(--el-border-color);
+      border-radius: 6px;
+      background: var(--el-bg-color);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--el-text-color-placeholder);
+    }
   }
 
   &__right {
@@ -240,6 +324,16 @@ async function switchToStudent() {
   }
   .header__right {
     padding-left: $spacing-md;
+  }
+  .header__search {
+    width: 34px;
+    justify-content: center;
+    padding: 0;
+
+    &-text,
+    kbd {
+      display: none;
+    }
   }
 }
 

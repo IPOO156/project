@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CardBlock, CardIcon, ParagraphBlock, RichContent } from '../types'
+import type { CardBlock, CardIcon, ParagraphBlock, RichContent } from '../ai-chat.types'
 /**
  * RichContentRenderer - 结构化富文本渲染
  *
@@ -60,9 +60,12 @@ function cardSegments(block: CardBlock) {
         </template>
         <!-- 知识库场景：按 highlights 高亮 -->
         <template v-else>
-          <template v-for="(seg, j) in paragraphSegments(block)" :key="j">
-            <span :class="{ rc__hl: seg.isHighlight }">{{ seg.text }}</span>
-          </template>
+          <span
+            v-for="(seg, j) in paragraphSegments(block)"
+            :key="j"
+            :class="{ rc__hl: seg.isHighlight }"
+            >{{ seg.text }}</span
+          >
         </template>
       </p>
 
@@ -88,13 +91,16 @@ function cardSegments(block: CardBlock) {
       <!-- 信息卡 -->
       <div v-else-if="block.type === 'card'" class="rc__card">
         <div class="rc__card-title">
-          <component :is="getCardIcon(block.icon)" :size="15" />
+          <component :is="getCardIcon(block.icon)" :size="16" />
           <span>{{ block.title }}</span>
         </div>
         <div class="rc__card-body">
-          <template v-for="(seg, j) in cardSegments(block)" :key="j">
-            <span :class="{ rc__hl: seg.isHighlight }">{{ seg.text }}</span>
-          </template>
+          <span
+            v-for="(seg, j) in cardSegments(block)"
+            :key="j"
+            :class="{ rc__hl: seg.isHighlight }"
+            >{{ seg.text }}</span
+          >
         </div>
       </div>
     </template>
@@ -107,7 +113,7 @@ function cardSegments(block: CardBlock) {
   flex-direction: column;
   gap: $spacing-sm;
   font-size: $font-size-base;
-  line-height: 1.7;
+  line-height: 1.6;
   color: var(--el-text-color-primary);
 
   &__greeting {
@@ -131,7 +137,7 @@ function cardSegments(block: CardBlock) {
   }
 
   &__chip {
-    padding: 2px 8px;
+    padding: 4px 8px;
     border-radius: $radius-lg;
     font-size: $font-size-xs;
     color: var(--mc-primary);

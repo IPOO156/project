@@ -1,4 +1,4 @@
-import type { ChatSettings } from '../types'
+import type { ChatSettings } from '../ai-chat.types'
 /**
  * useChatSettings - AI 助手设置项持久化
  *

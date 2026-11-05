@@ -1,0 +1,481 @@
+/**
+ * 书册鼠标指针（book-cursor 项目化版本）
+ *
+ * 来源：外部包 book-cursor v1.0.0（自包含 UMD）。
+ * 本项目化改造点：
+ *  1. 改写为 TS 模块（原包为 UMD + any 形态），对外导出类型完整的单例；
+ *  2. 配色对齐 themes.css / variables.scss 设计 token（深海蓝 + 琥珀金 / 夜间浅色）；
+ *  3. 移除 prefers-reduced-motion 降级分支——本项目策略为「动效始终启用」
+ *     （见 main.ts 的 data-allow-motion 与 motion-override.scss）；
+ *  4. 主题判定收敛到项目实际机制：html[data-theme='light'|'dark'] + .dark 类；
+ *  5. 修正原包 disabled 态变量名不一致的问题（原 CSS 用 --bc-na，applyVars 却写 --bc-not-allowed）。
+ *
+ * 注意事项（来自原包说明）：
+ *  - CSP 必须允许 img-src 中出现 data:，否则光标会静默失效（本项目未配置 CSP，暂无此风险）；
+ *  - Safari 对 SVG 光标支持不稳定，会回退为系统箭头；
+ *  - iframe 内部需各自调用一次 init；
+ *  - SPA 整页重挂前先 destroy() 再 init()，避免残留多个 <style>。
+ */
+
+export type BookCursorTheme = 'auto' | 'day' | 'night'
+export type BookCursorPalette = 'day' | 'night'
+
+export interface BookCursorOptions {
+  /** auto 跟随 html[data-theme] 与 .dark 类，并持续监听切换。默认 auto */
+  theme?: BookCursorTheme
+  /** 加载动画帧数，越大越顺滑，同时首次生成耗时更高。默认 36 */
+  frames?: number
+  /** 一轮翻页时长（毫秒）。默认 650 */
+  cycleMs?: number
+  /** 是否启用，默认 true */
+  enabled?: boolean
+}
+
+export interface BookCursorApi {
+  init: (options?: BookCursorOptions) => void
+  setTheme: (theme: BookCursorTheme) => void
+  startWait: (target?: Element) => void
+  stopWait: () => void
+  enable: () => void
+  disable: () => void
+  destroy: () => void
+}
+
+/* ---------------- 图形（沿用原包路径，避免视觉走样） ---------------- */
+
+const BOOK = 'M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z'
+const notch = (bookmark: number) => `M6 4h5V${bookmark}L8.5 ${bookmark - 2.5}L6 ${bookmark}z`
+
+const OPEN =
+  'M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783'
+const LEAF =
+  'M8 1.783C8.985.936 10.413.809 11.713.94c1.514.153 3.042.672 3.994 1.105A.5.5 0 0 1 16 2.5v11a.5.5 0 0 1-.707.455c-.882-.4-2.303-.881-3.681-1.02-1.408-.142-2.589.087-3.222.877Z'
+const CLIP = 'M0.2 2.6 L8 1.9 L15.8 2.6 L15.8 13.4 L8 13.7 L0.2 13.4 Z'
+
+/**
+ * 配色对齐项目设计 token：
+ *  - ink   = 书体与线条：日间 $color-primary #1e3a5f，夜间文字色 #f1f5f9
+ *  - paper = 镂空与反色描边：日间页面底色，夜间卡片底色
+ *  - back  = 翻动页片：日间 $color-accent #d4a574，夜间链接蓝 #60a5fa
+ */
+const THEMES: Record<BookCursorPalette, { ink: string; paper: string; back: string }> = {
+  day: { ink: '#1e3a5f', paper: '#f8fafc', back: '#d4a574' },
+  night: { ink: '#f1f5f9', paper: '#1e293b', back: '#60a5fa' },
+}
+
+// 按下态（原包的 left/right/middle 换图）已移除：按下瞬间换一张从未显示过的
+// SVG 光标图，Windows/Edge 在首次解码该图时会先回退到 auto（系统箭头），
+// 且与「按下期间保持 hover 手型 / I-beam」的要求冲突。按下期间沿用当前元素的自绘态。
+type CursorState = 'default' | 'hover' | 'text' | 'wait' | 'not-allowed'
+
+const CURSOR_STATES: CursorState[] = ['default', 'hover', 'text', 'wait', 'not-allowed']
+
+/** 状态名 → CSS 变量后缀（not-allowed 对应原设计的 --bc-na） */
+const VAR_SUFFIX: Record<CursorState, string> = {
+  default: 'default',
+  hover: 'hover',
+  text: 'text',
+  wait: 'wait',
+  'not-allowed': 'na',
+}
+
+const HOTSPOT: Record<CursorState, string> = {
+  default: '5 3',
+  hover: '5 3',
+  text: '16 16',
+  wait: '1 5',
+  'not-allowed': '5 3',
+}
+
+const DEFAULT_FRAMES = 36
+const DEFAULT_CYCLE_MS = 650
+const BUSY_CLASS = 'bc-busy'
+const OFF_CLASS = 'bc-off'
+const STYLE_ATTR = 'data-book-cursor'
+
+function wrap16(body: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 16 16">${body}</svg>`
+}
+
+function wrap24(body: string): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">${body}</svg>`
+}
+
+function uri(svg: string): string {
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`
+}
+
+/** 生成某个配色下的 8 个静态状态光标 */
+function buildStates(palette: {
+  ink: string
+  paper: string
+  back: string
+}): Record<CursorState, string> {
+  const { ink, paper } = palette
+  const book = (bookmark: number) =>
+    `<path d="${BOOK}${notch(bookmark)}" fill="${ink}" fill-rule="nonzero"/>`
+
+  return {
+    default: wrap24(book(12)),
+    hover: wrap24(book(16)),
+    // 文本态 I-beam 收小减细：画布仍 32×32、viewBox 24×24（scale=1.333）。
+    // 竖线 5.8→18.2（本体 12.4 单位）+ 1.05 单位圆头描边 = 可见高 13.45 单位 ≈ 18px；
+    // 上下衬线可见宽 6.75 单位 ≈ 9px；描边 1.05 单位 ≈ 1.4px，接近系统 beam_r.cur。
+    // 字形中心仍为 (12,12)，映射到画布 (16,16)，故 HOTSPOT.text 保持 16 16 不偏移。
+    text: wrap24(
+      `<path d="M12 5.8V18.2" fill="none" stroke="${ink}" stroke-width="1.05" stroke-linecap="round"/>` +
+        `<path d="M9.15 5.8h5.7M9.15 18.2h5.7" fill="none" stroke="${ink}" stroke-width="1.05" stroke-linecap="round"/>`,
+    ),
+    'not-allowed': wrap24(
+      `<path d="${BOOK}${notch(12)}" fill="${ink}" fill-rule="nonzero" opacity=".5"/>` +
+        `<path d="M5 21 19 3" stroke="${paper}" stroke-width="4.4" stroke-linecap="round" fill="none"/>` +
+        `<path d="M5 21 19 3" stroke="${ink}" stroke-width="2" stroke-linecap="round" fill="none"/>`,
+    ),
+    // wait 态由动画帧覆盖，这里给首帧兜底，避免动画未启动时无光标
+    wait: wrap16(`<path d="${OPEN}" fill="${ink}"/>`),
+  }
+}
+
+/** 三页错层连翻：把进度 p 渲染为一帧 SVG */
+function buildWaitFrame(palette: { ink: string; paper: string; back: string }, p: number): string {
+  let leaves = ''
+  for (let i = 2; i >= 0; i--) {
+    const q = (p + i / 3) % 1
+    const scaleX = Math.cos(Math.PI * q)
+    const offsetX = 8 * (1 - scaleX)
+    const opacity = Math.min(1, Math.min(q / 0.1, (1 - q) / 0.1))
+    if (opacity < 0.02) continue
+    leaves +=
+      `<g transform="matrix(${scaleX.toFixed(4)},0,0,1,${offsetX.toFixed(3)},0)" opacity="${opacity.toFixed(2)}">` +
+      `<path d="${LEAF}" fill="${palette.ink}" opacity=".26" transform="translate(1.1 .8)"/>` +
+      `<path d="${LEAF}" fill="${palette.back}" stroke="${palette.ink}" stroke-width=".85" stroke-linejoin="round"/>` +
+      `</g>`
+  }
+  return wrap16(
+    `<clipPath id="bk"><path d="${CLIP}"/></clipPath>` +
+      `<path d="${OPEN}" fill="${palette.ink}"/>` +
+      `<g clip-path="url(#bk)">${leaves}</g>`,
+  )
+}
+
+/* ---------------- 样式 ---------------- */
+
+/** 运行时归一化标记：悬停时把原生 pointer/text/not-allowed 映射到书册对应状态 */
+const DATA_CURSOR_ATTR = 'data-bc-cursor'
+
+/** 项目内大量自定义可点区域不走 a/button，靠 pointerover 按「实际计算光标」兜底 */
+const NATIVE_CURSOR_STATES: Record<string, 'hover' | 'text' | 'not-allowed'> = {
+  pointer: 'hover',
+  text: 'text',
+  'not-allowed': 'not-allowed',
+}
+
+// 常见交互元素前置声明，避免首次悬停时出现一帧系统光标
+const HOVER_SELECTOR = [
+  'a',
+  'button',
+  '[role="button"]',
+  '[role="tab"]',
+  '[role="menuitem"]',
+  '[role="option"]',
+  '[role="switch"]',
+  '[role="checkbox"]',
+  '[role="radio"]',
+  'select',
+  'summary',
+  'label[for]',
+  '.el-button',
+  '.el-link',
+  '.el-tabs__item',
+  '.el-radio',
+  '.el-checkbox',
+  '.el-switch',
+  '.el-select',
+  '.el-dropdown',
+  '.el-menu-item',
+  '.el-sub-menu__title',
+  '.el-pager li',
+  '.el-collapse-item__header',
+  '.el-tree-node__content',
+  '.el-upload',
+  '.el-upload-dragger',
+  '.bc-link',
+].join(',')
+
+const CURSOR_CSS = [
+  'html{cursor:var(--bc-default),auto;}',
+  // Element Plus 的 .el-button{cursor:pointer} 与组件内 scoped 的 .xxx{cursor:pointer}
+  // 与这条规则同权重，dev 下加载顺序不可控（实测 EP 后置会赢）。加 !important
+  // 保证 hover 手型不依赖运行时标记，也避免按下/重渲染时回落到系统指针。
+  // 禁用/加载态规则位于其后，同权重后置仍可正常覆盖。
+  `${HOVER_SELECTOR}{cursor:var(--bc-hover),pointer!important;}`,
+  // 文本输入态继续使用自绘书册 I-beam（字形已在 buildStates 中收小减细到 9×18px）。
+  // 加 !important 是为了压过 Element Plus 后置的 .el-textarea__inner{cursor:auto}，
+  // 否则文本域会退回系统光标；禁用/加载态规则位于其后，仍可正常覆盖。
+  'input,textarea,.el-input__wrapper,.el-textarea__inner,[contenteditable=""],[contenteditable="true"]{cursor:var(--bc-text),text!important;}',
+  // 运行时归一化规则放在 disabled 之前：元素被禁用时由后面的 disabled 规则覆盖
+  `[${DATA_CURSOR_ATTR}='hover']{cursor:var(--bc-hover),pointer!important;}`,
+  `[${DATA_CURSOR_ATTR}='text']{cursor:var(--bc-text),text!important;}`,
+  `[${DATA_CURSOR_ATTR}='not-allowed']{cursor:var(--bc-na),not-allowed!important;}`,
+  '[disabled],.is-disabled,[aria-disabled="true"]{cursor:var(--bc-na),not-allowed!important;}',
+  `.${BUSY_CLASS},.${BUSY_CLASS} *{cursor:var(--bc-wait),progress!important;}`,
+  `.${OFF_CLASS},.${OFF_CLASS} *{cursor:auto!important;}`,
+].join('')
+
+/* ---------------- 运行时状态 ---------------- */
+
+const cache: Record<
+  BookCursorPalette,
+  {
+    states: Record<CursorState, string> | null
+    frames: string[] | null
+  }
+> = {
+  day: { states: null, frames: null },
+  night: { states: null, frames: null },
+}
+
+let inited = false
+let enabled = true
+let theme: BookCursorPalette = 'day'
+let frameCount = DEFAULT_FRAMES
+let cycleMs = DEFAULT_CYCLE_MS
+let rafId: number | null = null
+let startTs = 0
+let lastFrameIdx = -1
+let waitTarget: Element | null = null
+let styleEl: HTMLStyleElement | null = null
+let observer: MutationObserver | null = null
+
+function statesFor(palette: BookCursorPalette): Record<CursorState, string> {
+  if (!cache[palette].states) cache[palette].states = buildStates(THEMES[palette])
+  return cache[palette].states
+}
+
+/** 帧在首次进入加载态时才生成，避免拖慢首屏（与原包策略一致） */
+function framesFor(palette: BookCursorPalette): string[] {
+  if (!cache[palette].frames) {
+    const frames: string[] = []
+    for (let i = 0; i < frameCount; i++)
+      frames.push(uri(buildWaitFrame(THEMES[palette], i / frameCount)))
+    cache[palette].frames = frames
+  }
+  return cache[palette].frames
+}
+
+function applyVars(): void {
+  const root = document.documentElement
+  const states = statesFor(theme)
+  for (const name of CURSOR_STATES) {
+    root.style.setProperty(`--bc-${VAR_SUFFIX[name]}`, `${uri(states[name])} ${HOTSPOT[name]}`)
+  }
+  // 加载帧已生成时同步首帧，避免主题切换后仍显示旧配色
+  const cachedFrames = cache[theme].frames
+  if (cachedFrames) {
+    root.style.setProperty(`--bc-wait`, `${cachedFrames[0]} ${HOTSPOT.wait}`)
+  }
+}
+
+/** 项目实际机制：theme store 同时写 html[data-theme] 与 .dark 类 */
+function detectTheme(): BookCursorPalette {
+  const root = document.documentElement
+  const attr = (root.getAttribute('data-theme') || '').toLowerCase()
+  if (attr === 'dark' || attr.includes('night')) return 'night'
+  if (root.classList.contains('dark')) return 'night'
+  return 'day'
+}
+
+function setTheme(name: BookCursorTheme): void {
+  const resolved = name === 'auto' ? detectTheme() : name
+  const next: BookCursorPalette = resolved === 'night' ? 'night' : 'day'
+  const changed = next !== theme
+  const waiting = waitTarget !== null && rafId !== null
+  theme = next
+  applyVars()
+  if (changed && waiting) startWait(waitTarget ?? undefined)
+}
+
+function setWaitCursor(value: string): void {
+  document.documentElement.style.setProperty('--bc-wait', `${value} ${HOTSPOT.wait}`)
+}
+
+/**
+ * 单个元素归一化：项目里大量可点区域是 div/span + 自定义 CSS（登录端切换、
+ * 卡片、时间轴节点等），无法靠选择器穷举。
+ * 这里读取元素「实际计算光标」，只把原生 pointer / text / not-allowed
+ * 映射为书册状态；grab、resize 等特殊光标保持原样。
+ */
+function normalizeElement(el: Element): void {
+  if (!enabled) return
+  // 已经归一化过的元素不再重复判断（避免每次进入都读一次计算样式）
+  if (el.hasAttribute(DATA_CURSOR_ATTR)) return
+
+  const cursor = getComputedStyle(el).cursor
+  // 已命中自定义光标（含 data URI）时直接跳过
+  if (cursor.includes('data:image/svg+xml')) return
+
+  // computed 形如 "pointer" 或 "url(...) 5 3, pointer"，取首个 token 判断
+  const primary = cursor.split(',')[0]?.trim() ?? ''
+  const state = NATIVE_CURSOR_STATES[primary]
+  if (state) el.setAttribute(DATA_CURSOR_ATTR, state)
+}
+
+function onPointerOver(event: PointerEvent): void {
+  if (!(event.target instanceof Element)) return
+  normalizeElement(event.target)
+}
+
+/**
+ * 按屏幕坐标重新打标：按下/抬起时浏览器会按命中点重建光标，且 :active 形变、
+ * 点击引发的 loading/弹窗/路由重渲染都会让触点换成未打标的新元素。
+ */
+function normalizeAt(x: number, y: number): void {
+  const hit = document.elementFromPoint(x, y)
+  if (hit) normalizeElement(hit)
+}
+
+function onMouseDown(event: MouseEvent): void {
+  if (event.button !== 0) return
+  normalizeAt(event.clientX, event.clientY)
+}
+
+function onMouseUp(event: MouseEvent): void {
+  if (event.button !== 0) return
+  const { clientX, clientY } = event
+  // 延迟到下一轮事件循环，等点击处理函数（可能触发重渲染）先完成
+  window.setTimeout(() => normalizeAt(clientX, clientY), 0)
+}
+
+/** 清除所有运行期归一化标记（禁用/销毁/拖拽开始时调用） */
+function clearHoverMarks(): void {
+  document.querySelectorAll(`[${DATA_CURSOR_ATTR}]`).forEach((el) => {
+    el.removeAttribute(DATA_CURSOR_ATTR)
+  })
+}
+
+function startWait(target?: Element): void {
+  stopWait()
+  const el = target ?? document.documentElement
+  waitTarget = el
+  el.classList.add(BUSY_CLASS)
+
+  const frames = framesFor(theme)
+  startTs = 0
+  lastFrameIdx = -1
+  setWaitCursor(frames[0])
+
+  const per = cycleMs / frames.length
+  const tick = (ts: number): void => {
+    if (!waitTarget) return
+    if (!startTs) startTs = ts
+    const idx = Math.floor((ts - startTs) / per) % frames.length
+    if (idx !== lastFrameIdx) {
+      lastFrameIdx = idx
+      setWaitCursor(frames[idx])
+    }
+    rafId = requestAnimationFrame(tick)
+  }
+  rafId = requestAnimationFrame(tick)
+}
+
+function stopWait(): void {
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+  if (waitTarget) {
+    waitTarget.classList.remove(BUSY_CLASS)
+    waitTarget = null
+  }
+}
+
+function applyEnabled(on: boolean): void {
+  if (!on) {
+    stopWait()
+    clearHoverMarks()
+    document.documentElement.classList.add(OFF_CLASS)
+  } else {
+    document.documentElement.classList.remove(OFF_CLASS)
+  }
+}
+
+function enable(): void {
+  enabled = true
+  applyEnabled(true)
+}
+
+function disable(): void {
+  enabled = false
+  applyEnabled(false)
+}
+
+function init(options: BookCursorOptions = {}): void {
+  if (typeof document === 'undefined') return
+  if (inited) {
+    if (options.theme) setTheme(options.theme)
+    return
+  }
+  inited = true
+  enabled = options.enabled !== false
+  if (options.frames) frameCount = Math.max(8, Math.floor(options.frames))
+  if (options.cycleMs) cycleMs = Math.max(200, Math.floor(options.cycleMs))
+
+  styleEl = document.createElement('style')
+  styleEl.setAttribute(STYLE_ATTR, '')
+  styleEl.textContent = CURSOR_CSS
+  document.head.appendChild(styleEl)
+
+  setTheme(options.theme ?? 'auto')
+
+  document.addEventListener('mousedown', onMouseDown, true)
+  document.addEventListener('mouseup', onMouseUp, true)
+  document.addEventListener('pointerover', onPointerOver, true)
+  // 拖拽时浏览器会接管光标（grab/grabbing），这里清掉标记避免自绘 hover 手型残留
+  document.addEventListener('dragstart', clearHoverMarks, true)
+
+  applyEnabled(enabled)
+
+  // theme store 切换时同步日夜配色（只监听 data-theme，项目内与 .dark 类同步写入）
+  observer = new MutationObserver(() => {
+    if (options.theme === 'auto' || !options.theme) setTheme('auto')
+  })
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  })
+}
+
+function destroy(): void {
+  stopWait()
+  document.removeEventListener('mousedown', onMouseDown, true)
+  document.removeEventListener('mouseup', onMouseUp, true)
+  document.removeEventListener('pointerover', onPointerOver, true)
+  document.removeEventListener('dragstart', clearHoverMarks, true)
+  clearHoverMarks()
+  if (observer) {
+    observer.disconnect()
+    observer = null
+  }
+  if (styleEl?.parentNode) styleEl.parentNode.removeChild(styleEl)
+  styleEl = null
+
+  // 清理运行期写入的变量与状态类，避免重挂后残留
+  const root = document.documentElement
+  for (const name of CURSOR_STATES) root.style.removeProperty(`--bc-${VAR_SUFFIX[name]}`)
+  root.style.removeProperty('--bc-wait')
+  root.classList.remove(BUSY_CLASS, OFF_CLASS)
+
+  inited = false
+}
+
+const bookCursor: BookCursorApi = {
+  init,
+  setTheme,
+  startWait,
+  stopWait,
+  enable,
+  disable,
+  destroy,
+}
+
+export default bookCursor

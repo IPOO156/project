@@ -11,7 +11,7 @@
  *     - 三层阴影（$shadow-sm / $shadow-base / $shadow-lg）
  *     - 主色深海蓝 + 琥珀金（$color-primary / $color-accent）
  *  4. 响应式：≥992 三栏、<992 自动折叠侧边栏为抽屉
- *  5. A11y：role/aria-label/aria-live + prefers-reduced-motion 支持
+ *  5. A11y：role/aria-label/aria-live
  *  6. 动画：4 套统一过渡（sidebar 滑入 / header 淡入 / route 切换 / loading 出场）
  *     - 全部使用 transform + opacity（合成层，GPU 加速）
  *     - 时长 200-280ms（命中 skill §6 区间）
@@ -19,12 +19,16 @@
  */
 import { computed, nextTick, ref, useSlots, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useTabs } from '@/app/composables/useTabs'
 import { useAppStore, useUserStore } from '@/app/stores/stores'
 import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import AIFloatingBall from '@/features/ai-chat/components/AIFloatingBall.vue'
 import { useGreeting } from '@/features/dashboard/composables/useGreeting'
-import { useTabs } from '@/shared/composables/composables'
+import { useLoadingTip } from '@/shared/composables/useLoadingTip'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import GreetingToast from '@/shared/ui/GreetingToast.vue'
+import LoadingTipCard from '@/shared/ui/LoadingTipCard.vue'
+import bookCursor from '@/shared/utils/bookCursor'
 import HeaderBar from './components/HeaderBar.vue'
 import Sidebar from './components/Sidebar.vue'
 
@@ -37,8 +41,30 @@ const slots = useSlots()
 
 const drawerVisible = ref(false)
 
+/**
+ * 管理员端与教师端共用同一套路由，但视觉语言要分开：
+ * 管理员＝治理总览（石墨蓝 + 中性灰），教师＝待审队列（墨蓝 + 琥珀）。
+ * 这里只落一个 layout--admin 类，具体差异集中在 teacher-console.scss；
+ * 学生端 isAdmin 恒为 false，不会命中任何管理员样式。
+ */
+const { isAdmin } = useTeacherAuthz()
+
 // 启动 tab 状态监听：路由切换时把已访问页面写入 useTabsStore
 useTabs()
+
+/**
+ * 书册光标只在学生端启用：教师端 / 管理员端采用普通系统指针。
+ * 登录页可能在同一个 SPA 会话内切换账号，故监听 isTeacher 双向切换，
+ * 离开教师端时恢复学生端书册光标。
+ */
+watch(
+  () => userStore.isTeacher,
+  (isTeacher) => {
+    if (isTeacher) bookCursor.disable()
+    else bookCursor.enable()
+  },
+  { immediate: true },
+)
 
 // 人性化问候弹窗（useGreeting 内部已处理挂载与登录状态监听）
 const { visible, dismissing, greeting, theme, dismiss } = useGreeting()
@@ -48,6 +74,9 @@ const hasToolbar = computed(() => !!slots.toolbar)
 const hasPageHeader = computed(() => hasHeader.value || hasToolbar.value)
 const hasFooter = computed(() => !!slots.footer)
 const isLoading = computed(() => appStore.pageLoading)
+
+// 加载页温馨提示：按当前路由/角色取主题，每次加载出现时换一条
+const { message: loadingMessage, hint: loadingHint, refresh: refreshLoadingTip } = useLoadingTip()
 
 /** 从路由 meta 中推断页面标题，用于文档标题与无障碍属性 */
 const pageTitle = computed(() => (route.meta?.title as string) || '')
@@ -82,6 +111,10 @@ watch(isLoading, async (loading) => {
   if (!loading) {
     return
   }
+  // 教师端 / 管理员端不展示加载温馨提示，仅在学生端按新页面主题重新抽取
+  if (!userStore.isTeacher) {
+    refreshLoadingTip()
+  }
   await nextTick()
   if (loadingEl.value) {
     loadingEl.value.style.willChange = 'transform, opacity'
@@ -103,6 +136,7 @@ watch(isLoading, async (loading) => {
       'layout--mobile': appStore.isMobile,
       'layout--has-footer': hasFooter,
       'layout--teacher': userStore.isTeacher,
+      'layout--admin': isAdmin,
     }"
   >
     <!-- 侧边栏（折叠/展开动画：280ms 横向滑入） -->
@@ -148,9 +182,11 @@ watch(isLoading, async (loading) => {
           <!-- 主内容：路由出口 / 自定义内容 -->
           <section class="layout__page-body">
             <router-view v-slot="{ Component, route: routeSlot }">
-              <keep-alive :max="20">
-                <component :is="Component" :key="routeSlot.fullPath" />
-              </keep-alive>
+              <Transition name="layout-route" mode="out-in">
+                <keep-alive :max="20">
+                  <component :is="Component" :key="routeSlot.fullPath" />
+                </keep-alive>
+              </Transition>
             </router-view>
           </section>
 
@@ -185,7 +221,10 @@ watch(isLoading, async (loading) => {
         aria-label="页面加载中"
       >
         <div class="layout__loading-spinner" aria-hidden="true" />
-        <span class="layout__loading-text">加载中…</span>
+        <span class="layout__loading-text">{{ loadingMessage }}</span>
+        <!-- 温馨提示：单行细线提示 + 2px 进度条，各端共用；文案随身份轮换 -->
+        <LoadingTipCard :text="loadingHint" />
+        <span class="layout__loading-progress" aria-hidden="true"><i /></span>
       </div>
     </Transition>
 
@@ -217,7 +256,8 @@ watch(isLoading, async (loading) => {
 // =============================================================================
 .layout {
   display: flex;
-  height: 100vh;
+  // dvh 跟随浏览器工具栏收放，避免移动端 100vh 把内容顶到屏幕外
+  height: 100dvh;
   overflow: hidden;
   background-color: var(--el-bg-color-page);
 
@@ -330,6 +370,8 @@ watch(isLoading, async (loading) => {
   }
 
   // 全局加载（z-index 使用项目统一比例尺：modal 层）
+  // 结构：转圈 → 主文案（16px）→ 单行提示（14px）→ 2px 进度条
+  // 垂直节奏：16px（$spacing-lg）/ 24px（$spacing-xl，由 LoadingTipCard 自带）/ 16px
   &__loading {
     position: fixed;
     inset: 0;
@@ -340,7 +382,7 @@ watch(isLoading, async (loading) => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: $spacing-md;
+    gap: 0;
   }
 
   &__loading-spinner {
@@ -354,8 +396,37 @@ watch(isLoading, async (loading) => {
   }
 
   &__loading-text {
-    color: var(--el-text-color-secondary);
-    font-size: $font-size-sm;
+    margin-top: $spacing-lg;
+    color: var(--el-text-color-primary);
+    font-size: $font-size-lg;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    // 只动 opacity + transform；与遮罩入场错开 40ms，读起来有先后
+    animation: layout-loading-text-in 240ms $ease-decelerate both;
+    animation-delay: 40ms;
+  }
+
+  &__loading-progress {
+    width: 160px;
+    height: 2px;
+    margin-top: $spacing-lg;
+    border-radius: $radius-pill;
+    background: var(--el-fill-color);
+    overflow: hidden;
+    animation: layout-loading-progress-in 240ms $ease-decelerate both;
+    animation-delay: 120ms;
+
+    i {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--el-color-primary);
+      transform: scaleX(0.04);
+      transform-origin: left center;
+      // 无真实进度可读：用先快后慢的推进表达「仍在进行」，只动 transform/opacity
+      animation: layout-loading-progress 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
   }
 }
 
@@ -440,10 +511,65 @@ html.dark .layout__loading {
   opacity: 0;
 }
 
+// G. 路由切换 → 纯透明度淡出淡入，无位移
+//    页面级“走位”会让内容整体跳一下；out-in 保证新旧页面不重叠，
+//    避免两页文字同时可见的双重曝光
+.layout-route-enter-active {
+  transition: opacity $duration-base $ease-decelerate;
+}
+
+.layout-route-leave-active {
+  transition: opacity $duration-instant $ease-accelerate;
+}
+
+.layout-route-enter-from,
+.layout-route-leave-to {
+  opacity: 0;
+}
+
 // 关键帧
 @keyframes layout-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes layout-loading-text-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes layout-loading-progress-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes layout-loading-progress {
+  0% {
+    opacity: 0.45;
+    transform: scaleX(0.04);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scaleX(0.82);
+  }
+
+  100% {
+    opacity: 0.35;
+    transform: scaleX(0.96);
   }
 }
 
@@ -473,7 +599,7 @@ html.dark .layout__loading {
   }
 }
 
-// 移动端竖屏：375px 以下（紧凑间距，禁止横向滚动）
+// 移动端竖屏：375px 以下（小间距，禁止横向滚动）
 @media (max-width: 375px) {
   .layout__content {
     padding: $spacing-sm;
@@ -495,52 +621,6 @@ html.dark .layout__loading {
   }
 }
 
-// =============================================================================
-// 4. 无障碍：尊重用户的减少动画偏好（ui-ux-pro-max skill §3 / §6）
-//    系统层开关：彻底关闭所有过渡 + 动画 + 缩放
-// =============================================================================
-@media (prefers-reduced-motion: reduce) {
-  // 主布局过渡（sidebar margin 切换等）
-  .layout,
-  .layout__main {
-    transition: none !important;
-  }
-
-  // 所有 transition 类：禁用过渡 + 清除初始/结束状态
-  .layout-sidebar-enter-active,
-  .layout-sidebar-leave-active,
-  .layout-mask-enter-active,
-  .layout-mask-leave-active,
-  .layout-fade-enter-active,
-  .layout-fade-leave-active,
-  .layout-loading-enter-active,
-  .layout-loading-leave-active {
-    transition: none !important;
-  }
-
-  // 初始/结束状态：直接显示，无 transform
-  .layout-sidebar-enter-from,
-  .layout-sidebar-leave-to,
-  .layout-mask-enter-from,
-  .layout-mask-leave-to,
-  .layout-fade-enter-from,
-  .layout-fade-leave-to,
-  .layout-route-enter-from,
-  .layout-route-leave-to,
-  .layout-loading-enter-from,
-  .layout-loading-leave-to {
-    transform: none !important;
-    filter: none !important;
-  }
-
-  // spinner 旋转也停掉
-  .layout__loading-spinner {
-    animation: none !important;
-  }
-
-  // 清理由 JS 注入的 will-change（避免残留图层占内存）
-  .layout__loading {
-    will-change: auto !important;
-  }
-}
+// 动效策略：始终启用，不提供 prefers-reduced-motion 降级；
+// 系统开启“减少动效”时也保持完整动画（统一说明见 assets/styles/motion-override.scss）
 </style>

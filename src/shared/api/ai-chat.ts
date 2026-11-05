@@ -1,38 +1,16 @@
 /**
- * AI 助手 API
- * 管理 AI 对话会话、消息、AI 辅助建议（与《学生端接口文档》九、AI 对话模块一致）。
+ * AI 助手 HTTP 接口（与《学生端接口文档》九、AI 对话模块一致）。
  *
- * 真实后端接口（主链路）：/ai/conversations、/ai/conversations/{id}/messages、
+ * 本文件只负责请求与响应类型，不包含任何业务编排：
+ * 离线回退应答（依赖档案/职业规划 store 与知识库）在
+ * `features/ai-chat/services/offlineChat.ts`，避免 shared 反向依赖上层。
+ *
+ * 真实后端接口：/ai/conversations、/ai/conversations/{id}/messages、
  * /ai/conversations/{id}/messages/{mid}/regenerate、/ai/suggestions、/ai/messages/{mid}/feedback、
- * DELETE /ai/conversations/{id}（见下方「后端 AI 接口」节）。
- *
- * 本地模拟（非真实接口，保留用途）：
- *   - sendMessage      → 离线回退（后端不可用时标注「离线模式」）
- * 旧 Mock getConversations/getConversation/createConversation/deleteConversation 已废弃删除。
+ * DELETE /ai/conversations/{id}。
  */
-import type { AISuggestion, RichContent } from '@/features/ai-chat/types'
-import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
-import {
-  analysisToRichBlocks,
-  analyzeCareer,
-} from '@/features/ai-chat/composables/useCareerAnalysis'
-import { matchKnowledge } from '@/features/ai-chat/data/knowledgeBase'
-import { richToPlain } from '@/features/ai-chat/utils/richText'
-
-/* ===================== 后端 AI 接口（/ai/*，与文档九一致） ===================== */
-
+import type { AISuggestion } from '@/features/ai-chat/ai-chat.types'
 import request from './request'
-
-export interface SendMessageResult {
-  message: {
-    id: string
-    role: 'ai'
-    content: string
-    time: string
-    richContent?: RichContent
-  }
-  conversationId: string
-}
 
 export interface ConversationSummary {
   id: string
@@ -41,114 +19,7 @@ export interface ConversationSummary {
   messageCount: number
 }
 
-// ── Mock 辅助 ──
-let convIdCounter = 0
-const mockConversations = new Map<string, ConversationSummary>()
-
-function nextConvId(): string {
-  return `conv_${++convIdCounter}`
-}
-
-function timeStr(): string {
-  return new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-}
-
-function simulateAIReply(userText: string): Promise<{ plain: string; rich: RichContent }> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const entry = matchKnowledge(userText)
-
-      if (entry.topic === '职业规划') {
-        const archiveStore = useArchiveStore()
-        const careerPlanStore = useCareerPlanStore()
-
-        const analysis = analyzeCareer(
-          archiveStore.dimensions,
-          archiveStore.awards,
-          archiveStore.grades,
-          careerPlanStore.plans,
-        )
-
-        if (analysis) {
-          careerPlanStore.setAIAnalysis(analysis)
-          const { greeting, blocks, materials } = analysisToRichBlocks(analysis)
-          const rich: RichContent = { greeting, blocks, materials }
-          resolve({ plain: richToPlain(rich), rich })
-          return
-        }
-
-        // 数据未就绪：先异步拉取档案数据，再重试一次分析
-        if (archiveStore.dimensions.length === 0) {
-          archiveStore
-            .fetchArchive()
-            .then(() => {
-              const retry = analyzeCareer(
-                archiveStore.dimensions,
-                archiveStore.awards,
-                archiveStore.grades,
-                careerPlanStore.plans,
-              )
-              if (retry) {
-                careerPlanStore.setAIAnalysis(retry)
-                const { greeting, blocks, materials } = analysisToRichBlocks(retry)
-                const rich: RichContent = { greeting, blocks, materials }
-                resolve({ plain: richToPlain(rich), rich })
-              } else {
-                const plain = richToPlain(entry.rich)
-                resolve({ plain, rich: entry.rich })
-              }
-            })
-            .catch(() => {
-              const plain = richToPlain(entry.rich)
-              resolve({ plain, rich: entry.rich })
-            })
-          return
-        }
-      }
-
-      const plain = richToPlain(entry.rich)
-      resolve({ plain, rich: entry.rich })
-    }, 800)
-  })
-}
-
 // ── API 函数 ──
-
-/** 发送消息，获取 AI 回复 */
-export function sendMessage(
-  text: string,
-  conversationId?: string,
-  _context?: Record<string, any>,
-): Promise<SendMessageResult> {
-  return new Promise((resolve) => {
-    setTimeout(async () => {
-      const cid = conversationId ?? nextConvId()
-      const { plain, rich } = await simulateAIReply(text)
-      const msgResult = {
-        id: `ai-${Date.now()}`,
-        role: 'ai' as const,
-        content: plain,
-        time: timeStr(),
-        richContent: rich,
-      }
-
-      // 同步更新 mock 对话存储
-      if (!mockConversations.has(cid)) {
-        const title = text.trim().slice(0, 14) + (text.trim().length > 14 ? '...' : '')
-        mockConversations.set(cid, {
-          id: cid,
-          title,
-          createTime: new Date().toLocaleString('zh-CN'),
-          messageCount: 0,
-        })
-      }
-      const conv = mockConversations.get(cid)!
-      conv.messageCount += 2 // user + ai
-
-      resolve({ message: msgResult, conversationId: cid })
-    }, 800)
-  })
-}
 
 /**
  * 提交消息反馈（9.8 POST /ai/messages/{messageId}/feedback，幂等：同消息重复反馈覆盖）
@@ -223,7 +94,13 @@ export function sendAIMessage(
   createdAt: string
   suggestedActions?: Array<{ label: string; jumpUrl: string; actionType: string }>
 }> {
-  return request.post(`/ai/conversations/${conversationId}/messages`, { content })
+  // 同步等待大模型生成：后端 DeepSeek 超时 60s（DeepSeekProperties.timeoutMs），
+  // 全局 15s 会先中断并提示「请求超时」，因此单次调用放宽到 65s。
+  return request.post(
+    `/ai/conversations/${conversationId}/messages`,
+    { content },
+    { timeout: 65_000 },
+  )
 }
 
 /** 重新生成 AI 消息（POST /ai/conversations/{conversationId}/messages/{messageId}/regenerate） */
@@ -242,7 +119,12 @@ export function regenerateAIMessage(
   isRetry: boolean
   createdAt: string
 }> {
-  return request.post(`/ai/conversations/${conversationId}/messages/${messageId}/regenerate`)
+  // 同 sendAIMessage：重新生成同样同步等待模型返回，沿用 65s 超时
+  return request.post(
+    `/ai/conversations/${conversationId}/messages/${messageId}/regenerate`,
+    null,
+    { timeout: 65_000 },
+  )
 }
 
 /** 获取 AI 辅助建议（GET /ai/suggestions，按来源记录查询改进建议） */

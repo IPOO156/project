@@ -1,10 +1,17 @@
 {
   "compilerOptions": {
     "composite": true,
+    // 增量构建信息也移出仓库根目录
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
+    // 被 tsconfig.json 以 project reference 引用时，composite 项目不能 noEmit（TS6310）。
+    // 改为只产出声明文件到 node_modules/.tmp：既避免 tsc 把 vite.config.ts 编译成项目根目录的
+    // vite.config.js（Vite 会优先读取它而遮蔽 .ts 配置），又满足 composite 的产物要求。
+    "emitDeclarationOnly": true,
+    "outDir": "./node_modules/.tmp/node-types",
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true
   },

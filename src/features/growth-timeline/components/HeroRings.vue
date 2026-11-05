@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import type { ElectronItem, RingItem, TooltipState } from './HeroRings.types'
 import { ChevronDown } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
 import { useRingEffects } from '../composables/useRingEffects'
-import { findRingBySemester, getSemesterDisplayLabel, SEMESTER_RINGS } from '../timeline-constants'
+import { findRingBySemester, getSemesterDisplayLabel, SEMESTER_RINGS } from '../timelineConstants'
 import HeroRingsElectrons from './HeroRingsElectrons.vue'
 import HeroRingsFooter from './HeroRingsFooter.vue'
 import HeroRingsNucleus from './HeroRingsNucleus.vue'
@@ -317,7 +317,7 @@ const { extinguishedRings } = useRingEffects(
 .hero-rings {
   --hero-scale: 1.75;
   position: relative;
-  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -420,7 +420,7 @@ const { extinguishedRings } = useRingEffects(
 .hero-rings__top,
 .hero-rings__poem {
   opacity: 0;
-  animation: fadeSlideUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeSlideUp 1s $ease-emphasized forwards;
   pointer-events: auto;
 }
 
@@ -479,7 +479,7 @@ const { extinguishedRings } = useRingEffects(
   line-height: 1;
   opacity: 0;
   transform: translateY(-18px);
-  animation: charDropIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: charDropIn 0.55s $ease-emphasized forwards;
   animation-delay: calc(0.9s + var(--char-index, 0) * 0.08s);
 }
 

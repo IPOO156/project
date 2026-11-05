@@ -13,14 +13,14 @@
  *  - role="tablist" / role="tab" / aria-selected
  *  - 移动端触控目标 ≥ 44×44px
  *  - 用 transform 做 active 指示条动画（合成层）
- *  - prefers-reduced-motion: reduce 关闭动画
  *  - 不使用 Emoji 图标
  */
 import { X } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
-import { useTabsStore } from '@/app/stores/tabs'
+import { useTabsStore } from '@/app/stores/useTabsStore'
 import { findMenuItemByPath } from '@/shared/constants/menu'
+import TabContextMenu from './TabContextMenu.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -198,6 +198,20 @@ onUnmounted(() => {
   window.removeEventListener('scroll', hideContextMenu, true)
 })
 
+/**
+ * 标签过多时允许用滚轮横向滚动。
+ *
+ * 标签栏本身隐藏了滚动条，若只保留原生 overflow-x，桌面鼠标用户很难发现
+ * 右侧还有标签。这里把垂直滚轮转换为横向滚动；触控板的横向手势仍走原生行为。
+ */
+function onTabsWheel(e: WheelEvent) {
+  const el = scrollerRef.value
+  if (!el || el.scrollWidth <= el.clientWidth) return
+  if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return
+  e.preventDefault()
+  el.scrollLeft += e.deltaY
+}
+
 function onKeydown(e: KeyboardEvent, path: string, index: number) {
   const total = tabs.value.length
   let nextIndex = index
@@ -237,7 +251,13 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
   <div v-if="tabs.length > 0" class="nav-tabs" role="presentation">
     <!-- 标签栏主体：水平滚动 + mask 渐变提示 -->
     <div class="nav-tabs__viewport">
-      <div ref="scrollerRef" class="nav-tabs__scroller" role="tablist" aria-label="已访问页面标签">
+      <div
+        ref="scrollerRef"
+        class="nav-tabs__scroller"
+        role="tablist"
+        aria-label="已访问页面标签"
+        @wheel="onTabsWheel"
+      >
         <div
           v-for="(tab, index) in tabs"
           :key="tab.path"
@@ -285,42 +305,16 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
       </div>
     </div>
 
-    <Teleport to="body">
-      <div
-        v-if="contextMenu.visible"
-        class="nav-tabs__menu"
-        :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
-        role="menu"
-        @contextmenu.prevent
-      >
-        <button
-          type="button"
-          class="nav-tabs__menu-item"
-          role="menuitem"
-          :disabled="!contextMenu.closable"
-          @click.stop="onCloseCurrent"
-        >
-          关闭当前
-        </button>
-        <button
-          type="button"
-          class="nav-tabs__menu-item"
-          role="menuitem"
-          @click.stop="onCloseOthers"
-        >
-          关闭其他
-        </button>
-        <button
-          type="button"
-          class="nav-tabs__menu-item"
-          role="menuitem"
-          :disabled="!hasClosableTabs"
-          @click.stop="onCloseAll"
-        >
-          关闭全部
-        </button>
-      </div>
-    </Teleport>
+    <TabContextMenu
+      :visible="contextMenu.visible"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :closable="contextMenu.closable"
+      :has-closable-tabs="hasClosableTabs"
+      @close-current="onCloseCurrent"
+      @close-others="onCloseOthers"
+      @close-all="onCloseAll"
+    />
   </div>
 </template>
 
@@ -333,7 +327,9 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
 // =============================================================================
 .nav-tabs {
   --tab-base-width: 168px;
-  --tab-min-width: 80px;
+  // 最小值需容纳「图标 + 4 个汉字 + 关闭按钮」；低于该宽度时标题会退化成
+  // 「材...」这类无法辨认的标签，不如让标签栏横向滚动。
+  --tab-min-width: 140px;
 
   flex: 1 1 auto;
   display: flex;
@@ -508,38 +504,6 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     border-color: var(--el-color-primary);
     background: rgba(96, 165, 250, 0.08);
   }
-
-  &__menu {
-    position: fixed;
-    z-index: $z-popover;
-    min-width: 112px;
-    padding: 4px;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    border-radius: $radius-base;
-    background: var(--el-bg-color-overlay);
-    box-shadow: $shadow-lg;
-  }
-  &__menu-item {
-    display: block;
-    width: 100%;
-    padding: 6px 12px;
-    border: 0;
-    border-radius: $radius-sm;
-    background: transparent;
-    color: var(--el-text-color-primary);
-    font-size: $font-size-base;
-    line-height: 1.5;
-    text-align: left;
-    cursor: pointer;
-    &:hover:not(:disabled) {
-      background: var(--el-fill-color-light);
-      color: var(--el-color-primary);
-    }
-    &:disabled {
-      color: var(--el-text-color-disabled);
-      cursor: not-allowed;
-    }
-  }
 }
 
 @media (max-width: 768px) {
@@ -576,14 +540,6 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     width: 16px;
     height: 16px;
     right: 6px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .nav-tabs__item,
-  .nav-tabs__surface,
-  .nav-tabs__close {
-    transition: none !important;
   }
 }
 </style>

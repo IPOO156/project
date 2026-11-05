@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import type { GrowthExperience } from '../timeline-constants'
+import type { GrowthExperience } from '../timelineConstants'
 import { ElMessageBox } from 'element-plus'
 import { FlaskConical, GraduationCap, HeartHandshake, Trash2, Trophy } from 'lucide-vue-next'
-import { getSemesterDisplayLabel } from '../timeline-constants'
+import { GROWTH_TAG_COLORS } from '@/shared/constants/dict'
+import { getSemesterDisplayLabel } from '../timelineConstants'
 
 interface Props {
   experience: GrowthExperience
@@ -42,14 +43,7 @@ function getTypeIcon(tag: string) {
 }
 
 function getTypeColor(tag: string): string {
-  const colorMap: Record<string, string> = {
-    竞赛: '#d4a574',
-    科研: '#8b6340',
-    实践: '#a67c52',
-    学业: '#5a7c5a',
-    技术: '#9a8474',
-  }
-  for (const [key, color] of Object.entries(colorMap)) {
+  for (const [key, color] of Object.entries(GROWTH_TAG_COLORS)) {
     if (tag?.includes(key)) return color
   }
   return '#8b6340'
@@ -134,7 +128,6 @@ function getTypeColor(tag: string): string {
     border-color 0.35s ease,
     background 0.35s ease,
     box-shadow 0.35s ease;
-  will-change: transform, box-shadow;
 }
 
 .growth-card:hover {
@@ -224,10 +217,9 @@ function getTypeColor(tag: string): string {
   justify-content: center;
   opacity: 0.55;
   transition:
-    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s $ease-emphasized,
     background 0.2s ease,
     color 0.2s ease;
-  will-change: transform, opacity;
   z-index: 5;
 }
 
@@ -350,9 +342,9 @@ function getTypeColor(tag: string): string {
   opacity: 0;
   transform: translateX(-8px);
   transition:
-    width 1.2s cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    width 1.2s $ease-emphasized,
+    opacity 0.6s $ease-emphasized,
+    transform 0.6s $ease-emphasized;
 }
 
 .growth-card.visible .card-skill-fill {
@@ -396,8 +388,8 @@ function getTypeColor(tag: string): string {
   transform: translateY(10px);
   transition:
     all 0.3s ease,
-    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 0.5s $ease-emphasized,
+    transform 0.5s $ease-emphasized;
 }
 
 .card-tag:hover {

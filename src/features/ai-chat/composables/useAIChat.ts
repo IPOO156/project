@@ -6,7 +6,7 @@ import type {
   Conversation,
   MessageFeedback,
   RichContent,
-} from '../types'
+} from '../ai-chat.types'
 /**
  * useAIChat - AI 助手对话核心 composable
  *
@@ -27,7 +27,6 @@ import type {
 import { ref } from 'vue'
 // 真实接口 + 本地模拟回复（离线回退）与反馈占位实现
 import {
-  sendMessage as apiSendMessageOffline,
   submitFeedback as apiSubmitFeedback,
   createAIConversation,
   deleteAIConversation,
@@ -37,6 +36,7 @@ import {
   renameAIConversation,
   sendAIMessage,
 } from '@/shared/api/ai-chat'
+import { sendMessage as apiSendMessageOffline } from '../services/offlineChat'
 import { parseMarkdownToRichContent } from '../utils/richText'
 
 // 重新导出类型，保持旧的 `import type { ChatMessage } from './useAIChat'` 可用
@@ -95,6 +95,11 @@ export function useAIChat() {
   const loading = ref(false)
   /** 最近一次 AI 请求是否失败（用于展示“重新生成”重试入口） */
   const error = ref(false)
+  /**
+   * 当前是否处于离线回退状态：后端不可用、回复由本地模拟产生时为 true。
+   * 用于顶栏展示真实连接状态，避免离线时仍显示“在线”。
+   */
+  const offlineMode = ref(false)
   /** 最近一次提问文本（重试时重新生成对应回复，不重复追加用户气泡） */
   let lastUserText = ''
   /** 最近一条可重新生成的助手消息（在线模式下后端的 messageId） */
@@ -124,6 +129,7 @@ export function useAIChat() {
   /** 离线回退：调用本地模拟回复，并标记“离线模式” */
   async function requestOfflineReply(text: string): Promise<ChatMessage> {
     const result = await apiSendMessageOffline(text)
+    offlineMode.value = true
     return {
       id: result.message.id,
       role: 'ai',
@@ -144,6 +150,7 @@ export function useAIChat() {
       void loadConversations()
     }
     const res: AISendMessageResult = await sendAIMessage(cid, text)
+    offlineMode.value = false
     lastAssistantMessageId = res.messageId
     const richContent = parseMarkdownToRichContent(res.content)
     return {
@@ -179,6 +186,7 @@ export function useAIChat() {
     loading.value = true
     try {
       const res: AIRegenerateResult = await regenerateAIMessage(cid, messageId)
+      offlineMode.value = false
       lastAssistantMessageId = res.messageId
       const richContent = parseMarkdownToRichContent(res.content)
       messages.value.push({
@@ -233,12 +241,20 @@ export function useAIChat() {
     }
   }
 
-  /** 清空消息（恢复欢迎语）— 旧 API 不变 */
+  /**
+   * 清空消息（恢复欢迎语）— 旧 API 不变
+   *
+   * 同时解除当前会话绑定：清空后再发消息会新建后端会话，
+   * 避免下一条消息继续追加到旧会话、切回历史时旧消息“复活”。
+   * 旧会话本身仍保留在历史列表中，可手动删除。
+   */
   function clearMessages() {
     messages.value = createWelcomeMessages()
     loading.value = false
     error.value = false
     lastAssistantMessageId = null
+    lastUserText = ''
+    currentConversationId.value = null
   }
 
   // ── 会话管理（真实接口）──
@@ -250,6 +266,7 @@ export function useAIChat() {
       conversations.value = res.list ?? []
     } catch {
       conversations.value = []
+      offlineMode.value = true
     }
   }
 
@@ -352,6 +369,7 @@ export function useAIChat() {
     formatTime,
     // 新增 API
     error,
+    offlineMode,
     retry,
     conversations,
     currentConversationId,

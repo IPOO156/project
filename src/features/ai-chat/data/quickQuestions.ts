@@ -4,7 +4,7 @@
  * icon 为标识字符串，由 QuickQuestions.vue 映射到 lucide-vue-next 图标组件
  * （避免在数据文件中引入组件依赖，保持数据层纯净）
  */
-import type { QuickQuestion } from '../types'
+import type { QuickQuestion } from '../ai-chat.types'
 
 export const quickQuestions: QuickQuestion[] = [
   {

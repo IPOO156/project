@@ -14,7 +14,7 @@ interface Props {
   visible: boolean
   dismissing: boolean
   greeting: GreetingInfo
-  theme: { gradient: string; emoji: string }
+  theme: { gradient: string }
 }
 </script>
 
@@ -27,8 +27,7 @@ interface Props {
         :class="{ 'greeting-toast--dismissing': dismissing }"
       >
         <div class="greeting-toast__content">
-          <span class="greeting-toast__emoji">{{ theme.emoji }}</span>
-          <span class="greeting-toast__message">{{ greeting.message.replace(/\n/g, ' · ') }}</span>
+          <span class="greeting-toast__message">{{ greeting.message }}</span>
         </div>
         <button
           type="button"
@@ -45,23 +44,20 @@ interface Props {
 
 <style scoped lang="scss">
 .greeting-toast {
+  // 右下角上移，避开学生端的 AI 助手悬浮按钮；同时不遮挡页头、标签页和表格首行。
   position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 24px;
+  bottom: 88px;
   z-index: $z-toast;
   display: flex;
   align-items: center;
-  gap: 16px;
-  max-width: 640px;
-  width: calc(100vw - 32px);
-  padding: 14px 18px;
-  border-radius: $radius-xl;
+  gap: 12px;
+  max-width: 340px;
+  padding: 10px 10px 10px 16px;
+  border-radius: $radius-lg;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-light);
-  box-shadow:
-    0 16px 48px rgba(0, 0, 0, 0.14),
-    0 6px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
   overflow: hidden;
 
   &::before {
@@ -70,38 +66,28 @@ interface Props {
     left: 0;
     top: 0;
     bottom: 0;
-    width: 4px;
+    width: 3px;
     background: v-bind('theme.gradient');
   }
 
   &__content {
     display: flex;
     align-items: center;
-    gap: 10px;
     flex: 1;
     min-width: 0;
-    padding-left: 8px;
-  }
-
-  &__emoji {
-    font-size: 20px;
-    line-height: 1;
-    flex-shrink: 0;
   }
 
   &__message {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--el-text-color-primary);
     line-height: 1.5;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-word;
   }
 
   &__close {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    border-radius: $radius-base;
     border: none;
     background: transparent;
     color: var(--el-text-color-secondary);
@@ -110,34 +96,56 @@ interface Props {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: all 0.2s ease;
 
-    &:hover {
+    &:hover,
+    &:focus-visible {
       background: var(--el-fill-color);
       color: var(--el-text-color-primary);
     }
   }
 }
 
+/* 教师端 / 管理员端：挪到左下角并压平。
+   右下角 (right:24px) 会正好压住表格最后一列操作（导出页的「下载 / 删除」），
+   而教师/管理员没有 AI 悬浮球需要避让，左下角是安全区。 */
+html:has(.layout--teacher) .greeting-toast,
+html:has(.layout--admin) .greeting-toast {
+  right: auto;
+  left: 24px;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+
+  &::before {
+    background: var(--mc-info, #1d4ed8);
+  }
+}
+
 .greeting-toast-enter-active,
 .greeting-toast-leave-active {
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .greeting-toast-enter-from,
 .greeting-toast-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(-20px);
+  transform: translateY(8px);
 }
 
 @media (max-width: 768px) {
   .greeting-toast {
-    top: 12px;
-    width: calc(100vw - 24px);
-    padding: 10px 12px;
+    right: 12px;
+    bottom: 76px;
+    max-width: calc(100vw - 24px);
   }
-  .greeting-toast__message {
-    font-size: 13px;
+
+  /* 窄屏上浮层无论放哪都会压住卡片内容，教师/管理员直接不弹，改用更省地方的提示 */
+  html:has(.layout--teacher) .greeting-toast,
+  html:has(.layout--admin) .greeting-toast {
+    right: auto;
+    left: 12px;
+    display: none;
   }
 }
 </style>

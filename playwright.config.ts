@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /**
+ * 端口可通过 E2E_PORT 覆盖：本机若已有旧的 dev server 占用 5173（常见于 HMR 失效的
+ * 残留进程），可用 `E2E_PORT=5174 npx playwright test` 另起一个干净的实例。
+ */
+const PORT = Number(process.env.E2E_PORT ?? 5173)
+const BASE_URL = `http://localhost:${PORT}`
+
+/**
  * Playwright E2E 测试配置
  *
  * 【位置】本文件必须位于仓库根目录。
@@ -9,9 +16,10 @@ import { defineConfig, devices } from '@playwright/test'
  * page.goto('/teacher') 这类相对路径变成非法 URL（报 Cannot navigate to invalid URL）。
  *
  * 测试账号：
- * - 学生端：202401002 / 123456  （「学生登录」Tab）
- * - 教师端：T00003   / 123456  （「管理员登录」Tab —— 登录页只有学生/管理员两个 Tab）
- * - 管理员端：A00002 / 123456  （「管理员登录」Tab）
+ * - 学生端：202401002（「学生登录」Tab）
+ * - 教师端：T00003  （「管理员登录」Tab —— 登录页只有学生/管理员两个 Tab）
+ * - 管理员端：A00002（「管理员登录」Tab）
+ * 密码不写入仓库，运行前通过环境变量 VITE_E2E_PASSWORD（或 E2E_PASSWORD）提供。
  */
 export default defineConfig({
   testDir: './tests/e2e',
@@ -27,13 +35,17 @@ export default defineConfig({
   // 真实缺陷两次都会失败，不会因此漏检。Playwright 会把重试通过的用例单列为 flaky。
   retries: process.env.CI ? 2 : 1,
 
+  // dev server 首次访问某个路由时才编译对应 chunk（实测权限页 Tab 在 5s 断言超时内
+  // 仍是 0 个元素、重试即通过），放宽断言超时，避免把编译耗时误判为权限回归失败。
+  expect: { timeout: 15000 },
+
   reporter: [
     ['html', { open: 'never' }],
     ['junit', { outputFile: 'test-results/junit.xml' }],
   ],
 
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: BASE_URL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -51,9 +63,14 @@ export default defineConfig({
 
   webServer: {
     // 本项目用 npm（原配置写的 pnpm dev，本机无 pnpm，dev server 未启动时会拉起失败）
-    command: 'npm run dev',
-    url: 'http://localhost:5173',
+    command: `npm run dev -- --port ${PORT}`,
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    // 测试用 dev server 注入免验证码账号：与后端 application-test.yml 的 skip-users 对齐。
+    // 说明：仅影响 Playwright 拉起的测试实例，不影响生产构建（request.ts 另有 DEV 门控）。
+    env: {
+      VITE_CAPTCHA_SKIP_ACCOUNTS: process.env.E2E_CAPTCHA_ACCOUNTS ?? '202401002,T00003,A00002',
+    },
   },
 })

@@ -8,17 +8,29 @@ dist
 playwright-report/
 test-results/
 
+# 单元测试覆盖率报告（vitest --coverage 产物）
+coverage/
+
+# 项目内 Playwright 浏览器缓存（沙箱内无法写系统目录时使用）
+.playwright-browsers/
+
+# 本地运行期取证与评审记录，不入库
+.runtime-check/
+
 # TypeScript composite project emit artifacts
 vite.config.js
 vite.config.d.ts
 *.tsbuildinfo
 
-package-lock.json
+# Node 依赖锁文件：CI 使用 npm ci，只保留 package-lock.json（已入库）
 
 # Cursor AI 配置目录（本地规则，不入库）
 .cursor/
 
 # Trae AI 配置目录（本地规则，不入库）
 .trae/
+
+# Trae HTML 分享产物（IDE 生成的打包 zip，不入库）
+.trae-html-share-packages/
 
 # package.json 由开发者维护，正常入库（保留）

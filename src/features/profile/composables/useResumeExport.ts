@@ -1,7 +1,5 @@
 import type { Ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import html2canvas from 'html2canvas'
-import JSPDF from 'jspdf'
 import { h, ref } from 'vue'
 import { previewResumeExport, submitResumeExport } from '@/shared/api/career-plan'
 
@@ -186,6 +184,11 @@ export function useResumeExport() {
 
     await new Promise((resolve) => setTimeout(resolve, 400))
 
+    const [{ default: html2canvas }, { default: JSPDF }] = await Promise.all([
+      import('html2canvas'),
+      import('jspdf'),
+    ])
+
     const canvas = await html2canvas(el, {
       scale: 2,
       useCORS: true,
@@ -262,7 +265,8 @@ export function useResumeExport() {
       }
 
       if (result) {
-        window.open(result.downloadUrl, '_blank')
+        // 同 useArchiveExport：预签名下载地址必须以 noopener/noreferrer 打开。
+        window.open(result.downloadUrl, '_blank', 'noopener,noreferrer')
         ElMessage.success(`简历导出任务已创建，链接有效期至 ${formatExpireAt(result.expireAt)}`)
       } else {
         // 4) 后端接口异常时回退本地 html2canvas + jspdf 生成

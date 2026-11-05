@@ -46,9 +46,14 @@ export function useUpload(options: UploadOptions = {}) {
             progress.value = Math.round((e.loaded / e.total) * 100)
           }
         },
-      })) as any
+      })) as unknown
       // 后端返回 { fileId, fileName, fileUrl, objectKey, fileSize, fileType }
-      const url = res.fileUrl ?? res.url ?? res
+      const responseObj =
+        typeof res === 'object' && res !== null ? (res as Record<string, unknown>) : null
+      const url =
+        (responseObj?.fileUrl as string | undefined) ??
+        (responseObj?.url as string | undefined) ??
+        (typeof res === 'string' ? res : '')
       uploadedUrls.value.push(url)
       return url
     } catch {

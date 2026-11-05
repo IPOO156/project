@@ -386,7 +386,8 @@ export interface SubmissionFilters {
 
 export interface Activity {
   id: string
-  type: 'draft' | 'submitted' | 'approved' | 'rejected'
+  /** 展示用状态类别；后端 status=4（已撤回）在此字段同样映射为 withdrawn */
+  type: 'draft' | 'submitted' | 'approved' | 'rejected' | 'withdrawn'
   text: string
   time: string
   status: 'draft' | 'pending' | 'rejected' | 'approved' | 'withdrawn'

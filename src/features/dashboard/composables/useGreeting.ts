@@ -46,7 +46,7 @@ export function getGreetingByHour(username: string): GreetingInfo {
     return {
       prefix: '早上好',
       period: 'morning',
-      message: `早上好，${username}☀️\n一日之计在于晨，一年之计在于春。`,
+      message: `早上好，${username}`,
     }
   }
 
@@ -54,7 +54,7 @@ export function getGreetingByHour(username: string): GreetingInfo {
     return {
       prefix: '中午好',
       period: 'noon',
-      message: `中午好，${username}🌤️\n中午小睡，下午精神百倍。`,
+      message: `中午好，${username}`,
     }
   }
 
@@ -62,7 +62,7 @@ export function getGreetingByHour(username: string): GreetingInfo {
     return {
       prefix: '下午好',
       period: 'afternoon',
-      message: `下午好，${username}☕\n一杯清茶，继续前行。`,
+      message: `下午好，${username}`,
     }
   }
 
@@ -70,7 +70,7 @@ export function getGreetingByHour(username: string): GreetingInfo {
     return {
       prefix: '晚上好',
       period: 'evening',
-      message: `晚上好，${username}🌙\n忙碌了一天，好好休息一下吧。`,
+      message: `晚上好，${username}`,
     }
   }
 
@@ -78,33 +78,23 @@ export function getGreetingByHour(username: string): GreetingInfo {
   return {
     prefix: '夜深了',
     period: 'night',
-    message: `夜深了，${username}🌙\n记得早点休息，明天会更好。`,
+    message: `夜深了，${username}，注意休息`,
   }
 }
 
-/** 获取当前时段对应的图标名（对应不同的装饰主题色） */
+/**
+ * 问候提示的视觉主题。
+ *
+ * 所有时段统一使用品牌深蓝，不用不同色相区分早晚：
+ * 这类提示是背景信息，颜色不应与状态色/主操作争抢注意力。
+ */
 export function getPeriodTheme(period: GreetingInfo['period']) {
-  const themes: Record<GreetingInfo['period'], { gradient: string; emoji: string }> = {
-    morning: {
-      gradient: 'linear-gradient(135deg, #f97316 0%, #fbbf24 50%, #f59e0b 100%)',
-      emoji: '☀️',
-    },
-    noon: {
-      gradient: 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%)',
-      emoji: '🌤️',
-    },
-    afternoon: {
-      gradient: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 50%, #c4b5fd 100%)',
-      emoji: '☕',
-    },
-    evening: {
-      gradient: 'linear-gradient(135deg, #1e3a5f 0%, #3b5998 50%, #6b7db3 100%)',
-      emoji: '🌙',
-    },
-    night: {
-      gradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-      emoji: '🌙',
-    },
+  const themes: Record<GreetingInfo['period'], { gradient: string }> = {
+    morning: { gradient: 'linear-gradient(180deg, #1e3a5f 0%, #2d5a87 100%)' },
+    noon: { gradient: 'linear-gradient(180deg, #1e3a5f 0%, #2d5a87 100%)' },
+    afternoon: { gradient: 'linear-gradient(180deg, #1e3a5f 0%, #2d5a87 100%)' },
+    evening: { gradient: 'linear-gradient(180deg, #1e3a5f 0%, #2d5a87 100%)' },
+    night: { gradient: 'linear-gradient(180deg, #1e3a5f 0%, #2d5a87 100%)' },
   }
   return themes[period]
 }

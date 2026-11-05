@@ -10,7 +10,7 @@
   --el-bg-color-overlay: #ffffff;
   --el-text-color-primary: #1e293b;
   --el-text-color-secondary: #64748b;
-  --el-text-color-placeholder: #94a3b8;
+  --el-text-color-placeholder: #64748b;
   --el-text-color-disabled: #cbd5e1;
   --el-border-color: #e2e8f0;
   --el-border-color-light: #e2e8f0;
@@ -36,7 +36,7 @@
   --bark-soft: #e3c4a0;
   --bark-mid: #2d5a87;
   --bark-dark: #1e3a5f;
-  --text-light: #94a3b8;
+  --text-light: #64748b;
   --text-mid: #64748b;
   --bg-parchment: #f0f4f8;
 
@@ -60,6 +60,19 @@
   --gt-tooltip-muted: rgba(241, 245, 249, 0.72);
   --gt-halo-gold: rgba(212, 165, 116, 0.28);
   --gt-halo-green: rgba(90, 124, 90, 0.2);
+
+  /* z-index 比例尺（与 variables.scss 同步） */
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+  --z-toast: 100;
+  --z-overlay: 200;
+  --z-ai: 300;
+  --z-ripple: 400;
 }
 
 [data-theme='dark'] {
@@ -119,4 +132,138 @@
   --gt-tooltip-muted: rgba(241, 245, 249, 0.5);
   --gt-halo-gold: rgba(251, 191, 36, 0.2);
   --gt-halo-green: rgba(110, 231, 183, 0.15);
+}
+
+/* =============================================================================
+ * 按钮语言「素面」token —— 仅供 _buttons.scss 消费，作用域收窄到教师 / 管理员壳
+ * 注意：这组变量是唯一命名，不参与 Element Plus 深色变量的权重竞争；
+ * 夜间值放在后面的 [data-theme='dark'] 块（0,1,0），与日间 :root（0,1,0）同权、靠后取胜。
+ * ============================================================================= */
+:root {
+  --mc-btn-surface: #ffffff;
+  --mc-btn-surface-hover: #f2f6fa;
+  --mc-btn-surface-active: #e7eff6;
+  --mc-btn-line: #adbacb;
+  --mc-btn-line-hover: #8695a9;
+  --mc-btn-line-active: #56657a;
+  --mc-btn-label: #334155;
+  --mc-btn-label-strong: #1e293b;
+  --mc-btn-label-soft: #5f6b7d;
+  --mc-btn-brand: #1e3a5f;
+  --mc-btn-brand-line: #172f4a;
+  --mc-btn-brand-hover: #2d5a87;
+  --mc-btn-brand-active: #142740;
+  --mc-btn-on-brand: #ffffff;
+  --mc-btn-danger: #b91c1c;
+  --mc-btn-danger-line: #dda8a8;
+  --mc-btn-danger-hover-bg: #fdf4f4;
+  --mc-btn-danger-solid: #b91c1c;
+  --mc-btn-danger-solid-hover: #a81a1a;
+  --mc-btn-danger-solid-active: #8f1717;
+  --mc-btn-on-danger: #ffffff;
+  --mc-btn-focus: #1e3a5f;
+  --mc-btn-disabled-surface: #f1f5f9;
+  --mc-btn-disabled-line: #e2e8f0;
+  --mc-btn-disabled-label: #94a3b8;
+  --mc-btn-h-inline: 24px;
+  --mc-btn-h-control: 32px;
+  --mc-btn-h-emphasis: 40px;
+  --mc-btn-h-touch: 44px;
+  --mc-btn-px-inline: 8px;
+  --mc-btn-px-control: 16px;
+  --mc-btn-px-emphasis: 20px;
+  --mc-btn-radius: 6px;
+  --mc-btn-font-inline: 13px;
+  --mc-btn-font-control: 14px;
+  --mc-btn-weight: 500;
+  --mc-btn-weight-strong: 600;
+  --mc-btn-duration: 120ms;
+  --mc-btn-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── 控制层（批 1）：输入 / 选择 / 标签 / 复选单选 ── */
+  --mc-ctl-h: 32px;
+  --mc-ctl-h-touch: 40px;
+  --mc-ctl-px: 12px;
+  --mc-ctl-radius: 6px;
+  --mc-ctl-font: 14px;
+
+  --mc-ctl-surface: #ffffff;
+  --mc-ctl-line: #adbacb;
+  --mc-ctl-line-hover: #8695a9;
+  --mc-ctl-line-active: #56657a;
+  --mc-ctl-line-focus: #1e3a5f;
+  --mc-ctl-line-float: #8695a9;
+  --mc-ctl-line-error: #b91c1c;
+  --mc-ctl-hover: #f1f5f9;
+
+  --mc-ctl-text: #1e293b;
+  --mc-ctl-label: #334155;
+  --mc-ctl-placeholder: #5f6b7d;
+
+  --mc-ctl-disabled-surface: #f1f5f9;
+  --mc-ctl-disabled-line: #e2e8f0;
+  --mc-ctl-disabled-text: #94a3b8;
+  --mc-ctl-focus: #1e3a5f;
+
+  --mc-ctl-duration: 120ms;
+  --mc-ctl-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --mc-tag-h: 24px;
+  --mc-tag-px: 8px;
+  --mc-tag-font: 12px;
+
+  --mc-choice-size: 16px;
+  --mc-choice-fill: #1e3a5f;
+  --mc-choice-on: #ffffff;
+}
+
+[data-theme='dark'] {
+  --mc-btn-surface: #111b2c;
+  --mc-btn-surface-hover: #1a2638;
+  --mc-btn-surface-active: #223144;
+  --mc-btn-line: #3d4c63;
+  --mc-btn-line-hover: #556882;
+  --mc-btn-line-active: #8296ae;
+  --mc-btn-label: #cbd5e1;
+  --mc-btn-label-strong: #f1f5f9;
+  --mc-btn-label-soft: #94a3b8;
+  --mc-btn-brand: #24466f;
+  --mc-btn-brand-line: #34577f;
+  --mc-btn-brand-hover: #30597f;
+  --mc-btn-brand-active: #193250;
+  --mc-btn-on-brand: #f1f5f9;
+  --mc-btn-danger: #f87171;
+  --mc-btn-danger-line: #7a3b3b;
+  --mc-btn-danger-hover-bg: #2a1516;
+  --mc-btn-danger-solid: #a83232;
+  --mc-btn-danger-solid-hover: #bd3a3a;
+  --mc-btn-danger-solid-active: #8c2727;
+  --mc-btn-on-danger: #f8fafc;
+  --mc-btn-focus: #93c5fd;
+  --mc-btn-disabled-surface: #141d2c;
+  --mc-btn-disabled-line: #26334a;
+  --mc-btn-disabled-label: #5a6b82;
+}
+
+:root[data-theme='dark'] {
+  --mc-ctl-surface: #111b2c;
+  --mc-ctl-line: #3d4c63;
+  --mc-ctl-line-hover: #556882;
+  --mc-ctl-line-active: #8296ae;
+  --mc-ctl-line-focus: #93c5fd;
+  --mc-ctl-line-float: #556882;
+  --mc-ctl-line-error: #f87171;
+  --mc-ctl-hover: #1a2638;
+
+  --mc-ctl-text: #f1f5f9;
+  --mc-ctl-label: #cbd5e1;
+  --mc-ctl-placeholder: #7c8ba1;
+
+  --mc-ctl-disabled-surface: #141d2c;
+  --mc-ctl-disabled-line: #26334a;
+  --mc-ctl-disabled-text: #5a6b82;
+  --mc-ctl-focus: #93c5fd;
+
+  --mc-choice-fill: #24466f;
+  --mc-choice-on: #f1f5f9;
 }

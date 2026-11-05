@@ -1,5 +1,9 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { USER_SCOPED_PREFIXES } from '@/shared/constants/storageKeys'
+import bookCursor from '@/shared/utils/bookCursor'
+import { markMustChangePassword } from '@/shared/utils/forcePasswordChange'
+import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import {
   clearAuth,
   getRefreshToken,
@@ -17,12 +21,54 @@ const request = axios.create({
   },
 })
 
-// 测试账号（后端已配置跳过验证码）
-const CAPTCHA_SKIP_ACCOUNTS = ['202401002', 'T00003', 'A00002']
+// 免验证码测试账号名单。
+//
+// 原先此处硬编码了一份测试账号清单（学生/教师/管理员各若干），与 Login.vue 的
+// SKIP_ACCOUNTS、后端 application-dev.yml 的 auth.captcha.skip-users 三处各自维护、
+// 极易发散（曾出现后端已加账号、前端两处名单未加，导致点击登录无任何请求发出）。
+// 现按要求移除：前端不再内置任何测试账号，开发时一律走图形验证码登录。
+//
+// 若日后确需免验证码调试，优先从 .env.development 注入（如 VITE_CAPTCHA_SKIP_ACCOUNTS），
+// 而不是在源码里硬编码 —— 硬编码的账号标识会随开发构建产物分发。
+const CAPTCHA_SKIP_ACCOUNTS = import.meta.env.DEV
+  ? (import.meta.env.VITE_CAPTCHA_SKIP_ACCOUNTS || '')
+      .split(',')
+      .map((s: string) => s.trim())
+      .filter(Boolean)
+  : []
 
-// 密钥：与后端 auth.captcha.skip-secret 保持一致
-// 开发环境 .env.development 可覆盖，生产构建 import.meta.env.PROD 为空字符串自动不生效
-const CAPTCHA_SKIP_SECRET = import.meta.env.VITE_CAPTCHA_SKIP_SECRET || ''
+// 密钥：与后端 auth.captcha.skip-secret 保持一致，仅开发/联调环境读取。
+// .env.production 不设置 VITE_CAPTCHA_SKIP_SECRET，且此处再用 DEV 门控，
+// 防止误配环境变量把跳过能力带进生产构建。
+const CAPTCHA_SKIP_SECRET = import.meta.env.DEV
+  ? import.meta.env.VITE_CAPTCHA_SKIP_SECRET || ''
+  : ''
+
+// ── 书册指针「加载中」态：全局请求计数 + 延迟触发 ──
+// 延迟 180ms 再切换光标，避免短请求（验证码、下拉选项等）造成光标闪烁；
+// 并发请求用计数归零才恢复，防止先完成的请求提前撤销加载态。
+let pendingRequestCount = 0
+let waitCursorTimer: number | null = null
+const WAIT_CURSOR_DELAY_MS = 180
+
+function beginRequestLoading(): void {
+  pendingRequestCount += 1
+  if (pendingRequestCount > 1 || waitCursorTimer !== null) return
+  waitCursorTimer = window.setTimeout(() => {
+    waitCursorTimer = null
+    if (pendingRequestCount > 0) bookCursor.startWait()
+  }, WAIT_CURSOR_DELAY_MS)
+}
+
+function endRequestLoading(): void {
+  pendingRequestCount = Math.max(0, pendingRequestCount - 1)
+  if (pendingRequestCount > 0) return
+  if (waitCursorTimer !== null) {
+    window.clearTimeout(waitCursorTimer)
+    waitCursorTimer = null
+  }
+  bookCursor.stopWait()
+}
 
 // 请求拦截器
 request.interceptors.request.use(
@@ -38,10 +84,18 @@ request.interceptors.request.use(
       config.headers['X-Captcha-Skip-Token'] = CAPTCHA_SKIP_SECRET
     }
 
+    beginRequestLoading()
     return config
   },
   (error) => Promise.reject(error),
 )
+
+// ── 强制改密跳转去重 ──
+// 一个页面常并发多个请求，强制改密期间会同时收到多个 403；同一批（1 秒内）只提示/跳转一次，
+// 避免连弹多条相同提示、重复 assign。用时间窗而不是一次性布尔量，防止同一 SPA 会话内
+// 换账号再次触发时失效。
+let lastForcePasswordChangeAt = 0
+const FORCE_PASSWORD_CHANGE_NOTIFY_WINDOW_MS = 1000
 
 // ── 401 令牌刷新：并发去重，单飞（singleton）──
 let refreshPromise: Promise<string | null> | null = null
@@ -77,8 +131,29 @@ function tryRefreshToken(): Promise<string | null> {
   return refreshPromise
 }
 
+/**
+ * 强制登出时的本地清理。
+ * user store 的主动登出会清理这些缓存；但令牌过期/刷新失败走这里时此前只清了 token，
+ * 残留的 user_info_cache / teacher_me 会让下一个登录账号读到上一个账号的 loginType
+ * 与权限码（路由守卫据此分流），必须一并清除。
+ */
+function clearAuthCaches() {
+  try {
+    // 会话失效（刷新失败）时同样清理当前用户的草稿/撤回标记，
+    // 避免令牌已失效但 PII 仍留在 localStorage。必须在删除身份缓存前执行。
+    clearCurrentUserScopedStorage(USER_SCOPED_PREFIXES)
+    localStorage.removeItem('user_info_cache')
+    localStorage.removeItem('teacher_me')
+    localStorage.removeItem('user_avatar_cache')
+    sessionStorage.removeItem('app:visited-tabs')
+  } catch {
+    /* 隐私模式下存储不可用时忽略 */
+  }
+}
+
 function forceLogout() {
   clearAuth()
+  clearAuthCaches()
   // 已在登录页/根路径时禁止整页跳转：对相同 URL 赋值 location 会触发 reload。
   // 若 401 源是"匿名访问被安全链拒绝"而非"会话过期"，跳转会形成 ~150ms 一次的无休止
   // reload 循环（登录页 /public/statistics 401 曾触发此死循环），故仅非登录页才回跳。
@@ -99,6 +174,12 @@ function isBusiness401(url = '') {
 // 响应拦截器
 request.interceptors.response.use(
   (response) => {
+    endRequestLoading()
+    // 文件下载（responseType=blob）没有业务信封：直接返回完整响应，
+    // 由调用方读取 blob 与 Content-Disposition；错误响应仍走下方 error 分支。
+    if (response.config.responseType === 'blob') {
+      return response
+    }
     const res = response.data
     if (res.code !== 0 && res.code !== 200) {
       ElMessage.error(res.message || '请求失败')
@@ -107,6 +188,8 @@ request.interceptors.response.use(
     return res.data
   },
   (error) => {
+    // 先于任何分支结束加载态：401 刷新/重试、业务 401 下抛等提前 return 的场景也要归零
+    endRequestLoading()
     if (error.response) {
       const status = error.response.status
       const url: string | undefined = error.config?.url
@@ -116,18 +199,24 @@ request.interceptors.response.use(
       // 但后端白名单尚未放行的 /public/**），并非"令牌过期"：一律下抛交由调用方 catch
       // 静默处理，禁止走刷新/登出——否则登录页对这类 401 的 forceLogout 会整页 reload，
       // 形成无休止刷新死循环。
-      if (status === 401 && !isBusiness401(url)) {
+      //
+      // /auth/refresh 自身返回 401 说明 refreshToken 已失效，不能再走刷新流程：
+      // 否则内部的 tryRefreshToken() 会返回仍在等待本请求的 refreshPromise，
+      // 形成 Promise 循环依赖，请求永不结算、页面 Loading 卡死且不会登出。
+      if (status === 401 && !isBusiness401(url) && !url?.includes('/auth/refresh')) {
         const hadToken = Boolean(error.config?.headers?.Authorization)
         if (!hadToken) {
           return Promise.reject(error)
         }
-        if (((error.config as any).refreshCount || 0) < 3) {
+        // axios 拦截器 error 为 any 形态；config 上挂载自定义 refreshCount 记录重试次数
+        const retryConfig = error.config as { refreshCount?: number }
+        if ((retryConfig.refreshCount || 0) < 3) {
           return tryRefreshToken().then((token) => {
             if (!token) {
               forceLogout()
               return Promise.reject(error)
             }
-            ;(error.config as any).refreshCount = ((error.config as any).refreshCount || 0) + 1
+            retryConfig.refreshCount = (retryConfig.refreshCount || 0) + 1
             error.config.headers = {
               ...error.config.headers,
               Authorization: `Bearer ${token}`,
@@ -151,9 +240,30 @@ request.interceptors.response.use(
             forceLogout()
           }
           break
-        case 403:
-          ElMessage.error('没有权限执行此操作')
+        case 403: {
+          // 403 有两种业务含义，不能一律提示「没有权限执行此操作」：
+          //   1. 真的无权访问该功能；
+          //   2. 首次登录强制改密（后端口径：must_change_password=1 时仅放行
+          //      /auth/password、/auth/me、/auth/logout，其余接口统一 403）。
+          // 第 2 种要如实提示并立即跳到改密页，否则用户会以为账号权限有问题。
+          const deniedMessage: string = error.response.data?.message ?? ''
+          if (deniedMessage.includes('首次登录请先修改初始密码')) {
+            markMustChangePassword()
+            if (Date.now() - lastForcePasswordChangeAt > FORCE_PASSWORD_CHANGE_NOTIFY_WINDOW_MS) {
+              lastForcePasswordChangeAt = Date.now()
+              ElMessage.warning(deniedMessage)
+              // 全量刷新回到登录页：登录页检测到强制改密标记后会直接显示改密表单，
+              // 视觉与原登录卡片一致。当前页可能已并发发出多个 403 请求，整页跳转
+              // 可一并终止它们；已在登录页时不再跳转，避免循环刷新。
+              if (window.location.pathname !== '/login') {
+                window.location.assign('/login')
+              }
+            }
+          } else {
+            ElMessage.error('没有权限执行此操作')
+          }
           break
+        }
         case 429:
           ElMessage.error('请求过于频繁，请稍后重试')
           break
