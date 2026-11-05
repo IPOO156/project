@@ -130,7 +130,7 @@ function openCalcDetail(label: string) {
   margin-bottom: 0;
 
   :deep(.el-card__body) {
-    padding: 16px 24px;
+    padding: 16px 20px;
   }
 
   // 空态：el-empty 默认上下留白 40px，在卡片内过于空旷；收紧留白并弱化说明文字层级
@@ -149,7 +149,7 @@ function openCalcDetail(label: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
 
   &__left {
@@ -163,8 +163,8 @@ function openCalcDetail(label: string) {
     font-size: 12px;
     font-weight: 500;
     color: var(--el-text-color-secondary);
-    padding: 4px 8px;
-    border-radius: 6px;
+    padding: 2px 10px;
+    border-radius: 4px;
     background: var(--el-fill-color-light);
   }
 }
@@ -172,7 +172,7 @@ function openCalcDetail(label: string) {
 .dimension-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .dimension-item {

@@ -61,7 +61,7 @@ function getTypeColor(tag: string): string {
       <div class="card-actions">
         <span class="card-status-ring" aria-hidden="true" />
         <button class="delete-btn" aria-label="删除" title="删除" @click.stop="handleDelete">
-          <Trash2 :size="16" />
+          <Trash2 :size="14" />
         </button>
       </div>
       <span class="card-index">{{ String(index + 1).padStart(2, '0') }}</span>
@@ -72,7 +72,7 @@ function getTypeColor(tag: string): string {
         class="card-type-indicator"
         :style="{ '--type-color': getTypeColor(experience.tags[0]) }"
       >
-        <component :is="getTypeIcon(experience.tags[0])" :size="16" />
+        <component :is="getTypeIcon(experience.tags[0])" :size="12" />
       </div>
       <span class="card-season-badge">{{ getSemesterDisplayLabel(experience.semester) }}</span>
       <span v-if="experience.statusLabel" class="card-status-label">{{
@@ -113,7 +113,7 @@ function getTypeColor(tag: string): string {
 }
 
 .growth-card {
-  padding: 32px 40px 52px;
+  padding: 2.25rem 2.5rem 3.25rem;
   border-radius: $radius-2xl;
   background: #fffcf7;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
@@ -143,9 +143,9 @@ function getTypeColor(tag: string): string {
 .card-top {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-  padding-right: 100px;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+  padding-right: 6.25rem;
 }
 
 .card-right-edge {
@@ -168,7 +168,7 @@ function getTypeColor(tag: string): string {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  gap: 0.5rem;
   pointer-events: auto;
 }
 
@@ -176,9 +176,9 @@ function getTypeColor(tag: string): string {
   width: 100%;
   font-family: 'Cormorant Garamond', serif;
   font-size: 3.5rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--gt-accent, #8b6340);
-  line-height: 1.2;
+  line-height: 1;
   text-align: right;
   pointer-events: none;
 }
@@ -252,70 +252,70 @@ function getTypeColor(tag: string): string {
 
 .card-season-badge {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 0.55rem;
   letter-spacing: 3px;
   text-transform: uppercase;
   color: var(--ring-color, var(--bark-light, #8b6340));
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
-  padding: 4px 8px;
-  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  border-radius: 100px;
   background: rgba(var(--gt-bark-rgb, 61 43 31), 0.02);
   flex-shrink: 0;
 }
 
 .card-status-label {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 0.55rem;
   letter-spacing: 2px;
   color: #3a7a4f;
   border: 1px solid rgba(58, 122, 79, 0.35);
-  padding: 4px 8px;
-  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  border-radius: 100px;
   background: rgba(58, 122, 79, 0.08);
   flex-shrink: 0;
 }
 
 .card-year-inline {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 0.55rem;
   letter-spacing: 2px;
   color: var(--text-light, #9a8474);
 }
 
 .card-title {
   font-family: 'Instrument Serif', serif;
-  font-size: 28px;
+  font-size: 1.85rem;
   font-weight: 500;
   color: var(--bark-dark, #2d1e12);
-  margin-bottom: 8px;
-  line-height: 1.25;
+  margin-bottom: 0.7rem;
+  line-height: 1.35;
 }
 
 .card-body {
-  font-size: 16px;
+  font-size: 0.98rem;
   color: var(--text-mid, #6b5443);
-  line-height: 1.6;
-  margin-bottom: 20px;
+  line-height: 1.9;
+  margin-bottom: 1.2rem;
 }
 
 .card-skills {
-  margin-bottom: 20px;
+  margin-bottom: 1.2rem;
 }
 
 .card-skill {
-  margin-bottom: 8px;
+  margin-bottom: 0.6rem;
 }
 
 .card-skill-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 0.3rem;
 }
 
 .card-skill-name {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 0.7rem;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--text-mid, #6b5443);
@@ -323,21 +323,21 @@ function getTypeColor(tag: string): string {
 
 .card-skill-pct {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 0.72rem;
   color: var(--text-light, #9a8474);
 }
 
 .card-skill-track {
   height: 3px;
   background: rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
-  border-radius: 6px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .card-skill-fill {
   height: 100%;
   background: var(--ring-color, var(--bark-light, #8b6340));
-  border-radius: 6px;
+  border-radius: 2px;
   width: 0;
   opacity: 0;
   transform: translateX(-8px);
@@ -372,17 +372,17 @@ function getTypeColor(tag: string): string {
 .card-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 0.4rem;
+  margin-top: 1rem;
 }
 
 .card-tag {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 0.6rem;
   letter-spacing: 1.5px;
-  padding: 8px 8px;
+  padding: 0.3rem 0.65rem;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
-  border-radius: 999px;
+  border-radius: 100px;
   color: var(--text-light, #9a8474);
   opacity: 0;
   transform: translateY(10px);
@@ -437,8 +437,8 @@ function getTypeColor(tag: string): string {
 @media (max-width: 768px) {
   .growth-card {
     --card-edge-offset: 1rem;
-    padding: 24px;
-    padding-top: 52px;
+    padding: 1.5rem;
+    padding-top: 3.25rem;
     border-radius: $radius-xl;
   }
 
@@ -453,10 +453,10 @@ function getTypeColor(tag: string): string {
     font-size: 2.4rem;
   }
   .card-title {
-    font-size: 20px;
+    font-size: 1.35rem;
   }
   .card-top {
-    padding-right: 72px;
+    padding-right: 4.5rem;
   }
   .delete-btn {
     width: 18px;

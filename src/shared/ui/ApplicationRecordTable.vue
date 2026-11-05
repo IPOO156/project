@@ -388,7 +388,7 @@ async function openGuide(row: any) {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--el-text-color-primary);
     margin-bottom: 8px;
@@ -397,9 +397,9 @@ async function openGuide(row: any) {
   &__type {
     font-size: 12px;
     font-weight: 500;
-    line-height: 1.5;
+    line-height: 20px;
     padding: 0 8px;
-    border-radius: 6px;
+    border-radius: 4px;
     color: var(--el-color-primary);
     background: var(--el-color-primary-light-9);
   }
@@ -417,14 +417,14 @@ async function openGuide(row: any) {
   }
 
   &__section {
-    margin-top: 8px;
+    margin-top: 10px;
   }
 
   &__section-title {
     font-size: 13px;
     font-weight: 600;
     color: var(--el-text-color-primary);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   &__table {
@@ -433,7 +433,7 @@ async function openGuide(row: any) {
 
     th,
     td {
-      padding: 8px 8px;
+      padding: 6px 8px;
       border: 1px solid var(--el-border-color-lighter);
       font-size: 12px;
       text-align: left;
@@ -452,11 +452,11 @@ async function openGuide(row: any) {
 
   &__notes {
     margin: 0;
-    padding-left: 16px;
+    padding-left: 18px;
     color: var(--el-text-color-regular);
 
     li {
-      margin: 4px 0;
+      margin: 2px 0;
     }
   }
 

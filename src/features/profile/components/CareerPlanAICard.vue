@@ -118,7 +118,7 @@ function openAIDrawer() {
           class="ai-item"
         >
           <div class="ai-item__head">
-            <AlertTriangle :size="16" />
+            <AlertTriangle :size="14" />
             <span class="ai-item__dim">{{ item.dimension }}</span>
             <span class="ai-item__score"
               >{{ item.score }} / {{ item.target }}（差 {{ item.gap }}）</span
@@ -133,7 +133,7 @@ function openAIDrawer() {
            在此新增「采纳为计划」按钮并二次确认后提交。 -->
     </div>
     <div v-else-if="!displaySuggestions.length" class="ai-empty">
-      <Sparkles :size="32" class="ai-empty__icon" />
+      <Sparkles :size="28" class="ai-empty__icon" />
       <p class="ai-empty__text">{{ emptyText }}</p>
     </div>
   </el-card>
@@ -149,7 +149,7 @@ function openAIDrawer() {
 <style scoped lang="scss">
 .gd-card {
   :deep(.el-card__body) {
-    padding: 16px 24px;
+    padding: 16px 20px;
   }
 
   &--ai {
@@ -159,7 +159,7 @@ function openAIDrawer() {
 }
 
 .card-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #1e293b;
 }
@@ -176,7 +176,7 @@ function openAIDrawer() {
   align-items: center;
   gap: 12px;
   padding: 32px 0;
-  color: var(--el-text-color-secondary);
+  color: #94a3b8;
   font-size: 14px;
 
   &__icon {
@@ -188,7 +188,7 @@ function openAIDrawer() {
 .ai-result {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .ai-result__head {
@@ -205,18 +205,18 @@ function openAIDrawer() {
   flex: 1;
   margin: 0;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: #1e293b;
 }
 
 .ai-result__time {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: #94a3b8;
 }
 
 .ai-result__summary {
   margin: 0;
-  padding: 8px 16px;
+  padding: 10px 14px;
   background: #f1f5f9;
   border-radius: 6px;
   font-size: 14px;
@@ -228,16 +228,16 @@ function openAIDrawer() {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .ai-result__materials-label {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: #94a3b8;
 }
 
 .ai-result__chip {
-  padding: 4px 8px;
+  padding: 2px 8px;
   border-radius: 6px;
   font-size: 12px;
   color: #c2410c;
@@ -248,12 +248,12 @@ function openAIDrawer() {
 .ai-result__list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .ai-item {
-  padding: 12px 16px;
-  border-radius: 6px;
+  padding: 12px 14px;
+  border-radius: 8px;
   background: linear-gradient(180deg, #fff7ed 0%, #ffffff 60%);
   border: 1px solid #fed7aa;
   border-left: 3px solid #f97316;
@@ -261,25 +261,25 @@ function openAIDrawer() {
   &__head {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 6px;
+    margin-bottom: 6px;
     color: #c2410c;
   }
 
   &__dim {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
   }
 
   &__score {
     margin-left: auto;
     font-size: 12px;
-    color: var(--el-text-color-secondary);
+    color: #94a3b8;
     font-weight: 500;
   }
 
   &__desc {
-    margin: 0 0 8px;
+    margin: 0 0 6px;
     font-size: 14px;
     color: #475569;
     line-height: 1.6;
@@ -295,8 +295,8 @@ function openAIDrawer() {
 
 // 后端 AI 辅助建议块（绿色系，与本地短板分析橙色区分）
 .ai-suggestion {
-  padding: 12px 16px;
-  border-radius: 6px;
+  padding: 12px 14px;
+  border-radius: 8px;
   background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 60%);
   border: 1px solid #bbf7d0;
   border-left: 3px solid #22c55e;
@@ -311,11 +311,11 @@ function openAIDrawer() {
   &__meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
 
   &__chip {
-    padding: 4px 8px;
+    padding: 2px 8px;
     border-radius: 6px;
     font-size: 12px;
     color: #c2410c;
@@ -324,7 +324,7 @@ function openAIDrawer() {
   }
 
   &__warn {
-    padding: 4px 8px;
+    padding: 2px 8px;
     border-radius: 6px;
     font-size: 12px;
     color: #92400e;
@@ -333,7 +333,7 @@ function openAIDrawer() {
   }
 
   &__status {
-    padding: 4px 8px;
+    padding: 2px 8px;
     border-radius: 6px;
     font-size: 12px;
     color: #1d4ed8;

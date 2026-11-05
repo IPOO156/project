@@ -341,7 +341,7 @@ onMounted(async () => {
     margin-bottom: $spacing-md;
     padding: $spacing-md $spacing-lg;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: $radius-lg;
+    border-radius: 6px;
     background: var(--el-fill-color-lighter);
 
     &__label {
@@ -356,7 +356,7 @@ onMounted(async () => {
       gap: 4px;
     }
     &__value {
-      font-size: $font-size-2xl;
+      font-size: 28px;
       font-weight: 600;
       color: var(--el-text-color-primary);
     }

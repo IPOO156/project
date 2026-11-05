@@ -185,7 +185,7 @@ async function handlePreview(file: UploadFile) {
       @remove="handleRemove"
     >
       <div class="upload-dragger">
-        <Upload :size="32" class="upload-dragger__icon" />
+        <Upload :size="36" class="upload-dragger__icon" />
         <p class="upload-dragger__title">
           {{ uploading ? '文件上传中…' : '点击或拖拽文件到此区域上传' }}
         </p>
@@ -205,7 +205,7 @@ async function handlePreview(file: UploadFile) {
             :disabled="previewing"
             @click="handlePreview(file)"
           >
-            <Eye :size="16" />
+            <Eye :size="13" />
             <span>预览</span>
           </button>
           <button
@@ -215,7 +215,7 @@ async function handlePreview(file: UploadFile) {
             aria-label="删除"
             @click="uploadRef?.handleRemove(file)"
           >
-            <Trash2 :size="16" />
+            <Trash2 :size="13" />
           </button>
         </div>
       </template>
@@ -284,7 +284,7 @@ async function handlePreview(file: UploadFile) {
     align-items: center;
     gap: 4px;
     flex-shrink: 0;
-    padding: 4px 8px;
+    padding: 2px 8px;
     border: 1px solid var(--el-border-color);
     border-radius: $radius-sm;
     background: var(--el-bg-color);

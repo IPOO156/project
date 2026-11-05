@@ -118,7 +118,7 @@ function restore(category: LoadingTipCategory): void {
   justify-content: center;
   min-width: 20px;
   height: 20px;
-  padding: 0 8px;
+  padding: 0 6px;
   border-radius: 999px;
   background: var(--el-fill-color);
   color: var(--el-text-color-secondary);
@@ -152,7 +152,7 @@ function restore(category: LoadingTipCategory): void {
   margin: $spacing-xs 0 $spacing-sm;
   color: var(--el-text-color-primary);
   font-size: $font-size-sm;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .study-tips__hidden {

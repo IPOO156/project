@@ -97,18 +97,18 @@ defineProps<{ userInfo: Partial<UserInfo> }>()
 <style scoped>
 /* ====== 头部 ====== */
 .resume-header {
-  padding: 24px 32px 24px;
+  padding: 28px 30px 20px;
   border-bottom: 3px solid #1e3a5f;
 }
 
 .header-top {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .header-name {
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   font-size: 26pt;
-  font-weight: 600;
+  font-weight: 700;
   color: #1e293b;
   letter-spacing: 4px;
 }
@@ -116,13 +116,13 @@ defineProps<{ userInfo: Partial<UserInfo> }>()
 .header-subtitle {
   margin: 0;
   font-size: 11pt;
-  color: var(--el-text-color-secondary);
+  color: #64748b;
 }
 
 .header-contact {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 6px 16px;
   font-size: 9.5pt;
   color: #475569;
 }

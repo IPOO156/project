@@ -1,5 +1,6 @@
 @use 'sass:color';
 @use './variables.scss' as *;
+@use './buttons.scss';
 
 // =============================================================================
 // 全局样式
@@ -16,10 +17,10 @@
   --el-color-primary-light-9: #{rgba($color-primary, 0.06)};
   --el-color-primary-dark-2: #{color.adjust($color-primary, $lightness: -8%)};
 
-  // 功能色：实色留给图形/进度条；文字与小面积一律用深色版，保证白字/浅底 ≥4.5:1
-  --el-color-success: #{$color-success-text};
-  --el-color-warning: #{$color-warning-text};
-  --el-color-danger: #{$color-danger-text};
+  // 功能色
+  --el-color-success: #{$color-success};
+  --el-color-warning: #{$color-warning};
+  --el-color-danger: #{$color-danger};
   --el-color-info: #{$color-info};
 
   // 文字色
@@ -47,42 +48,11 @@
   --el-font-size-large: #{$font-size-lg};
   --el-font-size-extra-large: #{$font-size-xl};
 
-  // 文字阶梯（六级，全站唯一来源；组件内优先用这些变量，不要再写字面量）
-  --fs-page-title: #{$font-size-2xl};
-  --fs-section: #{$font-size-xl};
-  --fs-card-title: #{$font-size-lg};
-  --fs-body: #{$font-size-base};
-  --fs-aux: #{$font-size-sm};
-  --fs-unit: #{$font-size-xs};
-  --fs-display: #{$font-size-display};
-  --lh-page-title: #{$line-height-title};
-  --lh-section: #{$line-height-title};
-  --lh-card-title: #{$line-height-title};
-  --lh-body: #{$line-height-body};
-  --lh-aux: #{$line-height-aux};
-  --fw-regular: #{$font-weight-regular};
-  --fw-medium: #{$font-weight-medium};
-  --fw-semibold: #{$font-weight-semibold};
-
-  // 间距阶梯（8px 主网格；4 / 12 为紧凑档）
-  --sp-1: #{$spacing-sm};
-  --sp-2: #{$spacing-lg};
-  --sp-3: #{$spacing-xl};
-  --sp-4: #{$spacing-2xl};
-  --sp-5: #{$spacing-3xl};
-  --sp-6: #{$spacing-4xl};
-  --sp-compact: #{$spacing-md};
-
-  // 圆角两档（控件 / 容器）；头像与胶囊用各自形状值
-  --radius-control: #{$radius-base};
-  --radius-container: #{$radius-lg};
-  --radius-pill: #{$radius-pill};
-
   // 圆角
   --el-border-radius-base: #{$radius-base};
   --el-border-radius-small: #{$radius-sm};
   --el-border-radius-large: #{$radius-lg};
-  --el-border-radius-round: #{$radius-pill};
+  --el-border-radius-round: 20px;
 
   // 阴影
   --el-box-shadow-light: #{$shadow-sm};
@@ -96,46 +66,18 @@
   border: 1px solid $color-border;
 
   &__header {
-    padding: 16px 24px;
+    padding: 16px 20px;
     border-bottom: 1px solid $color-border;
     font-weight: 600;
   }
 
   &__body {
-    padding: 24px;
+    padding: 20px;
   }
 }
 
 .el-table {
   font-size: $font-size-base;
-
-  /* 数字列纵向对齐：等宽数字是全站默认，不靠列设置 */
-  .cell {
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* 列层级：主标识列（姓名/学号/状态）600，辅助信息 13px 辅助色 */
-  .col-primary {
-    font-weight: 600;
-    color: var(--el-text-color-primary);
-  }
-
-  .col-secondary {
-    font-size: 13px;
-    color: var(--el-text-color-secondary);
-  }
-
-  /* 扫读只留横向分隔线：不画竖线，也不做整格网格 */
-  &.el-table--border,
-  &.el-table--border .el-table__inner-wrapper::before,
-  &.el-table--border .el-table__cell {
-    border: none;
-  }
-
-  /* 斑马纹与 hover 只留一种：条纹行与普通行同底色，高亮交给 hover */
-  .el-table__row--striped td.el-table__cell {
-    background-color: var(--el-bg-color);
-  }
 
   th.el-table__cell {
     background-color: var(--el-fill-color-light);
@@ -145,6 +87,10 @@
 
   .el-table__row {
     transition: background-color 0.15s;
+
+    &:hover > td.el-table__cell {
+      background-color: var(--el-fill-color-lighter);
+    }
   }
 }
 
@@ -155,124 +101,6 @@
   --el-button-hover-border-color: #{$color-primary-light};
   --el-button-active-bg-color: #{color.adjust($color-primary, $lightness: -8%)};
   --el-button-active-border-color: #{color.adjust($color-primary, $lightness: -8%)};
-}
-
-// Element Plus 控件内边距与圆角 —— 一律落到 4 / 8 / 12 / 16 与 6px
-// Element Plus 默认值（7 / 11 / 15 / 19、2px 圆角）不在设计网格内，逐个覆盖。
-// 用 #app 前缀抬高优先级，确保覆盖 Element Plus 自带样式；1px 为输入框边框内缩高度，属结构性取值。
-#app .el-button:not(.is-circle) {
-  padding: 8px 16px;
-  border-radius: $radius-base;
-}
-
-#app .el-button--small:not(.is-circle):not(.is-link):not(.is-text) {
-  padding: 4px 8px;
-}
-
-#app .el-button--large:not(.is-circle):not(.is-link):not(.is-text) {
-  padding: 12px 24px;
-}
-
-#app .el-tag {
-  padding: 0 8px;
-  border-radius: 4px;
-  line-height: 1.5;
-}
-
-#app .el-input__wrapper,
-#app .el-select__wrapper,
-#app .el-textarea__inner {
-  border-radius: $radius-base;
-}
-
-#app .el-input__wrapper,
-#app .el-select__wrapper {
-  padding: 1px 12px;
-}
-
-#app .el-badge__content {
-  padding: 0 4px;
-  border-radius: 4px;
-}
-
-#app .el-badge__content.is-dot {
-  border-radius: 50%;
-}
-
-#app .el-dialog,
-#app .el-drawer {
-  border-radius: $radius-lg;
-}
-
-#app .el-popper,
-#app .el-dropdown__popper {
-  border-radius: $radius-lg;
-}
-
-#app .el-checkbox__inner,
-#app .el-switch__core {
-  border-radius: $radius-base;
-}
-
-#app .el-card {
-  border-radius: $radius-lg;
-}
-
-#app .el-card__body,
-#app .el-card__header {
-  padding: 16px;
-}
-
-#app .el-pagination .btn-prev,
-#app .el-pagination .btn-next,
-#app .el-pager li {
-  border-radius: $radius-base;
-}
-
-#app .el-progress-bar__outer,
-#app .el-progress-bar__inner {
-  border-radius: $radius-pill;
-}
-
-#app .el-select__wrapper {
-  gap: 8px;
-}
-
-#app .el-button.is-text {
-  padding: 4px 8px;
-}
-
-#app .el-button.is-link {
-  padding: 0;
-}
-
-#app .el-tabs__item {
-  padding: 0 16px;
-}
-
-#app .el-tabs__nav-wrap {
-  padding: 0;
-}
-
-#app .el-select__suffix {
-  gap: 8px;
-}
-
-#app .el-table .cell {
-  padding-left: 12px;
-  padding-right: 12px;
-}
-
-#app .el-range-separator {
-  padding: 0 8px;
-}
-
-// 控件内单行文字行高 —— Element Plus 默认按钮 / 下拉触发器为 1、选择器为 20px，
-// 运行时会出现 1 / 1.67 等散值；统一收敛到单行控件档 1.5。
-#app .el-button,
-#app .el-dropdown,
-#app .el-select__selected-item {
-  line-height: 1.5;
 }
 
 // 滚动条美化
@@ -287,7 +115,7 @@
 
 ::-webkit-scrollbar-thumb {
   background: #c1c9d4;
-  border-radius: 6px;
+  border-radius: 3px;
 
   &:hover {
     background: #a8b2be;
@@ -308,84 +136,7 @@
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 37%, #f0f0f0 63%);
   background-size: 200px 100%;
   animation: skeleton-loading 1.4s ease infinite;
-  border-radius: 6px;
-}
-
-// =============================================================================
-// 文字阶梯（六级）—— 兜底规则 + 语义工具类
-// 组件里优先用 --fs-* / $font-size-* 变量；以下工具类供纯模板节点直接套用。
-// =============================================================================
-
-.t-page-title {
-  margin: 0;
-  font-size: var(--fs-page-title);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-page-title);
-  letter-spacing: -0.01em;
-  color: var(--el-text-color-primary);
-}
-
-.t-section {
-  margin: 0;
-  font-size: var(--fs-section);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-section);
-  letter-spacing: 0;
-  color: var(--el-text-color-primary);
-}
-
-.t-card-title {
-  margin: 0;
-  font-size: var(--fs-card-title);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-card-title);
-  letter-spacing: 0;
-  color: var(--el-text-color-primary);
-}
-
-.t-body {
-  font-size: var(--fs-body);
-  font-weight: var(--fw-regular);
-  line-height: var(--lh-body);
-  letter-spacing: 0;
-  color: var(--el-text-color-regular);
-}
-
-.t-aux {
-  font-size: var(--fs-aux);
-  font-weight: var(--fw-regular);
-  line-height: var(--lh-aux);
-  letter-spacing: 0.01em;
-  color: var(--el-text-color-secondary);
-}
-
-.t-unit {
-  font-size: var(--fs-unit);
-  font-weight: var(--fw-regular);
-  line-height: var(--lh-aux);
-  letter-spacing: 0.01em;
-  color: var(--el-text-color-secondary);
-}
-
-/* 数字显示档：主数值。等宽数字 + 收紧字距，纵向对齐靠 tabular-nums */
-.t-display {
-  font-size: var(--fs-display);
-  font-weight: var(--fw-semibold);
-  line-height: var(--lh-page-title);
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
-  color: var(--el-text-color-primary);
-}
-
-.t-num {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
-}
-
-/* 键盘焦点环：全站可见（含学生端），不只教师端 */
-:focus-visible {
-  outline: 2px solid var(--el-color-primary);
-  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 // =============================================================================
@@ -531,5 +282,5 @@ textarea,
 }
 
 .u-ml-2 {
-  margin-left: 4px;
+  margin-left: 2px;
 }

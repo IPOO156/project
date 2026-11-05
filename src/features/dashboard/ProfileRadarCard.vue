@@ -306,8 +306,8 @@ const radarOption = computed(() => {
 }
 
 .radar-metric {
-  padding: 16px 16px;
-  border-radius: 6px;
+  padding: 14px 16px;
+  border-radius: 12px;
   background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
 }
@@ -326,8 +326,8 @@ const radarOption = computed(() => {
 }
 
 .radar-metric__score {
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--el-color-primary);
 }
 

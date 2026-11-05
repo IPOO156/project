@@ -266,7 +266,7 @@ const previewImageStyle = computed(() => {
         aria-label="删除头像"
         @click="handleRemove"
       >
-        <X :size="16" />
+        <X :size="14" />
       </button>
     </div>
 

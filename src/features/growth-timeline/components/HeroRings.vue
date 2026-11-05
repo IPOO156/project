@@ -323,7 +323,7 @@ const { extinguishedRings } = useRingEffects(
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 32px;
+  padding: 2rem;
   overflow: hidden;
 }
 
@@ -413,7 +413,7 @@ const { extinguishedRings } = useRingEffects(
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: 80px 48px 72px;
+  padding: 5rem 3rem 4.5rem;
   pointer-events: none;
 }
 
@@ -459,7 +459,7 @@ const { extinguishedRings } = useRingEffects(
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 0.85rem;
   transform: translateY(-50%);
 }
 
@@ -476,7 +476,7 @@ const { extinguishedRings } = useRingEffects(
   font-size: clamp(1.1rem, 1.9vw, 1.35rem);
   color: var(--bark-dark, #2d1e12);
   letter-spacing: 0;
-  line-height: 1.2;
+  line-height: 1;
   opacity: 0;
   transform: translateY(-18px);
   animation: charDropIn 0.55s $ease-emphasized forwards;
@@ -496,7 +496,7 @@ const { extinguishedRings } = useRingEffects(
 
 @media (max-width: 768px) {
   .hero-rings__poem-scroll {
-    gap: 8px;
+    gap: 0.55rem;
   }
 
   .hero-rings__poem-scroll--left {
@@ -508,7 +508,7 @@ const { extinguishedRings } = useRingEffects(
   }
 
   .hero-rings__char {
-    font-size: 14px;
+    font-size: 0.9rem;
   }
 }
 
@@ -519,7 +519,7 @@ const { extinguishedRings } = useRingEffects(
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   background: transparent;
   border: none;
   color: var(--bark-light, #8b6340);

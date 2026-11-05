@@ -98,15 +98,15 @@ defineProps<{
 }
 .stat-card__label {
   font-size: 13px;
-  color: var(--el-text-color-secondary);
-  margin-bottom: 4px;
+  color: #94a3b8;
+  margin-bottom: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .stat-card__value {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 24px;
+  font-weight: 700;
   color: #1e293b;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
@@ -115,7 +115,7 @@ defineProps<{
 .stat-card__icon {
   width: 38px;
   height: 38px;
-  border-radius: 6px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;

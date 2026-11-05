@@ -77,7 +77,7 @@ function statusKey(status: number): string {
   &__item {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
   &__row {
     display: flex;

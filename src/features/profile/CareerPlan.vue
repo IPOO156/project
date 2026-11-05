@@ -127,7 +127,7 @@ onMounted(() => {
 .growth-dev {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   user-select: none;
 }
 
@@ -137,15 +137,15 @@ onMounted(() => {
 }
 
 .gd-header__title {
-  font-size: 28px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 700;
   color: #1e293b;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
 }
 
 .gd-header__subtitle {
   font-size: 16px;
-  color: var(--el-text-color-secondary);
+  color: #64748b;
   margin: 0;
 }
 
@@ -155,7 +155,7 @@ onMounted(() => {
   :deep(.el-tabs__item) {
     font-size: 16px;
     height: 44px;
-    line-height: 1.5;
+    line-height: 44px;
   }
 
   :deep(.el-tabs__nav-wrap::after) {
@@ -173,12 +173,12 @@ onMounted(() => {
 // 成长记录 Tab 内的通用卡片（其余卡片样式随各自区块组件内聚）
 .gd-card {
   :deep(.el-card__body) {
-    padding: 16px 24px;
+    padding: 16px 20px;
   }
 }
 
 .card-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #1e293b;
 }

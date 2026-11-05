@@ -331,7 +331,7 @@ onMounted(async () => {
     flex-direction: column;
     justify-content: center;
     padding: 8px 16px;
-    border-radius: $radius-lg;
+    border-radius: 6px;
     background: var(--el-bg-color);
     border: 1px solid var(--el-border-color-lighter);
     min-width: 96px;

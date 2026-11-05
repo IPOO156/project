@@ -26,7 +26,7 @@ defineProps<{
     <div v-if="awards.length" class="award-list">
       <div v-for="(a, i) in awards" :key="`${a.category}-${i}`" class="award-item">
         <div class="award-item__icon">
-          <Award :size="20" />
+          <Award :size="18" />
         </div>
         <div class="award-item__body">
           <div class="award-item__name">{{ a.category }}</div>
@@ -47,7 +47,7 @@ defineProps<{
   margin-bottom: 0;
 
   :deep(.el-card__body) {
-    padding: 16px 24px;
+    padding: 16px 20px;
   }
 }
 
@@ -55,7 +55,7 @@ defineProps<{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
 
   &__left {
@@ -75,15 +75,15 @@ defineProps<{
 .award-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .award-item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
   border: 1px solid var(--el-border-color-lighter);
   transition: border-color 0.2s;
 
@@ -94,7 +94,7 @@ defineProps<{
   &__icon {
     width: 32px;
     height: 32px;
-    border-radius: 6px;
+    border-radius: 8px;
     background: rgba(212, 165, 116, 0.1);
     color: #d4a574;
     display: flex;

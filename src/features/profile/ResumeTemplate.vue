@@ -238,7 +238,7 @@ defineExpose({
 
 /* ====== 主体 ====== */
 .resume-body {
-  padding: 16px 32px 32px;
+  padding: 16px 30px 30px;
 }
 
 /* ====== 段落 ====== */
@@ -248,7 +248,7 @@ defineExpose({
 
 .sec-title {
   font-size: 13pt;
-  font-weight: 600;
+  font-weight: 700;
   color: #1e3a5f;
   margin: 0 0 8px;
   padding-bottom: 4px;
@@ -257,7 +257,7 @@ defineExpose({
 }
 
 .sec-body {
-  padding-left: 4px;
+  padding-left: 2px;
 }
 
 /* ====== 教育背景 ====== */
@@ -265,7 +265,7 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .edu-left {
@@ -287,7 +287,7 @@ defineExpose({
 
 .edu-right {
   font-size: 9.5pt;
-  color: var(--el-text-color-secondary);
+  color: #64748b;
   white-space: nowrap;
 }
 
@@ -298,41 +298,41 @@ defineExpose({
   margin-bottom: 8px;
   padding: 4px 12px;
   background: #f1f5f9;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 10pt;
 }
 
 .gpa-label {
-  color: var(--el-text-color-secondary);
+  color: #64748b;
 }
 
 .gpa-value {
   font-size: 14pt;
-  font-weight: 600;
+  font-weight: 700;
   color: #1e3a5f;
 }
 
 .gpa-sep {
-  color: var(--el-text-color-secondary);
+  color: #94a3b8;
   margin-right: 8px;
 }
 
 .gpa-best {
-  color: var(--el-text-color-secondary);
+  color: #64748b;
   font-size: 9pt;
 }
 
 .courses-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .course-tag {
-  padding: 4px 8px;
+  padding: 2px 10px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 9pt;
   color: #475569;
 }
@@ -342,7 +342,7 @@ defineExpose({
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 4px 0;
+  padding: 3px 0;
   border-bottom: 1px dashed #f1f5f9;
 }
 
@@ -356,7 +356,7 @@ defineExpose({
   border-radius: 50%;
   background: #1e3a5f;
   flex-shrink: 0;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .award-name {
@@ -371,13 +371,13 @@ defineExpose({
   color: #1e3a5f;
   padding: 1px 8px;
   background: #eff6ff;
-  border-radius: 6px;
+  border-radius: 3px;
   white-space: nowrap;
 }
 
 .award-date {
   font-size: 9pt;
-  color: var(--el-text-color-secondary);
+  color: #94a3b8;
   white-space: nowrap;
   min-width: 72px;
   text-align: right;
@@ -393,17 +393,17 @@ defineExpose({
 .skills-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .skill-item {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 12px;
+  padding: 3px 12px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 .skill-label {
@@ -419,10 +419,10 @@ defineExpose({
 
 .skill-level {
   font-size: 8.5pt;
-  color: var(--el-text-color-secondary);
+  color: #64748b;
   padding: 0 4px;
   background: #f1f5f9;
-  border-radius: 6px;
+  border-radius: 2px;
 }
 
 /* ====== 经历 ====== */
@@ -443,7 +443,7 @@ defineExpose({
   border-radius: 50%;
   background: #94a3b8;
   flex-shrink: 0;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .exp-content {
@@ -460,7 +460,7 @@ defineExpose({
 
 .exp-date {
   font-size: 9pt;
-  color: var(--el-text-color-secondary);
+  color: #94a3b8;
   white-space: nowrap;
 }
 
@@ -468,14 +468,14 @@ defineExpose({
 .certs-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .cert-tag {
-  padding: 4px 12px;
+  padding: 3px 12px;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 9.5pt;
   color: #166534;
 }
@@ -485,20 +485,20 @@ defineExpose({
   margin: 0;
   font-size: 10pt;
   color: #475569;
-  line-height: 1.6;
+  line-height: 1.8;
   padding: 8px 12px;
   background: #f8fafc;
-  border-radius: 6px;
+  border-radius: 4px;
 }
 
 /* ====== 页脚 ====== */
 .resume-footer {
-  padding: 12px 32px 24px;
+  padding: 12px 30px 20px;
   text-align: right;
 }
 .resume-footer__text {
   font-size: 8.5pt;
-  color: var(--el-text-color-secondary);
+  color: #94a3b8;
 }
 
 @media print {

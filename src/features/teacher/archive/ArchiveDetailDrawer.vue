@@ -140,7 +140,7 @@ const detailEntries = computed(() => {
   }
   &__drawer-hero {
     padding: 24px 24px;
-    border-radius: $radius-lg;
+    border-radius: 6px;
     background: linear-gradient(
       135deg,
       var(--el-color-primary-light-9) 0%,
@@ -231,7 +231,7 @@ const detailEntries = computed(() => {
     padding: 0;
     margin: 0;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: $radius-lg;
+    border-radius: 6px;
     overflow: hidden;
     background: var(--el-bg-color);
   }

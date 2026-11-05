@@ -91,7 +91,7 @@ async function deleteInterest(id: number) {
   <el-card class="section-card" shadow="never">
     <template #header>
       <div class="section-head">
-        <span class="section-head__title"><Heart :size="16" /> 个人兴趣</span>
+        <span class="section-head__title"><Heart :size="15" /> 个人兴趣</span>
         <el-button link type="primary" size="small" :icon="Plus" @click="openAddInterest">
           新增
         </el-button>
@@ -100,7 +100,7 @@ async function deleteInterest(id: number) {
     <div class="interest-grid">
       <div v-for="item in interests" :key="item.id" class="interest-card">
         <div class="interest-card__top">
-          <Lightbulb :size="16" /><span class="interest-card__cat">{{ item.tagName }}</span
+          <Lightbulb :size="13" /><span class="interest-card__cat">{{ item.tagName }}</span
           ><el-tag :type="getInterestType(item.proficiencyLevel)" size="small" effect="plain">{{
             getLabel(item.proficiencyLevel)
           }}</el-tag>
@@ -156,10 +156,10 @@ async function deleteInterest(id: number) {
 <style scoped lang="scss">
 .section-card {
   border: 1px solid #f1f5f9;
-  border-radius: 6px;
+  border-radius: 10px;
 
   :deep(.el-card__body) {
-    padding: 16px 24px;
+    padding: 16px 20px;
   }
 }
 
@@ -170,24 +170,24 @@ async function deleteInterest(id: number) {
 }
 
 .section-head__title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #1e293b;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
 }
 
 .interest-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 
 .interest-card {
   padding: 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #f1f5f9;
   background: #f8fafc;
   transition: border-color 0.2s;
@@ -200,7 +200,7 @@ async function deleteInterest(id: number) {
 .interest-card__top {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 5px;
   margin-bottom: 4px;
   color: #4a7fb5;
 }
@@ -213,10 +213,10 @@ async function deleteInterest(id: number) {
 }
 
 .interest-card__text {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-size: 13px;
-  color: var(--el-text-color-secondary);
-  line-height: 1.6;
+  color: #64748b;
+  line-height: 1.4;
 }
 
 .interest-card__acts {

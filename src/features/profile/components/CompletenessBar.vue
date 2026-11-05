@@ -26,8 +26,8 @@ const BAR_COLOR = '#4a7fb5'
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
   background: #f8fafc;
   border: 1px solid #f1f5f9;
 
@@ -44,8 +44,8 @@ const BAR_COLOR = '#4a7fb5'
 
   &__value {
     min-width: 52px;
-    font-size: 20px;
-    font-weight: 600;
+    font-size: 18px;
+    font-weight: 700;
     color: #1e293b;
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -59,7 +59,7 @@ html.dark .completeness-bar {
   border-color: #334155;
 
   &__label {
-    color: var(--el-text-color-secondary);
+    color: #94a3b8;
   }
 
   &__value {

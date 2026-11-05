@@ -7,7 +7,7 @@
 // 学生端保留原有书册视觉与标签栏，不受本文件影响。
 //
 // 设计约束（对应重构原型 frontend/prototype/admin-console）：
-//   - 主色：墨蓝 #1d4ed8；页面底 #f6f7f9，面板白底，1px #e5e7eb 边框
+//   - 主色：墨蓝 #1e3a5f（与按钮 token 同源）；页面底 #f6f7f9，面板白底，1px #e5e7eb 边框
 //   - 圆角两档：控件 6px / 容器 10px；无渐变、无装饰高光、无卡片悬浮位移
 //   - 文字六级：28 页标题 / 20 区块 / 16 卡片 / 14 正文 / 13 辅助 / 12 单位；字重 400/500/600
 //   - 间距走 8px 主网格（4 / 12 为紧凑档）；表格行高 1.5 档（舒适 45px / 紧凑 37px），数字等宽
@@ -16,13 +16,15 @@
 
 #app .layout--teacher {
   /* ── 主题变量（浅色：中性灰白 + 墨蓝） ── */
-  --el-color-primary: #1d4ed8;
-  --el-color-primary-light-3: #3b6ce0;
-  --el-color-primary-light-5: #6d92ea;
-  --el-color-primary-light-7: #a9bdf4;
-  --el-color-primary-light-8: #d2dcf9;
-  --el-color-primary-light-9: #eef3fe;
-  --el-color-primary-dark-2: #1e40af;
+  /* 主色与 --mc-btn-brand 同源（#1e3a5f），浅色派生根 EP 的 30/50/70/80/90% 混白公式。
+     实心按钮的面另由 themes.css 的 --mc-btn-brand 决定，不依赖这组变量。 */
+  --el-color-primary: #1e3a5f;
+  --el-color-primary-light-3: #627593;
+  --el-color-primary-light-5: #8e9caf;
+  --el-color-primary-light-7: #bac4d1;
+  --el-color-primary-light-8: #d2d8df;
+  --el-color-primary-light-9: #e8ebef;
+  --el-color-primary-dark-2: #142740;
 
   --mc-ink: #111827;
   // 辅助文字：管理员灰底(#f4f5f7) 4.95:1、白底 5.4:1，过 WCAG AA
@@ -40,6 +42,7 @@
   --mc-danger: #b91c1c;
   --mc-danger-bg: #fef2f2;
   --mc-danger-border: #fecaca;
+  /* 语义 info 蓝保留 #1d4ed8：它是状态色而非品牌色，需要与墨蓝主色区分开 */
   --mc-info: #1d4ed8;
   --mc-info-bg: #eff6ff;
   --mc-info-border: #bfdbfe;
@@ -89,66 +92,9 @@
   }
 
   /* ============================================================
-     一、按钮 —— 扁平实色，4px 圆角，无渐变 / 投影
+     一、按钮 —— 已统一到 _buttons.scss（「素面」语言）
+     本壳不再单独覆盖按钮，避免教师端/管理员端与学生端出现两套边线。
      ============================================================ */
-  .el-button {
-    border-radius: $radius-base;
-    font-weight: $font-weight-medium;
-    box-shadow: none;
-    transition:
-      background-color 0.12s $ease-standard,
-      border-color 0.12s $ease-standard,
-      color 0.12s $ease-standard;
-
-    &--primary {
-      background-color: var(--el-color-primary);
-      background-image: none;
-      border-color: var(--el-color-primary);
-      box-shadow: none;
-
-      &:hover,
-      &:focus {
-        background-color: var(--el-color-primary-dark-2);
-        border-color: var(--el-color-primary-dark-2);
-      }
-
-      &:active {
-        background-color: #1e3a8a;
-        border-color: #1e3a8a;
-        transform: none;
-        box-shadow: none;
-      }
-    }
-
-    &.is-text {
-      background-color: transparent;
-      background-image: none;
-    }
-
-    &--primary.is-text {
-      color: var(--el-color-primary);
-
-      &:hover,
-      &:focus {
-        background-color: var(--el-color-primary-light-9);
-      }
-    }
-
-    &--primary.is-plain {
-      background-color: var(--el-color-primary-light-9);
-      background-image: none;
-      border-color: var(--el-color-primary-light-7);
-      color: var(--el-color-primary);
-      box-shadow: none;
-
-      &:hover,
-      &:focus {
-        background-color: var(--el-color-primary);
-        border-color: var(--el-color-primary);
-        color: #fff;
-      }
-    }
-  }
 
   /* ============================================================
      二、卡片 —— 白底、1px 边框、6px 圆角，无阴影与悬浮反馈
@@ -606,14 +552,13 @@
     }
   }
 
-  /* ── 键盘可达性：墨蓝焦点环 ── */
-  .el-button,
+  /* ── 键盘可达性：墨蓝焦点环（按钮已在 _buttons.scss 统一，这里只管表单控件） ── */
   .el-input__wrapper,
   .el-select__wrapper,
   .el-radio-button__inner,
   .el-checkbox-button__inner {
     &:focus-visible {
-      outline: 2px solid var(--el-color-primary-light-5);
+      outline: 2px solid var(--mc-btn-focus);
       outline-offset: 2px;
     }
   }
@@ -634,6 +579,8 @@
 // =============================================================================
 
 html.dark #app .layout--teacher {
+  /* 深色文字强调保留浅蓝：实心按钮的面由 --mc-btn-brand(#24466f) 决定；
+     #24466f 在 #0b1120 上作为文字仅 1.96:1，不能拿来当链接/菜单色。 */
   --el-color-primary: #3b82f6;
   --el-color-primary-light-3: #60a5fa;
   --el-color-primary-light-5: #93c5fd;
@@ -696,56 +643,7 @@ html.dark #app .layout--teacher {
     }
   }
 
-  .el-button {
-    &--primary {
-      background-color: #2563eb;
-      background-image: none;
-      border-color: #2563eb;
-      box-shadow: none;
-
-      &:hover,
-      &:focus {
-        background-color: #3b82f6;
-        border-color: #3b82f6;
-      }
-
-      &:active {
-        background-color: #1d4ed8;
-        border-color: #1d4ed8;
-        box-shadow: none;
-      }
-    }
-
-    &.is-text {
-      background-color: transparent;
-      background-image: none;
-      box-shadow: none;
-    }
-
-    &--primary.is-text {
-      color: var(--el-color-primary-light-3);
-
-      &:hover,
-      &:focus {
-        background-color: var(--el-color-primary-light-9);
-      }
-    }
-
-    &--primary.is-plain {
-      background-color: transparent;
-      background-image: none;
-      border-color: var(--el-color-primary-light-3);
-      color: var(--el-color-primary-light-3);
-      box-shadow: none;
-
-      &:hover,
-      &:focus {
-        background-color: var(--el-color-primary);
-        border-color: var(--el-color-primary);
-        color: #fff;
-      }
-    }
-  }
+  /* 按钮：夜间同样走 _buttons.scss，不再写死 #2563eb / #3b82f6 */
 
   .mc-card,
   .el-card,
@@ -821,7 +719,8 @@ html.dark #app .layout--teacher {
 // =============================================================================
 
 html:not(.dark) #app .layout--admin {
-  /* 石墨蓝：比教师端墨蓝 (#1d4ed8) 更冷、更低饱和，避免「操作按钮」抢视觉焦点 */
+  /* 石墨蓝：比教师端墨蓝 (#1e3a5f) 更冷、更低饱和，仅用于链接/菜单等非按钮强调；
+     实心按钮已统一走 --mc-btn-brand，不再受本组变量影响 */
   --el-color-primary: #35495e;
   --el-color-primary-light-3: #5b7288;
   --el-color-primary-light-5: #8a9bad;
@@ -880,12 +779,6 @@ html:not(.dark) #app .layout--admin {
     &.el-table--border .el-table__cell {
       border: none;
     }
-
-    .el-button.is-link,
-    .el-button.is-text {
-      padding: $spacing-2xs $spacing-sm;
-      font-size: $font-size-sm;
-    }
   }
 
   /* 管理员固定紧凑档；教师端可通过开关在舒适/紧凑之间切换 */
@@ -919,5 +812,144 @@ html:not(.dark) #app .layout--admin {
     border-radius: $radius-base;
     padding: $spacing-2xs $spacing-sm;
     user-select: all;
+  }
+}
+
+/* =============================================================================
+ * 控件基线 —— 自 global.scss 收窄到教师 / 管理员壳
+ * 学生端恢复 BASE：这些规则不再命中学生页面。
+ * ============================================================================= */
+#app .layout--teacher,
+#app .layout--admin {
+  /* 语义色：文字与小面积用深色版，保证白字 / 浅底 ≥4.5:1 */
+  --el-color-success: #047857;
+  --el-color-warning: #b45309;
+  --el-color-danger: #b91c1c;
+
+  .el-tag {
+    padding: 0 8px;
+    border-radius: 4px;
+    line-height: 1.5;
+  }
+
+  .el-input__wrapper,
+  .el-select__wrapper,
+  .el-textarea__inner {
+    border-radius: 6px;
+  }
+
+  .el-input__wrapper,
+  .el-select__wrapper {
+    padding: 1px 12px;
+  }
+
+  .el-badge__content {
+    padding: 0 4px;
+    border-radius: 4px;
+
+    &.is-dot {
+      border-radius: 50%;
+    }
+  }
+
+  .el-checkbox__inner,
+  .el-switch__core {
+    border-radius: 6px;
+  }
+
+  .el-card {
+    border-radius: 8px;
+  }
+
+  .el-card__body,
+  .el-card__header {
+    padding: 16px;
+  }
+
+  .el-pagination .btn-prev,
+  .el-pagination .btn-next,
+  .el-pager li {
+    border-radius: 6px;
+  }
+
+  .el-progress-bar__outer,
+  .el-progress-bar__inner {
+    border-radius: 999px;
+  }
+
+  .el-select__wrapper {
+    gap: 8px;
+  }
+
+  .el-select__suffix {
+    gap: 8px;
+  }
+
+  .el-tabs__item {
+    padding: 0 16px;
+  }
+
+  .el-tabs__nav-wrap {
+    padding: 0;
+  }
+
+  .el-range-separator {
+    padding: 0 8px;
+  }
+
+  .el-button,
+  .el-dropdown,
+  .el-select__selected-item {
+    line-height: 1.5;
+  }
+
+  .el-table {
+    .cell {
+      padding-left: 12px;
+      padding-right: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .col-primary {
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+    }
+
+    .col-secondary {
+      font-size: 13px;
+      color: var(--el-text-color-secondary);
+    }
+
+    &.el-table--border,
+    &.el-table--border .el-table__inner-wrapper::before,
+    &.el-table--border .el-table__cell {
+      border: none;
+    }
+
+    .el-table__row--striped td.el-table__cell {
+      background-color: var(--el-bg-color);
+    }
+  }
+}
+
+/* 页头字号（教师 / 管理员）：PageHeader 已恢复 BASE，学生端维持原档；
+   教师壳把标题抬回 20 / 28 / 32 的办公风阶梯。 */
+#app .layout--teacher,
+#app .layout--admin {
+  .page-header--sm .page-header__title {
+    font-size: 20px;
+    letter-spacing: 0;
+  }
+
+  .page-header--md .page-header__title {
+    font-size: 28px;
+  }
+
+  .page-header--lg .page-header__title {
+    font-size: 32px;
+  }
+
+  .page-header__subtitle {
+    font-size: 13px;
   }
 }

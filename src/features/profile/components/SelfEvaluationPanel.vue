@@ -42,7 +42,7 @@ async function save() {
   <el-card class="section-card" shadow="never">
     <template #header>
       <div class="section-head">
-        <span class="section-head__title"><Edit2 :size="16" /> 自我评价</span>
+        <span class="section-head__title"><Edit2 :size="15" /> 自我评价</span>
         <el-button v-if="!editing" link type="primary" size="small" :icon="Edit2" @click="startEdit"
           >编辑</el-button
         >
@@ -72,10 +72,10 @@ async function save() {
 <style scoped lang="scss">
 .section-card {
   border: 1px solid #f1f5f9;
-  border-radius: 6px;
+  border-radius: 10px;
 
   :deep(.el-card__body) {
-    padding: 16px 24px;
+    padding: 16px 20px;
   }
 }
 .section-head {
@@ -84,23 +84,23 @@ async function save() {
   gap: 8px;
 }
 .section-head__title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #1e293b;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
 }
 .edit-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 .self-eval__text {
   margin: 0;
   font-size: 13px;
   color: #475569;
-  line-height: 1.6;
+  line-height: 1.7;
   white-space: pre-wrap;
 }
 

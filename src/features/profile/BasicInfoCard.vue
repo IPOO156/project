@@ -136,7 +136,7 @@ async function handleAvatarUpload(base64: string) {
   <el-card class="section-card" shadow="never">
     <template #header
       ><div class="section-head">
-        <span class="section-head__title"><Info :size="16" /> 基本资料</span
+        <span class="section-head__title"><Info :size="15" /> 基本资料</span
         ><el-button
           v-if="!isEditing"
           link
@@ -202,7 +202,7 @@ async function handleAvatarUpload(base64: string) {
       <p class="contact-hint">
         联系邮箱、手机号、紧急联系人电话在展示时已脱敏；保存前请重新填写这三项。
       </p>
-      <el-row :gutter="16">
+      <el-row :gutter="12">
         <el-col :span="12"
           ><el-form-item label="联系邮箱" required
             ><el-input
@@ -266,9 +266,9 @@ async function handleAvatarUpload(base64: string) {
 // 区块卡片
 .section-card {
   border: 1px solid #f1f5f9;
-  border-radius: 6px;
+  border-radius: 10px;
   :deep(.el-card__body) {
-    padding: 16px 24px;
+    padding: 16px 20px;
   }
 }
 .section-head {
@@ -277,37 +277,37 @@ async function handleAvatarUpload(base64: string) {
   gap: 8px;
 }
 .section-head__title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #1e293b;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
 }
 .edit-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 // 基本资料
 .profile-top {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
   border-bottom: 1px solid #f1f5f9;
 }
 .profile-top__name {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   color: #1e293b;
-  margin: 0 0 4px;
+  margin: 0 0 2px;
 }
 .profile-top__meta {
   font-size: 13px;
-  color: var(--el-text-color-secondary);
+  color: #94a3b8;
   margin: 0;
 }
 .profile-desc {
@@ -322,15 +322,15 @@ async function handleAvatarUpload(base64: string) {
   }
 }
 .profile-desc__hint {
-  margin-top: 4px;
+  margin-top: 2px;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: #94a3b8;
 }
 .profile-form {
   margin-top: 8px;
 }
 .contact-hint {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--el-text-color-secondary);

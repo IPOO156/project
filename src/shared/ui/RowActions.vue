@@ -31,7 +31,7 @@ const props = withDefaults(
       popper-class="row-actions-menu"
     >
       <el-button text size="small" class="row-actions__more" aria-label="更多操作">
-        更多<ChevronDown :size="16" />
+        更多<ChevronDown :size="14" />
       </el-button>
       <template #dropdown>
         <el-dropdown-menu>
@@ -69,7 +69,7 @@ const props = withDefaults(
 
   &__more {
     flex-shrink: 0;
-    padding: 0 8px;
+    padding: 0 6px;
     color: var(--el-text-color-secondary);
 
     &:hover,
@@ -78,7 +78,7 @@ const props = withDefaults(
     }
 
     :deep(.lucide) {
-      margin-left: 4px;
+      margin-left: 2px;
     }
   }
 }

@@ -23,7 +23,7 @@ const { tip, refresh } = useLoadingTip()
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   width: min(520px, 100%);
   margin: $spacing-sm auto 0;
   padding: $spacing-sm $spacing-md;

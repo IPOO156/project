@@ -446,12 +446,12 @@ onMounted(() => void loadAll())
     align-items: center;
     gap: 4px;
     padding: $spacing-md;
-    border-radius: $radius-lg;
+    border-radius: 6px;
     background: var(--el-fill-color-light);
   }
 
   &__summary-value {
-    font-size: $font-size-2xl;
+    font-size: 28px;
     font-weight: 600;
     color: var(--el-color-primary);
   }
@@ -528,7 +528,7 @@ onMounted(() => void loadAll())
     padding: $spacing-md $spacing-lg;
     margin-bottom: $spacing-sm;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: $radius-lg;
+    border-radius: 6px;
     background: var(--el-bg-color);
     transition:
       border-color 0.2s $ease-standard,

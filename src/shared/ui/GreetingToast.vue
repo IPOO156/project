@@ -35,7 +35,7 @@ interface Props {
           aria-label="关闭"
           @click="emit('close')"
         >
-          <X :size="16" />
+          <X :size="14" />
         </button>
       </div>
     </Transition>
@@ -53,7 +53,7 @@ interface Props {
   align-items: center;
   gap: 12px;
   max-width: 340px;
-  padding: 8px 8px 8px 16px;
+  padding: 10px 10px 10px 16px;
   border-radius: $radius-lg;
   background: var(--el-bg-color);
   border: 1px solid var(--el-border-color-light);
@@ -105,17 +105,11 @@ interface Props {
   }
 }
 
-.greeting-toast-enter-active,
-.greeting-toast-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-
 /* 教师端 / 管理员端：挪到左下角并压平。
    右下角 (right:24px) 会正好压住表格最后一列操作（导出页的「下载 / 删除」），
    而教师/管理员没有 AI 悬浮球需要避让，左下角是安全区。 */
-html:has(.layout--teacher) .greeting-toast {
+html:has(.layout--teacher) .greeting-toast,
+html:has(.layout--admin) .greeting-toast {
   right: auto;
   left: 24px;
   border-radius: 6px;
@@ -124,6 +118,13 @@ html:has(.layout--teacher) .greeting-toast {
   &::before {
     background: var(--mc-info, #1d4ed8);
   }
+}
+
+.greeting-toast-enter-active,
+.greeting-toast-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .greeting-toast-enter-from,
@@ -140,7 +141,8 @@ html:has(.layout--teacher) .greeting-toast {
   }
 
   /* 窄屏上浮层无论放哪都会压住卡片内容，教师/管理员直接不弹，改用更省地方的提示 */
-  html:has(.layout--teacher) .greeting-toast {
+  html:has(.layout--teacher) .greeting-toast,
+  html:has(.layout--admin) .greeting-toast {
     right: auto;
     left: 12px;
     display: none;

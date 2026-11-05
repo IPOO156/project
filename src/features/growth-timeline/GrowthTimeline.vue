@@ -50,9 +50,9 @@ const pendingDeleteId = ref<string | null>(null)
 
 type ViewMode = 'rings' | 'list'
 
-// 首屏统一默认列表视图（年轮默认只有装饰、首屏看不到记录）；
-// 年轮保留为用户可切换的选项，之后只响应用户手动切换，不随窗口尺寸变化。
-const viewMode = ref<ViewMode>('list')
+// 首屏按设备初始选择：小屏（<=768px）默认列表视图，桌面默认年轮视图；
+// 之后只响应用户手动切换，不再随窗口尺寸变化。
+const viewMode = ref<ViewMode>(window.innerWidth <= 768 ? 'list' : 'rings')
 
 function setViewMode(mode: ViewMode) {
   viewMode.value = mode
@@ -229,7 +229,7 @@ function handleScrollToGrowth() {
                 :disabled="isSyncing"
                 @click.stop="syncFromSources"
               >
-                <RefreshCw :size="16" :class="{ spinning: isSyncing }" />
+                <RefreshCw :size="14" :class="{ spinning: isSyncing }" />
                 <span>{{ isSyncing ? '同步中…' : '同步其他模块经历' }}</span>
               </button>
               <label class="sync-auto">
@@ -321,9 +321,9 @@ function handleScrollToGrowth() {
   z-index: 50;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   padding: 4px;
-  border-radius: 999px;
+  border-radius: 100px;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
   background: rgba(var(--gt-card-rgb, 255 252 247), 0.8);
   backdrop-filter: blur(12px);
@@ -331,13 +331,13 @@ function handleScrollToGrowth() {
 }
 
 .view-switcher__btn {
-  padding: 8px 16px;
+  padding: 7px 18px;
   border: none;
-  border-radius: 999px;
+  border-radius: 100px;
   background: transparent;
   color: var(--text-mid, #6b5443);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 0.72rem;
   letter-spacing: 2px;
   cursor: pointer;
   transition:
@@ -346,8 +346,8 @@ function handleScrollToGrowth() {
 }
 
 .view-switcher__btn.is-active {
-  background: var(--gt-accent, #d4a574);
-  color: #3d2b1f;
+  background: var(--gt-accent, #8b6340);
+  color: #fff;
 }
 
 [data-theme='dark'] .view-switcher {
@@ -358,16 +358,16 @@ function handleScrollToGrowth() {
 .timeline-section {
   position: relative;
   z-index: 2;
-  padding: 32px 32px 80px;
+  padding: 2rem 2rem 5rem;
 }
 
 .section-break {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 1.5rem;
   max-width: 800px;
   margin: 0 auto;
-  padding: 64px 48px;
+  padding: 4rem 3rem;
 }
 
 .sb-line {
@@ -394,7 +394,7 @@ function handleScrollToGrowth() {
 .timeline-wrap {
   max-width: 960px;
   margin: 0 auto;
-  padding: 0 32px 128px;
+  padding: 0 2rem 8rem;
   position: relative;
 }
 
@@ -418,13 +418,13 @@ function handleScrollToGrowth() {
 
 .timeline-intro {
   text-align: center;
-  margin-bottom: 80px;
+  margin-bottom: 5rem;
   opacity: 0;
   animation: fadeSlideUp 0.8s ease 0.3s forwards;
 }
 
 .timeline-intro p {
-  font-size: 20px;
+  font-size: 1.2rem;
   color: var(--gt-text-quote);
   margin: 0;
   font-weight: 400;
@@ -432,25 +432,25 @@ function handleScrollToGrowth() {
 }
 
 .timeline-sync {
-  margin-top: 24px;
+  margin-top: 1.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 1rem;
   flex-wrap: wrap;
 }
 
 .sync-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 999px;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 100px;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
   background: rgba(255, 255, 255, 0.7);
   color: var(--text-mid, #6b5443);
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 0.6rem;
   letter-spacing: 1.5px;
   text-transform: uppercase;
   cursor: pointer;
@@ -487,9 +487,9 @@ function handleScrollToGrowth() {
 .sync-auto {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.4rem;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 0.55rem;
   letter-spacing: 1px;
   color: var(--text-light, #9a8474);
   cursor: pointer;
@@ -530,15 +530,15 @@ function handleScrollToGrowth() {
 
 @media (max-width: 768px) {
   .timeline-section {
-    padding: 16px 16px 48px;
+    padding: 1rem 1rem 3rem;
   }
 
   .section-break {
-    padding: 48px 24px;
+    padding: 3rem 1.5rem;
   }
 
   .timeline-wrap {
-    padding: 0 16px 80px;
+    padding: 0 1rem 5rem;
   }
 
   .vine-spine {
@@ -546,11 +546,11 @@ function handleScrollToGrowth() {
   }
 
   .timeline-intro {
-    margin-bottom: 64px;
+    margin-bottom: 4rem;
   }
 
   .timeline-intro p {
-    font-size: 20px;
+    font-size: 1.1rem;
     letter-spacing: 1px;
   }
 }

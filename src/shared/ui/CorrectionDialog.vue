@@ -86,7 +86,7 @@ function handleBeforeClose(done: (cancel?: boolean) => void) {
             <span class="correction-dialog__field">{{ field }}</span>
             <span class="correction-dialog__arrow">
               <span class="correction-dialog__old">{{ change.old ?? '(空)' }}</span>
-              <ArrowRight :size="16" />
+              <ArrowRight :size="14" />
               <span class="correction-dialog__new">{{ change.new ?? '(空)' }}</span>
             </span>
           </div>
@@ -106,7 +106,7 @@ function handleBeforeClose(done: (cancel?: boolean) => void) {
 <style scoped lang="scss">
 .correction-dialog {
   &__alert {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
   }
 
   &__form {
