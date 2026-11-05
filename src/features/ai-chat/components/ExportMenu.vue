@@ -32,6 +32,7 @@ function handleSelect(format: ExportFormat) {
 }
 
 function handleClickOutside(e: MouseEvent) {
+  // 触发按钮通过插槽渲染在 rootRef 内，点击它不会被判定为“外部点击”
   if (props.visible && rootRef.value && !rootRef.value.contains(e.target as Node)) {
     emit('close')
   }
@@ -43,6 +44,8 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 
 <template>
   <div ref="rootRef" class="em">
+    <!-- 触发按钮由调用方传入，与面板同属一个根节点，避免点击按钮触发“外部点击关闭” -->
+    <slot />
     <Transition name="em">
       <div v-if="props.visible" class="em__panel">
         <button
@@ -65,6 +68,7 @@ onBeforeUnmount(() => document.removeEventListener('click', handleClickOutside))
 <style scoped lang="scss">
 .em {
   position: relative;
+  display: inline-flex;
 
   &__panel {
     position: absolute;

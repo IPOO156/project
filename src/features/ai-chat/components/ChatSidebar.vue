@@ -58,6 +58,11 @@ function handleRenameCancel() {
   editingId.value = null
 }
 
+/** 会话标题兜底：后端可能返回空标题，避免列表出现空白行 */
+function displayTitle(conv: Conversation): string {
+  return conv.title?.trim() || '未命名对话'
+}
+
 /** 会话时间展示：优先最近消息时间，回退创建时间 */
 function formatConvTime(conv: Conversation): string {
   const raw = conv.lastMessageTime || conv.createdAt
@@ -104,7 +109,7 @@ function formatConvTime(conv: Conversation): string {
           :key="conv.id"
           class="cs__item"
           :class="{ 'is-active': conv.id === props.currentId }"
-          :title="conv.title"
+          :title="displayTitle(conv)"
           @click="emit('switch', conv.id)"
         >
           <!-- 编辑模式：输入框 -->
@@ -112,7 +117,7 @@ function formatConvTime(conv: Conversation): string {
             v-if="editingId === conv.id"
             v-model="editTitle"
             class="cs__item-input"
-            :placeholder="conv.title"
+            :placeholder="displayTitle(conv)"
             @click.stop
             @keydown.enter="handleRenameConfirm(conv.id)"
             @keydown.esc="handleRenameCancel"
@@ -120,17 +125,23 @@ function formatConvTime(conv: Conversation): string {
           />
           <!-- 非编辑模式：标题 + 时间 -->
           <template v-else>
-            <span class="cs__item-title">{{ conv.title }}</span>
+            <span class="cs__item-title">{{ displayTitle(conv) }}</span>
             <span class="cs__item-time">{{ formatConvTime(conv) }}</span>
           </template>
           <!-- 操作按钮组 -->
           <div class="cs__item-actions">
-            <button class="cs__item-btn" title="重命名" @click="handleRenameStart($event, conv)">
-              <Pencil :size="13" />
+            <button
+              class="cs__item-btn"
+              title="重命名"
+              aria-label="重命名对话"
+              @click="handleRenameStart($event, conv)"
+            >
+              <Pencil :size="14" />
             </button>
             <button
               class="cs__item-btn cs__item-btn--del"
               title="删除"
+              aria-label="删除对话"
               @click="handleDelete($event, conv.id)"
             >
               <Trash2 :size="13" />
@@ -262,7 +273,7 @@ function formatConvTime(conv: Conversation): string {
   &__item {
     position: relative;
     padding: $spacing-sm $spacing-md;
-    padding-right: 60px;
+    padding-right: 66px;
     border-radius: $radius-base;
     cursor: pointer;
     transition: background $duration-fast $ease-standard;
@@ -326,13 +337,21 @@ function formatConvTime(conv: Conversation): string {
     transition: opacity $duration-fast $ease-standard;
   }
 
-  &__item:hover &__item-actions {
+  // 键盘聚焦到操作按钮时同样可见；触屏无 hover 时常驻
+  &__item:hover &__item-actions,
+  &__item:focus-within &__item-actions {
     opacity: 1;
   }
 
+  @media (hover: none) {
+    &__item-actions {
+      opacity: 1;
+    }
+  }
+
   &__item-btn {
-    width: 22px;
-    height: 22px;
+    width: 28px;
+    height: 28px;
     border: none;
     background: transparent;
     border-radius: $radius-sm;
