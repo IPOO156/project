@@ -4,7 +4,6 @@ import {
   Clock,
   Compass,
   FilePen,
-  FileText,
   GraduationCap,
   Home,
   IdCard,
@@ -125,8 +124,10 @@ export const registeredModules: AppModule[] = [
     icon: FilePen,
     order: 30,
     routePrefix: '/applications',
-    description: '各类档案信息申报入口',
-    menuItems: [{ label: '个人档案信息申报', icon: FilePen, path: '/applications' }],
+    description: '个人档案申报情况总览与档案完整度',
+    // 入口直接落到「申报看板」：/applications 是无 tab 参数的申报表单 hub，
+    // 会静默回落到首个分类（学科竞赛），点「个人档案信息申报」却进了竞赛填报表单。
+    menuItems: [{ label: '个人档案信息申报', icon: FilePen, path: '/approval/pending' }],
   },
   {
     id: 'awards',
@@ -134,7 +135,7 @@ export const registeredModules: AppModule[] = [
     icon: Star,
     order: 40,
     routePrefix: '/awards',
-    description: '三类之星奖项报名（总览见「我的申报 - 奖项看板」）',
+    description: '三类之星奖项报名（总览见「我的奖项」）',
     menuItems: [
       {
         label: '奖项报名',
@@ -149,21 +150,14 @@ export const registeredModules: AppModule[] = [
   },
   {
     id: 'approval',
-    label: '我的申报',
-    icon: FileText,
+    label: '我的奖项',
+    icon: Star,
     order: 50,
     routePrefix: '/approval',
-    description: '查看与管理个人申报与奖项报名记录',
-    menuItems: [
-      {
-        label: '我的申报',
-        icon: FileText,
-        children: [
-          { label: '申报看板', icon: Clock, path: '/approval/pending' },
-          { label: '奖项看板', icon: Star, path: '/approval/award-review' },
-        ],
-      },
-    ],
+    description: '奖项看板：查看与管理奖项报名记录',
+    // 「申报看板」入口已由「个人档案信息申报」承担，只剩子项的折叠组属于结构冗余，
+    // 因此降级为扁平项，避免两个入口同指一页（双高亮 + 标签与内容不符）。
+    menuItems: [{ label: '我的奖项', icon: Star, path: '/approval/award-review' }],
   },
 ]
 

@@ -35,11 +35,11 @@ const actionLabel = (action: number) => AUDIT_ACTIONS[action]?.label ?? String(a
       >
         <component
           :is="isImage(file.fileName) ? ImageIcon : FileText"
-          :size="22"
+          :size="24"
           class="audit-detail__file-icon"
         />
         <span class="audit-detail__file-name">{{ file.fileName }}</span>
-        <ExternalLink :size="14" class="audit-detail__file-link" />
+        <ExternalLink :size="16" class="audit-detail__file-link" />
       </div>
     </div>
     <div v-else class="audit-detail__no-file">暂无佐证材料</div>
@@ -91,9 +91,9 @@ const actionLabel = (action: number) => AUDIT_ACTIONS[action]?.label ?? String(a
   &__file {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     max-width: 220px;
-    padding: 6px 12px;
+    padding: 8px 12px;
     border: 1px solid var(--el-border-color-light);
     border-radius: $radius-base;
     cursor: pointer;

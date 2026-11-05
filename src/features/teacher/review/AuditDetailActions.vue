@@ -23,7 +23,7 @@ const emit = defineEmits<{
         上一条
       </el-button>
       <el-button size="small" :disabled="!canNext" @click="emit('next')">
-        下一条<el-icon class="el-icon--right"><ChevronRight :size="14" /></el-icon>
+        下一条<el-icon class="el-icon--right"><ChevronRight :size="16" /></el-icon>
       </el-button>
     </div>
     <div class="audit-detail__actions">

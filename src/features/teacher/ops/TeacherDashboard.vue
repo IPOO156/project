@@ -41,7 +41,7 @@ import { useDashboardOption } from './useDashboardOption'
 const router = useRouter()
 const userStore = useUserStore()
 const { me } = useTeacherMe()
-const { canAccessAny, canAccessModule, roleLabel, menuGroups } = useTeacherAuthz()
+const { canAccessAny, canAccessModule, roleLabel, menuGroups, isAdmin } = useTeacherAuthz()
 
 const userName = computed(() => userStore.userName)
 // 管理端接口按后端真实鉴权码判定（admin 角色直通）
@@ -154,7 +154,7 @@ const { pendingItems, quickLinks, todayDate } = useDashboardOption({
   canAccessModule,
 })
 
-const pendingTotal = computed(() => dashboardOverview.value?.pendingStats.totalPending ?? null)
+const pendingTotal = computed(() => dashboardOverview.value?.pendingStats?.totalPending ?? null)
 
 const pendingMeta = computed(() => {
   const stats = dashboardOverview.value?.pendingStats
@@ -169,7 +169,7 @@ const pendingMeta = computed(() => {
 
 const kpis = computed(() => {
   const pendingReview = dashboardData.value?.pendingCount ?? null
-  return [
+  const list = [
     {
       label: '待处理事项',
       value: pendingTotal.value,
@@ -203,6 +203,13 @@ const kpis = computed(() => {
       alert: false,
     },
   ]
+
+  // 管理员看的是「治理规模」，主指标给在库学生；教师看的是「待审队列」，主指标给待处理事项。
+  if (isAdmin.value) {
+    const lead = list.splice(1, 1)[0]
+    return [lead, ...list]
+  }
+  return list
 })
 
 const dataMetrics = computed(() => {
@@ -332,9 +339,17 @@ onMounted(() => {
   <div class="mc-page teacher-dashboard">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
-        <h2 class="mc-page-head__title">工作台</h2>
+        <h2 class="mc-page-head__title">{{ isAdmin ? '治理总览' : '工作台' }}</h2>
         <p class="mc-page-head__desc">
-          {{ userName }}，今天有 {{ pendingTotal ?? 0 }} 项待办需要处理。数据范围：{{ scopeText }}。
+          <template v-if="isAdmin">
+            {{ userName }}，全校在库 {{ dashboardData?.studentCount ?? 0 }} 名学生，待处理
+            {{ pendingTotal ?? 0 }} 项。数据范围：{{ scopeText }}。
+          </template>
+          <template v-else>
+            {{ userName }}，今天有 {{ pendingTotal ?? 0 }} 项待办需要处理。数据范围：{{
+              scopeText
+            }}。
+          </template>
         </p>
       </div>
       <div class="mc-page-head__actions">
@@ -357,10 +372,10 @@ onMounted(() => {
     <!-- KPI 条 -->
     <div class="dash-kpis">
       <div
-        v-for="item in kpis"
+        v-for="(item, index) in kpis"
         :key="item.label"
         class="dash-kpis__item"
-        :class="`dash-kpis__item--${item.tone}`"
+        :class="[`dash-kpis__item--${item.tone}`, { 'dash-kpis__item--lead': index === 0 }]"
       >
         <span class="dash-kpis__label">{{ item.label }}</span>
         <span class="dash-kpis__value mc-num" :class="{ 'dash-kpis__value--alert': item.alert }">

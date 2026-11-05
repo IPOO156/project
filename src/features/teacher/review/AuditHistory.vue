@@ -231,7 +231,7 @@ onMounted(() => void loadList())
 .history-student {
   display: flex;
   flex-direction: column;
-  line-height: 1.4;
+  line-height: 1.5;
 
   &__no {
     font-size: 12px;

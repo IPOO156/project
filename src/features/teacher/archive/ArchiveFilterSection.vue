@@ -86,7 +86,7 @@ const status = computed({
   <section class="mc-card archive-view__filters">
     <div class="mc-card__head archive-view__filters-head">
       <span class="mc-card__title">
-        <Filter :size="14" />
+        <Filter :size="16" />
         筛选条件
       </span>
       <div class="archive-view__filters-meta">
@@ -164,7 +164,7 @@ const status = computed({
             class="archive-view__select archive-view__select--wide"
           >
             <template #prefix>
-              <Search :size="14" />
+              <Search :size="16" />
             </template>
           </el-input>
           <div class="archive-view__filter-actions">
@@ -184,7 +184,7 @@ const status = computed({
   /* ── 筛选区：分组视觉 ── */
   &__filters-head {
     .mc-card__title {
-      gap: 6px;
+      gap: 8px;
     }
   }
   &__filters-meta {
@@ -194,7 +194,7 @@ const status = computed({
   }
   &__filters-tag {
     font-size: 12px;
-    padding: 2px 10px;
+    padding: 4px 8px;
     border-radius: 999px;
     background: var(--el-color-primary-light-9);
     color: var(--el-color-primary);
@@ -208,8 +208,8 @@ const status = computed({
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;
-    padding-top: 14px;
-    padding-bottom: 18px;
+    padding-top: 16px;
+    padding-bottom: 16px;
   }
   &__filter-group {
     display: flex;

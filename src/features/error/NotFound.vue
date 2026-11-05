@@ -24,7 +24,7 @@ function goBack() {
 <template>
   <div class="not-found">
     <div class="not-found__card">
-      <div class="not-found__icon"><Compass :size="30" /></div>
+      <div class="not-found__icon"><Compass :size="32" /></div>
       <p class="not-found__code">404</p>
       <h1 class="not-found__title">页面不存在</h1>
       <p class="not-found__desc">该地址可能已被合并或调整，请从菜单重新进入。</p>
@@ -49,7 +49,7 @@ function goBack() {
     width: min(420px, 100%);
     padding: 40px 32px;
     text-align: center;
-    border-radius: 16px;
+    border-radius: 6px;
     background: var(--el-bg-color, #fff);
     box-shadow: var(--el-box-shadow-light, 0 2px 12px rgb(0 0 0 / 8%));
   }
@@ -61,7 +61,7 @@ function goBack() {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 14px;
+    border-radius: 6px;
     color: var(--el-color-primary, #2c5282);
     background: var(--el-color-primary-light-9, #eef4fa);
   }
@@ -74,15 +74,15 @@ function goBack() {
   }
 
   &__title {
-    margin: 6px 0 8px;
-    font-size: 22px;
+    margin: 8px 0 8px;
+    font-size: 20px;
     color: var(--el-text-color-primary, #1f2937);
   }
 
   &__desc {
     margin: 0 0 24px;
     font-size: 14px;
-    line-height: 1.7;
+    line-height: 1.6;
     color: var(--el-text-color-regular, #4b5563);
   }
 

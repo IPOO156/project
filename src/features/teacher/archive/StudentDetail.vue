@@ -251,7 +251,7 @@ onMounted(() => void loadAll())
         <!-- 能力画像 -->
         <div class="mc-card">
           <div class="mc-card__head">
-            <span class="mc-card__title"><UserRound :size="15" /> 能力画像</span>
+            <span class="mc-card__title"><UserRound :size="16" /> 能力画像</span>
           </div>
           <div class="mc-card__body">
             <div v-if="profile.dimensionProfile?.length" class="student-detail__dims">
@@ -278,7 +278,7 @@ onMounted(() => void loadAll())
         <!-- 成长时间轴 -->
         <div class="mc-card">
           <div class="mc-card__head">
-            <span class="mc-card__title"><GraduationCap :size="15" /> 成长时间轴</span>
+            <span class="mc-card__title"><GraduationCap :size="16" /> 成长时间轴</span>
             <el-radio-group v-model="eventTypeFilter" size="small">
               <el-radio-button
                 v-for="o in TEACHER_EVENT_TYPE_OPTIONS"
@@ -336,7 +336,7 @@ onMounted(() => void loadAll())
         <!-- 短板分析与改进建议 -->
         <div class="mc-card">
           <div class="mc-card__head">
-            <span class="mc-card__title"><ListChecks :size="15" /> 短板分析与改进建议</span>
+            <span class="mc-card__title"><ListChecks :size="16" /> 短板分析与改进建议</span>
           </div>
           <div class="mc-card__body">
             <el-table v-if="weaknesses.length" :data="weaknesses" stripe>
@@ -414,7 +414,7 @@ onMounted(() => void loadAll())
     padding-top: $spacing-md;
     border-top: 1px solid var(--el-border-color-lighter);
     font-size: 13px;
-    line-height: 1.8;
+    line-height: 1.6;
     color: var(--el-text-color-secondary);
   }
 
@@ -428,7 +428,7 @@ onMounted(() => void loadAll())
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     font-size: 13px;
     color: var(--el-text-color-secondary);
   }
@@ -446,13 +446,13 @@ onMounted(() => void loadAll())
     align-items: center;
     gap: 4px;
     padding: $spacing-md;
-    border-radius: $radius-lg;
+    border-radius: 6px;
     background: var(--el-fill-color-light);
   }
 
   &__summary-value {
-    font-size: $font-size-2xl;
-    font-weight: 700;
+    font-size: 28px;
+    font-weight: 600;
     color: var(--el-color-primary);
   }
 
@@ -492,7 +492,7 @@ onMounted(() => void loadAll())
   &__tl-dot {
     position: relative;
     z-index: 1;
-    margin-top: 6px;
+    margin-top: 8px;
     width: 12px;
     height: 12px;
     border-radius: 50%;
@@ -528,7 +528,7 @@ onMounted(() => void loadAll())
     padding: $spacing-md $spacing-lg;
     margin-bottom: $spacing-sm;
     border: 1px solid var(--el-border-color-lighter);
-    border-radius: $radius-lg;
+    border-radius: 6px;
     background: var(--el-bg-color);
     transition:
       border-color 0.2s $ease-standard,
@@ -560,7 +560,7 @@ onMounted(() => void loadAll())
   }
 
   &__tl-name {
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 600;
     color: var(--el-text-color-primary);
     margin-bottom: 4px;
@@ -568,7 +568,7 @@ onMounted(() => void loadAll())
 
   &__tl-content {
     font-size: 13px;
-    line-height: 1.7;
+    line-height: 1.6;
     color: var(--el-text-color-secondary);
     display: -webkit-box;
     -webkit-line-clamp: 3;

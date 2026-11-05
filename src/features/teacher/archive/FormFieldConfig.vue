@@ -91,7 +91,7 @@ const emit = defineEmits<{
     overflow-y: auto;
     padding: $spacing-sm;
     border: 1px dashed var(--el-border-color-light);
-    border-radius: $radius-lg;
+    border-radius: 6px;
     background: var(--el-fill-color-lighter);
   }
 

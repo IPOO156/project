@@ -36,9 +36,9 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
       <span class="archive-view__count">{{ rows.length }} 个组织</span>
     </div>
     <div class="mc-card__body">
-      <el-table v-loading="loading" class="u-w-full" :data="rows" stripe>
+      <el-table v-loading="loading" class="u-w-full" :data="rows">
         <el-table-column prop="orgName" label="组织" min-width="160" />
-        <el-table-column label="学生数" width="90" align="center">
+        <el-table-column label="学生数" width="88" align="right">
           <template #default="{ row }">
             <span class="mc-num">{{ row.studentCount ?? '-' }}</span>
           </template>
@@ -133,7 +133,7 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
   &__ratio {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     min-width: 200px;
   }
   &__ratio-meta {
@@ -148,19 +148,19 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
     font-weight: 600;
   }
   &__ratio-unit {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 400;
     color: var(--el-text-color-secondary);
-    margin-left: 2px;
+    margin-left: 4px;
   }
   &__ratio-percent {
-    color: $color-success;
+    color: $color-success-text;
     font-weight: 600;
   }
   &__ratio-bar {
     display: flex;
     height: 6px;
-    border-radius: 3px;
+    border-radius: 6px;
     overflow: hidden;
     background: var(--el-fill-color-light);
   }
@@ -189,22 +189,22 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
   &__status-pill {
     display: inline-flex;
     align-items: center;
-    padding: 2px 8px;
+    padding: 4px 8px;
     font-size: 12px;
     border-radius: 999px;
     font-variant-numeric: tabular-nums;
 
     &.is-success {
       background: rgba($color-success, 0.12);
-      color: color.adjust($color-success, $lightness: -8%);
+      color: $color-success-text;
     }
     &.is-warning {
       background: rgba($color-warning, 0.14);
-      color: color.adjust($color-warning, $lightness: -10%);
+      color: $color-warning-text;
     }
     &.is-danger {
       background: rgba($color-danger, 0.12);
-      color: color.adjust($color-danger, $lightness: -6%);
+      color: $color-danger-text;
     }
     &.is-muted {
       background: var(--el-fill-color-light);
@@ -222,7 +222,7 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 8px;
+    padding: 4px 8px;
     font-size: 12px;
     border-radius: $radius-base;
     background: var(--el-color-primary-light-9);
@@ -233,7 +233,7 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
     font-weight: 600;
     background: var(--el-bg-color);
     padding: 0 4px;
-    border-radius: 3px;
+    border-radius: 6px;
   }
 }
 </style>

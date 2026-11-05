@@ -25,6 +25,7 @@ import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import AIFloatingBall from '@/features/ai-chat/components/AIFloatingBall.vue'
 import { useGreeting } from '@/features/dashboard/composables/useGreeting'
 import { useLoadingTip } from '@/shared/composables/useLoadingTip'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import GreetingToast from '@/shared/ui/GreetingToast.vue'
 import LoadingTipCard from '@/shared/ui/LoadingTipCard.vue'
 import bookCursor from '@/shared/utils/bookCursor'
@@ -39,6 +40,14 @@ const userStore = useUserStore()
 const slots = useSlots()
 
 const drawerVisible = ref(false)
+
+/**
+ * 管理员端与教师端共用同一套路由，但视觉语言要分开：
+ * 管理员＝治理总览（石墨蓝 + 中性灰），教师＝待审队列（墨蓝 + 琥珀）。
+ * 这里只落一个 layout--admin 类，具体差异集中在 teacher-console.scss；
+ * 学生端 isAdmin 恒为 false，不会命中任何管理员样式。
+ */
+const { isAdmin } = useTeacherAuthz()
 
 // 启动 tab 状态监听：路由切换时把已访问页面写入 useTabsStore
 useTabs()
@@ -67,7 +76,7 @@ const hasFooter = computed(() => !!slots.footer)
 const isLoading = computed(() => appStore.pageLoading)
 
 // 加载页温馨提示：按当前路由/角色取主题，每次加载出现时换一条
-const { tip: loadingTip, refresh: refreshLoadingTip } = useLoadingTip()
+const { message: loadingMessage, hint: loadingHint, refresh: refreshLoadingTip } = useLoadingTip()
 
 /** 从路由 meta 中推断页面标题，用于文档标题与无障碍属性 */
 const pageTitle = computed(() => (route.meta?.title as string) || '')
@@ -127,6 +136,7 @@ watch(isLoading, async (loading) => {
       'layout--mobile': appStore.isMobile,
       'layout--has-footer': hasFooter,
       'layout--teacher': userStore.isTeacher,
+      'layout--admin': isAdmin,
     }"
   >
     <!-- 侧边栏（折叠/展开动画：280ms 横向滑入） -->
@@ -211,9 +221,10 @@ watch(isLoading, async (loading) => {
         aria-label="页面加载中"
       >
         <div class="layout__loading-spinner" aria-hidden="true" />
-        <span class="layout__loading-text">加载中…</span>
-        <!-- 教师端 / 管理员端保持克制：加载时仅显示进度，不弹温馨提示 -->
-        <LoadingTipCard v-if="!userStore.isTeacher" :tip="loadingTip" @next="refreshLoadingTip" />
+        <span class="layout__loading-text">{{ loadingMessage }}</span>
+        <!-- 温馨提示：单行细线提示 + 2px 进度条，各端共用；文案随身份轮换 -->
+        <LoadingTipCard :text="loadingHint" />
+        <span class="layout__loading-progress" aria-hidden="true"><i /></span>
       </div>
     </Transition>
 
@@ -359,6 +370,8 @@ watch(isLoading, async (loading) => {
   }
 
   // 全局加载（z-index 使用项目统一比例尺：modal 层）
+  // 结构：转圈 → 主文案（16px）→ 单行提示（14px）→ 2px 进度条
+  // 垂直节奏：16px（$spacing-lg）/ 24px（$spacing-xl，由 LoadingTipCard 自带）/ 16px
   &__loading {
     position: fixed;
     inset: 0;
@@ -369,7 +382,7 @@ watch(isLoading, async (loading) => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: $spacing-md;
+    gap: 0;
   }
 
   &__loading-spinner {
@@ -383,8 +396,37 @@ watch(isLoading, async (loading) => {
   }
 
   &__loading-text {
-    color: var(--el-text-color-secondary);
-    font-size: $font-size-sm;
+    margin-top: $spacing-lg;
+    color: var(--el-text-color-primary);
+    font-size: $font-size-lg;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    // 只动 opacity + transform；与遮罩入场错开 40ms，读起来有先后
+    animation: layout-loading-text-in 240ms $ease-decelerate both;
+    animation-delay: 40ms;
+  }
+
+  &__loading-progress {
+    width: 160px;
+    height: 2px;
+    margin-top: $spacing-lg;
+    border-radius: $radius-pill;
+    background: var(--el-fill-color);
+    overflow: hidden;
+    animation: layout-loading-progress-in 240ms $ease-decelerate both;
+    animation-delay: 120ms;
+
+    i {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--el-color-primary);
+      transform: scaleX(0.04);
+      transform-origin: left center;
+      // 无真实进度可读：用先快后慢的推进表达「仍在进行」，只动 transform/opacity
+      animation: layout-loading-progress 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
   }
 }
 
@@ -492,6 +534,45 @@ html.dark .layout__loading {
   }
 }
 
+@keyframes layout-loading-text-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes layout-loading-progress-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes layout-loading-progress {
+  0% {
+    opacity: 0.45;
+    transform: scaleX(0.04);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scaleX(0.82);
+  }
+
+  100% {
+    opacity: 0.35;
+    transform: scaleX(0.96);
+  }
+}
+
 // =============================================================================
 // 3. 响应式断点（覆盖 skill 要求的 4 个标准断点：375 / 768 / 1024 / 1440）
 // =============================================================================
@@ -518,7 +599,7 @@ html.dark .layout__loading {
   }
 }
 
-// 移动端竖屏：375px 以下（紧凑间距，禁止横向滚动）
+// 移动端竖屏：375px 以下（小间距，禁止横向滚动）
 @media (max-width: 375px) {
   .layout__content {
     padding: $spacing-sm;

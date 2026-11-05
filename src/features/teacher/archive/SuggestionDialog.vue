@@ -84,7 +84,7 @@ async function handleSubmit() {
   <el-dialog v-model="visible" title="添加改进建议" width="520px" destroy-on-close>
     <div class="sug">
       <div v-if="weaknessId" class="sug__hint">
-        <Lightbulb :size="14" />
+        <Lightbulb :size="16" />
         <span>该建议将关联到所选短板记录（ID: {{ weaknessId }}）</span>
       </div>
       <el-form label-width="90px" label-position="left">
@@ -132,7 +132,7 @@ async function handleSubmit() {
   &__hint {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding: $spacing-sm $spacing-md;
     margin-bottom: $spacing-md;
     border-radius: $radius-base;
