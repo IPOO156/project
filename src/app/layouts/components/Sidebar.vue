@@ -132,7 +132,6 @@ function handleMenuSelect(index: string) {
             <span>{{ entry.group.label }}</span>
           </template>
           <el-menu-item v-for="item in entry.items" :key="item.path" :index="item.path!">
-            <span class="sidebar__item-dot" />
             <template #title>
               <span>{{ item.label }}</span>
             </template>
@@ -153,7 +152,7 @@ function handleMenuSelect(index: string) {
         <template v-for="item in currentMenuItems" :key="item.label">
           <!-- 无子菜单 -->
           <el-menu-item v-if="!item.children && item.path" :index="item.path">
-            <component :is="item.icon" v-if="item.icon" :size="20" />
+            <component :is="item.icon" v-if="item.icon" :size="18" />
             <template #title>
               <span>{{ item.label }}</span>
             </template>
@@ -162,7 +161,7 @@ function handleMenuSelect(index: string) {
           <!-- 有子菜单 -->
           <el-sub-menu v-else :index="item.label">
             <template #title>
-              <component :is="item.icon" v-if="item.icon" :size="20" />
+              <component :is="item.icon" v-if="item.icon" :size="18" />
               <span>{{ item.label }}</span>
             </template>
             <el-menu-item
@@ -215,7 +214,7 @@ function handleMenuSelect(index: string) {
     height: 56px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     padding: 0 16px;
     border-bottom: 1px solid var(--el-border-color-light);
     flex-shrink: 0;
@@ -238,7 +237,7 @@ function handleMenuSelect(index: string) {
     }
 
     &-text {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       color: var(--el-text-color-primary);
       white-space: nowrap;
@@ -261,12 +260,12 @@ function handleMenuSelect(index: string) {
 
   // 菜单项：Element Plus 未提供对应样式 props，需覆盖内部类名以统一侧边栏尺寸与交互色。
   :deep(.el-menu-item) {
-    height: 48px;
-    line-height: 1.5;
+    height: 42px;
+    line-height: 42px;
     padding: 0 16px !important;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     color: var(--el-text-color-secondary);
     font-size: 14px;
     border-radius: 0;
@@ -287,11 +286,11 @@ function handleMenuSelect(index: string) {
         content: '';
         position: absolute;
         right: 0;
-        top: 8px;
-        bottom: 8px;
+        top: 6px;
+        bottom: 6px;
         width: 3px;
         background: var(--el-color-primary);
-        border-radius: 6px;
+        border-radius: 2px;
       }
     }
 
@@ -304,12 +303,12 @@ function handleMenuSelect(index: string) {
 
   // 子菜单标题：Element Plus 未提供对应样式 props，需覆盖内部类名以统一侧边栏尺寸与交互色。
   :deep(.el-sub-menu__title) {
-    height: 48px;
-    line-height: 1.5;
+    height: 42px;
+    line-height: 42px;
     padding: 0 16px !important;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     color: var(--el-text-color-secondary);
     font-size: 14px;
     border-radius: 0;
@@ -334,7 +333,7 @@ function handleMenuSelect(index: string) {
 
   // 子菜单项缩进：Element Plus 默认缩进尺寸与侧边栏设计规范不一致，需覆盖内部类名。
   :deep(.el-sub-menu .el-menu .el-menu-item) {
-    padding: 0 16px 0 48px !important;
+    padding: 0 16px 0 44px !important;
     font-size: 13px;
     min-width: auto;
   }
@@ -393,18 +392,6 @@ function handleMenuSelect(index: string) {
     }
   }
 
-  &__item-dot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--el-text-color-placeholder);
-    flex-shrink: 0;
-  }
-
-  :deep(.el-menu-item.is-active) .sidebar__item-dot {
-    background: var(--el-color-primary);
-  }
-
   &__footer {
     flex-shrink: 0;
     border-top: 1px solid var(--el-border-color-light);
@@ -416,7 +403,7 @@ function handleMenuSelect(index: string) {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
     color: var(--el-text-color-secondary);
     font-size: 13px;
   }

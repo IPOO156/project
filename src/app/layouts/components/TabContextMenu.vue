@@ -75,7 +75,7 @@ defineEmits<{
 .nav-tabs__menu-item {
   display: block;
   width: 100%;
-  padding: 8px 12px;
+  padding: 6px 12px;
   border: 0;
   border-radius: $radius-sm;
   background: transparent;

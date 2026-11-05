@@ -249,6 +249,7 @@
   .sidebar {
     .sidebar__logo {
       height: 56px;
+      gap: $spacing-sm;
       border-bottom-color: var(--mc-border);
 
       &-text {
@@ -276,6 +277,15 @@
     .el-menu--inline .el-menu-item {
       height: $spacing-3xl;
       line-height: 1.5;
+    }
+
+    /* 共享外壳已回到学生端基线（42px / 10px 间距），教师端按 8px 网格补回 8px 间距 */
+    .el-sub-menu__title {
+      gap: $spacing-sm;
+    }
+
+    .sidebar__collapse-btn {
+      gap: $spacing-sm;
     }
 
     .el-menu-item.is-active {
