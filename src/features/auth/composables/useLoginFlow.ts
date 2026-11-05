@@ -5,7 +5,13 @@ import { useRouter } from 'vue-router'
 import { useThemeStore, useUserStore } from '@/app/stores/stores'
 import { getCaptcha, teacherLogin } from '@/shared/api/teacher-api'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
-import { setRefreshToken } from '@/shared/utils/token'
+import {
+  clearMustChangePassword,
+  isMustChangePassword,
+  markMustChangePassword,
+} from '@/shared/utils/forcePasswordChange'
+import { getToken, setRefreshToken } from '@/shared/utils/token'
+import { validatePasswordStrength } from '@/shared/utils/validatePassword'
 
 /** 登录入口页签：学生端 / 管理端（教师走管理端入口） */
 export type LoginType = 'student' | 'admin'
@@ -179,6 +185,17 @@ export function useLoginFlow(options: LoginFlowOptions) {
   const loading = ref(false)
   const loginSuccess = ref(false)
   const loginType = ref<LoginType>('student')
+
+  // ── 首次登录强制改密 ──
+  // 不跳独立页面：后端此时只放行改密/身份/登出接口，任何业务外壳都会连环 403；
+  // 且独立页风格与登录页割裂。这里直接在登录卡片内切换为改密表单，视觉与登录页一致。
+  const forceChangePassword = ref(false)
+  const changeForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
+  const changeLoading = ref(false)
+  /** 强制改密页展示的账号名：刷新后输入框为空时回退到身份缓存里的登录账号 */
+  const forceAccountName = computed(
+    () => loginForm.username || userStore.userInfo?.username || '当前账号',
+  )
   const capsLockOn = ref(false)
   const captchaRefreshKey = ref(0)
   const usernameInputRef = ref<{ input: HTMLInputElement } | null>(null)
@@ -263,6 +280,25 @@ export function useLoginFlow(options: LoginFlowOptions) {
       userStore.setToken(res.accessToken, loginForm.remember)
       setRefreshToken(res.refreshToken ?? '', loginForm.remember)
 
+      // ── 首次登录强制改密 ──
+      // 后端 must_change_password=1 时仅放行改密/身份/登出接口，直接进首页会连发 403、
+      // 页面显示成「没有权限执行此操作」。这里拿到登录响应的标记后原地切换登录卡片内容，
+      // 不再拉取 /auth/me、也不导航（导航到业务页会被路由守卫弹回登录页）。
+      if (res.user.mustChangePassword === true) {
+        markMustChangePassword()
+        userStore.setUserInfo(
+          loginType.value === 'admin' ? toUserInfo(res.user) : toStudentUserInfo(res.user),
+        )
+        changeForm.oldPassword = ''
+        changeForm.newPassword = ''
+        changeForm.confirmPassword = ''
+        forceChangePassword.value = true
+        loading.value = false
+        return
+      }
+      // 非强制改密登录：清掉可能残留的旧标记（上次异常关闭浏览器未走登出清理）
+      clearMustChangePassword()
+
       if (loginType.value === 'admin') {
         userStore.setUserInfo(toUserInfo(res.user))
         // 拉取完整身份（roles / permissions / scopes）。
@@ -284,7 +320,68 @@ export function useLoginFlow(options: LoginFlowOptions) {
     }
   }
 
+  /* ===================== 首次登录强制改密 ===================== */
+  async function handleChangePassword() {
+    if (changeLoading.value) return
+    const { newPassword, confirmPassword } = changeForm
+    // 刚登录成功时，登录表单里就是本次的初始密码，直接复用它做原密码校验，
+    // 不再要求用户重复输入；刷新过页面（内存中没有密码）才回退到手动输入。
+    const oldPassword = changeForm.oldPassword || loginForm.password
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      ElMessage.warning('请填写完整信息')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      ElMessage.warning('两次输入的新密码不一致')
+      return
+    }
+    if (newPassword === oldPassword) {
+      ElMessage.warning('新密码不能与原密码相同')
+      return
+    }
+    const strength = validatePasswordStrength(newPassword)
+    if (!strength.valid) {
+      ElMessage.warning(strength.message)
+      return
+    }
+
+    changeLoading.value = true
+    try {
+      await userStore.changePassword({ oldPassword, newPassword })
+      ElMessage.success('密码修改成功，请使用新密码重新登录')
+      clearMustChangePassword()
+      // 后端改密成功后吊销全部令牌（revokeAllTokens），跳过必然 401 的登出请求
+      await userStore.logout({ notifyServer: false })
+      forceChangePassword.value = false
+      loginForm.password = ''
+      loginForm.captcha = ''
+      changeForm.oldPassword = ''
+      changeForm.newPassword = ''
+      changeForm.confirmPassword = ''
+      // 新会话需要重新登录：换一张验证码，避免沿用已消费的 key
+      void loadBackendCaptcha()
+    } catch {
+      /* 原密码错误等提示由请求拦截器统一弹出 */
+    } finally {
+      changeLoading.value = false
+    }
+  }
+
+  /** 强制改密页的「退出登录」：放弃本次登录，回到普通登录表单 */
+  async function handleForceChangeLogout() {
+    await userStore.logout()
+    forceChangePassword.value = false
+    loginForm.password = ''
+    loginForm.captcha = ''
+    changeForm.oldPassword = ''
+    changeForm.newPassword = ''
+    changeForm.confirmPassword = ''
+    void loadBackendCaptcha()
+  }
+
   onMounted(() => {
+    // 刷新页面 / 从 403 兜底回到登录页时，标记仍在 → 直接展示改密表单
+    if (getToken() && isMustChangePassword()) forceChangePassword.value = true
     nextTick(() => void loadBackendCaptcha())
     // 浏览器自动填充（记住密码）会在 mounted 之后异步写入原生 input 的 value，
     // 此时 Vue 的 v-model 未同步，导致 loginForm 为空但 DOM 已显示文字，
@@ -307,6 +404,12 @@ export function useLoginFlow(options: LoginFlowOptions) {
     loading,
     loginSuccess,
     loginType,
+    forceChangePassword,
+    forceAccountName,
+    changeForm,
+    changeLoading,
+    handleChangePassword,
+    handleForceChangeLogout,
     capsLockOn,
     backendCaptcha,
     captchaFailed,

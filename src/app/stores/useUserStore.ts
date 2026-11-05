@@ -11,6 +11,7 @@ import {
   USER_INFO_CACHE_KEY,
   USER_SCOPED_PREFIXES,
 } from '@/shared/constants/storageKeys'
+import { clearMustChangePassword } from '@/shared/utils/forcePasswordChange'
 import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import { clearAuth, getToken, setToken as persistToken } from '@/shared/utils/token'
 import { resetUserScopedStores } from './sessionReset'
@@ -165,15 +166,18 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function logout() {
+  async function logout(options: { notifyServer?: boolean } = {}) {
     // 通知后端使令牌失效。
     // 请求拦截器在微任务中异步读取 token，故必须先 getToken() 快照并作为显式
     // Authorization 传给 apiLogout —— 否则 clearAuth 后请求变匿名，/auth/logout
     // 会返回 401，令牌在服务端也不会真正失效。
+    // 改密成功后后端已吊销全部令牌，此时跳过该请求（notifyServer=false），避免必然的 401。
     const tokenSnapshot = getToken()
-    try {
-      await apiLogout(tokenSnapshot)
-    } catch {}
+    if (options.notifyServer !== false) {
+      try {
+        await apiLogout(tokenSnapshot)
+      } catch {}
+    }
     token.value = ''
     userInfo.value = null
     cachedAvatar.value = undefined
@@ -186,6 +190,8 @@ export const useUserStore = defineStore('user', () => {
     //   - user_info_cache：loginType 决定端级分流
     //   - teacher_me：/auth/me 的 permissions 决定菜单与页面可访问性
     localStorage.removeItem(USER_INFO_CACHE_KEY)
+    // 强制改密标记属账号级状态：不清理会让下一位登录的账号被误送改密页
+    clearMustChangePassword()
     // 教师身份为模块级 ref，需显式清空（clearUserScopedStorage 只清 localStorage）
     useTeacherMe().clear()
     // 重置全部用户级业务 store 与用户级本地存储（身份缓存 / 头像 / 草稿 / 撤回标记 / tabs）：
