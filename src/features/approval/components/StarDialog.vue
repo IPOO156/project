@@ -27,7 +27,7 @@ const emit = defineEmits<{
 const awardReviewStore = useAwardReviewStore()
 const { semesterOptions, load: loadSemesters } = useSemesters()
 
-// 学期下拉：模块级缓存，此处触发一次拉取（失败/为空自动回退本地列表）
+// 学期下拉：模块级缓存，此处触发一次拉取（失败/为空时下拉为空并提示，不再回退本地列表）
 loadSemesters()
 
 const editForm = reactive<Record<string, any>>({})
