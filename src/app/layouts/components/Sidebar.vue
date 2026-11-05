@@ -132,7 +132,6 @@ function handleMenuSelect(index: string) {
             <span>{{ entry.group.label }}</span>
           </template>
           <el-menu-item v-for="item in entry.items" :key="item.path" :index="item.path!">
-            <span class="sidebar__item-dot" />
             <template #title>
               <span>{{ item.label }}</span>
             </template>
@@ -339,20 +338,20 @@ function handleMenuSelect(index: string) {
     min-width: auto;
   }
 
-  // ── 教师端分组菜单：更紧凑的行高、无右侧高亮条，子项以圆点引导 ──
+  // ── 教师端分组菜单：较小的行高、无右侧高亮条，子项以圆点引导 ──
   :deep(.sidebar__el-menu--grouped) {
-    padding: 6px 0;
+    padding: 8px 0;
 
     .el-sub-menu {
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
 
     .el-sub-menu__title {
-      height: 36px;
-      line-height: 36px;
+      height: 40px;
+      line-height: 1.5;
       margin: 0 8px;
-      padding: 0 10px !important;
-      border-radius: 4px;
+      padding: 0 8px !important;
+      border-radius: 6px;
       font-size: 13px;
       font-weight: 500;
       color: var(--el-text-color-primary);
@@ -363,11 +362,11 @@ function handleMenuSelect(index: string) {
     }
 
     .el-menu-item {
-      height: 34px;
-      line-height: 34px;
-      margin: 1px 8px;
-      padding: 0 10px 0 26px !important;
-      border-radius: 4px;
+      height: 40px;
+      line-height: 1.5;
+      margin: 0 8px;
+      padding: 0 8px 0 24px !important;
+      border-radius: 6px;
       font-size: 13px;
       gap: 0;
 
@@ -387,22 +386,10 @@ function handleMenuSelect(index: string) {
       }
 
       .el-menu-item {
-        margin: 1px 6px;
-        padding: 0 10px !important;
+        margin: 1px 8px;
+        padding: 0 8px !important;
       }
     }
-  }
-
-  &__item-dot {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--el-text-color-placeholder);
-    flex-shrink: 0;
-  }
-
-  :deep(.el-menu-item.is-active) .sidebar__item-dot {
-    background: var(--el-color-primary);
   }
 
   &__footer {

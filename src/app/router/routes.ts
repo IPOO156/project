@@ -126,7 +126,7 @@ const routes: RouteRecordRaw[] = [
         path: 'awards',
         children: [
           {
-            // 奖项总览已并入「我的申报 - 奖项看板」，此处重定向避免悬空路由
+            // 奖项总览已并入「我的奖项」，此处重定向避免悬空路由
             path: '',
             redirect: '/approval/award-review',
           },

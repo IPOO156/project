@@ -17,7 +17,7 @@
   --mc-gold: #d4a574;
   --mc-cream: rgba(30, 58, 95, 0.04);
   --mc-text: #1e293b;
-  --mc-text-secondary: #64748b;
+  --mc-text-secondary: #5f6b7d;
   --mc-border: #e2e8f0;
   --mc-shadow: 0 2px 8px rgba(30, 58, 95, 0.06);
   --mc-shadow-hover: 0 6px 20px rgba(30, 58, 95, 0.1);
@@ -27,7 +27,7 @@
   --mc-danger: #ef4444;
   --mc-danger-light: #fca5a5;
   --mc-danger-fade: rgba(239, 68, 68, 0.08);
-  --mc-radius: 12px;
+  --mc-radius: 6px;
 
   // 夜间模式覆盖
   html.dark &,
@@ -82,9 +82,9 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: 6px;
   border: none;
   font-size: 13px;
   font-weight: 500;
@@ -139,7 +139,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   width: $width;
 
   :deep(.el-input__wrapper) {
-    padding-left: 36px;
+    padding-left: 32px;
     border-radius: 6px;
     box-shadow: 0 0 0 1px var(--mc-border) inset;
     background: var(--mc-bg);
@@ -164,7 +164,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
     left: 10px;
     top: 50%;
     transform: translateY(-50%);
-    color: #94a3b8;
+    color: var(--el-text-color-secondary);
     pointer-events: none;
     z-index: 1;
   }
@@ -199,7 +199,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   background: var(--mc-card);
   border: 1px solid var(--mc-border);
   border-radius: var(--mc-radius);
-  padding: 16px 20px;
+  padding: 16px 24px;
 }
 
 // ─── 弹窗 ───
@@ -209,22 +209,22 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
 
   .el-dialog__header {
     margin-right: 0;
-    padding: 16px 20px;
+    padding: 16px 24px;
     border-bottom: 1px solid var(--mc-border);
 
     .el-dialog__title {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 600;
       color: #1e3a5f;
     }
   }
 
   .el-dialog__body {
-    padding: 20px;
+    padding: 24px;
   }
 
   .el-dialog__footer {
-    padding: 12px 20px;
+    padding: 12px 24px;
     border-top: 1px solid var(--mc-border);
   }
 }
@@ -253,7 +253,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   --el-table-row-hover-bg-color: var(--mc-row-hover);
   --el-table-border-color: var(--mc-border);
 
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 
   th.el-table__cell {
@@ -277,7 +277,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   .el-input__wrapper,
   .el-textarea__inner,
   .el-select .el-input__wrapper {
-    border-radius: 8px;
+    border-radius: 6px;
     box-shadow: 0 0 0 1px var(--mc-border) inset;
     background: var(--mc-card);
 
@@ -288,7 +288,7 @@ $mc-font-body: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-s
   }
 
   .el-textarea__inner {
-    padding: 10px 12px;
+    padding: 8px 12px;
   }
 }
 

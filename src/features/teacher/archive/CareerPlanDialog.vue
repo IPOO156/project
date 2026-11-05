@@ -85,7 +85,7 @@ async function handleSubmit() {
           />
         </div>
         <div v-if="plan.rejectedReason" class="cpd__reject">
-          <XCircle :size="14" />
+          <XCircle :size="16" />
           <span>退回原因：{{ plan.rejectedReason }}</span>
         </div>
         <div v-if="plan.content" class="cpd__section">
@@ -114,7 +114,7 @@ async function handleSubmit() {
         <el-divider class="cpd__divider" />
         <div class="cpd__form">
           <p class="cpd__form-title">
-            <MessageSquarePlus :size="14" />
+            <MessageSquarePlus :size="16" />
             添加反馈
           </p>
           <el-input
@@ -150,7 +150,7 @@ async function handleSubmit() {
   &__title {
     margin: 0;
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--el-text-color-primary);
   }
 
@@ -180,7 +180,7 @@ async function handleSubmit() {
   &__reject {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     padding: $spacing-sm $spacing-md;
     margin-bottom: $spacing-md;
     border-radius: $radius-base;
@@ -194,7 +194,7 @@ async function handleSubmit() {
   }
 
   &__section-title {
-    margin: 0 0 6px;
+    margin: 0 0 8px;
     font-size: 13px;
     font-weight: 600;
     color: var(--el-text-color-secondary);
@@ -203,7 +203,7 @@ async function handleSubmit() {
   &__text {
     margin: 0;
     font-size: 14px;
-    line-height: 1.8;
+    line-height: 1.6;
     color: var(--el-text-color-primary);
     white-space: pre-wrap;
   }
@@ -243,7 +243,7 @@ async function handleSubmit() {
   &__feedback-text {
     margin: 0;
     font-size: 13px;
-    line-height: 1.7;
+    line-height: 1.6;
     color: var(--el-text-color-primary);
   }
 
@@ -263,7 +263,7 @@ async function handleSubmit() {
   &__form-title {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     margin: 0 0 $spacing-sm;
     font-size: 14px;
     font-weight: 600;

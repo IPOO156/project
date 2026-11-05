@@ -168,7 +168,7 @@ onMounted(() => void loadList())
       <div class="msg-tabs">
         <el-radio-group v-model="viewMode" @change="switchView">
           <el-radio-button value="inbox">
-            <el-icon><Inbox :size="14" /></el-icon>&nbsp;收件箱
+            <el-icon><Inbox :size="16" /></el-icon>&nbsp;收件箱
           </el-radio-button>
           <el-radio-button value="archived">已归档</el-radio-button>
         </el-radio-group>
@@ -334,7 +334,7 @@ onMounted(() => void loadList())
 }
 
 .msg-tabs {
-  padding-top: 2px;
+  padding-top: 4px;
 }
 
 // 时间列固定宽度后必须禁止换行，否则窄屏下会折成两行、撑高整张表。
@@ -350,7 +350,7 @@ onMounted(() => void loadList())
 .msg-row {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
 
   &--unread .msg-row__title {
@@ -380,10 +380,10 @@ onMounted(() => void loadList())
     height: 16px;
     margin-right: 4px;
     padding: 0 4px;
-    border-radius: 3px;
+    border-radius: 6px;
     background: rgba($color-danger, 0.1);
-    color: $color-danger;
-    font-size: 11px;
+    color: $color-danger-text;
+    font-size: 12px;
     font-style: normal;
     font-weight: 500;
     vertical-align: 1px;
@@ -393,7 +393,7 @@ onMounted(() => void loadList())
 .msg-status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
   white-space: nowrap;
@@ -444,7 +444,7 @@ onMounted(() => void loadList())
   &__content {
     margin: 0;
     font-size: 14px;
-    line-height: 1.7;
+    line-height: 1.6;
     color: var(--el-text-color-regular);
     white-space: pre-wrap;
     word-break: break-word;
@@ -453,7 +453,7 @@ onMounted(() => void loadList())
   &__deadline {
     margin-top: $spacing-md;
     font-size: 13px;
-    color: $color-danger;
+    color: $color-danger-text;
   }
 }
 </style>

@@ -90,7 +90,7 @@ function importStatusType(status: number | null) {
 <style scoped lang="scss">
 .grade-import {
   &__filter {
-    padding: 0 0 14px;
+    padding: 0 0 16px;
     margin-bottom: 4px;
     background: transparent;
     border: none;

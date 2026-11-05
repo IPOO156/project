@@ -394,6 +394,16 @@ function stopDetailPolling() {
     />
 
     <el-dialog v-model="configDialogVisible" title="成绩导入配置" width="640px">
+      <!-- 404 属「数据缺失」而非「接口缺失」：只做提示，不降级、不置灰，避免把保存入口锁死 -->
+      <el-alert
+        v-if="!configExists"
+        type="info"
+        :closable="false"
+        show-icon
+        class="grade-import__config-hint"
+        title="后端暂无成绩导入配置"
+        description="接口返回 404，说明库里还没有这条配置（接口本身正常）。保存后会自动新建一条默认配置。"
+      />
       <el-form label-width="110px">
         <el-form-item label="允许扩展名">
           <el-select
@@ -473,6 +483,10 @@ function stopDetailPolling() {
     flex-wrap: wrap;
     gap: $spacing-sm;
   }
+  &__config-hint {
+    margin-bottom: 16px;
+  }
+
   &__hint {
     margin-left: 8px;
     font-size: 12px;

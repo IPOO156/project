@@ -64,85 +64,90 @@ defineProps<Props>()
 @use '@/assets/styles/variables.scss' as *;
 
 .archive-view {
-  /* ── KPI 卡（横向 5 列）── */
+  /* ── KPI：1 个主指标 + 4 个次要指标，横向分层，不再五等分 ── */
   &__kpis {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: $spacing-lg;
+    grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr));
+    gap: $spacing-md;
 
     @media (max-width: 1100px) {
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
     }
     @media (max-width: 640px) {
-      grid-template-columns: repeat(2, 1fr);
+      grid-template-columns: 1fr;
     }
   }
   &__kpi {
     position: relative;
-    padding: 18px 20px 16px;
-    border-radius: $radius-lg;
+    padding: 16px 16px 16px;
+    border-radius: 6px;
     background: var(--el-bg-color);
     border: 1px solid var(--el-border-color-lighter);
-    overflow: hidden;
-    transition:
-      transform 0.25s $ease-standard,
-      box-shadow 0.25s $ease-standard,
-      border-color 0.25s $ease-standard;
+    transition: none;
 
+    /* 层级用左侧 3px 状态色条区分，不再靠悬浮阴影 / 位移 */
     &::before {
       content: '';
       position: absolute;
       left: 0;
-      top: 14px;
-      bottom: 14px;
+      top: 0;
+      bottom: 0;
       width: 3px;
-      border-radius: 0 3px 3px 0;
-      background: var(--el-color-primary-light-7);
+      background: var(--el-border-color);
     }
 
     &:hover {
-      border-color: rgba($color-accent, 0.3);
-      box-shadow: 0 4px 14px -6px rgba($color-primary, 0.15);
+      border-color: var(--el-border-color-lighter);
+      box-shadow: none;
+      transform: none;
     }
 
-    &--primary::before {
-      background: var(--el-color-primary);
+    &--primary {
+      background: var(--el-fill-color-lighter);
+
+      &::before {
+        background: var(--el-color-primary);
+      }
+
+      .archive-view__kpi-value {
+        font-size: 32px;
+      }
     }
     &--success::before {
-      background: $color-success;
+      background: var(--mc-success, #15803d);
     }
     &--warning::before {
-      background: $color-warning;
+      background: var(--mc-warning, #b45309);
     }
     &--danger::before {
-      background: $color-danger;
+      background: var(--mc-danger, #b91c1c);
     }
   }
   &__kpi-label {
     margin: 0;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--el-text-color-secondary);
-    letter-spacing: 0.04em;
+    letter-spacing: 0;
   }
   &__kpi-value {
-    margin: 6px 0 4px;
+    margin: 4px 0 4px;
     font-size: 28px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--el-text-color-primary);
-    line-height: 1.15;
+    line-height: 1.2;
     display: inline-flex;
     align-items: baseline;
     gap: 4px;
   }
   &__kpi-unit {
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 400;
     color: var(--el-text-color-secondary);
   }
   &__kpi-foot {
     margin: 0;
-    font-size: 12px;
-    color: var(--el-text-color-placeholder);
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
     line-height: 1.5;
   }
 }

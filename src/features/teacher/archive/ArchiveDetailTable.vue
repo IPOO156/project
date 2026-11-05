@@ -28,13 +28,13 @@ const emit = defineEmits<{
   <section class="mc-card archive-view__detail-list">
     <div class="mc-card__head">
       <span class="mc-card__title">
-        <FileSearch :size="14" />
+        <FileSearch :size="16" />
         档案明细
       </span>
       <span class="archive-view__count">{{ total }} 条</span>
     </div>
     <div class="mc-card__body">
-      <el-table v-loading="loading" class="u-w-full" :data="list" stripe>
+      <el-table v-loading="loading" class="u-w-full" :data="list">
         <el-table-column label="档案" min-width="220">
           <template #default="{ row }">
             <div class="archive-view__doc">
@@ -47,7 +47,7 @@ const emit = defineEmits<{
           <template #default="{ row }">
             <div class="archive-view__student">
               <span class="archive-view__student-name">{{ row.studentName ?? '-' }}</span>
-              <span class="archive-view__student-no mc-num">{{ row.studentNo ?? '-' }}</span>
+              <span class="archive-view__student-no">{{ row.studentNo ?? '-' }}</span>
             </div>
           </template>
         </el-table-column>
@@ -71,25 +71,25 @@ const emit = defineEmits<{
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="grade" label="年级" width="80" align="center">
+        <el-table-column prop="grade" label="年级" width="80" align="right">
           <template #default="{ row }">
             <span v-if="row.grade" class="archive-view__grade">{{ row.grade }}</span>
             <span v-else class="archive-view__empty-cell">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column label="状态" width="96">
           <template #default="{ row }">
             <el-tag :type="statusTagType(row.status)" size="small" effect="light">
               {{ row.statusLabel ?? statusLabel(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="提交时间" width="145">
+        <el-table-column label="提交时间" width="156">
           <template #default="{ row }">
             {{ row.submittedAt ? formatDateTime(row.submittedAt) : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="156" align="center" fixed="right">
+        <el-table-column label="操作" width="160" align="right" fixed="right">
           <template #default="{ row }">
             <el-button
               text
@@ -144,17 +144,15 @@ const emit = defineEmits<{
   &__doc {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
   }
   &__doc-type {
-    font-size: 11px;
+    font-size: 13px;
     color: var(--el-text-color-secondary);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
   &__doc-title {
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--el-text-color-primary);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -163,15 +161,15 @@ const emit = defineEmits<{
   &__student {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
   }
   &__student-name {
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--el-text-color-primary);
   }
   &__student-no {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--el-text-color-secondary);
   }
   &__org {
@@ -181,7 +179,7 @@ const emit = defineEmits<{
   }
   &__org-node {
     display: inline-flex;
-    padding: 2px 8px;
+    padding: 4px 8px;
     font-size: 12px;
     border-radius: $radius-base;
     background: var(--el-color-primary-light-9);
