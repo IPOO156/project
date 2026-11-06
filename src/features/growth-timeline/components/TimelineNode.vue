@@ -2,7 +2,7 @@
 import type { GrowthExperience } from '../timelineConstants'
 import { computed, ref } from 'vue'
 import { useScrollReveal } from '../composables/useScrollReveal'
-import { findRingBySemester } from '../timelineConstants'
+import { useSemesterRings } from '../composables/useSemesterRings'
 import GrowthCard from './GrowthCard.vue'
 
 interface Props {
@@ -21,7 +21,8 @@ const emit = defineEmits<{
   (e: 'delete', id: string): void
 }>()
 
-const ringColor = computed(() => findRingBySemester(props.experience.semester)?.color ?? '#8b6340')
+const { findRing } = useSemesterRings()
+const ringColor = computed(() => findRing(props.experience.semester)?.color ?? '#8b6340')
 
 const nodeRef = ref<HTMLElement | null>(null)
 const { isVisible } = useScrollReveal(nodeRef, {

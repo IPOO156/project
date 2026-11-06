@@ -1,21 +1,22 @@
 <script setup lang="ts">
 import type { GrowthExperience } from '../timelineConstants'
 import { computed } from 'vue'
-import { findRingBySemester, SEMESTER_RINGS } from '../timelineConstants'
+import { useSemesterRings } from '../composables/useSemesterRings'
 
 interface Props {
   experiences: GrowthExperience[]
 }
 
 const props = defineProps<Props>()
+const { rings, findRing } = useSemesterRings()
 
 const progressPercent = computed(() => {
   if (props.experiences.length === 0) return 0
   const maxLevel = props.experiences.reduce((max, exp) => {
-    const ring = findRingBySemester(exp.semester)
+    const ring = findRing(exp.semester)
     return Math.max(max, ring?.level ?? 1)
   }, 1)
-  return Math.round((maxLevel / SEMESTER_RINGS.length) * 100)
+  return Math.round((maxLevel / rings.value.length) * 100)
 })
 </script>
 
@@ -27,7 +28,7 @@ const progressPercent = computed(() => {
         <div class="hero-rings__data-unit">Experiences</div>
       </div>
       <div class="hero-rings__data-item">
-        <div class="hero-rings__data-value">{{ SEMESTER_RINGS.length }}</div>
+        <div class="hero-rings__data-value">{{ rings.length }}</div>
         <div class="hero-rings__data-unit">Rings</div>
       </div>
       <div class="hero-rings__data-item">
@@ -101,9 +102,9 @@ const progressPercent = computed(() => {
 }
 
 .hero-rings__data-unit {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.5rem;
-  letter-spacing: 3px;
+  font-family: var(--gt-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--text-light, #9a8474);
 }
@@ -116,10 +117,9 @@ const progressPercent = computed(() => {
 }
 
 .hero-rings__progress-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
+  font-family: var(--gt-font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
   color: var(--text-light, #9a8474);
   white-space: nowrap;
 }
@@ -142,10 +142,11 @@ const progressPercent = computed(() => {
 }
 
 .hero-rings__progress-pct {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
+  font-family: var(--gt-font-mono);
+  font-size: 0.75rem;
   color: var(--gt-accent, #8b6340);
   min-width: 32px;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 </style>

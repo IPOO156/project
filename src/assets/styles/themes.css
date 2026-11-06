@@ -44,6 +44,12 @@
   --gt-bg-page-rgb: 240 244 248;
   --gt-card: #ffffff;
   --gt-card-rgb: 255 255 255;
+  --gt-card-hover: #ffffff;
+  /* 成长时间轴字体族：Latin-only 字体（Instrument Serif / Cormorant / JetBrains Mono）
+     不含中文字形，必须显式补齐中文回退，否则标题会落到系统默认宋体 */
+  --gt-font-display: 'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+  --gt-font-ui: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  --gt-font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
   --gt-bark-rgb: 30 58 95;
   --gt-shadow-rgb: 15 23 42;
   --gt-accent: #d4a574;
@@ -118,6 +124,7 @@
   --gt-bg-page-rgb: 15 23 42;
   --gt-card: #1e293b;
   --gt-card-rgb: 30 41 59;
+  --gt-card-hover: #243449;
   --gt-bark-rgb: 96 165 250;
   --gt-shadow-rgb: 0 0 0;
   --gt-accent: #fbbf24;

@@ -1,50 +1,64 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildSemesterRings,
   findRingBySemester,
   getSemesterDisplayLabel,
   getSemesterIndex,
   getSemesterLabel,
-  inferSemester,
   mapTimelineEventType,
-  SEMESTER_RINGS,
+  resolveCohortYear,
   TIMELINE_EVENT_TYPE_LABELS,
 } from '@/features/growth-timeline/timelineConstants'
 
-describe('inferSemester', () => {
-  it('9 月及以后归入当年第一学期', () => {
-    expect(inferSemester('2026-09-01')).toBe('2026-2027-1')
-    expect(inferSemester('2026-12-31')).toBe('2026-2027-1')
-  })
-
-  it('1 月仍属上一学年第一学期', () => {
-    expect(inferSemester('2027-01-15')).toBe('2026-2027-1')
-  })
-
-  it('2~8 月归入上一学年的第二学期', () => {
-    expect(inferSemester('2027-03-01')).toBe('2026-2027-2')
-    expect(inferSemester('2027-08-31')).toBe('2026-2027-2')
-  })
-})
-
 describe('学期环形映射', () => {
-  it('8 个学期编码连续且唯一', () => {
-    expect(SEMESTER_RINGS).toHaveLength(8)
-    expect(new Set(SEMESTER_RINGS.map((r) => r.code)).size).toBe(8)
-    expect(SEMESTER_RINGS.map((r) => r.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+  it('按入学年份生成 8 个连续且唯一的学期编码', () => {
+    const rings = buildSemesterRings(2023)
+    expect(rings).toHaveLength(8)
+    expect(new Set(rings.map((r) => r.code)).size).toBe(8)
+    expect(rings.map((r) => r.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(rings[0]?.code).toBe('2023-2024-1')
+    expect(rings[7]?.code).toBe('2026-2027-2')
   })
 
-  it('按学期编码查找，未命中返回 undefined', () => {
-    expect(findRingBySemester('2023-2024-1')?.label).toBe('大一上')
-    expect(findRingBySemester('2099-2100-1')).toBeUndefined()
+  it('同一学期编码按不同入学年份映射到不同年级', () => {
+    expect(findRingBySemester('2026-2027-1', 2026)?.label).toBe('大一上')
+    expect(findRingBySemester('2026-2027-1', 2023)?.label).toBe('大四上')
+    expect(findRingBySemester('2023-2024-1', 2023)?.label).toBe('大一上')
+    expect(findRingBySemester('2099-2100-1', 2023)).toBeUndefined()
   })
 
   it('未命中时索引为 0，展示标签回退为原值', () => {
-    expect(getSemesterIndex('2023-2024-1')).toBe(1)
-    expect(getSemesterIndex('2099-2100-1')).toBe(0)
-    expect(getSemesterDisplayLabel('2024-2025-1')).toBe('第3学期')
-    expect(getSemesterDisplayLabel('2099-2100-1')).toBe('2099-2100-1')
-    expect(getSemesterLabel('2024-2025-1')).toBe('大二上')
-    expect(getSemesterLabel('2099-2100-1')).toBe('2099-2100-1')
+    expect(getSemesterIndex('2023-2024-1', 2023)).toBe(1)
+    expect(getSemesterIndex('2099-2100-1', 2023)).toBe(0)
+    expect(getSemesterDisplayLabel('2024-2025-1', 2023)).toBe('第3学期')
+    expect(getSemesterDisplayLabel('2099-2100-1', 2023)).toBe('2099-2100-1')
+    expect(getSemesterLabel('2024-2025-1', 2023)).toBe('大二上')
+    expect(getSemesterLabel('2099-2100-1', 2023)).toBe('2099-2100-1')
+  })
+})
+
+describe('resolveCohortYear', () => {
+  const now = new Date('2026-11-06T00:00:00')
+
+  it('优先读取年级中的入学年份', () => {
+    expect(resolveCohortYear('2024级', '', now)).toBe(2024)
+    expect(resolveCohortYear('2023', '', now)).toBe(2023)
+  })
+
+  it('只有年级文字时按当前学年推算', () => {
+    expect(resolveCohortYear('大一', '', now)).toBe(2026)
+    expect(resolveCohortYear('大二', '', now)).toBe(2025)
+    expect(resolveCohortYear('大四', '', now)).toBe(2023)
+  })
+
+  it('年级不可用时回退到学号前四位', () => {
+    expect(resolveCohortYear('', '2022111111', now)).toBe(2022)
+    expect(resolveCohortYear('', '12345678', now)).toBe(2026)
+  })
+
+  it('全部缺失时按当年入学兜底', () => {
+    expect(resolveCohortYear('', '', now)).toBe(2026)
+    expect(resolveCohortYear('', '', new Date('2026-03-01T00:00:00'))).toBe(2025)
   })
 })
 

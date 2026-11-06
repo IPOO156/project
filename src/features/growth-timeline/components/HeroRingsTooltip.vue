@@ -82,9 +82,9 @@ defineProps<Props>()
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--gt-tooltip-muted, rgba(244, 239, 230, 0.72));
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--gt-font-ui);
   letter-spacing: 0.3px;
 }
 
