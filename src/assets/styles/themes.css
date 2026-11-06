@@ -48,6 +48,8 @@
   --gt-shadow-rgb: 15 23 42;
   --gt-accent: #d4a574;
   --gt-accent-rgb: 212 165 116;
+  /* 强调色（accent 背景）上的文字色 */
+  --gt-on-accent: #ffffff;
   --gt-accent-mid: #2d5a87;
   --gt-accent-mid-rgb: 45 90 135;
   --gt-ring-soft: #93c5fd;
@@ -120,6 +122,8 @@
   --gt-shadow-rgb: 0 0 0;
   --gt-accent: #fbbf24;
   --gt-accent-rgb: 251 191 36;
+  /* 夜间 accent 为亮琥珀，白字对比度不足，改用深色字 */
+  --gt-on-accent: #0f172a;
   --gt-accent-mid: #60a5fa;
   --gt-accent-mid-rgb: 96 165 250;
   --gt-ring-soft: #60a5fa;

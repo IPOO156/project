@@ -286,11 +286,11 @@ function handleDelete(id: string) {
 .tlv-chip--active {
   background: var(--gt-accent, #d4a574);
   border-color: var(--gt-accent, #d4a574);
-  color: #fff;
+  color: var(--gt-on-accent, #fff);
 }
 
 .tlv-chip--active:hover {
-  color: #fff;
+  color: var(--gt-on-accent, #fff);
   border-color: var(--gt-accent, #d4a574);
 }
 
