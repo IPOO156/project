@@ -2,7 +2,7 @@
 import type { GrowthExperience } from '../timelineConstants'
 import { Plus, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
-import { findRingBySemester, getSemesterLabel } from '../timelineConstants'
+import { useSemesterRings } from '../composables/useSemesterRings'
 
 interface Props {
   experiences: GrowthExperience[]
@@ -18,6 +18,8 @@ const emit = defineEmits<{
   (e: 'add'): void
   (e: 'delete', id: string): void
 }>()
+
+const { findRing, semesterLabel } = useSemesterRings()
 
 interface TypeMeta {
   label: string
@@ -58,8 +60,8 @@ const semesterOptions = computed(() => {
     seen.add(exp.semester)
     list.push({
       code: exp.semester,
-      label: getSemesterLabel(exp.semester),
-      level: findRingBySemester(exp.semester)?.level ?? 999,
+      label: semesterLabel(exp.semester),
+      level: findRing(exp.semester)?.level ?? 999,
     })
   }
   return list.sort((a, b) => a.level - b.level)
@@ -194,7 +196,9 @@ function handleDelete(id: string) {
             <span class="tlv-item-title">{{ exp.title }}</span>
             <span class="tlv-item-date">{{ exp.date }}</span>
           </span>
-          <span class="tlv-item-semester">{{ getSemesterLabel(exp.semester) }}</span>
+          <span v-if="exp.semester" class="tlv-item-semester">{{
+            semesterLabel(exp.semester)
+          }}</span>
         </button>
         <button
           type="button"
@@ -224,9 +228,10 @@ function handleDelete(id: string) {
 }
 
 .tlv-title {
-  font-family: 'Instrument Serif', serif;
-  font-size: 2rem;
-  font-weight: 500;
+  font-family: var(--gt-font-display);
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: 1px;
   color: var(--bark-dark, #2d1e12);
   margin: 0 0 0.5rem;
 }
@@ -251,10 +256,9 @@ function handleDelete(id: string) {
 }
 
 .tlv-filter-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  font-family: var(--gt-font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 1px;
   color: var(--text-light, #9a8474);
 }
 
@@ -401,9 +405,9 @@ function handleDelete(id: string) {
   flex-shrink: 0;
   min-width: 2.5rem;
   text-align: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 1px;
+  font-family: var(--gt-font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
   padding: 0.3rem 0.6rem;
   border: 1px solid;
   border-radius: 100px;
@@ -426,17 +430,18 @@ function handleDelete(id: string) {
 }
 
 .tlv-item-date {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  letter-spacing: 1px;
+  font-family: var(--gt-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
   color: var(--text-light, #9a8474);
+  font-variant-numeric: tabular-nums;
 }
 
 .tlv-item-semester {
   flex-shrink: 0;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 1px;
+  font-family: var(--gt-font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
   color: var(--text-light, #9a8474);
 }
 
@@ -456,8 +461,9 @@ function handleDelete(id: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.5rem;
+  font-family: var(--gt-font-display);
+  font-size: 1.4rem;
+  font-weight: 600;
   color: var(--gt-accent, #d4a574);
   border: 1.5px dashed rgba(var(--gt-bark-rgb, 61 43 31), 0.25);
 }

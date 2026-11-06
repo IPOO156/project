@@ -6,7 +6,6 @@ import { computed, reactive, ref, watch } from 'vue'
 import { useSubmissionStore } from '@/app/stores/stores'
 import { getAbilityDimensionOptions } from '@/shared/api/archive'
 import { activityCategoryOf } from '@/shared/api/submission'
-import { inferSemester } from '../timelineConstants'
 
 interface Props {
   visible: boolean
@@ -184,10 +183,6 @@ watch(
           placeholder="选择日期"
           value-format="YYYY-MM-DD"
         />
-      </el-form-item>
-
-      <el-form-item label="学期">
-        <el-input :value="form.date ? inferSemester(form.date) : ''" disabled />
       </el-form-item>
 
       <el-form-item label="关联来源" required>

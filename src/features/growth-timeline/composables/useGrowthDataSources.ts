@@ -2,7 +2,6 @@ import type { GrowthExperience } from '../timelineConstants'
 import { computed, ref } from 'vue'
 import { useArchiveStore, useSubmissionStore } from '@/app/stores/stores'
 import { useActivityStore } from '@/app/stores/useActivityStore'
-import { inferSemester } from '../timelineConstants'
 
 interface SyncOptions {
   /** 是否只同步已审核通过的数据 */
@@ -164,7 +163,8 @@ export function useGrowthDataSources() {
         id: `sub-${record.id}`,
         title: sanitizeSyncedText(record.title),
         date,
-        semester: record.semester || inferSemester(date),
+        // 学期只取后端记录携带的值，缺失时留空，不按日期推导
+        semester: record.semester || '',
         description: `${sanitizeSyncedText(record.typeLabel)}申报已记录。`,
         tags: [sanitizeSyncedText(record.typeLabel), '申报'],
         skills,
@@ -184,7 +184,8 @@ export function useGrowthDataSources() {
         id: `award-${award.id}`,
         title: sanitizeSyncedText(award.name ?? ''),
         date,
-        semester: inferSemester(date),
+        // 奖项记录未返回学期，留空；学期归属以后端为准
+        semester: '',
         description:
           sanitizeSyncedText(award.description ?? '') ||
           `获得${cleanedLevel}级${cleanedType}奖项。`,
@@ -225,7 +226,8 @@ export function useGrowthDataSources() {
           id: `activity-${activity.id}`,
           title: cleanedText,
           date,
-          semester: inferSemester(date),
+          // 动态记录未返回学期，留空；学期归属以后端为准
+          semester: '',
           description: `来自最近动态：${cleanedText}。`,
           tags: ['动态'],
           skills: inferSkillsByType('other'),

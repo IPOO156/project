@@ -33,8 +33,21 @@ function getNodeId(experienceId: string): string {
   return `growth-node-${experienceId}`
 }
 
-function isDotActive(index: number): boolean {
-  return activeIndex.value >= 0 && index <= activeIndex.value
+/**
+ * 采样显示时，点的 sourceIndex 之间有空档。
+ * 用「最后一个 sourceIndex ≤ 当前经历」的显示点作为当前点，
+ * 避免按 sourceIndex 比较导致滚到当前经历时没有任何点被点亮。
+ */
+const activeDisplayIndex = computed(() => {
+  let result = -1
+  displayDots.value.forEach((dot, displayIndex) => {
+    if (dot.sourceIndex <= activeIndex.value) result = displayIndex
+  })
+  return result
+})
+
+function isDotActive(displayIndex: number): boolean {
+  return activeDisplayIndex.value >= 0 && displayIndex <= activeDisplayIndex.value
 }
 
 function scrollToNode(index: number) {
@@ -113,7 +126,7 @@ onBeforeUnmount(() => {
     <template v-for="(item, displayIndex) in displayDots" :key="item.exp.id">
       <button
         class="progress-dot"
-        :class="{ active: isDotActive(item.sourceIndex) }"
+        :class="{ active: isDotActive(displayIndex) }"
         :aria-label="item.exp.title"
         :title="item.exp.title"
         @click="scrollToNode(item.sourceIndex)"
@@ -146,6 +159,19 @@ onBeforeUnmount(() => {
   cursor: pointer;
   position: relative;
   padding: 0;
+}
+
+/* 视觉仍是 8px 小点，但把点击热区扩大到 28px（不参与布局，不撑高侧边栏） */
+.progress-dot::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+}
+
+.progress-dot:focus-visible {
+  outline: 2px solid var(--gt-accent, #8b6340);
+  outline-offset: 2px;
 }
 
 .progress-dot.active {
