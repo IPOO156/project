@@ -43,6 +43,16 @@ export const NOTIFICATION_CATEGORY = {
   private_message: { label: '私信', color: 'primary' },
 } as const
 
+/**
+ * 通知分类展示名。
+ * 后端 categoryLabel 由字典 message_category 解析，字典缺失时会退化为分类编码
+ * （如 "system_notice"）；此时回退本地字典，避免页面直接展示英文编码。
+ */
+export function notificationCategoryLabel(category: string, backendLabel?: string | null): string {
+  if (backendLabel && backendLabel !== category) return backendLabel
+  return NOTIFICATION_CATEGORY[category as keyof typeof NOTIFICATION_CATEGORY]?.label ?? category
+}
+
 // 通知状态
 export const NOTIFICATION_STATUS = {
   unread: { label: '未读', color: 'primary' },
