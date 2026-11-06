@@ -51,6 +51,12 @@ const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {}
  */
 const contactEmail = computed(() => archiveStore.profileData?.contactInfo?.email ?? '')
 const contactPhone = computed(() => archiveStore.profileData?.contactInfo?.phone ?? '')
+const contactAddress = computed(() => archiveStore.profileData?.contactInfo?.address ?? '')
+const emergencyName = computed(() => archiveStore.profileData?.contactInfo?.emergencyName ?? '')
+const emergencyRelation = computed(
+  () => archiveStore.profileData?.contactInfo?.emergencyRelation ?? '',
+)
+const emergencyPhone = computed(() => archiveStore.profileData?.contactInfo?.emergencyPhone ?? '')
 
 /** 政治面貌选项来自后端字典（GET /common/dict?dictType=political_status），不前端硬编码 */
 async function loadPoliticalOptions() {
@@ -194,6 +200,10 @@ async function handleAvatarUpload(base64: string) {
       }}</el-descriptions-item>
       <el-descriptions-item label="联系邮箱">{{ contactEmail || '-' }}</el-descriptions-item>
       <el-descriptions-item label="手机号">{{ contactPhone || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="通讯地址">{{ contactAddress || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="紧急联系人">{{ emergencyName || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="关系">{{ emergencyRelation || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="紧急联系电话">{{ emergencyPhone || '-' }}</el-descriptions-item>
     </el-descriptions>
     <el-form v-else :model="formData" label-width="100px" class="profile-form">
       <p class="contact-hint">
