@@ -347,7 +347,7 @@ function handleScrollToGrowth() {
 
 .view-switcher__btn.is-active {
   background: var(--gt-accent, #8b6340);
-  color: #fff;
+  color: var(--gt-on-accent, #fff);
 }
 
 [data-theme='dark'] .view-switcher {
