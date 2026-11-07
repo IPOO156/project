@@ -2,7 +2,7 @@ import type { GrowthExperience, GrowthExperienceInput } from '../timelineConstan
 import { computed, ref } from 'vue'
 import { addTimelineEvent, deleteTimelineEvent } from '@/shared/api/archive'
 import { getGrowthTimeline } from '@/shared/api/student'
-import { inferSemester, mapTimelineEventType } from '../timelineConstants'
+import { mapTimelineEventType } from '../timelineConstants'
 import { useGrowthDataSources } from './useGrowthDataSources'
 
 function sortExperiencesByDate(list: GrowthExperience[]): GrowthExperience[] {
@@ -17,8 +17,12 @@ function mapBackendEvent(e: Record<string, any>): GrowthExperience {
     title: e.eventName ?? '',
     description: e.content ?? '',
     date: e.eventAt ?? '',
-    semester: e.semesterName || (e.eventAt ? inferSemester(e.eventAt) : ''),
-    tags: [mapTimelineEventType(e.eventType), ...(Array.isArray(e.tags) ? e.tags : [])],
+    // 学期只认后端返回值（后端按 eventAt 归集 semester_id 后回传 semesterName），前端不推导
+    semester: e.semesterName ?? '',
+    // 事件类型标签与后端 tags 可能重复（如「实践」既是类型又被后端回传），去重避免卡片出现重复标签
+    tags: [
+      ...new Set([mapTimelineEventType(e.eventType), ...(Array.isArray(e.tags) ? e.tags : [])]),
+    ],
     skills: abilities.map((a: any) => ({
       name: a.dimensionName ?? a.dimensionCode ?? '',
       growth: a.score ?? 0,
@@ -83,12 +87,12 @@ export function useGrowthTimeline() {
    * @param done 回调通知表单是否保存成功：失败时表单保持打开、用户输入不丢失。
    */
   async function addExperience(payload: GrowthExperienceInput, done?: (ok: boolean) => void) {
-    const semester = inferSemester(payload.date)
     const localId = `local-${Date.now()}`
     const newExperience: GrowthExperience = {
       ...payload,
       id: localId,
-      semester,
+      // 后端按 eventAt 归集学期并在响应中回传 semesterName，前端不本地推导
+      semester: '',
       // 有关联来源时同步记录来源 ID，便于详情展示来源关联
       ...(payload.sourceId != null ? { recordId: String(payload.sourceId) } : {}),
     }
@@ -118,7 +122,9 @@ export function useGrowthTimeline() {
       })
       if (created?.id != null) {
         localExperiences.value = localExperiences.value.map((e) =>
-          e.id === localId ? { ...e, id: `backend-${created.id}` } : e,
+          e.id === localId
+            ? { ...e, id: `backend-${created.id}`, semester: created.semesterName ?? e.semester }
+            : e,
         )
         rebuildExperiences()
       }

@@ -3,7 +3,7 @@ import type { GrowthExperience } from '../timelineConstants'
 import { ElMessageBox } from 'element-plus'
 import { FlaskConical, GraduationCap, HeartHandshake, Trash2, Trophy } from 'lucide-vue-next'
 import { GROWTH_TAG_COLORS } from '@/shared/constants/dict'
-import { getSemesterDisplayLabel } from '../timelineConstants'
+import { useSemesterRings } from '../composables/useSemesterRings'
 
 interface Props {
   experience: GrowthExperience
@@ -19,6 +19,8 @@ const emit = defineEmits<{
   (e: 'click', id: string): void
   (e: 'delete', id: string): void
 }>()
+
+const { semesterLabel } = useSemesterRings()
 
 async function handleDelete(event: MouseEvent) {
   event.stopPropagation()
@@ -59,12 +61,11 @@ function getTypeColor(tag: string): string {
   >
     <div class="card-right-edge">
       <div class="card-actions">
-        <span class="card-status-ring" aria-hidden="true" />
         <button class="delete-btn" aria-label="删除" title="删除" @click.stop="handleDelete">
           <Trash2 :size="14" />
         </button>
       </div>
-      <span class="card-index">{{ String(index + 1).padStart(2, '0') }}</span>
+      <span class="card-index" aria-hidden="true">{{ String(index + 1).padStart(2, '0') }}</span>
     </div>
     <div class="card-top">
       <div
@@ -74,11 +75,13 @@ function getTypeColor(tag: string): string {
       >
         <component :is="getTypeIcon(experience.tags[0])" :size="12" />
       </div>
-      <span class="card-season-badge">{{ getSemesterDisplayLabel(experience.semester) }}</span>
+      <span v-if="experience.semester" class="card-season-badge">{{
+        semesterLabel(experience.semester)
+      }}</span>
       <span v-if="experience.statusLabel" class="card-status-label">{{
         experience.statusLabel
       }}</span>
-      <span class="card-year-inline">{{ experience.date }}</span>
+      <span v-if="experience.date" class="card-year-inline">{{ experience.date }}</span>
     </div>
     <h3 class="card-title">{{ experience.title }}</h3>
     <p class="card-body">{{ experience.description }}</p>
@@ -115,7 +118,9 @@ function getTypeColor(tag: string): string {
 .growth-card {
   padding: 2.25rem 2.5rem 3.25rem;
   border-radius: $radius-2xl;
-  background: #fffcf7;
+  background: var(--gt-card);
+  /* 在卡片底色上叠一点暖调，保留手账质感而不偏离品牌中性色 */
+  background: color-mix(in srgb, var(--gt-card) 97%, var(--gt-accent) 3%);
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
   box-shadow:
     0 2px 8px rgba(var(--gt-shadow-rgb, 26 18 10), 0.05),
@@ -132,7 +137,7 @@ function getTypeColor(tag: string): string {
 
 .growth-card:hover {
   border-color: rgba(var(--gt-bark-rgb, 61 43 31), 0.22);
-  background: #fff;
+  background: var(--gt-card-hover);
   box-shadow:
     0 6px 16px rgba(var(--gt-shadow-rgb, 26 18 10), 0.08),
     0 22px 56px rgba(var(--gt-shadow-rgb, 26 18 10), 0.12),
@@ -174,33 +179,15 @@ function getTypeColor(tag: string): string {
 
 .card-index {
   width: 100%;
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 3.5rem;
-  font-weight: 700;
-  color: var(--gt-accent, #8b6340);
+  font-family: var(--gt-font-mono);
+  font-size: 2.75rem;
+  font-weight: 500;
+  color: var(--ring-color, var(--bark-light, #8b6340));
+  opacity: 0.22;
   line-height: 1;
   text-align: right;
   pointer-events: none;
-}
-
-.card-status-ring {
-  position: relative;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  opacity: 0.5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.card-status-ring::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  border: 1.5px solid var(--ring-color, var(--bark-light, #8b6340));
-  box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
 }
 
 .delete-btn {
@@ -251,44 +238,48 @@ function getTypeColor(tag: string): string {
 }
 
 .card-season-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  font-family: var(--gt-font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
   color: var(--ring-color, var(--bark-light, #8b6340));
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
   padding: 0.25rem 0.7rem;
   border-radius: 100px;
   background: rgba(var(--gt-bark-rgb, 61 43 31), 0.02);
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .card-status-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
-  letter-spacing: 2px;
+  font-family: var(--gt-font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
   color: #3a7a4f;
   border: 1px solid rgba(58, 122, 79, 0.35);
   padding: 0.25rem 0.7rem;
   border-radius: 100px;
   background: rgba(58, 122, 79, 0.08);
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .card-year-inline {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
-  letter-spacing: 2px;
+  font-family: var(--gt-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
   color: var(--text-light, #9a8474);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .card-title {
-  font-family: 'Instrument Serif', serif;
-  font-size: 1.85rem;
-  font-weight: 500;
+  font-family: var(--gt-font-display);
+  font-size: 1.7rem;
+  font-weight: 600;
   color: var(--bark-dark, #2d1e12);
   margin-bottom: 0.7rem;
-  line-height: 1.35;
+  line-height: 1.45;
+  letter-spacing: 0.5px;
 }
 
 .card-body {
@@ -314,17 +305,17 @@ function getTypeColor(tag: string): string {
 }
 
 .card-skill-name {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  font-family: var(--gt-font-ui);
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
   color: var(--text-mid, #6b5443);
 }
 
 .card-skill-pct {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
+  font-family: var(--gt-font-mono);
+  font-size: 0.75rem;
   color: var(--text-light, #9a8474);
+  font-variant-numeric: tabular-nums;
 }
 
 .card-skill-track {
@@ -377,9 +368,9 @@ function getTypeColor(tag: string): string {
 }
 
 .card-tag {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 1.5px;
+  font-family: var(--gt-font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
   padding: 0.3rem 0.65rem;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.08);
   border-radius: 100px;
@@ -387,7 +378,8 @@ function getTypeColor(tag: string): string {
   opacity: 0;
   transform: translateY(10px);
   transition:
-    all 0.3s ease,
+    border-color 0.3s $ease-standard,
+    color 0.3s $ease-standard,
     opacity 0.5s $ease-emphasized,
     transform 0.5s $ease-emphasized;
 }
@@ -464,19 +456,14 @@ function getTypeColor(tag: string): string {
     opacity: 1;
     transform: scale(1);
   }
-
-  .card-status-ring::before {
-    width: 8px;
-    height: 8px;
-  }
 }
 
 /* 兜底规则已移至 src/assets/styles/motion-override.scss 统一管理
    （项目内"强制启用动画"开关可一键覆盖） */
 
 [data-theme='dark'] .growth-card {
-  background: #35302b;
-  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.4);
+  background: var(--gt-card);
+  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.28);
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.28),
     0 16px 40px rgba(0, 0, 0, 0.2),
@@ -484,8 +471,8 @@ function getTypeColor(tag: string): string {
 }
 
 [data-theme='dark'] .growth-card:hover {
-  background: #3d3832;
-  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.48);
+  background: var(--gt-card-hover);
+  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.36);
 }
 
 [data-theme='dark'] .card-title {
@@ -523,14 +510,6 @@ function getTypeColor(tag: string): string {
 [data-theme='dark'] .delete-btn:hover {
   background: #b94e4e;
   color: #fff;
-}
-
-[data-theme='dark'] .card-status-ring {
-  opacity: 0.6;
-}
-
-[data-theme='dark'] .card-status-ring::before {
-  border-color: var(--ring-color, var(--bark-light, #d4a574));
 }
 
 [data-theme='dark'] .card-type-indicator {

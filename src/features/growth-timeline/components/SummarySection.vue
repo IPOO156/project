@@ -77,7 +77,7 @@ watch(avgGrowth, (newVal) => {
         <p>每一次经历，都是年轮上的一道光。</p>
       </div>
 
-      <div class="summary-grid">
+      <div class="summary-grid" :class="{ 'is-revealed': isVisible }">
         <div class="summary-card" :class="{ 'is-revealed': isVisible }">
           <div class="summary-value">{{ displayExperiences }}</div>
           <div class="summary-label">经历</div>
@@ -117,72 +117,83 @@ watch(avgGrowth, (newVal) => {
 }
 
 .summary-header h2 {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 8px;
-  text-transform: uppercase;
+  font-family: var(--gt-font-ui);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
   color: var(--gt-accent, #8b6340);
   margin-bottom: 0.8rem;
 }
 
 .summary-header p {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.2rem;
+  font-family: var(--gt-font-display);
+  font-size: 1.15rem;
   color: var(--text-light, #9a8474);
   margin-bottom: 3rem;
 }
 
+/* 四组数据收敛为一块统一浅底统计面板，颜色只由品牌 token 决定 */
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.14);
+  border-radius: $radius-2xl;
+  background: var(--gt-card);
+  box-shadow:
+    0 2px 8px rgba(var(--gt-shadow-rgb, 26 18 10), 0.05),
+    0 12px 32px rgba(var(--gt-shadow-rgb, 26 18 10), 0.06);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 0.7s $ease-emphasized,
+    transform 0.7s $ease-emphasized;
+}
+
+.summary-grid.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .summary-card {
-  padding: 2.25rem 1.5rem;
-  border-radius: 16px;
-  background: var(--gt-card-bg);
-  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.22);
-  box-shadow:
-    0 2px 8px rgba(var(--gt-shadow-rgb, 26 18 10), 0.06),
-    0 12px 32px rgba(var(--gt-shadow-rgb, 26 18 10), 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  position: relative;
+  padding: 2rem 1.25rem;
+  border-left: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
+  background: transparent;
   opacity: 0;
-  transform: translateY(40px) scale(0.96);
-  filter: blur(4px);
+  transform: translateY(16px);
   transition:
-    opacity 0.85s $ease-emphasized,
-    transform 0.85s $ease-emphasized,
-    filter 0.85s $ease-emphasized,
-    box-shadow 0.4s ease;
+    opacity 0.6s $ease-emphasized,
+    transform 0.6s $ease-emphasized,
+    background-color 0.3s $ease-standard;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 160px;
+  min-height: 150px;
 }
 
-/* 四张卡片分别配色 */
-.summary-card:nth-child(1) {
-  --gt-card-bg: #6b8fa3;
+.summary-card:first-child {
+  border-left: none;
 }
 
-.summary-card:nth-child(2) {
-  --gt-card-bg: #7a9e6b;
-}
-
-.summary-card:nth-child(3) {
-  --gt-card-bg: #b8945c;
-}
-
-.summary-card:nth-child(4) {
-  --gt-card-bg: #8b6b9e;
+/* 顶部金色短线：整块面板唯一的强调色，替代原来的四块高饱和大色块 */
+.summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 24px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--gt-accent, #d4a574);
+  opacity: 0.75;
+  transform: translateX(-50%);
 }
 
 .summary-card.is-revealed {
   opacity: 1;
-  transform: translateY(0) scale(1);
-  filter: blur(0);
+  transform: translateY(0);
 }
 
 .summary-card:nth-child(1).is-revealed {
@@ -199,58 +210,74 @@ watch(avgGrowth, (newVal) => {
 }
 
 .summary-card:hover {
-  transform: translateY(-8px);
-  box-shadow:
-    0 8px 24px rgba(var(--gt-shadow-rgb, 26 18 10), 0.08),
-    0 24px 56px rgba(var(--gt-shadow-rgb, 26 18 10), 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: rgba(var(--gt-bark-rgb, 61 43 31), 0.03);
 }
 
 .summary-value {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 3rem;
-  font-weight: 600;
-  color: #fff;
+  font-family: var(--gt-font-mono);
+  font-size: 2.75rem;
+  font-weight: 500;
+  color: var(--mc-primary, #1e3a5f);
   line-height: 1;
-  margin-bottom: 0.75rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  margin-bottom: 0.9rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .summary-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.92);
+  font-family: var(--gt-font-ui);
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  color: var(--text-light, #64748b);
   margin-top: auto;
 }
 
 .summary-closing {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.1rem;
+  font-family: var(--gt-font-display);
+  font-size: 1.05rem;
   color: var(--text-light, #9a8474);
   margin: 3rem auto 0;
   max-width: 520px;
-  line-height: 1.8;
+  line-height: 1.9;
   letter-spacing: 1px;
   opacity: 0;
   transform: translateY(24px);
-  filter: blur(3px);
   transition:
-    opacity 0.85s $ease-emphasized 0.55s,
-    transform 0.85s $ease-emphasized 0.55s,
-    filter 0.85s $ease-emphasized 0.55s;
+    opacity 0.7s $ease-emphasized 0.4s,
+    transform 0.7s $ease-emphasized 0.4s;
 }
 
 .summary-closing.is-revealed {
   opacity: 1;
   transform: translateY(0);
-  filter: blur(0);
 }
 
 @media (max-width: 768px) {
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* 2×2 布局补上横向分隔线，避免只有奇数项有左边线 */
+  .summary-card:nth-child(3) {
+    border-left: none;
+    border-top: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
+  }
+
+  .summary-card:nth-child(4) {
+    border-top: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
+  }
+
+  [data-theme='dark'] .summary-card:nth-child(3),
+  [data-theme='dark'] .summary-card:nth-child(4) {
+    border-top-color: rgba(var(--gt-bark-rgb, 96 165 250), 0.16);
+  }
+
+  .summary-card {
+    min-height: 130px;
+    padding: 1.6rem 1rem;
+  }
+
+  .summary-value {
+    font-size: 2.25rem;
   }
 
   .summary-closing {
@@ -259,45 +286,32 @@ watch(avgGrowth, (newVal) => {
   }
 }
 
-/* 夜间模式适配：增强卡片与背景的区分度（明度整体下调，保持色相区分） */
-html.dark .summary-card:nth-child(1) {
-  background: #2b3a43;
-}
-
-html.dark .summary-card:nth-child(2) {
-  background: #32422b;
-}
-
-html.dark .summary-card:nth-child(3) {
-  background: #4a3d25;
-}
-
-html.dark .summary-card:nth-child(4) {
-  background: #382c44;
-}
-
-html.dark .summary-card {
-  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.28);
+/* 夜间模式：面板沿用全站蓝灰卡面，不再单独使用四套晚霞色 */
+[data-theme='dark'] .summary-grid {
+  border-color: rgba(var(--gt-bark-rgb, 96 165 250), 0.2);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.18),
-    0 12px 32px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 12px 32px rgba(0, 0, 0, 0.24);
 }
 
-html.dark .summary-card:hover {
-  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.36);
+[data-theme='dark'] .summary-card {
+  border-left-color: rgba(var(--gt-bark-rgb, 96 165 250), 0.16);
 }
 
-html.dark .summary-value {
-  color: #fff;
+[data-theme='dark'] .summary-card:hover {
+  background: rgba(var(--gt-bark-rgb, 96 165 250), 0.06);
 }
 
-html.dark .summary-label {
-  color: rgba(255, 255, 255, 0.9);
+[data-theme='dark'] .summary-value {
+  color: var(--el-text-color-primary, #f1f5f9);
 }
 
-html.dark .summary-header p,
-html.dark .summary-closing {
+[data-theme='dark'] .summary-label {
+  color: var(--text-light, #94a3b8);
+}
+
+[data-theme='dark'] .summary-header p,
+[data-theme='dark'] .summary-closing {
   color: var(--text-light, #a89a8a);
 }
 </style>

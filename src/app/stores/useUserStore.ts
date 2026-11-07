@@ -123,15 +123,12 @@ export const useUserStore = defineStore('user', () => {
   /**
    * 更新联系信息（对接 PUT /profile/contact）。
    *
-   * 注意：邮箱/手机号属于「档案联系信息」，与登录账号的注册邮箱不是同一份数据 ——
-   * 账号邮箱用于登录与找回密码，由后端在账号上维护，前端不提供修改入口。
-   * 因此这里只提交联系信息，**不回写 userInfo.email/phone**，避免把联系邮箱污染成账号邮箱
-   * （联系信息展示改由档案概览读取 archive store 的 /profile/info.contactInfo）。
+   * 后端 PUT /profile/contact 为整体覆盖且六个字段都必填，因此必须接收完整联系信息，
+   * 而不是只传邮箱/手机号。
+   * 后端只有一份邮箱/手机号（user_contact_info），登录响应的 user.email/phone 也取自该表，
+   * 不存在独立的「账号邮箱」：邮箱用于找回密码与系统邮件，登录本身只认学号/工号。
+   * 因此保存成功后同步回写 userInfo，避免简历页等仍展示旧联系方式。
    * 接口失败向上抛出，由调用方决定是否提示「已保存」。
-   */
-  /**
-   * 更新联系信息。后端 PUT /profile/contact 为整体覆盖且六个字段都必填，
-   * 因此这里必须接收完整联系信息，而不是只传邮箱/手机号。
    */
   async function updateUserInfo(contact: {
     email: string
@@ -142,6 +139,10 @@ export const useUserStore = defineStore('user', () => {
     emergencyPhone: string
   }) {
     await updateProfileContact(contact)
+    // 后端 userInfo.email/phone 与联系信息同源，保存后同步缓存（含 localStorage）
+    if (userInfo.value) {
+      setUserInfo({ ...userInfo.value, email: contact.email, phone: contact.phone })
+    }
   }
 
   async function changePassword(payload: {

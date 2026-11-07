@@ -3,7 +3,7 @@ import type { Notification, NotificationCategory } from '@/shared/types/types'
 import { Archive, Bell, Bot, ChevronRight, Mail, MailOpen, MessageSquare } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { useThemeStore } from '@/app/stores/stores'
-import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
+import { notificationCategoryLabel } from '@/shared/constants/dict'
 import { formatDateTime } from '@/shared/utils/time'
 
 interface Props {
@@ -23,7 +23,7 @@ const router = useRouter()
 const themeStore = useThemeStore()
 
 function categoryLabel(category: NotificationCategory) {
-  return props.item.categoryLabel || NOTIFICATION_CATEGORY[category]?.label || category
+  return notificationCategoryLabel(category, props.item.categoryLabel)
 }
 
 function categoryStyle(category: NotificationCategory) {

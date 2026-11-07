@@ -17,25 +17,7 @@ export const APPLICATION_TYPE_MAP: Record<string, string> = {
   paper: '科研之星-论文',
 }
 
-const TERM_LABELS = ['一', '二'] as const
-
-function generateSemesterOptions(startYear: number, endYear: number) {
-  const options: { label: string; value: string }[] = []
-  for (let year = startYear; year < endYear; year++) {
-    for (let term = 0; term < TERM_LABELS.length; term++) {
-      const value = `${year}-${year + 1}-${term + 1}`
-      options.push({
-        label: `${year}-${year + 1}第${TERM_LABELS[term]}学期`,
-        value,
-      })
-    }
-  }
-  return options
-}
-
-// 学期选项：学年-学期格式，如 2024-2025第一学期
-// 作为 useSemesters 的可用性兜底保留，页面请用 useSemesters()
-export const SEMESTER_OPTIONS = generateSemesterOptions(2022, 2028)
+// 学期选项统一由 useSemesters 从后端 GET /common/semesters 获取，前端不再内置学期列表。
 
 // 本人角色
 export const ROLE_OPTIONS = [
@@ -60,6 +42,16 @@ export const NOTIFICATION_CATEGORY = {
   dynamic_remind: { label: '动态提醒', color: 'success' },
   private_message: { label: '私信', color: 'primary' },
 } as const
+
+/**
+ * 通知分类展示名。
+ * 后端 categoryLabel 由字典 message_category 解析，字典缺失时会退化为分类编码
+ * （如 "system_notice"）；此时回退本地字典，避免页面直接展示英文编码。
+ */
+export function notificationCategoryLabel(category: string, backendLabel?: string | null): string {
+  if (backendLabel && backendLabel !== category) return backendLabel
+  return NOTIFICATION_CATEGORY[category as keyof typeof NOTIFICATION_CATEGORY]?.label ?? category
+}
 
 // 通知状态
 export const NOTIFICATION_STATUS = {
