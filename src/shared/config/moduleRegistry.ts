@@ -8,6 +8,7 @@ import {
   GraduationCap,
   Home,
   IdCard,
+  Images,
   Inbox,
   Lightbulb,
   MessageSquare,
@@ -73,6 +74,15 @@ export const registeredModules: AppModule[] = [
     routePrefix: '/growth-timeline',
     description: '成长经历时间轴可视化',
     menuItems: [{ label: '成长时间轴', icon: Clock, path: '/growth-timeline' }],
+  },
+  {
+    id: 'achievements',
+    label: '成果墙',
+    icon: Images,
+    order: 25,
+    routePrefix: '/achievements',
+    description: '成果归档与材料自查',
+    menuItems: [{ label: '成果墙', icon: Images, path: '/achievements' }],
   },
   {
     id: 'profile',

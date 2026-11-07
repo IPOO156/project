@@ -35,6 +35,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/features/growth-timeline/GrowthTimeline.vue'),
         meta: { title: '成长时间轴', fullBleed: true },
       },
+      // ─── 成果墙 ───
+      {
+        path: 'achievements',
+        name: 'AchievementWall',
+        component: () => import('@/features/achievements/AchievementWall.vue'),
+        meta: { title: '成果墙' },
+      },
       // ─── AI 助手 ───
       {
         path: 'ai-chat',
