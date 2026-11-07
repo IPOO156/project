@@ -182,9 +182,10 @@ watch(isLoading, async (loading) => {
           <!-- 主内容：路由出口 / 自定义内容 -->
           <section class="layout__page-body">
             <router-view v-slot="{ Component, route: routeSlot }">
+              <!-- key 用 path（含 params、不含 query）：同页仅改 query 时不再整页重挂/重播路由过渡 -->
               <Transition name="layout-route" mode="out-in">
                 <keep-alive :max="20">
-                  <component :is="Component" :key="routeSlot.fullPath" />
+                  <component :is="Component" :key="routeSlot.path" />
                 </keep-alive>
               </Transition>
             </router-view>

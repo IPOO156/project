@@ -68,16 +68,15 @@ const kpiSnapshot = computed<KpiSnapshot>(() => {
   const pick = (apiValue: number | undefined, fallback: () => number | null): number | null =>
     typeof apiValue === 'number' ? apiValue : fallback()
 
+  const countFallback = (status: string) => () =>
+    records.length > 0 ? countByStatus(status) : null
+
   const profileGpa = archiveStore.profileData?.overallGpa
   return {
     total: pick(home?.applicationTotal, () => (records.length > 0 ? records.length : null)),
-    approved: pick(home?.approvedCount, () =>
-      records.length > 0 ? countByStatus('approved') : null,
-    ),
-    pending: pick(home?.pendingCount, () => (records.length > 0 ? countByStatus('pending') : null)),
-    rejected: pick(home?.rejectedCount, () =>
-      records.length > 0 ? countByStatus('rejected') : null,
-    ),
+    approved: pick(home?.approvedCount, countFallback('approved')),
+    pending: pick(home?.pendingCount, countFallback('pending')),
+    rejected: pick(home?.rejectedCount, countFallback('rejected')),
     gpa:
       typeof home?.currentGpa === 'number'
         ? home.currentGpa

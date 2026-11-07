@@ -424,7 +424,6 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     width: 14px;
     height: 14px;
     color: currentColor;
-    opacity: 0.8;
   }
 
   &__item:hover .nav-tabs__surface {

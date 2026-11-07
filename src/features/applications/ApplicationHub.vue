@@ -176,7 +176,7 @@ function switchModule(key: string) {
     </div>
 
     <section class="application-hub__panel">
-      <Transition name="module-fade" mode="out-in">
+      <Transition name="module-fade">
         <div :key="activeKey" class="application-hub__panel-item is-active" aria-hidden="false">
           <component :is="activeModule.component" :key="activeKey" />
         </div>
@@ -310,20 +310,19 @@ function switchModule(key: string) {
   }
 }
 
+/* 原地交叉淡入：离场侧脱离文档流，进出可重叠，不再有 out-in 的纯空白帧；不做位移 */
 .module-fade-enter-active,
 .module-fade-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
+  transition: opacity 0.16s ease;
 }
 
-.module-fade-enter-from {
-  opacity: 0;
-  transform: translateY(6px);
+.module-fade-leave-active {
+  position: absolute;
+  inset: 0;
 }
 
+.module-fade-enter-from,
 .module-fade-leave-to {
   opacity: 0;
-  transform: translateY(-6px);
 }
 </style>
