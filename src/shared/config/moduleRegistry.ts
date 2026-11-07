@@ -115,7 +115,7 @@ export const registeredModules: AppModule[] = [
         icon: Inbox,
         children: [
           { label: '通知', icon: Bell, path: '/messages' },
-          { label: '动态记录', icon: Clock, path: '/messages/activities' },
+          { label: '动态中心', icon: Clock, path: '/messages/activities' },
         ],
       },
     ],

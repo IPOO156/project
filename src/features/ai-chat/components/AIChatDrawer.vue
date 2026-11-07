@@ -139,7 +139,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
               <ChatAvatar role="ai" />
               <div class="ai-drawer__bubble ai-drawer__bubble--loading">
                 <Sparkles :size="14" class="ai-drawer__thinking-icon" />
-                <span>AI Thinking...</span>
+                <span>AI 思考中…</span>
               </div>
             </div>
           </div>

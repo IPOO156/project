@@ -171,7 +171,7 @@ const routes: RouteRecordRaw[] = [
             path: 'activities',
             name: 'MessageActivities',
             component: () => import('@/features/messages/activities/ActivityList.vue'),
-            meta: { title: '全部动态' },
+            meta: { title: '动态中心' },
           },
         ],
       },
