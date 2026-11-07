@@ -19,25 +19,7 @@ export const APPLICATION_TYPE_MAP: Record<string, string> = {
   paper: '科研之星-论文',
 }
 
-const TERM_LABELS = ['一', '二'] as const
-
-function generateSemesterOptions(startYear: number, endYear: number) {
-  const options: { label: string; value: string }[] = []
-  for (let year = startYear; year < endYear; year++) {
-    for (let term = 0; term < TERM_LABELS.length; term++) {
-      const value = `${year}-${year + 1}-${term + 1}`
-      options.push({
-        label: `${year}-${year + 1}第${TERM_LABELS[term]}学期`,
-        value,
-      })
-    }
-  }
-  return options
-}
-
-// 学期选项：学年-学期格式，如 2024-2025第一学期
-// 作为 useSemesters 的可用性兜底保留，页面请用 useSemesters()
-export const SEMESTER_OPTIONS = generateSemesterOptions(2022, 2028)
+// 学期选项统一由 useSemesters 从后端 GET /common/semesters 获取，前端不再内置学期列表。
 
 // 本人角色
 export const ROLE_OPTIONS = [

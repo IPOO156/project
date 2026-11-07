@@ -242,29 +242,31 @@ onMounted(() => void loadList())
           <el-table-column label="时间" width="150" class-name="msg-time">
             <template #default="{ row }">{{ fmtTime((row as MessageItem).createdAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="130" align="center" fixed="right">
+          <el-table-column label="操作" width="220" align="center" fixed="right">
             <template #default="{ row }">
-              <!-- 查看详情是高频操作，保持行内可见；归档与标为已读频次低且可能误触，收进「更多」。 -->
               <RowActions>
                 <el-button text type="primary" size="small" @click="openDetail(row as MessageItem)">
                   详情
                 </el-button>
-                <template #more>
-                  <el-dropdown-item
-                    v-if="(row as MessageItem).isRead !== 1"
-                    @click="handleRead(row as MessageItem)"
-                  >
-                    标为已读
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    v-if="viewMode === 'inbox'"
-                    :divided="(row as MessageItem).isRead !== 1"
-                    :disabled="archivingId !== null"
-                    @click="handleArchive(row as MessageItem)"
-                  >
-                    {{ archivingId === (row as MessageItem).id ? '归档中…' : '归档' }}
-                  </el-dropdown-item>
-                </template>
+                <el-button
+                  v-if="(row as MessageItem).isRead !== 1"
+                  text
+                  type="primary"
+                  size="small"
+                  @click="handleRead(row as MessageItem)"
+                >
+                  标为已读
+                </el-button>
+                <el-button
+                  v-if="viewMode === 'inbox'"
+                  text
+                  type="primary"
+                  size="small"
+                  :disabled="archivingId !== null"
+                  @click="handleArchive(row as MessageItem)"
+                >
+                  {{ archivingId === (row as MessageItem).id ? '归档中…' : '归档' }}
+                </el-button>
               </RowActions>
             </template>
           </el-table-column>

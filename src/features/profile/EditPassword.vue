@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores/stores'
 import { validatePasswordStrength } from '@/shared/utils/validatePassword'
 
+const router = useRouter()
 const userStore = useUserStore()
 
 const passwordForm = reactive({
@@ -35,10 +37,14 @@ async function handleSubmit() {
       oldPassword: passwordForm.oldPassword,
       newPassword: passwordForm.newPassword,
     })
-    ElMessage.success('密码修改成功')
+    // 后端改密成功后吊销该用户全部令牌（revokeAllTokens），当前会话已失效，
+    // 必须回到登录页用新密码重新登录；跳过 /auth/logout 请求（令牌已失效必然 401）。
+    ElMessage.success('密码修改成功，请使用新密码重新登录')
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
+    await userStore.logout({ notifyServer: false })
+    await router.replace('/login')
   } catch {
     // 错误提示已由请求拦截器统一弹出（如"原密码错误"），此处不再重复提示
   } finally {

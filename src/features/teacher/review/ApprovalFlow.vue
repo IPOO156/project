@@ -246,7 +246,7 @@ onMounted(() => void load())
           <el-table-column label="创建时间" width="150">
             <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="156" align="center" fixed="right">
+          <el-table-column label="操作" width="300" align="center" fixed="right">
             <template #default="{ row }">
               <RowActions>
                 <el-button
@@ -265,22 +265,31 @@ onMounted(() => void load())
                 >
                   步骤
                 </el-button>
-                <template #more>
-                  <el-dropdown-item @click="openEdit(row as ApprovalFlowItem)">
-                    编辑
-                  </el-dropdown-item>
-                  <el-dropdown-item @click="handleToggleStatus(row as ApprovalFlowItem)">
-                    {{ row.status === 1 ? '禁用' : '启用' }}
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    divided
-                    class="row-actions__danger"
-                    :disabled="deletingId !== null"
-                    @click="handleDelete(row as ApprovalFlowItem)"
-                  >
-                    {{ deletingId === (row as ApprovalFlowItem).id ? '删除中…' : '删除' }}
-                  </el-dropdown-item>
-                </template>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openEdit(row as ApprovalFlowItem)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="handleToggleStatus(row as ApprovalFlowItem)"
+                >
+                  {{ row.status === 1 ? '禁用' : '启用' }}
+                </el-button>
+                <el-button
+                  text
+                  type="danger"
+                  size="small"
+                  :disabled="deletingId !== null"
+                  @click="handleDelete(row as ApprovalFlowItem)"
+                >
+                  {{ deletingId === (row as ApprovalFlowItem).id ? '删除中…' : '删除' }}
+                </el-button>
               </RowActions>
             </template>
           </el-table-column>

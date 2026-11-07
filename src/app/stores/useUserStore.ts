@@ -11,6 +11,7 @@ import {
   USER_INFO_CACHE_KEY,
   USER_SCOPED_PREFIXES,
 } from '@/shared/constants/storageKeys'
+import { clearMustChangePassword } from '@/shared/utils/forcePasswordChange'
 import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import { clearAuth, getToken, setToken as persistToken } from '@/shared/utils/token'
 import { resetUserScopedStores } from './sessionReset'
@@ -122,15 +123,12 @@ export const useUserStore = defineStore('user', () => {
   /**
    * 更新联系信息（对接 PUT /profile/contact）。
    *
-   * 注意：邮箱/手机号属于「档案联系信息」，与登录账号的注册邮箱不是同一份数据 ——
-   * 账号邮箱用于登录与找回密码，由后端在账号上维护，前端不提供修改入口。
-   * 因此这里只提交联系信息，**不回写 userInfo.email/phone**，避免把联系邮箱污染成账号邮箱
-   * （联系信息展示改由档案概览读取 archive store 的 /profile/info.contactInfo）。
+   * 后端 PUT /profile/contact 为整体覆盖且六个字段都必填，因此必须接收完整联系信息，
+   * 而不是只传邮箱/手机号。
+   * 后端只有一份邮箱/手机号（user_contact_info），登录响应的 user.email/phone 也取自该表，
+   * 不存在独立的「账号邮箱」：邮箱用于找回密码与系统邮件，登录本身只认学号/工号。
+   * 因此保存成功后同步回写 userInfo，避免简历页等仍展示旧联系方式。
    * 接口失败向上抛出，由调用方决定是否提示「已保存」。
-   */
-  /**
-   * 更新联系信息。后端 PUT /profile/contact 为整体覆盖且六个字段都必填，
-   * 因此这里必须接收完整联系信息，而不是只传邮箱/手机号。
    */
   async function updateUserInfo(contact: {
     email: string
@@ -141,6 +139,10 @@ export const useUserStore = defineStore('user', () => {
     emergencyPhone: string
   }) {
     await updateProfileContact(contact)
+    // 后端 userInfo.email/phone 与联系信息同源，保存后同步缓存（含 localStorage）
+    if (userInfo.value) {
+      setUserInfo({ ...userInfo.value, email: contact.email, phone: contact.phone })
+    }
   }
 
   async function changePassword(payload: {
@@ -165,15 +167,18 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function logout() {
+  async function logout(options: { notifyServer?: boolean } = {}) {
     // 通知后端使令牌失效。
     // 请求拦截器在微任务中异步读取 token，故必须先 getToken() 快照并作为显式
     // Authorization 传给 apiLogout —— 否则 clearAuth 后请求变匿名，/auth/logout
     // 会返回 401，令牌在服务端也不会真正失效。
+    // 改密成功后后端已吊销全部令牌，此时跳过该请求（notifyServer=false），避免必然的 401。
     const tokenSnapshot = getToken()
-    try {
-      await apiLogout(tokenSnapshot)
-    } catch {}
+    if (options.notifyServer !== false) {
+      try {
+        await apiLogout(tokenSnapshot)
+      } catch {}
+    }
     token.value = ''
     userInfo.value = null
     cachedAvatar.value = undefined
@@ -186,6 +191,8 @@ export const useUserStore = defineStore('user', () => {
     //   - user_info_cache：loginType 决定端级分流
     //   - teacher_me：/auth/me 的 permissions 决定菜单与页面可访问性
     localStorage.removeItem(USER_INFO_CACHE_KEY)
+    // 强制改密标记属账号级状态：不清理会让下一位登录的账号被误送改密页
+    clearMustChangePassword()
     // 教师身份为模块级 ref，需显式清空（clearUserScopedStorage 只清 localStorage）
     useTeacherMe().clear()
     // 重置全部用户级业务 store 与用户级本地存储（身份缓存 / 头像 / 草稿 / 撤回标记 / tabs）：

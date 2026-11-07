@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ChatSettings, ExportFormat } from './ai-chat.types'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 /**
  * AIChat - AI 智能助手独立页（编排者）
  *
@@ -35,6 +35,7 @@ const {
   messages,
   loading,
   error,
+  offlineMode,
   retry,
   sendMessage,
   clearMessages,
@@ -58,6 +59,13 @@ const quickVisible = ref(settings.value.quick)
 const userName = computed(() => userStore.userName || '同学')
 const userAvatar = computed(() => userStore.avatar || '')
 const messageCount = computed(() => messages.value.length)
+/** 顶栏当前会话标题：未绑定会话时为「新的对话」，空标题兜底 */
+const currentTitle = computed(() => {
+  const id = currentConversationId.value
+  if (id == null) return '新的对话'
+  const conv = conversations.value.find((c) => c.id === id)
+  return conv?.title?.trim() || '未命名对话'
+})
 /** 快捷问题有效可见 = 设置开关 && 对话状态 */
 const quickEffectiveVisible = computed(() => settings.value.quick && quickVisible.value)
 
@@ -86,10 +94,20 @@ function handleClear() {
   showClearModal.value = true
 }
 
-/** 确认清空：恢复欢迎语 + 重置快捷问题可见性 */
-function confirmClear() {
-  clearMessages()
+/**
+ * 确认清空：删除当前会话（已落库时）并恢复欢迎语，避免旧会话消息在切回时“复活”。
+ * 尚未绑定会话（离线模式/尚未发送消息）时只重置视图。
+ */
+async function confirmClear() {
+  const id = currentConversationId.value
   showClearModal.value = false
+  if (id != null) {
+    await deleteConversation(id)
+  }
+  // 会话不在本地列表（列表加载失败）时 deleteConversation 不会重置视图，这里兜底
+  if (currentConversationId.value === id) {
+    clearMessages()
+  }
   quickVisible.value = settings.value.quick
 }
 
@@ -105,8 +123,18 @@ function handleSwitch(id: number) {
   quickVisible.value = false
 }
 
-/** 删除历史对话 */
-function handleDelete(id: number) {
+/** 删除历史对话：删除不可恢复，先二次确认 */
+async function handleDelete(id: number) {
+  try {
+    await ElMessageBox.confirm('删除后不可恢复，确定删除该对话吗？', '删除对话', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    // 用户取消
+    return
+  }
   void deleteConversation(id)
 }
 
@@ -175,7 +203,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
     <!-- 右侧：主聊天区 -->
     <section class="ai-chat__main">
       <ChatHeader
-        :online="true"
+        :title="currentTitle"
+        :online="!offlineMode"
         :message-count="messageCount"
         @clear="handleClear"
         @export="handleExport"

@@ -124,67 +124,81 @@ function handleVoiceClick() {
 
 <template>
   <div class="ci">
-    <!-- 语音录制状态条 -->
-    <Transition name="voice">
-      <div v-if="isRecording" class="ci__voice-status">
-        <span class="ci__voice-dot" />
-        正在聆听…{{ transcript ? `「${transcript}」` : '' }}
-      </div>
-    </Transition>
-
-    <!-- 附件预览条 -->
-    <Transition name="attach">
-      <div v-if="attachments.length" class="ci__attach">
-        <div v-for="(file, i) in attachments" :key="i" class="ci__attach-item">
-          <Paperclip :size="13" />
-          <span class="ci__attach-name" :title="file.name">{{ file.name }}</span>
-          <span class="ci__attach-size">{{ formatSize(file.size) }}</span>
-          <button class="ci__attach-remove" title="移除" @click="removeAttachment(i)">
-            <X :size="12" />
-          </button>
+    <div class="ci__inner">
+      <!-- 语音录制状态条 -->
+      <Transition name="voice">
+        <div v-if="isRecording" class="ci__voice-status">
+          <span class="ci__voice-dot" />
+          正在聆听…{{ transcript ? `「${transcript}」` : '' }}
         </div>
+      </Transition>
+
+      <!-- 附件预览条 -->
+      <Transition name="attach">
+        <div v-if="attachments.length" class="ci__attach">
+          <div v-for="(file, i) in attachments" :key="i" class="ci__attach-item">
+            <Paperclip :size="16" />
+            <span class="ci__attach-name" :title="file.name">{{ file.name }}</span>
+            <span class="ci__attach-size">{{ formatSize(file.size) }}</span>
+            <button class="ci__attach-remove" title="移除" @click="removeAttachment(i)">
+              <X :size="16" />
+            </button>
+          </div>
+        </div>
+      </Transition>
+
+      <!-- 输入栏 -->
+      <div class="ci__bar" :class="{ 'is-recording': isRecording }">
+        <!-- 附件按钮 -->
+        <button
+          class="ci__btn"
+          title="添加附件"
+          aria-label="添加附件"
+          @click="fileInputRef?.click()"
+        >
+          <Paperclip :size="20" />
+        </button>
+        <input
+          ref="fileInputRef"
+          type="file"
+          multiple
+          class="ci__file-input"
+          @change="handleFileChange"
+        />
+
+        <!-- 语音按钮 -->
+        <button
+          class="ci__btn"
+          :class="{ 'is-recording': isRecording }"
+          :title="voiceSupported ? '语音输入' : voiceUnsupportedHint"
+          :aria-label="voiceSupported ? '语音输入' : voiceUnsupportedHint"
+          @click="handleVoiceClick"
+        >
+          <Mic :size="20" />
+        </button>
+
+        <!-- textarea -->
+        <textarea
+          ref="textareaRef"
+          :value="displayText"
+          class="ci__textarea"
+          rows="1"
+          placeholder="输入你的问题…（Enter 发送，Shift+Enter 换行）"
+          @input="onInput"
+          @keydown="handleKeydown"
+        />
+
+        <!-- 发送按钮 -->
+        <button
+          class="ci__send"
+          :disabled="!canSend"
+          title="发送"
+          aria-label="发送"
+          @click="handleSend"
+        >
+          <Send :size="20" />
+        </button>
       </div>
-    </Transition>
-
-    <!-- 输入栏 -->
-    <div class="ci__bar" :class="{ 'is-recording': isRecording }">
-      <!-- 附件按钮 -->
-      <button class="ci__btn" title="添加附件" @click="fileInputRef?.click()">
-        <Paperclip :size="18" />
-      </button>
-      <input
-        ref="fileInputRef"
-        type="file"
-        multiple
-        class="ci__file-input"
-        @change="handleFileChange"
-      />
-
-      <!-- 语音按钮 -->
-      <button
-        class="ci__btn"
-        :class="{ 'is-recording': isRecording }"
-        :title="voiceSupported ? '语音输入' : voiceUnsupportedHint"
-        @click="handleVoiceClick"
-      >
-        <Mic :size="18" />
-      </button>
-
-      <!-- textarea -->
-      <textarea
-        ref="textareaRef"
-        :value="displayText"
-        class="ci__textarea"
-        rows="1"
-        placeholder="输入你的问题…（Enter 发送，Shift+Enter 换行）"
-        @input="onInput"
-        @keydown="handleKeydown"
-      />
-
-      <!-- 发送按钮 -->
-      <button class="ci__send" :disabled="!canSend" title="发送" @click="handleSend">
-        <Send :size="18" />
-      </button>
     </div>
   </div>
 </template>
@@ -196,6 +210,11 @@ function handleVoiceClick() {
   background: var(--el-bg-color);
   border-top: 1px solid var(--el-border-color-lighter);
 
+  // 与消息列共用同一左边界
+  &__inner {
+    width: 100%;
+  }
+
   &__voice-status {
     display: flex;
     align-items: center;
@@ -205,7 +224,7 @@ function handleVoiceClick() {
     background: rgba($color-danger, 0.08);
     border-radius: $radius-base;
     font-size: $font-size-sm;
-    color: $color-danger;
+    color: $color-danger-text;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -260,7 +279,7 @@ function handleVoiceClick() {
     padding: 0;
 
     &:hover {
-      color: $color-danger;
+      color: $color-danger-text;
     }
   }
 
@@ -307,7 +326,7 @@ function handleVoiceClick() {
     }
 
     &.is-recording {
-      color: $color-danger;
+      color: $color-danger-text;
       background: rgba($color-danger, 0.1);
     }
   }

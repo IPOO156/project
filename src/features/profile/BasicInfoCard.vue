@@ -46,7 +46,8 @@ const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {}
 
 /**
  * 联系邮箱/手机号：来自 /profile/info 的 contactInfo（PUT /profile/contact 的写入目标）。
- * 与「账号邮箱」（userStore.userInfo.email，用于登录与找回密码）不是同一份数据，展示上分开。
+ * 后端只有这一份邮箱（user_contact_info.email）：登录用学号/工号，邮箱用于找回密码与系统邮件；
+ * 登录响应 /auth/me 返回的 email 也取自同一字段，不存在独立的「账号邮箱」。
  */
 const contactEmail = computed(() => archiveStore.profileData?.contactInfo?.email ?? '')
 const contactPhone = computed(() => archiveStore.profileData?.contactInfo?.phone ?? '')
@@ -191,10 +192,6 @@ async function handleAvatarUpload(base64: string) {
       <el-descriptions-item label="学生状态">{{
         academicInfo.studentStatusLabel || '-'
       }}</el-descriptions-item>
-      <el-descriptions-item label="账号邮箱">
-        {{ userStore.userInfo?.email || '-' }}
-        <div class="profile-desc__hint">用于登录与找回密码，如需修改请联系管理员</div>
-      </el-descriptions-item>
       <el-descriptions-item label="联系邮箱">{{ contactEmail || '-' }}</el-descriptions-item>
       <el-descriptions-item label="手机号">{{ contactPhone || '-' }}</el-descriptions-item>
     </el-descriptions>
@@ -320,11 +317,6 @@ async function handleAvatarUpload(base64: string) {
   :deep(.el-descriptions__content) {
     font-size: 13px;
   }
-}
-.profile-desc__hint {
-  margin-top: 2px;
-  font-size: 12px;
-  color: #94a3b8;
 }
 .profile-form {
   margin-top: 8px;

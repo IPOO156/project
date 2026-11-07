@@ -46,10 +46,10 @@
 }
 
 .footer-text {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 0.85rem;
+  font-family: var(--gt-font-display);
+  font-size: 0.9rem;
   color: var(--text-light, #9a8474);
-  font-style: italic;
+  letter-spacing: 1px;
 }
 
 @media (max-width: 768px) {

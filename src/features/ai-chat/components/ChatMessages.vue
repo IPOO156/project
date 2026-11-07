@@ -54,7 +54,7 @@ watch(() => props.showThinking, scrollToBottom)
 </script>
 
 <template>
-  <div ref="scrollRef" class="cm">
+  <div ref="scrollRef" class="cm" role="log" aria-live="polite" aria-label="对话消息">
     <div class="cm__inner">
       <MessageBubble
         v-for="msg in props.messages"
@@ -69,7 +69,7 @@ watch(() => props.showThinking, scrollToBottom)
       <!-- AI 失败重试入口 -->
       <div v-if="props.error && !props.loading" class="cm__retry">
         <button class="cm__retry-btn" type="button" @click="emit('retry')">
-          <RotateCcw :size="13" />
+          <RotateCcw :size="16" />
           <span>重新生成</span>
         </button>
       </div>
@@ -77,7 +77,7 @@ watch(() => props.showThinking, scrollToBottom)
       <Transition name="think">
         <div v-if="props.loading && props.showThinking" class="cm__thinking">
           <div class="cm__thinking-avatar">
-            <Sparkles :size="18" />
+            <Sparkles :size="20" />
           </div>
           <div class="cm__thinking-bubble">
             <Sparkles :size="14" class="cm__thinking-icon" />
@@ -97,8 +97,6 @@ watch(() => props.showThinking, scrollToBottom)
   scroll-behavior: smooth;
 
   &__inner {
-    max-width: 880px;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: $spacing-lg;

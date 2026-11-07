@@ -3,14 +3,17 @@ import type { ExportFormat } from '../ai-chat.types'
 /**
  * ChatHeader - 主聊天区顶部栏
  *
- * 左：标题图标（在线绿点）+ 标题/副标题 + 在线状态徽章
- * 右：清空按钮 + 导出按钮（点击展开 ExportMenu 下拉）
+ * 品牌只在左侧历史栏出现一次；这里展示当前会话标题 + 在线状态，
+ * 右侧为清空 / 导出（导出下拉由 ExportMenu 承载）。
  */
-import { ChevronDown, Download, Sparkles, Trash2 } from 'lucide-vue-next'
-import { ref } from 'vue'
+import { ChevronDown, Download, Trash2 } from 'lucide-vue-next'
+import { computed, ref } from 'vue'
 import ExportMenu from './ExportMenu.vue'
 
-defineProps<{
+const props = defineProps<{
+  /** 当前会话标题（无会话时为「新的对话」） */
+  title: string
+  /** AI 服务是否可用（离线回退时为 false） */
   online: boolean
   /** 消息条数（<=1 时禁用清空/导出） */
   messageCount: number
@@ -20,6 +23,11 @@ const emit = defineEmits<{
   clear: []
   export: [format: ExportFormat]
 }>()
+/** 状态徽章文案与说明：离线时如实展示，不再固定“在线” */
+const statusText = computed(() => (props.online ? '在线' : '离线'))
+const statusHint = computed(() =>
+  props.online ? 'AI 服务可用' : '后端服务不可用，当前为离线模拟回复',
+)
 
 const exportMenuVisible = ref(false)
 
@@ -34,46 +42,42 @@ function handleExport(format: ExportFormat) {
 
 <template>
   <header class="ch">
-    <div class="ch__left">
-      <div class="ch__icon">
-        <Sparkles :size="20" />
-        <span class="ch__online-dot" />
+    <div class="ch__inner">
+      <div class="ch__left">
+        <h2 class="ch__title" :title="title">{{ title }}</h2>
+        <span class="ch__badge" :class="{ 'is-offline': !online }" :title="statusHint">
+          <span class="ch__badge-dot" :class="{ 'is-offline': !online }" />
+          {{ statusText }}
+        </span>
       </div>
-      <div class="ch__titles">
-        <h2 class="ch__title">
-          档案智能助手
-          <span class="ch__ver">V2.0</span>
-        </h2>
-        <p class="ch__subtitle">智能问答 · 档案申报 · 成长记录</p>
-      </div>
-      <span class="ch__badge">
-        <span class="ch__badge-dot" />
-        在线
-      </span>
-    </div>
 
-    <div class="ch__right">
-      <button class="ch__btn" :disabled="messageCount <= 1" title="清空对话" @click="emit('clear')">
-        <Trash2 :size="15" />
-        <span>清空</span>
-      </button>
-
-      <div class="ch__export">
+      <div class="ch__right">
         <button
-          class="ch__btn ch__btn--accent"
+          class="ch__btn"
           :disabled="messageCount <= 1"
-          title="导出对话"
-          @click="toggleExportMenu"
+          title="清空对话"
+          @click="emit('clear')"
         >
-          <Download :size="15" />
-          <span>导出</span>
-          <ChevronDown :size="13" class="ch__caret" :class="{ 'is-open': exportMenuVisible }" />
+          <Trash2 :size="16" />
+          <span>清空</span>
         </button>
+
         <ExportMenu
           :visible="exportMenuVisible"
           @select="handleExport"
           @close="exportMenuVisible = false"
-        />
+        >
+          <button
+            class="ch__btn ch__btn--accent"
+            :disabled="messageCount <= 1"
+            title="导出对话"
+            @click="toggleExportMenu"
+          >
+            <Download :size="16" />
+            <span>导出</span>
+            <ChevronDown :size="16" class="ch__caret" :class="{ 'is-open': exportMenuVisible }" />
+          </button>
+        </ExportMenu>
       </div>
     </div>
   </header>
@@ -82,83 +86,52 @@ function handleExport(format: ExportFormat) {
 <style scoped lang="scss">
 .ch {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: $spacing-md $spacing-xl;
   background: var(--el-bg-color);
   border-bottom: 1px solid var(--el-border-color-lighter);
 
+  // 铺满主区，与消息列共用同一左边界
+  &__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $spacing-md;
+    width: 100%;
+  }
+
   &__left {
     display: flex;
     align-items: center;
-    gap: $spacing-md;
-  }
-
-  &__icon {
-    position: relative;
-    width: 40px;
-    height: 40px;
-    border-radius: $radius-lg;
-    background: linear-gradient(135deg, var(--mc-primary), var(--mc-primary-light));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  &__online-dot {
-    position: absolute;
-    right: -2px;
-    bottom: -2px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: $color-success;
-    border: 2px solid var(--el-bg-color);
-  }
-
-  &__titles {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
+    gap: $spacing-sm;
+    min-width: 0;
   }
 
   &__title {
     margin: 0;
     font-size: $font-size-lg;
+    font-weight: 600;
     color: var(--el-text-color-primary);
-    display: flex;
-    align-items: center;
-    gap: $spacing-xs;
-  }
-
-  &__ver {
-    font-size: $font-size-xs;
-    color: var(--mc-accent);
-    background: color-mix(in srgb, var(--mc-accent) 12%, transparent);
-    padding: 1px 6px;
-    border-radius: $radius-sm;
-    font-weight: 500;
-  }
-
-  &__subtitle {
-    margin: 0;
-    font-size: $font-size-xs;
-    color: var(--el-text-color-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__badge {
     display: inline-flex;
     align-items: center;
     gap: $spacing-xs;
-    padding: 3px $spacing-sm;
+    padding: 4px $spacing-sm;
     border-radius: $radius-2xl;
     background: rgba($color-success, 0.1);
-    color: $color-success;
+    color: $color-success-text;
     font-size: $font-size-xs;
     font-weight: 500;
-    margin-left: $spacing-sm;
+    flex-shrink: 0;
+
+    &.is-offline {
+      background: rgba($color-warning, 0.12);
+      color: $color-warning;
+    }
   }
 
   &__badge-dot {
@@ -166,6 +139,10 @@ function handleExport(format: ExportFormat) {
     height: 6px;
     border-radius: 50%;
     background: $color-success;
+
+    &.is-offline {
+      background: $color-warning;
+    }
   }
 
   &__right {
@@ -203,10 +180,6 @@ function handleExport(format: ExportFormat) {
     }
   }
 
-  &__export {
-    position: relative;
-  }
-
   &__caret {
     transition: transform $duration-fast $ease-standard;
 
@@ -218,10 +191,7 @@ function handleExport(format: ExportFormat) {
 
 @media (max-width: 768px) {
   .ch {
-    &__subtitle,
-    &__badge {
-      display: none;
-    }
+    padding: $spacing-md;
 
     &__btn span {
       display: none;

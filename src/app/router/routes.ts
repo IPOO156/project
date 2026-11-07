@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/shared/api/auth'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { isModuleAllowed, isRoleMatchedLoginTab } from '@/shared/config/teacherModuleRegistry'
 import { USER_INFO_CACHE_KEY } from '@/shared/constants/storageKeys'
+import { isMustChangePassword } from '@/shared/utils/forcePasswordChange'
 import { getToken } from '@/shared/utils/token'
 import { setupNavigationLoading } from './loadingIndicator'
 import teacherRoutes from './teacher-routes'
@@ -299,7 +300,17 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
-  if (to.name === 'Login' && token) {
+  // 强制改密期间收起一切业务页面，只允许停留在登录页（登录页会切换为改密表单）：
+  // 后端此时只放行 /auth/password、/auth/me、/auth/logout，进其他页面只会连环吃 403。
+  // 标记来源见 shared/utils/forcePasswordChange.ts（登录响应 + 403 兜底补写）。
+  const mustChangePassword = Boolean(token) && isMustChangePassword()
+  if (mustChangePassword && to.name !== 'Login') {
+    next({ name: 'Login' })
+    return
+  }
+
+  // 正常登录态访问登录页时回首页；强制改密态必须留在登录页（由页面渲染改密表单）
+  if (to.name === 'Login' && token && !mustChangePassword) {
     next({ path: '/dashboard' })
     return
   }

@@ -13,7 +13,7 @@ import {
   watch,
 } from 'vue'
 import { useRingEffects } from '../composables/useRingEffects'
-import { findRingBySemester, getSemesterDisplayLabel, SEMESTER_RINGS } from '../timelineConstants'
+import { useSemesterRings } from '../composables/useSemesterRings'
 import HeroRingsElectrons from './HeroRingsElectrons.vue'
 import HeroRingsFooter from './HeroRingsFooter.vue'
 import HeroRingsNucleus from './HeroRingsNucleus.vue'
@@ -44,8 +44,10 @@ const emit = defineEmits<{
 const BASE_RADIUS = 52
 const RING_STEP = 18
 
+const { rings: semesterRings, findRing, semesterLabel } = useSemesterRings()
+
 const rings = computed<RingItem[]>(() => {
-  return SEMESTER_RINGS.map((ring, index) => {
+  return semesterRings.value.map((ring, index) => {
     const r = BASE_RADIUS + index * RING_STEP
     return {
       r,
@@ -67,12 +69,14 @@ function getSubOrbitOffsets(_count: number): number[] {
 function initElectronAngles() {
   const byLevel = new Map<number, GrowthExperience[]>()
   props.experiences.forEach((exp) => {
-    const ring = findRingBySemester(exp.semester)
-    const level = ring?.level ?? 1
-    if (!byLevel.has(level)) {
-      byLevel.set(level, [])
+    // 学期只来自后端，缺失时不落到默认年轮，避免把无学期事件错画成「大一上」
+    if (!exp.semester) return
+    const ring = findRing(exp.semester)
+    if (!ring) return
+    if (!byLevel.has(ring.level)) {
+      byLevel.set(ring.level, [])
     }
-    byLevel.get(level)!.push(exp)
+    byLevel.get(ring.level)!.push(exp)
   })
   const nextAngles: Record<string, number> = {}
   byLevel.forEach((exps) => {
@@ -91,12 +95,13 @@ watch(() => props.experiences, initElectronAngles, { immediate: true, deep: true
 const electrons = computed<ElectronItem[]>(() => {
   const byLevel = new Map<number, GrowthExperience[]>()
   props.experiences.forEach((exp) => {
-    const ring = findRingBySemester(exp.semester)
-    const level = ring?.level ?? 1
-    if (!byLevel.has(level)) {
-      byLevel.set(level, [])
+    if (!exp.semester) return
+    const ring = findRing(exp.semester)
+    if (!ring) return
+    if (!byLevel.has(ring.level)) {
+      byLevel.set(ring.level, [])
     }
-    byLevel.get(level)!.push(exp)
+    byLevel.get(ring.level)!.push(exp)
   })
   const result: ElectronItem[] = []
   byLevel.forEach((exps, level) => {
@@ -218,7 +223,7 @@ function handleElectronEnter(event: MouseEvent, electron: ElectronItem) {
     y: tooltip.value.y,
     title: electron.title,
     date: electron.date,
-    semester: getSemesterDisplayLabel(electron.semester),
+    semester: semesterLabel(electron.semester),
   }
   updateTooltipPosition(event)
 }
@@ -482,9 +487,9 @@ const { extinguishedRings } = useRingEffects(
 }
 
 .hero-rings__title {
-  font-family: 'Instrument Serif', serif;
+  font-family: var(--gt-font-display);
   font-size: clamp(1.8rem, 4vw, 2.8rem);
-  font-weight: 400;
+  font-weight: 600;
   margin: 0;
   letter-spacing: 2px;
   user-select: none;
@@ -525,8 +530,9 @@ const { extinguishedRings } = useRingEffects(
 }
 
 .hero-rings__char {
-  font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+  font-family: var(--gt-font-display);
   font-size: clamp(1.1rem, 1.9vw, 1.35rem);
+  font-weight: 500;
   color: var(--bark-dark, #2d1e12);
   letter-spacing: 0;
   line-height: 1;

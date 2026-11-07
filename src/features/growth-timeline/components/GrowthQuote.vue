@@ -28,7 +28,8 @@ const { isVisible } = useScrollReveal(quoteRef, {
 }
 
 .quote-block {
-  max-width: 680px;
+  /* 引文是一整句，容器放宽到接近内容区宽度，避免末字被挤到第二行 */
+  max-width: 1000px;
   margin: 0 auto;
   opacity: 0;
   transform: translateY(30px);
@@ -43,19 +44,20 @@ const { isVisible } = useScrollReveal(quoteRef, {
 }
 
 .quote-text {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.6rem;
+  font-family: var(--gt-font-display);
+  /* 桌面端随视口轻微缩放，保证整句保持一排 */
+  font-size: clamp(1.15rem, 1.45vw, 1.5rem);
+  font-weight: 500;
   color: var(--gt-text-quote, #5a4a3a);
-  line-height: 1.7;
+  line-height: 1.8;
   margin: 0 0 1.2rem;
   letter-spacing: 1px;
 }
 
 .quote-attribution {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  font-family: var(--gt-font-ui);
+  font-size: 0.78rem;
+  letter-spacing: 1px;
   color: var(--text-light, #9a8474);
   font-style: normal;
 }

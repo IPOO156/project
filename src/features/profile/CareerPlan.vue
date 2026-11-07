@@ -37,7 +37,7 @@ const planEmptyText = computed(() =>
 // 及「完成进度(目标/行动完成数)」尚未在 CareerPlanRecord 契约中定义，暂不展示；
 // 进度仅基于本地已有数据（已填学期数）计算。
 const filledSemesterCount = computed(() => availableSemesters.value.length)
-// 学期下拉与「总学期数」共用同一数据源（useSemesters：后端学期 ∪ 本地生成区间的并集），
+// 学期下拉与「总学期数」共用同一数据源（useSemesters，仅后端真实学期），
 // 避免下拉可选而分母不含、或反之的口径不一致。
 const { semesterOptions, load: loadSemesters } = useSemesters()
 const totalSemesterCount = computed(() => semesterOptions.value.length)

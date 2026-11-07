@@ -22,11 +22,11 @@ const emit = defineEmits<{
     <div v-if="visible" class="ccm" @click.self="emit('cancel')">
       <div class="ccm__dialog">
         <div class="ccm__icon">
-          <AlertTriangle :size="28" />
+          <AlertTriangle :size="32" />
         </div>
         <h3 class="ccm__title">清空当前对话？</h3>
         <p class="ccm__desc">
-          清空后将保留欢迎语，当前对话内容将被移除。如需保存，请先导出或新建对话后再清空。
+          清空后将恢复欢迎语并删除当前对话，删除后不可恢复。如需保存，请先导出。
         </p>
         <div class="ccm__actions">
           <button class="ccm__btn ccm__btn--ghost" @click="emit('cancel')">取消</button>
@@ -64,7 +64,7 @@ const emit = defineEmits<{
     margin: 0 auto $spacing-md;
     border-radius: 50%;
     background: rgba($color-warning, 0.12);
-    color: $color-warning;
+    color: $color-warning-text;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -108,7 +108,7 @@ const emit = defineEmits<{
     }
 
     &--primary {
-      background: $color-danger;
+      background: $color-danger-text;
       color: #fff;
 
       &:hover {

@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import type { GrowthExperience } from '../timelineConstants'
 import { computed, ref, watch } from 'vue'
-import { findRingBySemester, SEMESTER_RINGS } from '../timelineConstants'
+import { useSemesterRings } from './useSemesterRings'
 
 export function useRingEffects(
   experiences: Ref<GrowthExperience[]>,
@@ -10,7 +10,8 @@ export function useRingEffects(
   selectedAngle: Ref<number>,
   onComplete: (id: string) => void,
 ) {
-  const ringCount = computed(() => SEMESTER_RINGS.length)
+  const { rings, findRing } = useSemesterRings()
+  const ringCount = computed(() => rings.value.length)
   const extinguishedRings = ref<Set<number>>(new Set())
   const isReversing = ref(false)
   let reverseTimeouts: ReturnType<typeof setTimeout>[] = []
@@ -25,7 +26,7 @@ export function useRingEffects(
     if (!selectedId.value) return -1
     const exp = experiences.value.find((e) => e.id === selectedId.value)
     if (!exp) return -1
-    const ring = findRingBySemester(exp.semester)
+    const ring = findRing(exp.semester)
     return Math.max(0, (ring?.level ?? 1) - 1)
   }
 

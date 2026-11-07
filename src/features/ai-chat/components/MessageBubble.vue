@@ -83,18 +83,21 @@ async function handleCopy() {
   <div class="mb" :class="{ 'mb--ai': isAi, 'mb--user': !isAi }">
     <!-- 头像 -->
     <div class="mb__avatar" :class="isAi ? 'mb__avatar--ai' : 'mb__avatar--user'">
-      <Sparkles v-if="isAi" :size="18" />
+      <Sparkles v-if="isAi" :size="20" />
       <span v-else>{{ userInitial }}</span>
     </div>
 
     <!-- 气泡 + meta + actions -->
     <div class="mb__col">
       <div class="mb__bubble" :class="isAi ? 'mb__bubble--ai' : 'mb__bubble--user'">
+        <!-- 离线回退回复明确标注，避免与在线回复混淆 -->
+        <div v-if="message.offline" class="mb__offline">离线模式</div>
         <RichContentRenderer v-if="isAi && message.richContent" :content="message.richContent" />
         <p v-else class="mb__text">{{ message.content }}</p>
       </div>
 
-      <div v-if="isAi" class="mb__disclaimer">AI 生成内容仅供参考</div>
+      <!-- 欢迎语是固定文案，不重复展示 AI 内容免责声明 -->
+      <div v-if="isAi && message.id !== 'welcome'" class="mb__disclaimer">AI 生成内容仅供参考</div>
 
       <div class="mb__footer">
         <span class="mb__time">{{ message.time }}</span>
@@ -105,20 +108,22 @@ async function handleCopy() {
             class="mb__action"
             :class="{ 'is-active': message.feedback === 'useful' }"
             title="有用"
+            aria-label="标记为有用"
             @click="emit('feedback', 'useful')"
           >
-            <ThumbsUp :size="13" />
+            <ThumbsUp :size="16" />
           </button>
           <button
             class="mb__action"
             :class="{ 'is-active': message.feedback === 'useless' }"
             title="无用"
+            aria-label="标记为无用"
             @click="emit('feedback', 'useless')"
           >
-            <ThumbsDown :size="13" />
+            <ThumbsDown :size="16" />
           </button>
-          <button class="mb__action" title="复制" @click="handleCopy">
-            <Copy :size="13" />
+          <button class="mb__action" title="复制" aria-label="复制回复内容" @click="handleCopy">
+            <Copy :size="16" />
           </button>
         </div>
       </div>
@@ -190,22 +195,23 @@ async function handleCopy() {
 
   &__text {
     margin: 0;
-    line-height: 1.7;
+    line-height: 1.6;
   }
 
   &__disclaimer {
     font-size: $font-size-xs;
     color: var(--el-text-color-placeholder);
-    line-height: 1.4;
+    line-height: 1.6;
   }
 
   &__offline {
     display: inline-block;
-    margin-right: 6px;
-    padding: 0 6px;
-    border-radius: 100px;
-    background: color-mix(in srgb, var(--mc-accent) 14%, transparent);
-    color: var(--mc-accent);
+    margin: 0 0 $spacing-xs;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: rgba($color-warning, 0.12);
+    color: $color-warning;
+    font-size: $font-size-xs;
     font-weight: 600;
   }
 
@@ -223,18 +229,27 @@ async function handleCopy() {
 
   &__actions {
     display: flex;
-    gap: 2px;
+    gap: 4px;
     opacity: 0;
     transition: opacity $duration-fast $ease-standard;
   }
 
-  &:hover &__actions {
+  // 键盘聚焦时同样显示操作区（仅 hover 对键盘/触屏用户不可达）
+  &:hover &__actions,
+  &:focus-within &__actions {
     opacity: 1;
   }
 
+  // 触屏设备没有 hover，操作区常驻
+  @media (hover: none) {
+    &__actions {
+      opacity: 1;
+    }
+  }
+
   &__action {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border: none;
     background: transparent;
     border-radius: $radius-sm;

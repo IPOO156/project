@@ -313,7 +313,7 @@ onMounted(() => void load())
               {{ row.updatedAt ? formatDateTime(row.updatedAt) : '-' }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="156" align="center" fixed="right">
+          <el-table-column label="操作" width="310" align="center" fixed="right">
             <template #default="{ row }">
               <RowActions>
                 <el-button
@@ -332,29 +332,34 @@ onMounted(() => void load())
                 >
                   编辑
                 </el-button>
-                <template #more>
-                  <el-dropdown-item
-                    v-if="row.isDefault !== 1"
-                    :disabled="actingId !== null"
-                    @click="handleSetDefault(row as ExportTemplateItem)"
-                  >
-                    {{ actingId === (row as ExportTemplateItem).id ? '设置中…' : '设为默认' }}
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    :disabled="actingId !== null"
-                    @click="handleToggleStatus(row as ExportTemplateItem)"
-                  >
-                    {{ row.status === 1 ? '禁用' : '启用' }}
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    divided
-                    class="row-actions__danger"
-                    :disabled="deletingId !== null"
-                    @click="handleDelete(row as ExportTemplateItem)"
-                  >
-                    {{ deletingId === (row as ExportTemplateItem).id ? '删除中…' : '删除' }}
-                  </el-dropdown-item>
-                </template>
+                <el-button
+                  v-if="row.isDefault !== 1"
+                  text
+                  type="primary"
+                  size="small"
+                  :disabled="actingId !== null"
+                  @click="handleSetDefault(row as ExportTemplateItem)"
+                >
+                  {{ actingId === (row as ExportTemplateItem).id ? '设置中…' : '设为默认' }}
+                </el-button>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  :disabled="actingId !== null"
+                  @click="handleToggleStatus(row as ExportTemplateItem)"
+                >
+                  {{ row.status === 1 ? '禁用' : '启用' }}
+                </el-button>
+                <el-button
+                  text
+                  type="danger"
+                  size="small"
+                  :disabled="deletingId !== null"
+                  @click="handleDelete(row as ExportTemplateItem)"
+                >
+                  {{ deletingId === (row as ExportTemplateItem).id ? '删除中…' : '删除' }}
+                </el-button>
               </RowActions>
             </template>
           </el-table-column>

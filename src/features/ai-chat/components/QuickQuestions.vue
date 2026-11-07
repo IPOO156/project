@@ -35,20 +35,22 @@ function getIcon(icon: string): Component {
 <template>
   <Transition name="qq">
     <div v-if="props.visible && props.questions.length" class="qq">
-      <div class="qq__label">
-        <span class="qq__dot" />
-        常见问题
-      </div>
-      <div class="qq__list">
-        <button
-          v-for="(q, i) in props.questions"
-          :key="i"
-          class="qq__chip"
-          @click="emit('ask', q.question)"
-        >
-          <component :is="getIcon(q.icon)" :size="14" />
-          <span>{{ q.label }}</span>
-        </button>
+      <div class="qq__inner">
+        <div class="qq__label">
+          <span class="qq__dot" />
+          常见问题
+        </div>
+        <div class="qq__list">
+          <button
+            v-for="(q, i) in props.questions"
+            :key="i"
+            class="qq__chip"
+            @click="emit('ask', q.question)"
+          >
+            <component :is="getIcon(q.icon)" :size="16" />
+            <span>{{ q.label }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </Transition>
@@ -60,6 +62,11 @@ function getIcon(icon: string): Component {
   padding: $spacing-sm $spacing-xl;
   border-top: 1px solid var(--el-border-color-lighter);
   background: var(--el-bg-color-page);
+
+  // 与消息列共用同一左边界
+  &__inner {
+    width: 100%;
+  }
 
   &__label {
     display: flex;

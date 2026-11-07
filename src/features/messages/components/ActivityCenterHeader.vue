@@ -19,7 +19,7 @@ function switchTab(tab: 'activity' | 'submission') {
   <header class="center-header">
     <div class="center-header__main">
       <div class="center-header__icon">
-        <Clock :size="28" />
+        <Clock :size="32" />
       </div>
       <div>
         <h1 class="center-header__title">动态中心</h1>
@@ -66,7 +66,7 @@ function switchTab(tab: 'activity' | 'submission') {
   background: linear-gradient(135deg, var(--mc-card) 0%, var(--mc-cream) 100%);
   border: 1px solid var(--mc-border);
   border-radius: var(--mc-radius);
-  padding: 28px 32px;
+  padding: 24px 32px;
   box-shadow: var(--mc-shadow);
   display: flex;
   align-items: center;
@@ -79,13 +79,13 @@ function switchTab(tab: 'activity' | 'submission') {
   &__main {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 16px;
   }
 
   &__icon {
     width: 56px;
     height: 56px;
-    border-radius: 14px;
+    border-radius: 6px;
     background: linear-gradient(135deg, var(--mc-wood) 0%, var(--mc-wood-light) 100%);
     color: #fff;
     display: flex;
@@ -97,14 +97,14 @@ function switchTab(tab: 'activity' | 'submission') {
   &__title {
     margin: 0;
     font-family: $mc-font-display;
-    font-size: 26px;
-    font-weight: 700;
+    font-size: 28px;
+    font-weight: 600;
     color: var(--mc-wood);
     letter-spacing: 1px;
   }
 
   &__subtitle {
-    margin: 6px 0 0;
+    margin: 8px 0 0;
     font-size: 14px;
     color: var(--mc-text-secondary);
   }
@@ -112,10 +112,10 @@ function switchTab(tab: 'activity' | 'submission') {
   &__tabs {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px;
+    gap: 8px;
+    padding: 8px;
     background: var(--mc-bg);
-    border-radius: 12px;
+    border-radius: 6px;
     border: 1px solid var(--mc-border);
   }
 
@@ -123,8 +123,8 @@ function switchTab(tab: 'activity' | 'submission') {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 18px;
-    border-radius: 10px;
+    padding: 8px 16px;
+    border-radius: 6px;
     border: none;
     background: transparent;
     color: var(--mc-text-secondary);
@@ -147,8 +147,8 @@ function switchTab(tab: 'activity' | 'submission') {
 
   &__badge {
     min-width: 22px;
-    padding: 2px 7px;
-    border-radius: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
     background: var(--mc-cream);
     color: var(--mc-wood);
     font-size: 12px;
@@ -176,7 +176,7 @@ html.dark .center-header {
   }
 
   &__tab {
-    color: #94a3b8;
+    color: var(--el-text-color-secondary);
 
     &:hover {
       background: rgba(96, 165, 250, 0.12);
@@ -202,10 +202,10 @@ html.dark .center-header {
 
 @media (max-width: 768px) {
   .center-header {
-    padding: 20px;
+    padding: 24px;
 
     &__title {
-      font-size: 22px;
+      font-size: 20px;
     }
 
     &__tabs {

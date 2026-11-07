@@ -12,7 +12,7 @@ import SummarySection from './components/SummarySection.vue'
 import TimelineListView from './components/TimelineListView.vue'
 import TimelineNode from './components/TimelineNode.vue'
 import { useGrowthTimeline } from './composables/useGrowthTimeline'
-import { findRingBySemester } from './timelineConstants'
+import { useSemesterRings } from './composables/useSemesterRings'
 
 const {
   experiences,
@@ -32,6 +32,7 @@ const {
 const BASE_RADIUS = 52
 const RING_STEP = 18
 const HERO_SCALE = 1.75
+const { findRing } = useSemesterRings()
 
 const orbitPaused = ref(false)
 let expandTimer: ReturnType<typeof setTimeout> | null = null
@@ -103,7 +104,7 @@ function handleNodeClick(id: string) {
   selectExperience(id)
   const exp = experiences.value.find((e) => e.id === id)
   if (!exp) return
-  const ring = findRingBySemester(exp.semester)
+  const ring = findRing(exp.semester)
   const index = Math.max(0, (ring?.level ?? 1) - 1)
   const radius = (BASE_RADIUS + index * RING_STEP) * getHeroScale()
   const center = getSystemCenter()
@@ -336,9 +337,9 @@ function handleScrollToGrowth() {
   border-radius: 100px;
   background: transparent;
   color: var(--text-mid, #6b5443);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  letter-spacing: 2px;
+  font-family: var(--gt-font-ui);
+  font-size: 0.8rem;
+  letter-spacing: 1px;
   cursor: pointer;
   transition:
     background 0.2s ease,
@@ -347,7 +348,7 @@ function handleScrollToGrowth() {
 
 .view-switcher__btn.is-active {
   background: var(--gt-accent, #8b6340);
-  color: #fff;
+  color: var(--gt-on-accent, #fff);
 }
 
 [data-theme='dark'] .view-switcher {
@@ -449,10 +450,9 @@ function handleScrollToGrowth() {
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
   background: rgba(255, 255, 255, 0.7);
   color: var(--text-mid, #6b5443);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.6rem;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
+  font-family: var(--gt-font-ui);
+  font-size: 0.78rem;
+  letter-spacing: 0.5px;
   cursor: pointer;
   transition:
     background 0.2s ease,
@@ -488,9 +488,9 @@ function handleScrollToGrowth() {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.55rem;
-  letter-spacing: 1px;
+  font-family: var(--gt-font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
   color: var(--text-light, #9a8474);
   cursor: pointer;
 }

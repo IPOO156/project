@@ -22,7 +22,7 @@ import PermissionDrawer from './PermissionDrawer.vue'
 // （无自定义类型，直接使用共享层 DTO）
 
 // ── 3. Props & Emits ──
-// （页面组件无 props/emits）
+const props = defineProps<{ embed?: boolean }>()
 
 // ── 4. Store / Composable ──
 // （无全局状态依赖，数据直接通过 API 获取）
@@ -202,7 +202,7 @@ function openPermissionAssign(row: RoleListItem) {
 
 <template>
   <div class="mc-page role-management" :class="{ 'is-stagger-armed': staggerActive }">
-    <div class="mc-page-head">
+    <div v-if="!props.embed" class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">角色管理</h2>
         <p class="mc-page-head__desc">管理系统角色，维护启用状态与权限分配。</p>
@@ -266,7 +266,7 @@ function openPermissionAssign(row: RoleListItem) {
           <el-table-column label="创建时间" width="145">
             <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="190" align="center" fixed="right">
+          <el-table-column label="操作" width="250" align="center" fixed="right">
             <template #default="{ row }">
               <RowActions>
                 <el-button
@@ -280,15 +280,15 @@ function openPermissionAssign(row: RoleListItem) {
                 <el-button text type="primary" size="small" @click="openEdit(row as RoleListItem)">
                   编辑
                 </el-button>
-                <template #more>
-                  <el-dropdown-item
-                    class="row-actions__danger"
-                    :disabled="deletingId !== null"
-                    @click="handleDelete(row as RoleListItem)"
-                  >
-                    {{ deletingId === (row as RoleListItem).roleId ? '删除中…' : '删除角色' }}
-                  </el-dropdown-item>
-                </template>
+                <el-button
+                  text
+                  type="danger"
+                  size="small"
+                  :disabled="deletingId !== null"
+                  @click="handleDelete(row as RoleListItem)"
+                >
+                  {{ deletingId === (row as RoleListItem).roleId ? '删除中…' : '删除角色' }}
+                </el-button>
               </RowActions>
             </template>
           </el-table-column>

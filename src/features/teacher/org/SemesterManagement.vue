@@ -2,7 +2,8 @@
 /**
  * SemesterManagement - 学期管理（教师端）
  * 对接后端 /admin/semesters（列表/创建/更新/设为当前/启停/导入/模板下载）。
- * schoolId 为可选字段，创建/导入时不提供；列表展示后端返回的 schoolName。
+ * schoolId 后端强制要求，从 useTeacherMe 自动取登录者所属学校，用户无需手动填写；
+ * 列表展示后端返回的 schoolName。
  */
 
 // ── 1. 外部依赖导入 ──
@@ -28,6 +29,7 @@ import {
 } from '@/shared/api/teacher-api'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { COMMON_STATUS } from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
@@ -45,6 +47,7 @@ type DateRange = [string, string] | null
 // 与页面入口的 semester:manage 不是同一个码；admin 角色直通。
 const { canAccessAny } = useTeacherAuthz()
 const canImport = computed(() => canAccessAny(['semester:import']))
+const { me } = useTeacherMe()
 
 // ── 5. 响应式数据 ──
 const loading = ref(false)
@@ -165,7 +168,13 @@ async function handleSave() {
     ElMessage.warning('请选择起止日期')
     return
   }
+  const schoolId = me.value?.schoolId
+  if (!schoolId) {
+    ElMessage.warning('未获取到学校信息，请重新登录')
+    return
+  }
   const payload: SemesterSavePayload = {
+    schoolId,
     name: form.name.trim(),
     startDate: range[0],
     endDate: range[1],
@@ -241,10 +250,16 @@ async function handleSubmitImport() {
     ElMessage.warning('请先选择要导入的学期文件')
     return
   }
+  const schoolId = me.value?.schoolId
+  if (!schoolId) {
+    ElMessage.warning('未获取到学校信息，请重新登录')
+    return
+  }
   importing.value = true
   try {
     const fileResult = await uploadFile(importFile.value, 'excel', 'semester')
     const res = await importSemesters({
+      schoolId,
       fileId: fileResult.fileId,
       overwrite: importOverwrite.value,
     })
@@ -368,11 +383,7 @@ function openImportResult() {
               {{ row.createdAt ? formatDateTime(row.createdAt) : '-' }}
             </template>
           </el-table-column>
-          <!--
-            「设为当前」与「编辑」是高频行操作；启用/禁用低频且会改变学期可用状态，
-            收进「更多」避免三个文字按钮在 196px 内折行，同时保留全部操作。
-          -->
-          <el-table-column label="操作" width="180" align="center" fixed="right">
+          <el-table-column label="操作" width="240" align="center" fixed="right">
             <template #default="{ row }">
               <RowActions>
                 <el-button
@@ -392,11 +403,14 @@ function openImportResult() {
                 >
                   编辑
                 </el-button>
-                <template #more>
-                  <el-dropdown-item @click="handleToggleStatus(row as SemesterListItem)">
-                    {{ row.status === 1 ? '禁用' : '启用' }}
-                  </el-dropdown-item>
-                </template>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="handleToggleStatus(row as SemesterListItem)"
+                >
+                  {{ row.status === 1 ? '禁用' : '启用' }}
+                </el-button>
               </RowActions>
             </template>
           </el-table-column>

@@ -23,6 +23,8 @@ import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
 
+const props = defineProps<{ embed?: boolean }>()
+
 const loading = ref(false)
 const users = ref<UserListItem[]>([])
 // 首次拿到非空账号后只播一次，翻页 / 筛选改变行数不会重播
@@ -181,7 +183,7 @@ onMounted(() => void load())
 
 <template>
   <div class="mc-page teacher-account" :class="{ 'is-stagger-armed': staggerActive }">
-    <div class="mc-page-head">
+    <div v-if="!props.embed" class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">教师账号管理</h2>
         <p class="mc-page-head__desc">查看教师账号信息与数据范围，处理密码重置和账号启停。</p>
@@ -268,18 +270,22 @@ onMounted(() => void load())
                 <el-button text type="primary" size="small" @click="openEdit(row as UserListItem)">
                   编辑
                 </el-button>
-                <template #more>
-                  <el-dropdown-item @click="openPasswordDialog(row as UserListItem)">
-                    重置密码
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    divided
-                    :class="{ 'row-actions__danger': row.status === 1 }"
-                    @click="handleToggleStatus(row as UserListItem)"
-                  >
-                    {{ row.status === 1 ? '禁用账号' : '启用账号' }}
-                  </el-dropdown-item>
-                </template>
+                <el-button
+                  text
+                  type="warning"
+                  size="small"
+                  @click="openPasswordDialog(row as UserListItem)"
+                >
+                  重置密码
+                </el-button>
+                <el-button
+                  text
+                  :type="row.status === 1 ? 'danger' : 'success'"
+                  size="small"
+                  @click="handleToggleStatus(row as UserListItem)"
+                >
+                  {{ row.status === 1 ? '禁用账号' : '启用账号' }}
+                </el-button>
               </RowActions>
             </template>
           </el-table-column>

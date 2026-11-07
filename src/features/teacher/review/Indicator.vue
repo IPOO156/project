@@ -342,7 +342,7 @@ onMounted(() => void load())
           <el-table-column prop="description" label="说明" min-width="160" show-overflow-tooltip>
             <template #default="{ row }">{{ row.description ?? '-' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="176" align="center" fixed="right">
+          <el-table-column label="操作" width="260" align="center" fixed="right">
             <template #default="{ row }">
               <RowActions>
                 <el-button
@@ -357,19 +357,23 @@ onMounted(() => void load())
                 <el-button text type="primary" size="small" @click="openEdit(row as IndicatorNode)">
                   编辑
                 </el-button>
-                <template #more>
-                  <el-dropdown-item @click="handleToggleStatus(row as IndicatorNode)">
-                    {{ row.status === 1 ? '禁用' : '启用' }}
-                  </el-dropdown-item>
-                  <el-dropdown-item
-                    divided
-                    class="row-actions__danger"
-                    :disabled="deletingId !== null"
-                    @click="handleDelete(row as IndicatorNode)"
-                  >
-                    {{ deletingId === (row as IndicatorNode).id ? '删除中…' : '删除' }}
-                  </el-dropdown-item>
-                </template>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="handleToggleStatus(row as IndicatorNode)"
+                >
+                  {{ row.status === 1 ? '禁用' : '启用' }}
+                </el-button>
+                <el-button
+                  text
+                  type="danger"
+                  size="small"
+                  :disabled="deletingId !== null"
+                  @click="handleDelete(row as IndicatorNode)"
+                >
+                  {{ deletingId === (row as IndicatorNode).id ? '删除中…' : '删除' }}
+                </el-button>
               </RowActions>
             </template>
           </el-table-column>

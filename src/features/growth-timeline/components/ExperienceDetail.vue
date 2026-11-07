@@ -3,7 +3,7 @@ import type { GrowthExperience } from '../timelineConstants'
 import { ElMessageBox } from 'element-plus'
 import { Trash2, X } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
-import { getSemesterDisplayLabel } from '../timelineConstants'
+import { useSemesterRings } from '../composables/useSemesterRings'
 
 interface Props {
   experience: GrowthExperience | null
@@ -27,9 +27,11 @@ const originX = ref('50%')
 const originY = ref('50%')
 const origin = computed(() => `${originX.value} ${originY.value}`)
 
+const { semesterLabel: formatSemester } = useSemesterRings()
+
 const semesterLabel = computed(() => {
   if (!props.experience) return ''
-  return getSemesterDisplayLabel(props.experience.semester)
+  return formatSemester(props.experience.semester)
 })
 
 watch(
@@ -112,7 +114,7 @@ function handleBackdropClick(event: MouseEvent) {
 
     <div v-if="experience" class="detail-content">
       <div class="detail-header">
-        <span class="detail-semester">{{ semesterLabel }}</span>
+        <span v-if="semesterLabel" class="detail-semester">{{ semesterLabel }}</span>
         <span v-if="experience.statusLabel" class="detail-status">{{
           experience.statusLabel
         }}</span>
@@ -222,10 +224,9 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .detail-semester {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  font-family: var(--gt-font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
   color: var(--gt-accent-mid, #5c3d28);
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
   padding: 6px 14px;
@@ -233,9 +234,9 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .detail-status {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 2px;
+  font-family: var(--gt-font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
   color: #3a7a4f;
   border: 1px solid rgba(58, 122, 79, 0.35);
   padding: 6px 14px;
@@ -244,18 +245,20 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .detail-date {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
+  font-family: var(--gt-font-mono);
+  font-size: 0.75rem;
   color: var(--text-light, #9a8474);
+  font-variant-numeric: tabular-nums;
 }
 
 .detail-title {
-  font-family: 'Instrument Serif', serif;
-  font-size: clamp(2.5rem, 6vw, 4.5rem);
-  font-weight: 400;
+  font-family: var(--gt-font-display);
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  font-weight: 600;
+  letter-spacing: 1px;
   color: var(--bark-dark, #2d1e12);
   margin-bottom: 1.5rem;
-  line-height: 1.15;
+  line-height: 1.3;
 }
 
 .detail-desc {
@@ -273,9 +276,9 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .detail-tag {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 1.5px;
+  font-family: var(--gt-font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
   padding: 8px 14px;
   border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
   border-radius: 100px;
@@ -283,10 +286,10 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .detail-subtitle {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 3px;
-  text-transform: uppercase;
+  font-family: var(--gt-font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 2px;
   color: var(--gt-accent, #8b6340);
   margin-bottom: 1.5rem;
 }
@@ -312,9 +315,10 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .skill-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--gt-font-mono);
   font-size: 0.75rem;
   color: var(--text-light, #9a8474);
+  font-variant-numeric: tabular-nums;
 }
 
 .skill-track {

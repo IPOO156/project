@@ -2,6 +2,7 @@
 import { ElMessage } from 'element-plus'
 import { ref, watch } from 'vue'
 import { getMessageSettings, updateMessageSettings } from '@/shared/api/notification'
+import { notificationCategoryLabel } from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 
 interface MessageSetting {
@@ -94,7 +95,9 @@ watch(
         :image-size="80"
       />
       <div v-for="item in settings" :key="item.category" class="message-settings__item">
-        <div class="message-settings__label">{{ item.categoryLabel }}</div>
+        <div class="message-settings__label">
+          {{ notificationCategoryLabel(item.category, item.categoryLabel) }}
+        </div>
         <div class="message-settings__switches">
           <div v-for="channel in CHANNELS" :key="channel.key" class="message-settings__switch">
             <span class="message-settings__switch-label">{{ channel.label }}</span>
@@ -146,7 +149,7 @@ watch(
   &__switches {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 24px;
   }
 
   &__switch {

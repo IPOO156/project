@@ -16,6 +16,12 @@ export const USER_AVATAR_CACHE_KEY = 'user_avatar_cache'
 /** 教师当前登录者身份缓存（/auth/me 的 roles / permissions / scopes） */
 export const TEACHER_ME_KEY = 'teacher_me'
 
+/**
+ * 首次登录强制改密标记（账号级）：登录响应 user.mustChangePassword=true 时写入，
+ * 改密成功 / 登出 / 普通登录时清除。用于刷新页面后仍能停留在强制改密页。
+ */
+export const MUST_CHANGE_PASSWORD_KEY = 'must_change_password'
+
 /** 表单草稿前缀：每页表单草稿键为 `form_draft_<key>`，登出后需按前缀整批清除 */
 export const DRAFT_PREFIX = 'form_draft_'
 

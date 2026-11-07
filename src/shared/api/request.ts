@@ -2,6 +2,7 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { USER_SCOPED_PREFIXES } from '@/shared/constants/storageKeys'
 import bookCursor from '@/shared/utils/bookCursor'
+import { markMustChangePassword } from '@/shared/utils/forcePasswordChange'
 import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import {
   clearAuth,
@@ -88,6 +89,13 @@ request.interceptors.request.use(
   },
   (error) => Promise.reject(error),
 )
+
+// ── 强制改密跳转去重 ──
+// 一个页面常并发多个请求，强制改密期间会同时收到多个 403；同一批（1 秒内）只提示/跳转一次，
+// 避免连弹多条相同提示、重复 assign。用时间窗而不是一次性布尔量，防止同一 SPA 会话内
+// 换账号再次触发时失效。
+let lastForcePasswordChangeAt = 0
+const FORCE_PASSWORD_CHANGE_NOTIFY_WINDOW_MS = 1000
 
 // ── 401 令牌刷新：并发去重，单飞（singleton）──
 let refreshPromise: Promise<string | null> | null = null
@@ -232,9 +240,30 @@ request.interceptors.response.use(
             forceLogout()
           }
           break
-        case 403:
-          ElMessage.error('没有权限执行此操作')
+        case 403: {
+          // 403 有两种业务含义，不能一律提示「没有权限执行此操作」：
+          //   1. 真的无权访问该功能；
+          //   2. 首次登录强制改密（后端口径：must_change_password=1 时仅放行
+          //      /auth/password、/auth/me、/auth/logout，其余接口统一 403）。
+          // 第 2 种要如实提示并立即跳到改密页，否则用户会以为账号权限有问题。
+          const deniedMessage: string = error.response.data?.message ?? ''
+          if (deniedMessage.includes('首次登录请先修改初始密码')) {
+            markMustChangePassword()
+            if (Date.now() - lastForcePasswordChangeAt > FORCE_PASSWORD_CHANGE_NOTIFY_WINDOW_MS) {
+              lastForcePasswordChangeAt = Date.now()
+              ElMessage.warning(deniedMessage)
+              // 全量刷新回到登录页：登录页检测到强制改密标记后会直接显示改密表单，
+              // 视觉与原登录卡片一致。当前页可能已并发发出多个 403 请求，整页跳转
+              // 可一并终止它们；已在登录页时不再跳转，避免循环刷新。
+              if (window.location.pathname !== '/login') {
+                window.location.assign('/login')
+              }
+            }
+          } else {
+            ElMessage.error('没有权限执行此操作')
+          }
           break
+        }
         case 429:
           ElMessage.error('请求过于频繁，请稍后重试')
           break

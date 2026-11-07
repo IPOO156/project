@@ -10,7 +10,7 @@ import { useCareerPlanStore } from '@/app/stores/stores'
 import { useFormDraft } from '@/shared/composables/useFormDraft'
 
 defineProps<{
-  /** 学期下拉选项（useSemesters：后端学期 ∪ 本地生成区间的并集） */
+  /** 学期下拉选项（useSemesters：仅后端真实学期） */
   semesterOptions: SemesterSelectOption[]
 }>()
 

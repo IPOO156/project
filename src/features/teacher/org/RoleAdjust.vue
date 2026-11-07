@@ -3,10 +3,11 @@
  * RoleAdjust - 管理权限 · 职位调整
  *
  * 对接后端：
- *  - GET /admin/users（roleId=3 教师）拉取教师账号列表
- *  - PUT /admin/users/{id}/roles 覆盖式调整职位（管理员/审核员/课任教师）
+ *  - GET /admin/users（roleId=3 teacher）拉取教师账号列表
+ *  - PUT /admin/users/{id}/roles 覆盖式调整角色（admin=[2] / teacher=[3]）
  *
- * 角色编码 → roleIds：admin=[2]；审核员(辅导员)=[3,4]；课任教师=[3]。
+ * 账号类型与后端角色码严格对齐（admin / teacher），前端不再暴露"审核员"开关——
+ * 审核能力由管理员在"审批流程 → 步骤配置"里直接选择哪个角色可以审核。
  */
 import type { ScopeConfigItem, UserListItem } from '@/shared/types/teacher'
 import { ElMessage } from 'element-plus'
@@ -22,16 +23,16 @@ import {
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 
+const props = defineProps<{ embed?: boolean }>()
+
 const ROLE_IDS: Record<string, number[]> = {
   admin: [2],
-  reviewer: [3, 4], // 辅导员 = 教师 + 辅导员双角色
   teacher: [3],
 }
 
 const ROLE_LABELS: Record<string, string> = {
   admin: '管理员',
-  reviewer: '审核员',
-  teacher: '课任教师',
+  teacher: '教师',
 }
 
 const loading = ref(false)
@@ -84,11 +85,16 @@ function handleSizeChange(size: number) {
   void load()
 }
 
-/** 从后端 roles 编码推断当前职位，用于弹窗默认选中 */
+/** 从后端 roles 编码推断当前角色（admin 或 teacher） */
 function currentRoleOf(row: UserListItem): string {
   if (row.roles?.includes('admin')) return 'admin'
-  if (row.roles?.includes('counselor')) return 'reviewer'
   return 'teacher'
+}
+
+/** 根据 roles 组合出展示给用户的职位文本（简化：admin → 管理员，其余 → 教师） */
+function displayTitleOf(row: UserListItem): string {
+  if (row.roles?.includes('admin')) return '管理员'
+  return '教师'
 }
 
 // ── 调整职位弹窗 ──
@@ -107,8 +113,12 @@ async function handleSaveRole() {
   if (!currentUser.value) return
   roleSaving.value = true
   try {
-    await updateUserRoles(currentUser.value.userId, ROLE_IDS[targetRole.value])
-    ElMessage.success(`已将「${currentUser.value.name}」调整为${ROLE_LABELS[targetRole.value]}`)
+    if (targetRole.value !== currentRoleOf(currentUser.value)) {
+      await updateUserRoles(currentUser.value.userId, ROLE_IDS[targetRole.value])
+      ElMessage.success(`已将「${currentUser.value.name}」调整为${ROLE_LABELS[targetRole.value]}`)
+    } else {
+      ElMessage.info('角色未变更')
+    }
     roleDialogVisible.value = false
     void load()
   } catch {
@@ -184,10 +194,13 @@ onMounted(() => void load())
 
 <template>
   <div class="mc-page" :class="{ 'is-stagger-armed': staggerActive }">
-    <div class="mc-page-head">
+    <div v-if="!props.embed" class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">教师职位调整</h2>
-        <p class="mc-page-head__desc">将教师职位调整为管理员、审核员（辅导员）或课任教师。</p>
+        <p class="mc-page-head__desc">
+          将教师角色调整为管理员或教师。审核能力由管理员在"审批流程 → 步骤配置"里
+          指定哪个角色可以审核，前端职位调整不暴露独立的审核开关。
+        </p>
       </div>
       <div class="mc-page-head__actions">
         <el-button :icon="RefreshCw" :loading="loading" @click="handleReset">刷新</el-button>
@@ -228,8 +241,8 @@ onMounted(() => void load())
               <span class="col-primary">{{ row.name }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="当前职位" width="144" class-name="col-secondary">
-            <template #default="{ row }">{{ row.roleNames?.join('、') ?? '-' }}</template>
+          <el-table-column label="当前职位" width="170" class-name="col-secondary">
+            <template #default="{ row }">{{ displayTitleOf(row as UserListItem) }}</template>
           </el-table-column>
           <el-table-column
             label="所属学院"
@@ -292,11 +305,10 @@ onMounted(() => void load())
         <el-form-item label="教师">
           <span>{{ currentUser?.name }}（{{ currentUser?.userNo }}）</span>
         </el-form-item>
-        <el-form-item label="新职位" required>
+        <el-form-item label="角色" required>
           <el-radio-group v-model="targetRole">
             <el-radio value="admin">管理员</el-radio>
-            <el-radio value="reviewer">审核员</el-radio>
-            <el-radio value="teacher">课任教师</el-radio>
+            <el-radio value="teacher">教师</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>

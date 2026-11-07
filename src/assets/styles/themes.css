@@ -44,10 +44,18 @@
   --gt-bg-page-rgb: 240 244 248;
   --gt-card: #ffffff;
   --gt-card-rgb: 255 255 255;
+  --gt-card-hover: #ffffff;
+  /* 成长时间轴字体族：Latin-only 字体（Instrument Serif / Cormorant / JetBrains Mono）
+     不含中文字形，必须显式补齐中文回退，否则标题会落到系统默认宋体 */
+  --gt-font-display: 'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+  --gt-font-ui: 'PingFang SC', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  --gt-font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
   --gt-bark-rgb: 30 58 95;
   --gt-shadow-rgb: 15 23 42;
   --gt-accent: #d4a574;
   --gt-accent-rgb: 212 165 116;
+  /* 强调色（accent 背景）上的文字色 */
+  --gt-on-accent: #ffffff;
   --gt-accent-mid: #2d5a87;
   --gt-accent-mid-rgb: 45 90 135;
   --gt-ring-soft: #93c5fd;
@@ -116,10 +124,13 @@
   --gt-bg-page-rgb: 15 23 42;
   --gt-card: #1e293b;
   --gt-card-rgb: 30 41 59;
+  --gt-card-hover: #243449;
   --gt-bark-rgb: 96 165 250;
   --gt-shadow-rgb: 0 0 0;
   --gt-accent: #fbbf24;
   --gt-accent-rgb: 251 191 36;
+  /* 夜间 accent 为亮琥珀，白字对比度不足，改用深色字 */
+  --gt-on-accent: #0f172a;
   --gt-accent-mid: #60a5fa;
   --gt-accent-mid-rgb: 96 165 250;
   --gt-ring-soft: #60a5fa;
