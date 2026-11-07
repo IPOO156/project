@@ -79,7 +79,79 @@ describe('useSemesters', () => {
 
     expect(semesterOptions.value).toEqual([])
     expect(error.value).toBe('学期数据为空')
-    expect(api.warning).toHaveBeenCalledWith('学期数据未配置，请联系管理员')
+    expect(api.warning).toHaveBeenCalledWith({
+      message: '学期数据未配置，请联系管理员',
+      duration: 0,
+      showClose: true,
+    })
+  })
+
+  it('成功获取后锁定缓存，再次 load 不重新请求', async () => {
+    api.getSemesters.mockResolvedValue([
+      { value: 1, name: '2024-2025-1', label: 'x', isCurrent: 1 },
+    ])
+
+    const { useSemesters } = await freshModule()
+    const { load } = useSemesters()
+
+    await load()
+    await load()
+    await load()
+
+    expect(api.getSemesters).toHaveBeenCalledTimes(1)
+  })
+
+  it('请求失败不锁定，下次 load 会重新请求，成功后锁定', async () => {
+    api.getSemesters.mockRejectedValueOnce(new Error('接口 500'))
+    api.getSemesters.mockResolvedValueOnce([
+      { value: 1, name: '2024-2025-1', label: 'x', isCurrent: 1 },
+    ])
+
+    const { useSemesters } = await freshModule()
+    const { load, error, semesterOptions } = useSemesters()
+
+    await load()
+    expect(api.getSemesters).toHaveBeenCalledTimes(1)
+    expect(error.value).toBe('接口 500')
+
+    await load()
+    expect(api.getSemesters).toHaveBeenCalledTimes(2)
+    expect(error.value).toBeNull()
+    expect(semesterOptions.value).toHaveLength(1)
+
+    await load()
+    expect(api.getSemesters).toHaveBeenCalledTimes(2)
+  })
+
+  it('持续失败达到上限后不再请求，避免无限重试', async () => {
+    api.getSemesters.mockRejectedValue(new Error('接口 500'))
+
+    const { useSemesters } = await freshModule()
+    const { load, error } = useSemesters()
+
+    for (let i = 0; i < 5; i += 1) await load()
+
+    expect(api.getSemesters).toHaveBeenCalledTimes(3)
+    expect(error.value).toBe('接口 500')
+  })
+
+  it('空数据常驻提示同一会话只弹一次，重试不刷屏', async () => {
+    api.getSemesters.mockResolvedValue([])
+
+    const { useSemesters } = await freshModule()
+    const { load, reload } = useSemesters()
+
+    await load()
+    await reload()
+    await reload()
+
+    expect(api.getSemesters).toHaveBeenCalledTimes(3)
+    expect(api.warning).toHaveBeenCalledTimes(1)
+    expect(api.warning).toHaveBeenCalledWith({
+      message: '学期数据未配置，请联系管理员',
+      duration: 0,
+      showClose: true,
+    })
   })
 
   it('请求失败时记录 Error message，不重复弹提示', async () => {
