@@ -4,7 +4,8 @@ import { ElMessage } from 'element-plus'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAppStore, useUserStore } from '@/app/stores/stores'
+import { useAppStore, useThemeStore, useUserStore } from '@/app/stores/stores'
+import logoIconDark from '@/assets/logo/logo-icon-dark.png'
 import logoIcon from '@/assets/logo/logo-icon.png'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { findMenuItemByRoute, menuItems } from '@/shared/constants/menu'
@@ -13,6 +14,7 @@ const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 // 教师端菜单按 /auth/me 的权限码过滤（见 teacherModuleRegistry）
 const { menuGroups, baselineFallback } = useTeacherAuthz()
 
@@ -101,7 +103,11 @@ function handleMenuSelect(index: string) {
     <!-- Logo -->
     <div class="sidebar__logo">
       <div class="sidebar__logo-icon">
-        <img :src="logoIcon" alt="档鉴未来" class="sidebar__logo-img" />
+        <img
+          :src="themeStore.isDark ? logoIconDark : logoIcon"
+          alt="档鉴未来"
+          class="sidebar__logo-img"
+        />
       </div>
       <transition name="fade">
         <span v-show="!appStore.isSidebarCollapsed" class="sidebar__logo-text">{{
@@ -442,8 +448,5 @@ html.dark .sidebar__logo-icon {
   box-shadow:
     0 0 12px rgba(148, 163, 184, 0.3),
     inset 0 0 0 1px rgba(148, 163, 184, 0.25);
-}
-html.dark .sidebar__logo-img {
-  filter: brightness(1.3);
 }
 </style>

@@ -2,6 +2,8 @@
 import type { PublicStatistics } from '@/shared/api/common'
 import { BookOpen, Clock, FileCheck, Layers, Shield, Sparkles, Users, Zap } from 'lucide-vue-next'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useThemeStore } from '@/app/stores/stores'
+import logoIconDark from '@/assets/logo/logo-icon-dark.png'
 import logoIcon from '@/assets/logo/logo-icon.png'
 import { getPublicStatistics } from '@/shared/api/common'
 
@@ -10,6 +12,8 @@ const props = defineProps<{
   mouseX: number
   mouseY: number
 }>()
+
+const themeStore = useThemeStore()
 
 /* ===================== 响应式数据 ===================== */
 const parallaxStyle = computed(() => {
@@ -117,7 +121,11 @@ onUnmounted(() => {
 
     <!-- Logo -->
     <div class="login__brand-mark" :style="parallaxStyle">
-      <img :src="logoIcon" alt="档鉴未来" class="login__brand-logo" />
+      <img
+        :src="themeStore.isDark ? logoIconDark : logoIcon"
+        alt="档鉴未来"
+        class="login__brand-logo"
+      />
     </div>
 
     <!-- 文字 -->
@@ -235,11 +243,6 @@ onUnmounted(() => {
   width: 112px;
   height: 112px;
   object-fit: contain;
-}
-
-/* 全局 dark 模式下 logo 滤镜 */
-:global(html.dark) .login__brand-logo {
-  filter: brightness(1.3) drop-shadow(0 0 8px rgba(255, 255, 255, 0.15));
 }
 
 .login__hero-copy {
