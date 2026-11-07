@@ -5,6 +5,8 @@ import { ref } from 'vue'
 
 const props = defineProps<{
   entries: QuickEntry[]
+  /** 候选池总数（真实菜单入口数），用于头部 N / 总数 与库位点阵 */
+  totalCount: number
 }>()
 
 const emit = defineEmits<{
@@ -70,127 +72,172 @@ function handleDragEndVisual() {
 </script>
 
 <template>
-  <el-card class="quick-entries-card">
-    <template #header>
-      <div class="quick-entries-card__header">
-        <span class="section-title">快捷入口</span>
-        <div class="quick-entry-actions">
-          <el-button
-            text
-            class="quick-entry-actions__refresh"
-            aria-label="刷新快捷入口"
-            @click="handleRefresh"
-          >
-            <RefreshCw :size="18" :class="{ 'is-spinning': isRefreshing }" />
-          </el-button>
-          <el-button
-            text
-            :icon="Settings2"
-            aria-label="自定义快捷入口"
-            @click="emit('openSettings')"
-          />
-        </div>
-      </div>
-    </template>
-    <div class="quick-entry-grid" :class="`quick-entry-grid--${Math.min(entries.length, 6)}`">
-      <div
-        v-for="(entry, index) in entries"
-        :key="entry.id"
-        class="quick-entry"
-        :class="{
-          'is-drag-over': dragOverIndex === index,
-          'is-dragging': dragActiveIndex === index,
-        }"
-        :style="{ '--entry-index': index }"
-        tabindex="0"
-        role="button"
-        draggable="true"
-        @click="emit('entryClick', entry)"
-        @keydown="(e) => handleKeydown(e, entry)"
-        @dragstart="handleDragStartVisual(index)"
-        @dragover.prevent="handleDragOver(index)"
-        @drop.prevent="handleDropVisual(index)"
-        @dragend="handleDragEndVisual"
-      >
+  <section class="quick-card" aria-label="快捷入口">
+    <header class="quick-card__head">
+      <h2 class="quick-card__title">快捷入口</h2>
+      <span class="quick-card__count">{{ entries.length }} / {{ totalCount }}</span>
+      <div class="quick-card__tools">
         <button
           type="button"
-          class="quick-entry__remove"
-          aria-label="删除快捷入口"
-          @click.stop="emit('toggleHidden', entry.id)"
+          class="icon-btn icon-btn--refresh"
+          aria-label="刷新快捷入口"
+          @click="handleRefresh"
         >
-          <X :size="12" />
+          <RefreshCw :size="15" :class="{ 'is-spinning': isRefreshing }" />
         </button>
-        <div class="quick-entry__body">
-          <div class="quick-entry__icon" :style="{ background: entry.bgColor, color: entry.color }">
+        <button
+          type="button"
+          class="icon-btn"
+          aria-label="自定义快捷入口"
+          @click="emit('openSettings')"
+        >
+          <Settings2 :size="15" />
+        </button>
+      </div>
+    </header>
+
+    <div class="quick-card__body">
+      <div v-if="entries.length" class="quick-grid">
+        <div
+          v-for="(entry, index) in entries"
+          :key="entry.id"
+          class="qitem"
+          :class="{
+            'is-drag-over': dragOverIndex === index,
+            'is-dragging': dragActiveIndex === index,
+          }"
+          :style="{ '--entry-index': index }"
+          tabindex="0"
+          role="button"
+          draggable="true"
+          @click="emit('entryClick', entry)"
+          @keydown="(e) => handleKeydown(e, entry)"
+          @dragstart="handleDragStartVisual(index)"
+          @dragover.prevent="handleDragOver(index)"
+          @drop.prevent="handleDropVisual(index)"
+          @dragend="handleDragEndVisual"
+        >
+          <span
+            class="qitem__icon"
+            :style="{ background: entry.bgColor, color: entry.color }"
+            aria-hidden="true"
+          >
             <component :is="entry.icon" :size="20" />
-          </div>
-          <div class="quick-entry__info">
-            <span class="quick-entry__label">{{ entry.label }}</span>
-            <span v-if="entry.isRecent" class="quick-entry__badge">最近使用</span>
-          </div>
-          <ArrowRight :size="14" class="quick-entry__arrow" />
+          </span>
+          <span class="qitem__info">
+            <span class="qitem__label">{{ entry.label }}</span>
+            <span v-if="entry.isRecent" class="qitem__badge">最近使用</span>
+          </span>
+          <ArrowRight :size="14" class="qitem__arrow" />
+          <button
+            type="button"
+            class="qitem__remove"
+            aria-label="删除快捷入口"
+            @click.stop="emit('toggleHidden', entry.id)"
+          >
+            <X :size="12" />
+          </button>
+        </div>
+      </div>
+
+      <div v-else class="quick-grid">
+        <div v-for="n in 6" :key="n" class="qitem qitem--slot" aria-hidden="true">
+          <span class="qitem__icon qitem__icon--slot" />
+          <span class="qitem__label">虚位待添加</span>
         </div>
       </div>
     </div>
-    <el-empty
-      v-if="entries.length === 0"
-      description="暂无可见入口，请点击设置添加"
-      :image-size="80"
-    />
-  </el-card>
+
+    <footer class="quick-card__foot">
+      <span v-if="entries.length" class="quick-card__hint">
+        {{ entries.length }} / {{ totalCount }} · 拖拽可排序 · 悬停出现移除按钮
+      </span>
+      <span v-else class="quick-card__hint">暂无可见入口，请点击设置添加</span>
+      <span class="qdots" aria-hidden="true">
+        <i v-for="n in totalCount" :key="n" :class="{ off: n > entries.length }" />
+      </span>
+    </footer>
+  </section>
 </template>
 
 <style scoped lang="scss">
-.quick-entries-card {
-  &__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
+.quick-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
 }
 
-.section-title {
-  font-size: 16px;
+.quick-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 8px 12px 8px 16px;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+
+.quick-card__title {
+  margin: 0;
+  font-size: $font-size-lg;
   font-weight: 600;
   color: var(--el-text-color-primary);
+  white-space: nowrap;
 }
 
-.quick-entry-grid {
-  display: grid;
-  // 按容器宽度自适应列数：11/24 栏在 1200–1366 宽度下只有约 130px/列，
-  // 固定三列会把「个人档案信息申报」压成逐字竖排。168px 才能留出约 70px 的标签宽度。
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-  gap: 12px;
-
-  &--1 {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-
-  &--2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  &--4 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.quick-card__count {
+  font-size: $font-size-xs;
+  color: var(--el-text-color-placeholder);
+  font-variant-numeric: tabular-nums;
 }
 
-.quick-entry-actions {
+.quick-card__tools {
   display: flex;
   align-items: center;
   gap: 4px;
+  margin-left: auto;
+}
 
-  &__refresh {
-    transition: transform $duration-slow $ease-standard;
+.icon-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--el-text-color-secondary);
+  cursor: pointer;
+  transition:
+    background-color $duration-fast $ease-standard,
+    color $duration-fast $ease-standard;
 
-    &:hover {
-      transform: rotate(180deg);
-    }
+  &:hover,
+  &:focus-visible {
+    background: var(--el-fill-color-light);
+    color: var(--el-text-color-primary);
+    outline: none;
+  }
 
-    .is-spinning {
-      animation: quick-refresh-spin 0.6s linear infinite;
-    }
+  .is-spinning {
+    animation: quick-refresh-spin 0.6s linear infinite;
+  }
+}
+
+// 刷新按钮 hover 旋转 180°（与 HEAD 的 .quick-entry-actions__refresh 一致：280ms 标准曲线）
+.icon-btn--refresh {
+  transition:
+    transform $duration-slow $ease-standard,
+    background-color $duration-fast $ease-standard,
+    color $duration-fast $ease-standard;
+
+  &:hover {
+    transform: rotate(180deg);
   }
 }
 
@@ -210,20 +257,39 @@ function handleDragEndVisual() {
   }
 }
 
-.quick-entry {
-  cursor: pointer;
-  border-radius: $radius-lg;
+.quick-card__body {
+  flex: 1;
+  min-height: 0;
+  padding: 10px 12px 0;
+}
+
+.quick-grid {
+  display: grid;
+  height: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  // 行高按容器剩余高度均分，让入口随卡片一起长高而不是挤在顶部
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.qitem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 10px;
   border: 1px solid var(--el-border-color-lighter);
+  border-radius: $radius-lg;
   background: var(--el-bg-color);
+  cursor: pointer;
   transition:
     transform $duration-base $ease-standard,
     box-shadow $duration-base $ease-standard,
     border-color $duration-base $ease-standard;
-  // 首次渲染按索引错峰入场（40ms/个）；backwards 只在动画期间占用 transform，
-  // 结束后交还给 hover/active，避免 fill 锁死后续交互
+  // 首次渲染按索引错峰入场（40ms/个）
   animation: quick-entry-in $duration-slow $ease-decelerate backwards;
   animation-delay: calc(var(--entry-index, 0) * 40ms);
-  position: relative;
 
   &.is-drag-over {
     box-shadow: inset 0 0 0 2px var(--el-color-primary-light-7);
@@ -235,54 +301,113 @@ function handleDragEndVisual() {
     cursor: grabbing;
   }
 
-  // 悬停上浮只在精确指针设备生效：触屏点按后 :hover 会“粘住”，
-  // 卡片一直悬空不落回，松手后看起来像卡住了
   @media (hover: hover) and (pointer: fine) {
     &:hover {
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
       border-color: var(--el-color-primary-light-7);
 
-      .quick-entry__icon {
+      .qitem__icon {
         transform: scale(1.08);
       }
 
-      .quick-entry__arrow {
+      .qitem__arrow {
         opacity: 1;
         transform: translateX(0);
       }
     }
   }
 
-  // 键盘聚焦给同样的视觉反馈，但不依赖 hover
   &:focus-visible {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     border-color: var(--el-color-primary-light-7);
     outline: none;
 
-    .quick-entry__icon {
+    .qitem__icon {
       transform: scale(1.08);
     }
 
-    .quick-entry__arrow {
+    .qitem__arrow {
       opacity: 1;
       transform: translateX(0);
     }
   }
 
-  // 按下即回落 + 轻微内缩，给“点击已被接收”的即时反馈
   &:active {
     transform: translateY(0) scale(0.98);
     transition-duration: $duration-instant;
   }
 
+  &--slot {
+    cursor: default;
+    border-style: dashed;
+    background: transparent;
+    color: var(--el-text-color-placeholder);
+    animation: none;
+  }
+
+  &__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+
+    &--slot {
+      border: 1px dashed var(--el-border-color);
+      background: transparent;
+    }
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__label {
+    font-size: $font-size-base;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &--slot &__label {
+    color: var(--el-text-color-placeholder);
+    font-weight: 400;
+  }
+
+  &__badge {
+    font-size: 11px;
+    line-height: 1.2;
+    color: var(--el-color-primary);
+  }
+
+  &__arrow {
+    opacity: 0;
+    transform: translateX(-4px);
+    transition:
+      opacity $duration-base $ease-standard,
+      transform $duration-base $ease-standard;
+    color: var(--el-text-color-secondary);
+    flex-shrink: 0;
+  }
+
   &__remove {
     position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 20px;
-    height: 20px;
+    top: 4px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
     border: none;
     border-radius: 50%;
     background: transparent;
@@ -315,80 +440,55 @@ function handleDragEndVisual() {
       opacity: 1;
     }
   }
+}
 
-  &__body {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px;
-  }
+.quick-card__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding: 4px 16px 8px;
+  font-size: $font-size-xs;
+  color: var(--el-text-color-placeholder);
+}
 
-  &__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: transform 0.2s;
-  }
+.quick-card__hint {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-  &__info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
+.qdots {
+  display: flex;
+  gap: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
 
-  &__label {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--el-text-color-primary);
-    // 入口名称可能很长，截断而不是换行把卡片撑高
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+  i {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--el-color-primary);
 
-  &__badge {
-    font-size: 11px;
-    line-height: 1;
-    color: var(--el-color-primary);
-  }
-
-  &__arrow {
-    opacity: 0;
-    transform: translateX(-4px);
-    transition:
-      opacity $duration-base $ease-standard,
-      transform $duration-base $ease-standard;
-    color: var(--el-text-color-secondary);
-    flex-shrink: 0;
+    &.off {
+      background: var(--el-border-color);
+    }
   }
 }
 
 @media (max-width: 768px) {
-  .quick-entry-grid {
+  .quick-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .quick-entry {
-    &__body {
-      padding: 14px 12px;
-      min-height: 44px;
-    }
-
-    &__arrow {
-      opacity: 1;
-      transform: translateX(0);
-    }
+  .qitem__arrow {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
 @media (max-width: 480px) {
-  .quick-entry-grid {
+  .quick-grid {
     grid-template-columns: 1fr;
   }
 }

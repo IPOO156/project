@@ -73,9 +73,19 @@ const profileSummary = computed(() => {
  */
 const hasAnyComparison = computed(() => profileSummary.value.some((item) => item.hasBaseline))
 
-const radarLegend = computed(() =>
-  hasAnyComparison.value ? ['当前画像', '目标值', '上一阶段'] : ['当前画像', '目标值'],
-)
+const radarLegendItems = computed(() => {
+  const items = [
+    { label: '当前画像', color: '#2d5a87' },
+    { label: '目标值', color: '#94a3b8' },
+  ]
+  if (hasAnyComparison.value) items.push({ label: '上一阶段', color: '#a855f7' })
+  return items
+})
+
+/** 进度条百分比：分数按 0–100 截断，避免数据异常时轨道溢出 */
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, value))
+}
 
 const radarTextColor = computed(() => (themeStore.isDark ? '#94a3b8' : '#334155'))
 const radarAxisColor = computed(() => (themeStore.isDark ? '#334155' : 'rgba(148, 163, 184, 0.18)'))
@@ -103,24 +113,13 @@ const radarOption = computed(() => {
       borderWidth: 0,
       textStyle: { color: '#fff' },
     },
-    legend: {
-      bottom: 0,
-      icon: 'circle',
-      itemWidth: 10,
-      itemHeight: 10,
-      textStyle: {
-        color: radarTextColor.value,
-        fontSize: 12,
-      },
-      data: radarLegend.value,
-    },
     radar: {
-      radius: '62%',
-      center: ['50%', '44%'],
+      radius: '70%',
+      center: ['50%', '50%'],
       splitNumber: 5,
       axisName: {
         color: radarTextColor.value,
-        fontSize: 13,
+        fontSize: 12,
       },
       splitLine: {
         lineStyle: {
@@ -204,188 +203,358 @@ const radarOption = computed(() => {
 </script>
 
 <template>
-  <el-card class="dashboard__section dashboard__section--radar">
-    <template #header>
-      <div class="dashboard__section-header dashboard__section-header--stacked">
-        <span class="section-title">多维度画像评估</span>
-        <span class="indicator-meta">
-          规则版本 {{ indicatorMeta.ruleVersion }} · 计算时间 {{ indicatorMeta.calculatedAt }} ·
-          数据完整度 {{ indicatorMeta.completeness }}
-          <el-button link type="primary" @click="emit('viewProfile')">查看档案概览</el-button>
-        </span>
-      </div>
-    </template>
-    <div class="radar-panel">
-      <div class="radar-panel__chart-wrap" @click="emit('viewProfile')">
-        <VChart v-if="radarOption" class="radar-panel__chart" :option="radarOption" autoresize />
-        <div v-else class="radar-panel__chart radar-panel__chart--empty">
-          <el-empty description="暂无维度数据" :image-size="80" />
+  <section class="profile-card" aria-label="多维度画像评估">
+    <header class="profile-card__head">
+      <h2 class="profile-card__title">多维度画像评估</h2>
+      <span class="profile-card__meta">
+        规则版本 {{ indicatorMeta.ruleVersion }} · 计算时间 {{ indicatorMeta.calculatedAt }} ·
+        数据完整度
+        {{ indicatorMeta.completeness }}
+      </span>
+      <button type="button" class="link-btn" @click="emit('viewProfile')">查看档案概览</button>
+    </header>
+
+    <div
+      class="profile-card__body"
+      :class="{ 'profile-card__body--empty': profileSummary.length === 0 }"
+    >
+      <div class="profile-chart">
+        <div class="profile-chart__canvas" @click="emit('viewProfile')">
+          <VChart
+            v-if="radarOption"
+            class="profile-chart__echart"
+            :option="radarOption"
+            autoresize
+          />
+          <div v-else class="profile-chart__empty">
+            <svg class="profile-chart__grid" viewBox="0 0 120 100" aria-hidden="true">
+              <polygon points="60,8 110,44 91,92 29,92 10,44" />
+              <polygon points="60,26 94,51 81,84 39,84 26,51" />
+              <polygon points="60,44 78,58 71,76 49,76 42,58" />
+              <line x1="60" y1="8" x2="60" y2="92" />
+              <line x1="110" y1="44" x2="29" y2="92" />
+              <line x1="91" y1="92" x2="10" y2="44" />
+            </svg>
+            <p class="profile-chart__empty-title">暂无维度数据</p>
+            <p class="profile-chart__empty-sub">完成首次评估后生成五维画像</p>
+          </div>
+        </div>
+        <div v-if="radarOption" class="profile-chart__legend">
+          <span v-for="item in radarLegendItems" :key="item.label">
+            <i :style="{ background: item.color }" />{{ item.label }}
+          </span>
         </div>
       </div>
-      <div v-if="profileSummary.length > 0" class="radar-panel__summary">
-        <div v-for="item in profileSummary" :key="item.label" class="radar-metric">
-          <div class="radar-metric__title-row">
-            <span class="radar-metric__label">{{ item.label }}</span>
-            <div class="radar-metric__score-group">
-              <span class="radar-metric__score">{{ item.current }}分</span>
-              <el-button
-                class="radar-metric__link"
-                link
-                type="primary"
-                @click="emit('openIndicator', item.label)"
-                >查看计算说明</el-button
-              >
-            </div>
-          </div>
-          <div class="radar-metric__meta">
-            <span v-if="item.hasBaseline" class="radar-metric__delta" :class="item.deltaClass">
+
+      <div v-if="profileSummary.length > 0" class="dims">
+        <div v-for="item in profileSummary" :key="item.label" class="dim">
+          <div class="dim__top">
+            <span class="dim__label">{{ item.label }}</span>
+            <span class="dim__score">{{ item.current }}<i>分</i></span>
+            <span v-if="item.hasBaseline" class="dim__delta" :class="item.deltaClass">
               {{ item.deltaLabel }} {{ item.deltaSign }}{{ item.deltaFromPrevious }}分
             </span>
-            <span v-else class="radar-metric__delta is-flat">暂无环比数据</span>
-            <span class="radar-metric__gap">距目标 {{ item.gapToTarget }}分</span>
+            <span v-else class="dim__delta is-flat">暂无环比数据</span>
+            <button type="button" class="dim__ask" @click="emit('openIndicator', item.label)">
+              查看计算说明
+            </button>
           </div>
+          <div class="dim__track">
+            <span class="dim__fill" :style="{ width: `${clampScore(item.current)}%` }" />
+            <span class="dim__target" :style="{ left: `${clampScore(item.target)}%` }" />
+          </div>
+          <div class="dim__gap">距目标 {{ item.gapToTarget }}分</div>
         </div>
       </div>
     </div>
-  </el-card>
+  </section>
 </template>
 
 <style scoped lang="scss">
-.dashboard__section-header {
+.profile-card {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-
-  // 画像卡的规则版本/计算时间较长，和标题并排会把标题挤成两行；
-  // 改为上下两行，标题保持单行，元信息自行换行。
-  &--stacked {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
+  flex-direction: column;
+  min-width: 0;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
 }
 
-.section-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.indicator-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--el-text-color-secondary);
-}
-
-.radar-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 1fr);
-  gap: $spacing-lg;
-  align-items: center;
-}
-
-.radar-panel__chart-wrap {
-  cursor: pointer;
-}
-
-.radar-panel__chart {
-  height: 260px;
-  width: 100%;
-}
-
-.radar-panel__summary {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  align-content: center;
-}
-
-.radar-metric {
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-}
-
-.radar-metric__title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.radar-metric__label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.radar-metric__score {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--el-color-primary);
-}
-
-.radar-metric__score-group {
+.profile-card__head {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 48px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--el-border-color-light);
 }
 
-.radar-metric__link {
-  font-size: 12px;
+.profile-card__title {
+  margin: 0;
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
 }
 
-.radar-metric__meta {
-  margin-top: 8px;
+.profile-card__meta {
+  min-width: 0;
+  font-size: $font-size-xs;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-btn {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: $font-size-base;
+  color: var(--el-color-primary);
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+    outline: none;
+  }
+}
+
+.profile-card__body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+  padding: 8px 16px 12px;
+}
+
+.profile-chart {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 4px 12px;
-  font-size: 12px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+// 空态没有右侧五维列表，让空态图形占满整行居中，避免右侧留下大片空白
+.profile-card__body--empty {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.profile-chart__canvas {
+  cursor: pointer;
+}
+
+.profile-chart__echart {
+  width: 300px;
+  height: 186px;
+}
+
+.profile-chart__empty {
+  width: 300px;
+  height: 186px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--el-text-color-placeholder);
+}
+
+.profile-chart__grid {
+  width: 104px;
+  height: 86px;
+  fill: none;
+  stroke: var(--el-border-color);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+}
+
+.profile-chart__empty-title {
+  margin: 4px 0 0;
+  font-size: $font-size-base;
+  color: var(--el-text-color-secondary);
+}
+
+.profile-chart__empty-sub {
+  margin: 0;
+  font-size: $font-size-xs;
+}
+
+.profile-chart__legend {
+  display: flex;
+  gap: 14px;
+  font-size: $font-size-xs;
   color: var(--el-text-color-secondary);
 
-  // 环比文字（含学期名）与目标差距都是完整短语，不在短语中间断行
-  > span {
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  i {
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+}
+
+.dims {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 14px;
+  align-content: stretch;
+  min-width: 0;
+}
+
+.dim {
+  min-width: 0;
+  padding: 3px 10px 2px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 6px;
+
+  // 五维数据在 2 列里会多出一个：让第 5 个占满整行，避免留下半排空白
+  &:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+
+  &__top {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__label {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-base;
+    color: var(--el-text-color-regular);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__score {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--el-text-color-primary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+
+    i {
+      margin-left: 1px;
+      font-size: $font-size-xs;
+      font-weight: 400;
+      font-style: normal;
+      color: var(--el-text-color-placeholder);
+    }
+  }
+
+  &__delta {
+    font-size: $font-size-xs;
+    white-space: nowrap;
+
+    &.is-up {
+      color: #16a34a;
+    }
+
+    &.is-down {
+      color: #dc2626;
+    }
+
+    /* 持平 / 无环比基线：沿用父级次级文字色，不套用涨跌色 */
+    &.is-flat {
+      color: var(--el-text-color-secondary);
+    }
+  }
+
+  &__ask {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: $font-size-xs;
+    color: var(--el-color-primary);
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+      outline: none;
+    }
+  }
+
+  &__track {
+    position: relative;
+    height: 6px;
+    margin-top: 4px;
+    border-radius: 999px;
+    background: var(--el-fill-color-light);
+    overflow: hidden;
+  }
+
+  &__fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 999px;
+    background: var(--el-color-primary);
+  }
+
+  &__target {
+    position: absolute;
+    top: -1px;
+    width: 2px;
+    height: 7px;
+    background: var(--el-text-color-secondary);
+  }
+
+  &__gap {
+    margin-top: 2px;
+    font-size: $font-size-xs;
+    color: var(--el-text-color-placeholder);
     white-space: nowrap;
   }
 }
 
-.radar-metric__delta.is-up {
-  color: #16a34a;
-}
-
-.radar-metric__delta.is-down {
-  color: #dc2626;
-}
-
-/* 持平 / 无环比基线：沿用父级 --el-text-color-secondary，不套用涨跌色 */
-.radar-metric__delta.is-flat {
-  color: var(--el-text-color-secondary);
-}
-
 @media (max-width: 1200px) {
-  .radar-panel {
+  .profile-card__body {
     grid-template-columns: 1fr;
   }
 
-  .radar-panel__chart {
-    height: 320px;
-  }
-
-  .radar-panel__summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .profile-chart__echart,
+  .profile-chart__empty {
+    width: 100%;
+    height: 260px;
   }
 }
 
 @media (max-width: 768px) {
-  .radar-panel__summary {
+  .profile-card__meta {
+    display: none;
+  }
+
+  .dims {
     grid-template-columns: 1fr;
+  }
+
+  .dim:nth-child(5) {
+    grid-column: auto;
+  }
+
+  .dims__foot {
+    flex-direction: column;
+    gap: 2px;
   }
 }
 </style>
