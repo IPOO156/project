@@ -11,7 +11,6 @@ import type { UserDetail, UserListItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { RefreshCw, Search } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
-
 import {
   getUserDetail,
   listAllClasses,
@@ -20,12 +19,16 @@ import {
   updateUser,
   updateUserStatus,
 } from '@/shared/api/teacher-api'
+
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
 
 const loading = ref(false)
 const users = ref<UserListItem[]>([])
+// 首次拿到非空账号后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => users.value.length)
 const total = ref(0)
 const page = ref(1)
 const perPage = ref(10)
@@ -198,7 +201,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mc-page student-account">
+  <div class="mc-page student-account" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">学生账号管理</h2>
@@ -411,6 +414,18 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .student-account {
   &__total {
     font-size: 13px;

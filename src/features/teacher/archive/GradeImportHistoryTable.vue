@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { GradeImportListItem, SemesterItem } from '@/shared/types/teacher'
 import { Search } from 'lucide-vue-next'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 
-defineProps<{
+const props = defineProps<{
   semesters: SemesterItem[]
   list: GradeImportListItem[]
   total: number
@@ -10,13 +11,16 @@ defineProps<{
   page: number
   perPage: number
 }>()
-
 const emit = defineEmits<{
   (e: 'search'): void
   (e: 'reset'): void
   (e: 'pageChange', page: number): void
   (e: 'openDetail', row: GradeImportListItem): void
 }>()
+
+// 首次拿到非空导入记录后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => props.list.length)
+
 const semesterId = defineModel<number | undefined>('semesterId', { required: true })
 const importStatus = defineModel<number | undefined>('importStatus', { required: true })
 
@@ -47,7 +51,13 @@ function importStatusType(status: number | null) {
     </el-form>
   </div>
 
-  <el-table v-loading="loading" class="u-w-full" :data="list" stripe>
+  <el-table
+    v-loading="loading"
+    class="u-w-full"
+    :class="{ 'is-stagger-armed': staggerActive }"
+    :data="list"
+    stripe
+  >
     <el-table-column prop="semesterName" label="学期" min-width="140" />
     <el-table-column prop="fileName" label="文件名" min-width="160" show-overflow-tooltip />
     <el-table-column prop="operatorName" label="操作人" width="100" />
@@ -88,6 +98,18 @@ function importStatusType(status: number | null) {
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .grade-import {
   &__filter {
     padding: 0 0 16px;

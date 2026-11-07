@@ -2,6 +2,7 @@
 import type { LogActionTag } from '@/shared/constants/dict'
 import type { SystemLogItem } from '@/shared/types/teacher'
 import { computed } from 'vue'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
 import { formatDateTime } from '@/shared/utils/time'
@@ -9,7 +10,9 @@ import { formatDateTime } from '@/shared/utils/time'
 interface Props {
   data: SystemLogItem[]
 }
-defineProps<Props>()
+const props = defineProps<Props>()
+// 首次拿到非空日志后只播一次，翻页 / 筛选 / 轮询改变长度不会重播
+const staggerActive = useFirstLoadStagger(() => props.data.length)
 // 持有系统日志权限的管理员看明文；教师 / 辅导员看脱敏（后端 /teacher/logs 亦为脱敏数据）
 // 后端日志接口只校验 log:view；admin 角色直通（其权限码可能为空）
 const { canAccessAny } = useTeacherAuthz()
@@ -50,7 +53,13 @@ function moduleLabel(module: string | null): string {
 </script>
 
 <template>
-  <el-table class="u-w-full" :data="data" stripe max-height="600">
+  <el-table
+    class="u-w-full"
+    :class="{ 'is-stagger-armed': staggerActive }"
+    :data="data"
+    stripe
+    max-height="600"
+  >
     <el-table-column type="index" label="序号" width="60" />
     <el-table-column label="操作人" width="130">
       <template #default="{ row }">
@@ -81,6 +90,18 @@ function moduleLabel(module: string | null): string {
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 :deep(.log-time .cell) {
   white-space: nowrap;
 }

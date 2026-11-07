@@ -19,7 +19,6 @@ import type {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Megaphone, Plus, RefreshCw } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-
 import {
   createAnnouncement,
   deleteAnnouncement,
@@ -29,11 +28,15 @@ import {
   listMajors,
   updateAnnouncement,
 } from '@/shared/api/teacher-api'
+
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import RowActions from '@/shared/ui/RowActions.vue'
 
 const announcementLoading = ref(false)
 const deletingId = ref<number | null>(null)
 const announcements = ref<AnnouncementItem[]>([])
+// 首次拿到非空公告后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => announcements.value.length)
 const total = ref(0)
 const page = ref(1)
 const perPage = ref(10)
@@ -298,7 +301,7 @@ onMounted(() => void loadAnnouncements())
 </script>
 
 <template>
-  <div class="announcement-panel">
+  <div class="announcement-panel" :class="{ 'is-stagger-armed': staggerActive }">
     <el-alert
       class="announcement-panel__hint"
       type="info"
@@ -518,6 +521,18 @@ onMounted(() => void loadAnnouncements())
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .announcement-panel {
   &__hint {
     margin-bottom: $spacing-lg;

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ArchiveAdminListItem } from '@/shared/types/teacher'
 import { FileSearch } from 'lucide-vue-next'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { formatDateTime } from '@/shared/utils/time'
 import { statusLabel, statusTagType } from './archiveStatus'
 
@@ -13,19 +14,21 @@ interface Props {
   perPage: number
 }
 
-defineProps<Props>()
-
+const props = defineProps<Props>()
 const emit = defineEmits<{
   (e: 'pageChange', page: number): void
   (e: 'sizeChange', size: number): void
   (e: 'openStudentArchive', row: ArchiveAdminListItem): void
   (e: 'openDetail', row: ArchiveAdminListItem): void
 }>()
+
+// 首次拿到非空明细后只播一次，筛选 / 翻页 / 刷新改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => props.list.length)
 </script>
 
 <template>
   <!-- 档案明细 -->
-  <section class="mc-card archive-view__detail-list">
+  <section class="mc-card archive-view__detail-list" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-card__head">
       <span class="mc-card__title">
         <FileSearch :size="16" />
@@ -129,6 +132,18 @@ const emit = defineEmits<{
 
 <style scoped lang="scss">
 @use '@/assets/styles/variables.scss' as *;
+
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
 
 .archive-view {
   /* ── 数量徽标 ── */

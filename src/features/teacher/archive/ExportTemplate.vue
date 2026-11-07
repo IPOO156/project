@@ -17,6 +17,7 @@ import {
   updateExportTemplate,
   updateExportTemplateStatus,
 } from '@/shared/api/teacher-api'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
 import ExportTemplateDetailDrawer from './ExportTemplateDetailDrawer.vue'
@@ -27,6 +28,8 @@ const deletingId = ref<number | null>(null)
 /** 正在执行行内动作（设默认/启停）的模板 id —— 二者均为行级写操作，共用一个 ref */
 const actingId = ref<number | null>(null)
 const list = ref<ExportTemplateItem[]>([])
+// 首次拿到非空模板后只播一次，翻页 / 刷新改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => list.value.length)
 const total = ref(0)
 const page = ref(1)
 const perPage = ref(20)
@@ -257,7 +260,7 @@ onMounted(() => void load())
 </script>
 
 <template>
-  <div class="mc-page">
+  <div class="mc-page" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">导出模板</h2>
@@ -442,6 +445,18 @@ onMounted(() => void load())
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .export-template {
   &__pagination {
     margin-top: $spacing-lg;

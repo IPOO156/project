@@ -32,6 +32,7 @@ import {
   getTeacherStudentTimeline,
   getTeacherStudentWeaknesses,
 } from '@/shared/api/teacher-api'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { TEACHER_EVENT_TYPE_OPTIONS } from '@/shared/constants/dict'
 import CareerPlanDialog from './CareerPlanDialog.vue'
 import SuggestionDialog from './SuggestionDialog.vue'
@@ -44,6 +45,8 @@ const loading = ref(false)
 const profile = ref<TeacherStudentProfile | null>(null)
 const timeline = ref<TeacherGrowthTimeline | null>(null)
 const weaknesses = ref<TeacherWeaknessItem[]>([])
+// 首次拿到非空短板列表后只播一次，重新加载改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => weaknesses.value.length)
 
 // ── 成长时间轴 ──
 const eventTypeFilter = ref<number | ''>('')
@@ -139,7 +142,7 @@ onMounted(() => void loadAll())
 </script>
 
 <template>
-  <div class="mc-page student-detail">
+  <div class="mc-page student-detail page-enter" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <el-button text :icon="ArrowLeft" class="student-detail__back" @click="router.back()">
@@ -390,6 +393,18 @@ onMounted(() => void loadAll())
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .student-detail {
   &__back {
     padding-left: 0;
