@@ -49,6 +49,24 @@ $spacing-xl: 24px;
 $spacing-2xl: 32px;
 
 // 圆角
+// ── 语义档位（φ 阶梯 9 / 14 / 23）—— 仅教师端 / 管理员端消费 ──
+// 9：控件与小容器（按钮 / 输入 / 下拉 / 分页 / 消息条 / 页签容器 / 卡片）
+// 14：高度 ≥72px 且承载大块内容的大面（大卡片 / 抽屉 / 面板；抽屉贴屏幕边的两角为 0）
+// 23：高度 ≥96px 的大面（首屏主卡 / 空态大块 / 大媒体区）；当前无消费者，仅保留定义
+// 锁定值：列表行 0、表格单元格 0、行内 chip 6、tag 4、checkbox 4、radio 50%
+// 同心规则：内层 = max(0, 外层 − 内边距)；弹窗内距 16 > 外圆角 14 时普通控件仍取 9
+// 落地范围：只在 `#app :is(.layout--teacher, .layout--admin)` 及其浮层作用域生效，
+//   学生端与登录页继续使用下方 BASE 值（4 / 6 / 8 / 12 / 16）。
+$radius-row: 0;
+$radius-tag: 4px;
+$radius-choice: 4px;
+$radius-chip: 6px;
+$radius-control: 9px;
+$radius-card: 9px;
+$radius-large: 14px;
+$radius-hero: 23px;
+
+// BASE 档位：学生端 / 登录页沿用的既有取值，不得随教师端改造而变
 $radius-sm: 4px;
 $radius-base: 6px;
 $radius-lg: 8px;

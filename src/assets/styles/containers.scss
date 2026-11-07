@@ -108,7 +108,7 @@ html:has(#app :is(.layout--teacher, .layout--admin)) {
   // EP 分页根节点变量。
   // 为什么这么写：
   // - 表面色、文字色、hover 色全部复用按钮 token，active 不再用品牌蓝。
-  // - 圆角沿用 6px（与现有 teacher-console 的 6px 一致）。
+  // - 圆角沿用控件档位 9px（由 --mc-ctl-radius 提供）。
   // - 不改 font-size / button-width / button-height，32×32 尺寸保持原样。
   .el-pagination.el-pagination[class] {
     --el-pagination-bg-color: var(--mc-ctl-surface);
