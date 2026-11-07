@@ -181,7 +181,7 @@ async function handleExportResume() {
 </script>
 
 <template>
-  <div class="archive-overview">
+  <div class="archive-overview page-enter">
     <div class="page-head">
       <div>
         <h1 class="page-head__title">档案概览</h1>
@@ -237,6 +237,10 @@ async function handleExportResume() {
 </template>
 
 <style scoped lang="scss">
+.page-enter {
+  @include page-enter;
+}
+
 .archive-overview {
   display: flex;
   flex-direction: column;

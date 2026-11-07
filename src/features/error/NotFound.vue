@@ -22,7 +22,7 @@ function goBack() {
 </script>
 
 <template>
-  <div class="not-found">
+  <div class="not-found page-enter">
     <div class="not-found__card">
       <div class="not-found__icon"><Compass :size="30" /></div>
       <p class="not-found__code">404</p>
@@ -37,6 +37,10 @@ function goBack() {
 </template>
 
 <style scoped lang="scss">
+.page-enter {
+  @include page-enter;
+}
+
 .not-found {
   min-height: 100svh;
   display: flex;

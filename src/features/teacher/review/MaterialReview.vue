@@ -72,7 +72,7 @@ const { activeTab } = useTabRoute<TabKey>(availableKeys, 'pending')
 </script>
 
 <template>
-  <div class="mc-page hub-page material-review">
+  <div class="mc-page hub-page material-review page-enter">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">材料审核</h2>

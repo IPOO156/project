@@ -48,7 +48,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="edit-password">
+  <div class="edit-password page-enter">
     <el-card>
       <template #header>
         <span class="card-title">修改密码</span>
@@ -96,6 +96,10 @@ async function handleSubmit() {
 </template>
 
 <style scoped lang="scss">
+.page-enter {
+  @include page-enter;
+}
+
 .edit-password {
   max-width: 640px;
 }

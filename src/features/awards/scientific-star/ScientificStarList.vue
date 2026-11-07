@@ -15,7 +15,7 @@ const activeTab = ref<'project' | 'copyright' | 'paper'>(
 </script>
 
 <template>
-  <div class="app-page">
+  <div class="app-page page-enter">
     <el-alert title="科研之星报名说明" type="info" :closable="false" show-icon>
       <p>科研之星报名包含科研项目、软件著作权和论文三类成果，请根据实际情况填写并上传证明材料。</p>
     </el-alert>
@@ -37,6 +37,10 @@ const activeTab = ref<'project' | 'copyright' | 'paper'>(
 </template>
 
 <style scoped lang="scss">
+.page-enter {
+  @include page-enter;
+}
+
 .app-page {
   display: flex;
   flex-direction: column;
