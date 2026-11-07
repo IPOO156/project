@@ -15,6 +15,9 @@ export default defineConfig({
   test: {
     include: ['tests/unit/**/*.spec.ts'],
     environment: 'node',
+    // Windows 下 forks 池并发启动 worker 会争抢资源并超时（12/25 文件未跑），
+    // 改用 threads 池：线程启动开销更低，且不依赖子进程 fork。
+    pool: 'threads',
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

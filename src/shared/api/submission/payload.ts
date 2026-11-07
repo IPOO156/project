@@ -58,6 +58,41 @@ function toEvidenceFileIds(proofMaterials: unknown): number[] {
   return ids
 }
 
+/**
+ * proofMaterials 中来自成果墙的附件 → achievementEvidence。
+ * 只传引用（成果 id + 版本 + 附件 id），由后端按该版本冻结快照；
+ * 成果后续被编辑或下架，已提交申报读快照，不回查成果墙。
+ */
+export interface AchievementEvidenceRef {
+  achievementId: string
+  version: number
+  fileIds: string[]
+}
+
+function toAchievementEvidence(proofMaterials: unknown): AchievementEvidenceRef[] {
+  if (!Array.isArray(proofMaterials)) return []
+  const refs = new Map<string, AchievementEvidenceRef>()
+  for (const item of proofMaterials) {
+    if (!item || typeof item !== 'object') continue
+    const ref = item as {
+      achievementId?: unknown
+      achievementVersion?: unknown
+      achievementFileId?: unknown
+    }
+    const achievementId = typeof ref.achievementId === 'string' ? ref.achievementId : ''
+    const version = typeof ref.achievementVersion === 'number' ? ref.achievementVersion : 0
+    if (!achievementId || version <= 0) continue
+    const fileId = typeof ref.achievementFileId === 'string' ? ref.achievementFileId : ''
+    const existing = refs.get(achievementId)
+    if (existing) {
+      if (fileId && !existing.fileIds.includes(fileId)) existing.fileIds.push(fileId)
+      continue
+    }
+    refs.set(achievementId, { achievementId, version, fileIds: fileId ? [fileId] : [] })
+  }
+  return [...refs.values()]
+}
+
 let semesterIdMap: Record<string, number> | null = null
 
 /** 学期名称字符串 → 学期 ID（Integer）。表单 semester 为 '2024-2025-1' 格式名称，契约要求 ID。 */
@@ -109,6 +144,9 @@ export async function buildContractPayload(
     evidenceFileIds: toEvidenceFileIds(data.proofMaterials),
   }
 
+  const achievementEvidence = toAchievementEvidence(data.proofMaterials)
+  if (achievementEvidence.length > 0) payload.achievementEvidence = achievementEvidence
+
   for (const [backendKey, frontKey] of Object.entries(contract.mapping)) {
     const raw = data[frontKey]
     if (raw === undefined || raw === null || raw === '') continue
@@ -130,4 +168,4 @@ export async function buildContractPayload(
   return payload
 }
 
-export { normalizeRole, toDateString, toEvidenceFileIds }
+export { normalizeRole, toAchievementEvidence, toDateString, toEvidenceFileIds }

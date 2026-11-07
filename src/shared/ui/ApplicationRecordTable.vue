@@ -1,10 +1,11 @@
 <script setup lang="ts" generic="T">
 import type { ApplicationType } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { computed, h, ref, watch } from 'vue'
+import { computed, h, inject, ref, watch } from 'vue'
 import { getApplicationGuide, getApplicationVersions } from '@/shared/api/applications'
 import { getAwardGuide, getAwardVersions } from '@/shared/api/awards'
 import { activityCategoryOf } from '@/shared/api/submission'
+import { FORM_RECORDS_LOADING } from '@/shared/composables/useFormRecords'
 import StatusTag from './StatusTag.vue'
 import VersionHistoryDrawer from './VersionHistoryDrawer.vue'
 
@@ -28,6 +29,9 @@ const emit = defineEmits<{
   (e: 'correction', row: T): void
   (e: 'score', row: T): void
 }>()
+
+// 记录加载态由 useFormRecords 向下提供；未被提供时（如奖项页复用本组件）视为已加载
+const recordsLoading = inject(FORM_RECORDS_LOADING, ref(false))
 
 /* ===================== 申报记录分页 ===================== */
 // 超过 PAGE_SIZE 条才启用分页（≤ 阈值时全量展示，保持简洁）；客户端分页基于当前 records 数组
@@ -263,82 +267,91 @@ async function openGuide(row: any) {
 </script>
 
 <template>
-  <el-card v-if="showRecords && records.length" class="record-card">
+  <el-card v-if="showRecords" class="record-card">
     <template #header
       ><span class="card-title">申报记录</span
-      ><span class="card-title__count">共 {{ records.length }} 条</span></template
+      ><span v-if="!recordsLoading" class="card-title__count"
+        >共 {{ records.length }} 条</span
+      ></template
     >
+    <!-- 加载中用静态骨架占住记录区高度：不做循环扫光，避免长驻动态抢注意力 -->
+    <div v-if="recordsLoading" class="record-card__skeleton" aria-busy="true">
+      <el-skeleton :rows="4" />
+    </div>
     <!-- pagedRecords 为泛型 T[]，el-table data 要求 DefaultRow[]（Record<PropertyKey, any>），双重断言显式收窄 -->
-    <el-table :data="pagedRecords as unknown as Record<PropertyKey, any>[]" stripe>
-      <slot name="columns" />
-      <el-table-column label="状态" width="100" align="center"
-        ><template #default="{ row }"
-          ><StatusTag :status="getRecordStatus(row)" size="small" /></template
-      ></el-table-column>
-      <el-table-column label="操作" width="360" fixed="right" align="center">
-        <template #default="{ row }">
-          <el-button size="small" type="primary" link @click="emit('view', row as T)"
-            >查看</el-button
-          >
-          <el-button
-            v-if="canEdit(getRecordStatus(row))"
-            size="small"
-            type="primary"
-            link
-            @click="emit('edit', row as T)"
-            >编辑</el-button
-          >
-          <el-button
-            v-if="canDelete(getRecordStatus(row))"
-            size="small"
-            type="danger"
-            link
-            @click="emit('remove', row as T)"
-            >删除</el-button
-          >
-          <el-button
-            v-if="canWithdraw(getRecordStatus(row))"
-            size="small"
-            type="warning"
-            link
-            @click="emit('withdraw', row as T)"
-            >撤回</el-button
-          >
-          <el-button
-            v-if="canRequestCorrection(row)"
-            size="small"
-            type="primary"
-            link
-            @click="emit('correction', row as T)"
-            >申请更正</el-button
-          >
-          <el-button
-            v-if="canViewScore(getRecordStatus(row))"
-            size="small"
-            type="info"
-            link
-            @click="emit('score', row as T)"
-            >计分影响</el-button
-          >
-          <el-button
-            v-if="canViewVersions(row)"
-            size="small"
-            type="info"
-            link
-            @click="openVersions(row as T)"
-            >版本</el-button
-          >
-          <el-button
-            v-if="canViewGuide(row)"
-            size="small"
-            type="info"
-            link
-            @click="openGuide(row as T)"
-            >评选说明</el-button
-          >
-        </template>
-      </el-table-column>
-    </el-table>
+    <!-- 外层 min-height 对齐骨架高度，加载完成前后记录区不塌陷 -->
+    <div v-else class="record-card__table">
+      <el-table :data="pagedRecords as unknown as Record<PropertyKey, any>[]" stripe>
+        <slot name="columns" />
+        <el-table-column label="状态" width="100" align="center"
+          ><template #default="{ row }"
+            ><StatusTag :status="getRecordStatus(row)" size="small" /></template
+        ></el-table-column>
+        <el-table-column label="操作" width="360" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" link @click="emit('view', row as T)"
+              >查看</el-button
+            >
+            <el-button
+              v-if="canEdit(getRecordStatus(row))"
+              size="small"
+              type="primary"
+              link
+              @click="emit('edit', row as T)"
+              >编辑</el-button
+            >
+            <el-button
+              v-if="canDelete(getRecordStatus(row))"
+              size="small"
+              type="danger"
+              link
+              @click="emit('remove', row as T)"
+              >删除</el-button
+            >
+            <el-button
+              v-if="canWithdraw(getRecordStatus(row))"
+              size="small"
+              type="warning"
+              link
+              @click="emit('withdraw', row as T)"
+              >撤回</el-button
+            >
+            <el-button
+              v-if="canRequestCorrection(row)"
+              size="small"
+              type="primary"
+              link
+              @click="emit('correction', row as T)"
+              >申请更正</el-button
+            >
+            <el-button
+              v-if="canViewScore(getRecordStatus(row))"
+              size="small"
+              type="info"
+              link
+              @click="emit('score', row as T)"
+              >计分影响</el-button
+            >
+            <el-button
+              v-if="canViewVersions(row)"
+              size="small"
+              type="info"
+              link
+              @click="openVersions(row as T)"
+              >版本</el-button
+            >
+            <el-button
+              v-if="canViewGuide(row)"
+              size="small"
+              type="info"
+              link
+              @click="openGuide(row as T)"
+              >评选说明</el-button
+            >
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
     <div v-if="showRecordsPagination" class="record-card__pagination">
       <el-pagination
         v-model:current-page="recordsPage"
@@ -367,6 +380,24 @@ async function openGuide(row: any) {
   display: flex;
   justify-content: flex-end;
   margin-top: 12px;
+}
+.record-card__skeleton {
+  padding: 4px 2px;
+}
+/* 与骨架（4 行 × 32px + 上下 4px ≈ 136px）等高，避免加载完成时记录区高度突变 */
+.record-card__table {
+  min-height: 136px;
+  /* 挂载即淡入：骨架让位后表格原地浮现，不位移（用户正在读的内容不该移动） */
+  animation: record-swap-in $duration-base $ease-decelerate both;
+}
+
+@keyframes record-swap-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .card-title__count {
   margin-left: 8px;

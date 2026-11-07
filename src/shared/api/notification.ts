@@ -1,4 +1,5 @@
 import type { Notification, NotificationFilters } from '@/shared/types/types'
+import { notificationCategoryLabel } from '@/shared/constants/dict'
 import request from './request'
 
 /** 后端 GET /messages 的单页上限（MessageController 将 per_page 截断到 100） */
@@ -63,7 +64,8 @@ function mapMessage(m: any): Notification {
   return {
     id: String(m.id),
     category: m.category,
-    categoryLabel: m.categoryLabel || m.category,
+    // 后端可能把枚举键写进 categoryLabel：统一在此归一，UI 不再各自兜底
+    categoryLabel: notificationCategoryLabel(m.category, m.categoryLabel),
     title: m.title,
     content: m.content,
     senderType: m.senderType,
@@ -147,7 +149,14 @@ export function getMessageSettings(): Promise<
 > {
   // 不吞错误：接口失败必须让调用方区分「读取失败」与「没有任何设置项」，
   // 否则页面会把失败显示成「全部关闭/暂无设置」，用户可能据此误改通知配置。
-  return request.get('/messages/settings').then((res: any) => (Array.isArray(res) ? res : []))
+  return request.get('/messages/settings').then((res: any) =>
+    Array.isArray(res)
+      ? res.map((item: any) => ({
+          ...item,
+          categoryLabel: notificationCategoryLabel(item.category, item.categoryLabel),
+        }))
+      : [],
+  )
 }
 
 /** 更新/新增消息通知设置（PUT /messages/settings） */

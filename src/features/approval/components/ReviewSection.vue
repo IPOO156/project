@@ -30,8 +30,12 @@ const dialogMode = ref<'view' | 'edit'>('view')
 const dialogRecord = ref<any>(null)
 const tableKey = ref(0)
 const successPulse = ref(false)
+// 刷入只播一次：首屏数据到达后即上锁，翻页 / 筛选 / 切页签都不再重播
+let staggerArmed = true
 
 function bumpTableAnimation() {
+  if (!staggerArmed) return
+  staggerArmed = false
   tableKey.value++
 }
 
@@ -498,17 +502,17 @@ onMounted(() => {
 
 // 行级 stagger 动画
 .mc-table--staggered {
-  --mc-row-duration: 0.54s;
-  --mc-row-delay: 0.05s;
-  --mc-row-offset: -28px;
+  --mc-row-duration: 0.32s;
+  --mc-row-delay: 0.04s;
+  --mc-row-offset: 60px;
 
   :deep(.el-table__row) {
     --_duration: var(--mc-row-duration, 0.6s);
     --_delay: var(--mc-row-delay, 0.08s);
     --_easing: var(--mc-row-easing, #{$ease-emphasized});
 
-    opacity: 0;
-    animation: table-row-brush var(--_duration) var(--_easing) both;
+    opacity: 1;
+    animation: table-row-brush var(--_duration) var(--_easing) backwards;
   }
 
   @for $i from 1 through 24 {

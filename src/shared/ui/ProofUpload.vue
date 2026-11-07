@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { UploadFile, UploadInstance, UploadUserFile } from 'element-plus'
+import type { PickedAchievementFile } from '@/shared/api/achievements'
 import { ElImageViewer, ElMessage } from 'element-plus'
-import { Eye, Trash2, Upload } from 'lucide-vue-next'
+import { Eye, FolderOpen, Trash2, Upload } from 'lucide-vue-next'
 import { reactive, ref } from 'vue'
 import { deleteFile, previewFile, uploadFile } from '@/shared/api/common'
+import AchievementPickerDialog from '@/shared/ui/AchievementPickerDialog.vue'
 
 interface Props {
   accept?: string
@@ -27,6 +29,11 @@ const fileList = defineModel<UploadUserFile[]>('fileList', { default: () => [] }
 /** 上传附件（运行时由上传结果回填 fileId，提交映射据此生成 evidenceFileIds） */
 interface EvidenceUploadFile extends UploadUserFile {
   fileId?: number
+  /** 来自成果墙的附件：提交时随 achievementEvidence 一起冻结快照 */
+  achievementId?: string
+  achievementVersion?: number
+  achievementFileId?: string
+  sourceUrl?: string
 }
 
 const uploadRef = ref<UploadInstance>()
@@ -36,6 +43,7 @@ const progressMap = reactive<Record<number, number>>({})
 const previewing = ref(false)
 const imageViewerVisible = ref(false)
 const imageViewerUrl = ref('')
+const pickerVisible = ref(false)
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp']
 
@@ -55,15 +63,57 @@ function canDeleteFile() {
   )
 }
 
+/** 来自成果墙的条目只从本次申报里移除，不删除成果原件 */
+function isAchievementFile(file: UploadFile | UploadUserFile): boolean {
+  return typeof (file as EvidenceUploadFile).achievementId === 'string'
+}
+
 /** 移除文件（el-upload internal handleRemove 触发）：调用 DELETE 并回写父级列表 */
 function handleRemove(file: UploadFile, list: UploadFile[]) {
   const fileId = getFileId(file)
-  if (typeof fileId === 'number') {
+  if (typeof fileId === 'number' && !isAchievementFile(file)) {
     deleteFile(fileId).catch(() => {
       // 删除失败（如文件已被业务关联，仅未关联可删）：静默处理
     })
   }
   fileList.value = [...list]
+}
+
+/** 成果墙选材：把选中成果的附件并入当前附件列表，与手动上传的文件共存 */
+function handlePicked(files: PickedAchievementFile[]) {
+  // 去重键必须与下方 key 同构（achievementId:fileId）。
+  // 只存 achievementFileId 会与复合 key 永远不相等，导致重复选同一份附件时重复入列。
+  const existing = new Set(
+    fileList.value
+      .map((file) => {
+        const item = file as EvidenceUploadFile
+        return typeof item.achievementId === 'string' && typeof item.achievementFileId === 'string'
+          ? `${item.achievementId}:${item.achievementFileId}`
+          : null
+      })
+      .filter((key): key is string => key !== null),
+  )
+  const base = Date.now()
+  const appended: UploadUserFile[] = []
+  files.forEach((file, index) => {
+    const key = `${file.achievementId}:${file.fileId}`
+    if (existing.has(key)) return
+    existing.add(key)
+    const numericId = Number(file.fileId)
+    appended.push({
+      uid: base + index,
+      name: `${file.achievementTitle} · ${file.fileName}`,
+      status: 'success',
+      fileId: Number.isFinite(numericId) ? numericId : undefined,
+      achievementId: file.achievementId,
+      achievementVersion: file.achievementVersion,
+      achievementFileId: file.fileId,
+      sourceUrl: file.previewUrl || file.url,
+    } as UploadUserFile)
+  })
+  fileList.value = [...fileList.value, ...appended]
+  pickerVisible.value = false
+  if (appended.length === 0) ElMessage.info('所选证书已在附件列表中')
 }
 
 /**
@@ -143,8 +193,23 @@ function isImageFile(fileName: string, fileType: string): boolean {
   return IMAGE_EXTS.includes(ext) || IMAGE_EXTS.includes(type) || type.startsWith('image/')
 }
 
+/** 是否可预览：手动上传的看 fileId，成果墙来源的看本地/签名地址 */
+function canPreview(file: UploadFile | UploadUserFile): boolean {
+  return getFileId(file) !== undefined || Boolean((file as EvidenceUploadFile).sourceUrl)
+}
+
 /** 预览：图片走 el-image-viewer，PDF 等走新窗口打开 */
 async function handlePreview(file: UploadFile) {
+  const sourceUrl = (file as EvidenceUploadFile).sourceUrl
+  if (sourceUrl) {
+    if (/\.pdf$/i.test(file.name)) {
+      window.open(sourceUrl, '_blank', 'noopener')
+    } else {
+      imageViewerUrl.value = sourceUrl
+      imageViewerVisible.value = true
+    }
+    return
+  }
   const fileId = getFileId(file)
   if (typeof fileId !== 'number' || previewing.value) return
   previewing.value = true
@@ -171,6 +236,14 @@ async function handlePreview(file: UploadFile) {
 
 <template>
   <div class="proof-upload">
+    <div class="proof-upload__bar">
+      <span class="proof-upload__bar-tip">可直接选成果墙里已有的证书，也可继续另传其他文件</span>
+      <button type="button" class="proof-upload__pick" @click="pickerVisible = true">
+        <FolderOpen :size="14" />
+        从成果墙选择
+      </button>
+    </div>
+
     <el-upload
       ref="uploadRef"
       action="#"
@@ -199,7 +272,7 @@ async function handlePreview(file: UploadFile) {
             {{ progressMap[file.uid] ?? 0 }}%
           </span>
           <button
-            v-if="file.status === 'success' && getFileId(file) !== undefined"
+            v-if="file.status === 'success' && canPreview(file)"
             type="button"
             class="pf-item__preview"
             :disabled="previewing"
@@ -226,10 +299,49 @@ async function handlePreview(file: UploadFile) {
       :url-list="[imageViewerUrl]"
       @close="imageViewerVisible = false"
     />
+
+    <AchievementPickerDialog
+      v-if="pickerVisible"
+      @close="pickerVisible = false"
+      @confirm="handlePicked"
+    />
   </div>
 </template>
 
 <style scoped lang="scss">
+.proof-upload__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.proof-upload__bar-tip {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.proof-upload__pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  background: var(--el-fill-color-blank);
+  color: var(--el-color-primary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--el-color-primary);
+  }
+}
+
 .upload-dragger {
   display: flex;
   flex-direction: column;

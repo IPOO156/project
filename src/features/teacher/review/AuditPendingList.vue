@@ -5,6 +5,7 @@ import { CheckCheck, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { batchApproveAuditTasks, listAuditPending } from '@/shared/api/teacher-api'
 import { useDebounce } from '@/shared/composables/useDebounce'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { AUDIT_BUSINESS_TYPES } from '@/shared/constants/dict'
 import { formatDateTime } from '@/shared/utils/time'
 import AuditDetailDialog from './AuditDetailDialog.vue'
@@ -33,6 +34,8 @@ const filters = reactive({
 // ── 列表 ──
 const loading = ref(false)
 const list = ref<AuditPendingItem[]>([])
+// 首次拿到非空待审列表后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => list.value.length)
 const total = ref(0)
 const page = ref(1)
 const perPage = ref(20)
@@ -163,7 +166,7 @@ onMounted(() => void loadList())
 </script>
 
 <template>
-  <div class="mc-page">
+  <div class="mc-page" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">材料审核</h2>
@@ -341,6 +344,18 @@ onMounted(() => void loadList())
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .audit-count {
   font-size: 13px;
   color: var(--el-text-color-secondary);

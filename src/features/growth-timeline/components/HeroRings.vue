@@ -2,7 +2,16 @@
 import type { GrowthExperience } from '../timelineConstants'
 import type { ElectronItem, RingItem, TooltipState } from './HeroRings.types'
 import { ChevronDown } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, onMounted, ref, toRef, watch } from 'vue'
+import {
+  computed,
+  onActivated,
+  onBeforeUnmount,
+  onDeactivated,
+  onMounted,
+  ref,
+  toRef,
+  watch,
+} from 'vue'
 import { useRingEffects } from '../composables/useRingEffects'
 import { useSemesterRings } from '../composables/useSemesterRings'
 import HeroRingsElectrons from './HeroRingsElectrons.vue'
@@ -141,11 +150,52 @@ function tick() {
 const electronsVisible = ref(false)
 const scrollY = ref(0)
 
-function handleScroll() {
-  scrollY.value = window.scrollY
+const heroRingsRef = ref<HTMLElement | null>(null)
+
+/**
+ * 实际滚动发生在外层 .layout__content（overflow-y: auto），
+ * window 本身不滚动、window.scrollY 恒为 0，因此需要找到真正的滚动容器。
+ * 从 hero 节点向上取最近的可滚动祖先；找不到再退回 window。
+ */
+function resolveScrollContainer(): HTMLElement | null {
+  let parent = heroRingsRef.value?.parentElement ?? null
+  while (parent) {
+    const { overflowY } = getComputedStyle(parent)
+    if (overflowY === 'auto' || overflowY === 'scroll') return parent
+    parent = parent.parentElement
+  }
+  return null
 }
 
-const heroRingsRef = ref<HTMLElement | null>(null)
+let scrollTarget: HTMLElement | null = null
+let scrollBound = false
+
+function handleScroll() {
+  scrollY.value = scrollTarget ? scrollTarget.scrollTop : window.scrollY
+}
+
+function bindScroll() {
+  if (scrollBound) return
+  scrollTarget = resolveScrollContainer()
+  if (scrollTarget) {
+    scrollTarget.addEventListener('scroll', handleScroll, { passive: true })
+  } else {
+    window.addEventListener('scroll', handleScroll, { passive: true })
+  }
+  scrollBound = true
+  handleScroll()
+}
+
+function unbindScroll() {
+  if (!scrollBound) return
+  if (scrollTarget) {
+    scrollTarget.removeEventListener('scroll', handleScroll)
+  } else {
+    window.removeEventListener('scroll', handleScroll)
+  }
+  scrollTarget = null
+  scrollBound = false
+}
 
 const tooltip = ref<TooltipState>({
   visible: false,
@@ -194,15 +244,18 @@ onMounted(() => {
   setTimeout(() => {
     electronsVisible.value = true
   }, 2000)
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  handleScroll()
+  bindScroll()
 })
+
+// keep-alive 缓存后滚动容器可能变化：激活时重新绑定并取一次当前滚动位置
+onActivated(bindScroll)
+onDeactivated(unbindScroll)
 
 onBeforeUnmount(() => {
   if (rafId) {
     cancelAnimationFrame(rafId)
   }
-  window.removeEventListener('scroll', handleScroll)
+  unbindScroll()
 })
 
 function handleElectronClick(event: MouseEvent, id: string) {
@@ -279,8 +332,8 @@ const { extinguishedRings } = useRingEffects(
     <div class="hero-rings__content">
       <div class="hero-rings__top">
         <h1 class="hero-rings__title">
-          <span class="hero-rings__title-accent">年轮</span>
-          <span class="hero-rings__title-sub">生长记</span>
+          <span class="hero-rings__title-accent">成长</span>
+          <span class="hero-rings__title-sub">时间轴</span>
         </h1>
       </div>
 

@@ -77,7 +77,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="growth-dev">
+  <div class="growth-dev page-enter">
     <div class="gd-header">
       <h1 class="gd-header__title">成长发展</h1>
       <p class="gd-header__subtitle">职业规划与成长记录管理</p>
@@ -124,6 +124,10 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+.page-enter {
+  @include page-enter;
+}
+
 .growth-dev {
   display: flex;
   flex-direction: column;

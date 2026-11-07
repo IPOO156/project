@@ -9,8 +9,9 @@ import type { RoleListItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
-
 import { createRole, deleteRole, listRoles, updateRole } from '@/shared/api/teacher-api'
+
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { COMMON_STATUS, ROLE_LEVEL_OPTIONS, ROLE_LEVELS } from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
@@ -29,6 +30,8 @@ const props = defineProps<{ embed?: boolean }>()
 // ── 5. 响应式数据 ──
 const loading = ref(false)
 const list = ref<RoleListItem[]>([])
+// 首次拿到非空角色后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => list.value.length)
 const total = ref(0)
 const page = ref(1)
 const perPage = ref(20)
@@ -198,7 +201,7 @@ function openPermissionAssign(row: RoleListItem) {
 </script>
 
 <template>
-  <div class="mc-page role-management">
+  <div class="mc-page role-management" :class="{ 'is-stagger-armed': staggerActive }">
     <div v-if="!props.embed" class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">角色管理</h2>
@@ -363,6 +366,18 @@ function openPermissionAssign(row: RoleListItem) {
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .role-management {
   &__pagination {
     margin-top: $spacing-lg;

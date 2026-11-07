@@ -111,7 +111,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mc-page heat-map">
+  <div class="mc-page heat-map page-enter">
     <header class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">成果热力图</h2>

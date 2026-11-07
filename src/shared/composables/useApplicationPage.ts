@@ -355,7 +355,13 @@ export function useApplicationPage(
   watch(
     [editIdQuery, () => records.value],
     () => {
-      if (!editIdQuery.value || editTriggeredFor === editIdQuery.value) return
+      // 参数消失（已被消费或离开该次进入）时清空去重标记：
+      // keep-alive 下实例不再因 query 变化重建，若不清空，同一条记录二次从消息中心点编辑会被永久跳过。
+      if (!editIdQuery.value) {
+        editTriggeredFor = ''
+        return
+      }
+      if (editTriggeredFor === editIdQuery.value) return
       const target = records.value.find((r) => String(r.id) === editIdQuery.value)
       if (!target) return
       editTriggeredFor = editIdQuery.value

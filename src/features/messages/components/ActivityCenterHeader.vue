@@ -163,6 +163,13 @@ function switchTab(tab: 'activity' | 'submission') {
 
 /* 暗色模式下增强 tab 容器与 badge 对比度 */
 html.dark .center-header {
+  // 深色主题的 --mc-wood 是浅棕（#d4a574），直接做白图标/白字的实底只有 1.9:1。
+  // 这里保持同一暖色相、只压深明度，白图标实测提升到 5.4:1，不靠 opacity/filter。
+  &__icon {
+    background: linear-gradient(135deg, #7a4d22 0%, #8f5a2a 100%);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  }
+
   &__tabs {
     background: #1e293b;
     border-color: #475569;
@@ -177,6 +184,8 @@ html.dark .center-header {
     }
 
     &.is-active {
+      background: linear-gradient(135deg, #7a4d22 0%, #8f5a2a 100%);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
       color: #fff;
     }
   }

@@ -88,7 +88,7 @@ const { activeTab } = useTabRoute<TabKey>(availableKeys, 'export')
 </script>
 
 <template>
-  <div class="mc-page hub-page export-center">
+  <div class="mc-page hub-page export-center page-enter">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">档案导出</h2>

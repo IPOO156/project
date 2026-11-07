@@ -94,7 +94,7 @@ const { activeTab } = useTabRoute<TabKey>(availableKeys, 'dict')
 </script>
 
 <template>
-  <div class="mc-page hub-page system-settings">
+  <div class="mc-page hub-page system-settings page-enter">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">系统设置</h2>

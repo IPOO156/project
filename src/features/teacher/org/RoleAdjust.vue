@@ -13,13 +13,14 @@ import type { ScopeConfigItem, UserListItem } from '@/shared/types/teacher'
 import { ElMessage } from 'element-plus'
 import { RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
-
 import {
   getUserDetail,
   listUsers,
   updateUserRoles,
   updateUserScopes,
 } from '@/shared/api/teacher-api'
+
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 
 const props = defineProps<{ embed?: boolean }>()
@@ -36,6 +37,8 @@ const ROLE_LABELS: Record<string, string> = {
 
 const loading = ref(false)
 const users = ref<UserListItem[]>([])
+// 首次拿到非空账号后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => users.value.length)
 const total = ref(0)
 const page = ref(1)
 const perPage = ref(10)
@@ -190,7 +193,7 @@ onMounted(() => void load())
 </script>
 
 <template>
-  <div class="mc-page">
+  <div class="mc-page" :class="{ 'is-stagger-armed': staggerActive }">
     <div v-if="!props.embed" class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">教师职位调整</h2>
@@ -397,6 +400,18 @@ onMounted(() => void load())
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .role-adjust {
   &__total {
     font-size: 13px;

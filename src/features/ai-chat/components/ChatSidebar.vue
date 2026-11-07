@@ -84,7 +84,6 @@ function formatConvTime(conv: Conversation): string {
       </div>
       <div class="cs__brand-text">
         <div class="cs__brand-title">档案智能助手</div>
-        <div class="cs__brand-sub">Smart Archive Assistant</div>
       </div>
     </div>
 
@@ -207,12 +206,6 @@ function formatConvTime(conv: Conversation): string {
     font-size: $font-size-sm;
     font-weight: 600;
     color: var(--el-text-color-primary);
-  }
-
-  &__brand-sub {
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-    letter-spacing: 0.3px;
   }
 
   &__new {

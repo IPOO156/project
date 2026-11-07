@@ -88,7 +88,7 @@ const { activeTab } = useTabRoute<TabKey>(availableKeys, 'student')
 </script>
 
 <template>
-  <div class="mc-page hub-page account-role">
+  <div class="mc-page hub-page account-role page-enter">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">账号与角色</h2>

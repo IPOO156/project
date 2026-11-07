@@ -3,6 +3,7 @@ import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { PROJECT_LEVELS, ROLE_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -41,6 +42,8 @@ const page = reactive(
   ),
 )
 
+const staggerActive = useFirstLoadStagger(() => page.records.length)
+
 function handleEditClick(row: any) {
   page.form.projectName = row.projectName || ''
   page.form.projectLevel = row.projectLevel || ''
@@ -72,6 +75,8 @@ onMounted(() => {
 
 <template>
   <ApplicationFormRecord
+    class="page-enter"
+    :class="{ 'is-stagger-armed': staggerActive }"
     alert-title="科研项目申报说明"
     alert-description="请填写科研项目信息。"
     :show-alert="false"
@@ -187,6 +192,19 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+.page-enter {
+  @include page-enter;
+}
+
+.page-enter.is-stagger-armed {
+  --mc-row-duration: 0.32s;
+  --mc-row-delay: 0.04s;
+  --mc-row-offset: 60px;
+  --mc-row-easing: #{$ease-out-cubic};
+
+  @include table-row-staggered(20);
+}
+
 :deep(.page-container) {
   user-select: none;
 }

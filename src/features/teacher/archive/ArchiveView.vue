@@ -246,7 +246,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mc-page archive-view">
+  <div class="mc-page archive-view page-enter">
     <!-- 页头：标题 + 数据范围 + 操作入口 -->
     <header class="mc-page-head archive-view__head">
       <div class="mc-page-head__left">
@@ -329,7 +329,7 @@ onMounted(async () => {
     flex-direction: column;
     justify-content: center;
     padding: 8px 16px;
-    border-radius: 6px;
+    border-radius: $radius-chip;
     background: var(--el-bg-color);
     border: 1px solid var(--el-border-color-lighter);
     min-width: 96px;

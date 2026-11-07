@@ -7,7 +7,6 @@ import type { AbilityDimensionItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, RefreshCw } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
-
 import {
   createAbilityDimension,
   deleteAbilityDimension,
@@ -15,8 +14,12 @@ import {
   updateAbilityDimension,
 } from '@/shared/api/teacher-api'
 
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
+
 const loading = ref(false)
 const list = ref<AbilityDimensionItem[]>([])
+// 首次拿到非空维度后只播一次，刷新改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => list.value.length)
 
 // ─── 弹窗保存 / 行内删除 Loading（与列表 loading 分离，避免整表转圈） ───
 const saving = ref(false)
@@ -133,7 +136,7 @@ onMounted(() => void load())
 </script>
 
 <template>
-  <div class="mc-page">
+  <div class="mc-page" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">能力维度</h2>
@@ -227,3 +230,17 @@ onMounted(() => void load())
     </el-dialog>
   </div>
 </template>
+
+<style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+</style>

@@ -61,10 +61,8 @@
   --el-fill-color-light: #f9fafb;
   --el-fill-color-lighter: #fbfbfc;
   --el-fill-color-blank: #ffffff;
-  // 圆角两档：控件 6px / 容器 10px
-  --el-border-radius-base: #{$radius-base};
-  --el-border-radius-small: #{$radius-base};
-  --el-border-radius-large: #{$radius-lg};
+  // 圆角三档（控件与小容器 9 / 大面 14 / 锁定值 tag 4、chip 6）统一在文件末尾的
+  // 「圆角阶梯」块声明，教师端与管理员端共用一份，避免两壳取值分叉。
 
   font-size: 14px;
 
@@ -97,12 +95,12 @@
      ============================================================ */
 
   /* ============================================================
-     二、卡片 —— 白底、1px 边框、6px 圆角，无阴影与悬浮反馈
+     二、卡片 —— 白底、1px 边框、9px 圆角，无阴影与悬浮反馈
      ============================================================ */
   .el-card,
   .el-card.is-always-shadow,
   .el-card.is-hover-shadow {
-    border-radius: $radius-lg;
+    border-radius: $radius-card;
     border-color: var(--mc-border);
     box-shadow: none;
     transition: none;
@@ -199,7 +197,7 @@
   }
 
   .el-tag {
-    border-radius: $radius-base;
+    border-radius: $radius-tag;
     font-size: $font-size-xs;
   }
 
@@ -427,7 +425,7 @@
 
   .mc-filter-bar {
     padding: $spacing-lg $spacing-lg 0;
-    border-radius: $radius-lg;
+    border-radius: $radius-card;
     background: var(--el-bg-color);
     border: 1px solid var(--mc-border);
     box-shadow: none;
@@ -444,7 +442,7 @@
 
   .mc-card {
     position: relative;
-    border-radius: $radius-lg;
+    border-radius: $radius-card;
     background: var(--el-bg-color);
     border: 1px solid var(--mc-border);
     box-shadow: none;
@@ -793,7 +791,7 @@ html:not(.dark) #app .layout--admin {
 
   .el-tag {
     padding: 0 8px;
-    border-radius: 4px;
+    border-radius: var(--mc-radius-tag);
     line-height: 1.5;
   }
 
@@ -806,13 +804,16 @@ html:not(.dark) #app .layout--admin {
     }
   }
 
-  .el-checkbox__inner,
+  .el-checkbox__inner {
+    border-radius: var(--mc-radius-choice);
+  }
+
   .el-switch__core {
-    border-radius: 6px;
+    border-radius: var(--mc-radius-control);
   }
 
   .el-card {
-    border-radius: 8px;
+    border-radius: var(--mc-radius-card);
   }
 
   .el-card__body,
@@ -823,7 +824,7 @@ html:not(.dark) #app .layout--admin {
   .el-pagination .btn-prev,
   .el-pagination .btn-next,
   .el-pager li {
-    border-radius: 6px;
+    border-radius: var(--mc-radius-control);
   }
 
   .el-progress-bar__outer,
@@ -906,4 +907,42 @@ html:not(.dark) #app .layout--admin {
   .page-header__subtitle {
     font-size: 13px;
   }
+}
+
+/* =============================================================================
+ * 圆角阶梯 —— 只作用于教师端 / 管理员端
+ *
+ * 作用域（学生端与登录页零命中）：
+ *   - `#app :is(.layout--teacher, .layout--admin)` 命中壳内元素；
+ *   - `html:has(#app :is(...))` 命中 teleport 到 body 的浮层（dialog / drawer / message-box）。
+ *
+ * 取值：
+ *   9  = 控件与小容器（按钮 / 输入 / 下拉 / 分页 / 开关轨道 / 页签容器 / 卡片 / 页头面板）
+ *   14 = 大面（弹窗 / 抽屉；抽屉贴屏幕边的两角为 0，方向边角写在 feedback.scss）
+ *   23 = 预留档（当前无消费者，只保留 variables.scss 里的定义，不落地）
+ *   锁定值：列表行 0、表格单元格 0、行内 chip 6、tag 4、checkbox 4、radio 50%
+ *
+ * 为什么不改根级 --el-border-radius-*：它们是全局变量，改了学生端会一起变；
+ * 这里只在两壳作用域内重声明，学生端继续取 global.scss 的 6 / 4 / 8。
+ * 深色主题只切颜色，圆角没有 dark 分支。
+ * ============================================================================= */
+#app :is(.layout--teacher, .layout--admin),
+html:has(#app :is(.layout--teacher, .layout--admin)) {
+  --mc-radius-row: #{$radius-row};
+  --mc-radius-tag: #{$radius-tag};
+  --mc-radius-choice: #{$radius-choice};
+  --mc-radius-chip: #{$radius-chip};
+  --mc-radius-control: #{$radius-control};
+  --mc-radius-card: #{$radius-card};
+  --mc-radius-large: #{$radius-large};
+  --mc-radius-hero: #{$radius-hero};
+
+  /* 既有控件 token 在新档位下重指向；themes.css 的 6px 是学生端 BASE，保持不动 */
+  --mc-ctl-radius: var(--mc-radius-control);
+  --mc-btn-radius: var(--mc-radius-control);
+
+  /* EP 圆角变量只在两壳作用域内覆盖，浮层由 html:has 分支继承 */
+  --el-border-radius-base: #{$radius-control};
+  --el-border-radius-small: #{$radius-control};
+  --el-border-radius-large: #{$radius-large};
 }

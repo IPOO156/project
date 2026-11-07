@@ -80,8 +80,8 @@ watch(() => props.showThinking, scrollToBottom)
             <Sparkles :size="20" />
           </div>
           <div class="cm__thinking-bubble">
-            <Sparkles :size="16" class="cm__thinking-icon" />
-            <span>AI Thinking...</span>
+            <Sparkles :size="14" class="cm__thinking-icon" />
+            <span>AI 思考中…</span>
           </div>
         </div>
       </Transition>

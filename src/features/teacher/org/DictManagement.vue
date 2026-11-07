@@ -19,6 +19,7 @@ import {
   listDictTypes,
   updateDictItem,
 } from '@/shared/api/teacher-api'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { COMMON_STATUS } from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import { formatDateTime } from '@/shared/utils/time'
@@ -36,6 +37,8 @@ import { formatDateTime } from '@/shared/utils/time'
 // 字典类型列表：筛选与分页
 const typeLoading = ref(false)
 const typeList = ref<DictTypeItem[]>([])
+// 首次拿到非空字典类型后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => typeList.value.length)
 const typeTotal = ref(0)
 const typePage = ref(1)
 const typePerPage = ref(20)
@@ -261,7 +264,7 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
 </script>
 
 <template>
-  <div class="mc-page dict-management">
+  <div class="mc-page dict-management" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">字典管理</h2>
@@ -490,6 +493,18 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .dict-management {
   &__notice {
     margin-bottom: $spacing-lg;

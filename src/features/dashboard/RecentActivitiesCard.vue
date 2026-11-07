@@ -14,54 +14,113 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <el-card class="dashboard__section dashboard__section--activities">
-    <template #header>
-      <div class="dashboard__section-header">
-        <span class="section-title">最近动态</span>
-        <el-button link type="primary" @click="emit('viewAll')">查看全部</el-button>
-      </div>
-    </template>
-    <div v-loading="loading" class="activities">
-      <div v-for="act in activities" :key="act.id" class="activity-item">
-        <div class="activity-item__dot" :class="`activity-item__dot--${act.type}`" />
-        <div class="activity-item__content">
-          <div class="activity-item__title-row">
-            <p class="activity-item__text">{{ act.text }}</p>
-            <StatusTag :status="act.status" size="small" />
-          </div>
-          <span class="activity-item__time">{{ act.time }}</span>
+  <section class="activities-card" aria-label="最近动态">
+    <header class="activities-card__head">
+      <h2 class="activities-card__title">最近动态</h2>
+      <button type="button" class="link-btn" @click="emit('viewAll')">查看全部</button>
+    </header>
+
+    <div v-loading="loading" class="activities-card__body">
+      <div v-if="activities.length" class="acts">
+        <div v-for="act in activities" :key="act.id" class="act">
+          <span class="act__dot" :class="`act__dot--${act.type}`" aria-hidden="true" />
+          <span class="act__text">{{ act.text }}</span>
+          <StatusTag :status="act.status" size="small" />
+          <span class="act__time">{{ act.time }}</span>
         </div>
       </div>
-      <el-empty v-if="!loading && activities.length === 0" description="暂无动态">
-        <StudyTipInline compact />
-      </el-empty>
+
+      <div v-else-if="!loading" class="acts acts--empty">
+        <div class="act act--slot">
+          <span class="act__dot act__dot--off" aria-hidden="true" />
+          <span class="act__text">暂无动态</span>
+          <span class="act__time">—</span>
+        </div>
+        <div class="act act--slot">
+          <span class="act__dot act__dot--off" aria-hidden="true" />
+          <span class="act__text">申报、材料与审核记录会出现在这里</span>
+          <span class="act__time">—</span>
+        </div>
+        <div class="act act--slot act--tip">
+          <StudyTipInline compact />
+        </div>
+      </div>
+
+      <div v-else class="acts acts--loading" />
     </div>
-  </el-card>
+  </section>
 </template>
 
 <style scoped lang="scss">
-.dashboard__section-header {
+.activities-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  overflow: hidden;
+}
+
+.activities-card__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 46px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--el-border-color-light);
 }
 
-.section-title {
-  font-size: 16px;
+.activities-card__title {
+  margin: 0;
+  font-size: $font-size-lg;
   font-weight: 600;
   color: var(--el-text-color-primary);
+  white-space: nowrap;
 }
 
-.activities {
-  max-height: 240px;
-  overflow-y: auto;
+.link-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: $font-size-base;
+  color: var(--el-color-primary);
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+    outline: none;
+  }
 }
 
-.activity-item {
+.activities-card__body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  padding: 6px 12px;
+}
+
+.acts {
   display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  &--loading {
+    min-height: 120px;
+  }
+}
+
+.act {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  padding: 10px 0;
+  flex: 1;
+  min-width: 0;
+  padding: 0 6px;
   border-bottom: 1px solid var(--el-border-color-light);
 
   &:last-child {
@@ -69,11 +128,10 @@ const emit = defineEmits<{
   }
 
   &__dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    margin-top: 6px;
-    flex-shrink: 0;
+    flex: 0 0 7px;
 
     &--draft {
       background: #909399;
@@ -87,29 +145,40 @@ const emit = defineEmits<{
     &--rejected {
       background: #f56c6c;
     }
-  }
-
-  &__content {
-    flex: 1;
-    min-width: 0;
-
-    p {
-      font-size: 14px;
-      color: var(--el-text-color-primary);
-      margin-bottom: 2px;
+    &--off {
+      background: transparent;
+      border: 1px dashed var(--el-border-color);
     }
   }
 
-  &__title-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+  &__text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-base;
+    color: var(--el-text-color-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   &__time {
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
+    flex-shrink: 0;
+    font-size: $font-size-xs;
+    color: var(--el-text-color-placeholder);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &--slot {
+    color: var(--el-text-color-placeholder);
+
+    .act__text {
+      color: var(--el-text-color-placeholder);
+    }
+  }
+
+  &--tip {
+    border-bottom: none;
+    padding: 8px;
   }
 }
 </style>

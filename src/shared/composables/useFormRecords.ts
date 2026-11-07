@@ -1,4 +1,4 @@
-import type { Ref } from 'vue'
+import type { InjectionKey, Ref } from 'vue'
 /**
  * useFormRecords - 表单提交记录管理
  *
@@ -6,13 +6,16 @@ import type { Ref } from 'vue'
  * 列表数据源为 GET /activities（6.1 动态记录），按 archiveType 过滤出当前类型；
  * 接口异常时保持空列表（不填充假数据），提交成功后由调用方触发 loadRecords 刷新真实记录。
  */
-import { ref } from 'vue'
+import { getCurrentInstance, provide, ref } from 'vue'
 import { getActivities } from '@/shared/api/activities'
 import { ARCHIVE_TYPE_ALIASES, deriveRecordTitle, STATUS_MAP } from '@/shared/api/submission'
 import { scopedStorageKey } from '@/shared/utils/storageScope'
 
 /** 本地草稿记录的统一 id（草稿仅本地持久化，无后端草稿接口） */
 export const DRAFT_LOCAL_ID = 'draft-local'
+
+/** 申报记录加载态：由 useFormRecords 向下提供，记录区据此渲染骨架占位 */
+export const FORM_RECORDS_LOADING: InjectionKey<Ref<boolean>> = Symbol('FORM_RECORDS_LOADING')
 
 /** 通用提交记录（无状态，学生自主管理） */
 export interface FormRecord {
@@ -87,6 +90,10 @@ function isNonEmptyDraft(data: Record<string, unknown>): boolean {
 export function useFormRecords(type: string, draftStorageKey?: string) {
   const label = TYPE_LABELS[type] || type
   const records: Ref<FormRecord[]> = ref([])
+  // 记录加载态：初值 true，避免首帧先渲染零高度空列表；加载结束（含失败）一律复位
+  const loading = ref(true)
+  // 仅在组件 setup 上下文里提供，防止非组件调用时告警
+  if (getCurrentInstance()) provide(FORM_RECORDS_LOADING, loading)
   // 与 useFormDraft 使用同一套按用户隔离的键，避免换账号后读到上一个学生的草稿
   const resolvedDraftStorageKey = draftStorageKey ? scopedStorageKey(draftStorageKey) : undefined
 
@@ -116,6 +123,7 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
 
   /** 从 GET /activities（6.1）拉取该类型真实申报记录 + 合并本地草稿；拉取失败保持已有列表，不填充假数据 */
   async function loadRecords(): Promise<void> {
+    loading.value = true
     try {
       // 后端分页参数是 perPage（@JsonProperty("per_page") 只影响 JSON，不作用于 query 绑定），
       // 上限 100；此前传 per_page:200 被忽略，只取到默认 20 条。这里分页拉全量。
@@ -161,6 +169,8 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
       records.value = draft ? [draft, ...real] : real
     } catch {
       // 拉取失败保持已有列表，避免提交成功瞬间网络抖动导致记录"消失"
+    } finally {
+      loading.value = false
     }
   }
 
@@ -195,6 +205,7 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
 
   return {
     records,
+    loading,
     loadRecords,
     addRecord,
     updateRecord,

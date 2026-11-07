@@ -12,8 +12,8 @@
  *     以及可能被 append-to-body 装进 body 的 dialog 内的 switch。
  *   - 学生壳不输出这两个类（DefaultLayout.vue:136-141），因此本文件对学生端零命中。
  *
- * 变量：只消费 src/assets/styles/themes.css 已定义的 --mc-btn-* / --mc-ctl-* /
- *   --mc-choice-*；不新增任何变量，不新增根级 --el-* 覆盖。
+ * 变量：只消费 themes.css 的 --mc-btn-* / --mc-ctl-* / --mc-choice-*，以及教师壳在
+ *   teacher-console.scss「圆角阶梯」块里声明的 --mc-radius-*；不新增根级 --el-* 覆盖。
  *   深色切换完全靠 html[data-theme] 下的根级 token 继承，无需 `:root[data-theme='dark']`。
  *   若未来必须新增根级 --el-* 深色值，只能写 `:root[data-theme='dark']`（0,2,0），
  *   不能写 `[data-theme='dark']`（0,1,0），否则被 EP 的 `html.dark`（0,1,1）压掉。
@@ -47,7 +47,7 @@ html:has(#app :is(.layout--teacher, .layout--admin)) .el-message {
    对应组件：ElMessageBox.confirm / alert / prompt（grep 实测 55 处 / 47 文件）
    为什么这么写：
      - 圆角：EP 用 `--el-messagebox-border-radius: 4px`（el-message-box.css），改为
-       `var(--mc-ctl-radius)`（6px，themes.css:187），与批 1/批 2 的控件圆角同源。
+       `var(--mc-radius-large)`（14px，大面档），与教师壳的弹窗 / 抽屉同档。
      - 内边距：EP 用 `--el-messagebox-padding-primary: 12px`，它同时驱动
        `.el-message-box__header` 的 padding-bottom、`.el-message-box__btns` 的
        padding-top 与面板自身 padding；改一处即整体统一。
@@ -62,7 +62,7 @@ html:has(#app :is(.layout--teacher, .layout--admin)) .el-message {
    作用域：MessageBox 的面板与遮罩都挂在 body，只有 html:has 能命中。
    ══════════════════════════════════════════════════════════════════ */
 html:has(#app :is(.layout--teacher, .layout--admin)) .el-message-box {
-  --el-messagebox-border-radius: var(--mc-ctl-radius); /* 4px → 6px */
+  --el-messagebox-border-radius: var(--mc-radius-large); /* 弹窗属大面：14px */
   --el-messagebox-padding-primary: 16px; /* 12px → 16px */
   --el-messagebox-box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
   border: 1px solid var(--mc-ctl-line-float);
@@ -72,6 +72,33 @@ html:has(#app :is(.layout--teacher, .layout--admin)) .el-message-box {
    权重 (1,3,1) > 上面的 (1,2,1)；不写成根级 --el-* 覆盖，避免外溢到学生端。 */
 html[data-theme='dark']:has(#app :is(.layout--teacher, .layout--admin)) .el-message-box {
   --el-messagebox-box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+}
+
+/* ── ②c el-dialog / el-drawer —— 大面档 14px
+
+   两者都 teleport 到 body，只能走 html:has 作用域；学生端不输出
+   .layout--teacher / .layout--admin，因此零命中。
+   - 弹窗：EP 无专属圆角变量时取 --el-border-radius-base，会被教师壳的 9 带偏，
+     这里显式落 14。
+   - 抽屉：EP 没有圆角变量，按展开方向写边角；贴屏幕边的两角固定 0。 */
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-dialog {
+  border-radius: var(--mc-radius-large);
+}
+
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-drawer.rtl {
+  border-radius: var(--mc-radius-large) 0 0 var(--mc-radius-large);
+}
+
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-drawer.ltr {
+  border-radius: 0 var(--mc-radius-large) var(--mc-radius-large) 0;
+}
+
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-drawer.ttb {
+  border-radius: 0 0 var(--mc-radius-large) var(--mc-radius-large);
+}
+
+html:has(#app :is(.layout--teacher, .layout--admin)) .el-drawer.btt {
+  border-radius: var(--mc-radius-large) var(--mc-radius-large) 0 0;
 }
 
 /* ── ②b 面板内按钮 —— 把 _buttons.scss 的素面语言下沉到浮层
@@ -200,7 +227,7 @@ html:has(#app :is(.layout--teacher, .layout--admin)) .el-switch {
 }
 
 html:has(#app :is(.layout--teacher, .layout--admin)) .el-switch__core {
-  border-radius: var(--mc-ctl-radius); /* 10px → 6px */
+  border-radius: var(--mc-radius-control); /* 10px → 9px（轨道高 20px，落在胶囊阈值内） */
 }
 
 html:has(#app :is(.layout--teacher, .layout--admin)) .el-switch:not(.is-checked) .el-switch__core {
