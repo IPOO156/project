@@ -2,7 +2,7 @@
 import type { NotificationCategory, NotificationStatus } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Archive, Bell, CheckCheck, Filter, Mail, Search, Settings, X } from 'lucide-vue-next'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from '@/app/stores/stores'
 import { NOTIFICATION_CATEGORY } from '@/shared/constants/dict'
@@ -77,20 +77,45 @@ function handleCancelBatchMode() {
 }
 
 // ─── 卡片逐行刷入动画触发 ───
+// 判定依据：firstLoad 标记（listStaggerArmed）。只在首次拿到一份新数据集时消费一次；
+// 翻页、筛选、排序、同数据集重渲染只调用 stopListStagger（清理类名），不会重新武装。
 const listKey = ref(0)
+const listStaggerActive = ref(false)
+const listStaggerArmed = ref(true)
+// 仅用于回收动画类，不参与触发判定
+let listStaggerTimer: number | null = null
+const LIST_STAGGER_CLEANUP_MS = 2200
 
-function bumpListAnimation() {
+function triggerListStagger() {
+  if (!listStaggerArmed.value) return
+  listStaggerArmed.value = false
   listKey.value++
+  listStaggerActive.value = true
+  if (listStaggerTimer !== null) window.clearTimeout(listStaggerTimer)
+  listStaggerTimer = window.setTimeout(() => {
+    listStaggerActive.value = false
+    listStaggerTimer = null
+  }, LIST_STAGGER_CLEANUP_MS)
+}
+
+function stopListStagger() {
+  listStaggerActive.value = false
+  if (listStaggerTimer !== null) {
+    window.clearTimeout(listStaggerTimer)
+    listStaggerTimer = null
+  }
 }
 
 watch(
   () => notificationStore.loading,
   (loading) => {
-    if (!loading) bumpListAnimation()
+    if (!loading) triggerListStagger()
   },
 )
 
-watch([pageNum, pageSize], () => bumpListAnimation(), { flush: 'post' })
+watch([pageNum, pageSize], () => stopListStagger(), { flush: 'post' })
+
+onBeforeUnmount(stopListStagger)
 
 const categoryOptions = computed(() => [
   { value: '' as const, label: '全部分类' },
@@ -340,7 +365,12 @@ onMounted(() => {
     </div>
 
     <!-- 通知列表 -->
-    <div :key="listKey" v-loading="notificationStore.loading" class="mc-card message-list">
+    <div
+      :key="listKey"
+      v-loading="notificationStore.loading"
+      class="mc-card message-list"
+      :class="{ 'message-list--staggered': listStaggerActive }"
+    >
       <MessageCard
         v-for="item in paginatedList"
         :key="item.id"
@@ -420,6 +450,13 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
+
+    // 深色下 --el-color-primary 取 #409eff，白图标仅 2.78:1；
+    // 同色相压深到蓝-700，白图标约 6.7:1
+    html.dark &,
+    [data-theme='dark'] & {
+      background: #1d4ed8;
+    }
   }
 
   &__title {
@@ -459,6 +496,12 @@ onMounted(() => {
     align-items: center;
     gap: 6px;
     color: #1e3a5f;
+
+    // 深色下 #1e3a5f 落在 #0b1120 上仅 1.64:1；换到项目夜间主色的浅一档
+    html.dark &,
+    [data-theme='dark'] & {
+      color: #93c5fd;
+    }
   }
 
   &__stat-value {
@@ -550,11 +593,15 @@ onMounted(() => {
   gap: 12px;
 
   &--staggered {
-    --mc-row-duration: 0.5s;
-    --mc-row-delay: 0.07s;
-    --mc-row-offset: -40px;
+    // 与活动表同口径但略短：0.30s / 40ms，20 项总时长 = 19 × 40ms + 0.30s = 1.06s
+    // 缓动 easeOutCubic（无回弹）
+    --mc-row-duration: 0.3s;
+    --mc-row-delay: 0.04s;
+    --mc-row-easing: #{$ease-out-cubic};
+    --mc-row-offset: 40px;
 
-    @include list-item-staggered(50);
+    // 首屏最多前 20 项参与逐行延迟，其余一次性出现
+    @include list-item-staggered(20);
   }
 }
 
