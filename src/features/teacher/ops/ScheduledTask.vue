@@ -70,6 +70,11 @@ async function loadList() {
     })
     list.value = res?.list ?? []
     total.value = res?.total ?? list.value.length
+    // 删除末页最后一条后回退一页，避免停留在空页
+    if (page.value > 1 && list.value.length === 0) {
+      page.value -= 1
+      void loadList()
+    }
   } catch {
     list.value = []
     total.value = 0
