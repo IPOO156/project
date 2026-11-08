@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { PROJECT_LEVELS, ROLE_OPTIONS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -13,6 +14,12 @@ import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
+
+/** 项目级别：后端字典优先，常量兜底 */
+const { options: projectLevelOptions, load: loadProjectLevels } = useRemoteDict(
+  'project_level',
+  PROJECT_LEVELS,
+)
 
 function emptyForm() {
   return {
@@ -70,6 +77,7 @@ async function handleRemove(row: any) {
 onMounted(() => {
   page.init()
   loadSemesters()
+  void loadProjectLevels()
 })
 </script>
 
@@ -112,7 +120,7 @@ onMounted(() => {
         <el-form-item label="项目级别" required>
           <el-select v-model="page.form.projectLevel" class="form-select">
             <el-option
-              v-for="t in PROJECT_LEVELS"
+              v-for="t in projectLevelOptions"
               :key="t.value"
               :label="t.label"
               :value="t.value"

@@ -3,6 +3,7 @@ import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { PROJECT_LEVELS, RESEARCH_TYPES } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -12,6 +13,16 @@ import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
+
+/** 项目级别 / 研究类型：后端字典优先，常量兜底 */
+const { options: projectLevelOptions, load: loadProjectLevels } = useRemoteDict(
+  'project_level',
+  PROJECT_LEVELS,
+)
+const { options: researchTypeOptions, load: loadResearchTypes } = useRemoteDict(
+  'research_type',
+  RESEARCH_TYPES,
+)
 
 function emptyForm() {
   return {
@@ -66,6 +77,8 @@ async function handleRemove(row: any) {
 onMounted(() => {
   page.init()
   loadSemesters()
+  void loadProjectLevels()
+  void loadResearchTypes()
 })
 </script>
 
@@ -105,7 +118,7 @@ onMounted(() => {
         <el-form-item label="项目级别" required
           ><el-select v-model="page.form.projectLevel" placeholder="请选择" class="form-select">
             <el-option
-              v-for="l in PROJECT_LEVELS"
+              v-for="l in projectLevelOptions"
               :key="l.value"
               :label="l.label"
               :value="l.value"
@@ -115,7 +128,7 @@ onMounted(() => {
         <el-form-item label="研究类型" required
           ><el-select v-model="page.form.researchType" placeholder="请选择" class="form-select">
             <el-option
-              v-for="t in RESEARCH_TYPES"
+              v-for="t in researchTypeOptions"
               :key="t.value"
               :label="t.label"
               :value="t.value"

@@ -8,9 +8,9 @@ import { ElMessage } from 'element-plus'
 import { Edit2, Info } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useArchiveStore, useUserStore } from '@/app/stores/stores'
-import { getDict } from '@/shared/api/common'
 import { updatePoliticalStatus, updateStudentStatus } from '@/shared/api/student'
-import { STUDENT_STATUS_OPTIONS } from '@/shared/constants/dict'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
+import { POLITICAL_STATUS_OPTIONS, STUDENT_STATUS_OPTIONS } from '@/shared/constants/dict'
 import AvatarUploader from './components/AvatarUploader.vue'
 
 const archiveStore = useArchiveStore()
@@ -40,7 +40,11 @@ interface ProfileEditForm {
   studentStatus?: string
 }
 const formData = ref<Partial<ProfileEditForm>>({})
-const politicalOptions = ref<{ value: string; label: string }[]>([])
+/** 政治面貌：后端字典优先，常量兜底（GET /common/dict?dictType=political_status） */
+const { options: politicalOptions, load: loadPoliticalOptions } = useRemoteDict(
+  'political_status',
+  POLITICAL_STATUS_OPTIONS,
+)
 /** /profile/info 中的学籍信息（政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
 const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})
 
@@ -57,16 +61,6 @@ const emergencyRelation = computed(
   () => archiveStore.profileData?.contactInfo?.emergencyRelation ?? '',
 )
 const emergencyPhone = computed(() => archiveStore.profileData?.contactInfo?.emergencyPhone ?? '')
-
-/** 政治面貌选项来自后端字典（GET /common/dict?dictType=political_status），不前端硬编码 */
-async function loadPoliticalOptions() {
-  try {
-    const list = await getDict('political_status')
-    politicalOptions.value = (list ?? []).map((d: any) => ({ value: d.value, label: d.label }))
-  } catch {
-    politicalOptions.value = []
-  }
-}
 
 function startEdit() {
   const a = academicInfo.value

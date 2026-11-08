@@ -276,18 +276,22 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
     </div>
 
     <!--
-      字典口径说明：前端各页面的下拉与枚举展示取自 src/shared/constants/dict.ts 的
-      前端常量（useDict(map) 接收的是本地常量表），并未读取后端字典接口；
-      后端字典表目前仅由本页自身读写。故此处增改字典项不会改变任何页面的下拉/标签。
-      待前后端统一字典来源（前端改读接口或后端以下发常量为准）后删除本提示。
+      字典口径说明：学生申报页的业务下拉已改为「后端字典优先、前端常量兜底」
+      （src/shared/composables/useRemoteDict.ts）。本页维护的字典类型有启用项时覆盖
+      前端常量；接口失败或返回空数组时保留常量兜底。后端 /common/dict 使用 5 分钟
+      Caffeine 缓存，保存后通常最多约 5 分钟对新请求生效。审批端展示仍使用前端常量映射。
     -->
     <el-alert
       class="dict-management__notice"
       type="info"
       :closable="false"
       show-icon
-      title="本页字典项目前仅用于后台台账，修改后不会改变其他页面的下拉选项和状态标签。"
-    />
+      title="学生申报页已优先读取后端字典，本页修改约 5 分钟后生效。"
+    >
+      <template #default>
+        接口异常或字典为空时自动回退前端常量。已接入：competition_type、competition_level、award_level、scholarship_award_level、project_level、research_type、organization_level、company_type、industry_type、participant_role、political_status。学生状态、证书类型仍使用前端常量或自由文本。
+      </template>
+    </el-alert>
 
     <div class="mc-filter-bar">
       <el-form inline @submit.prevent="handleTypeSearch">

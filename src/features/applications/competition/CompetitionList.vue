@@ -3,6 +3,7 @@ import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { AWARD_LEVELS, COMPETITION_TYPES } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -12,6 +13,16 @@ import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
+
+/** 竞赛类型 / 获奖等级：后端字典优先，常量兜底 */
+const { options: competitionTypeOptions, load: loadCompetitionTypes } = useRemoteDict(
+  'competition_type',
+  COMPETITION_TYPES,
+)
+const { options: awardLevelOptions, load: loadAwardLevels } = useRemoteDict(
+  'award_level',
+  AWARD_LEVELS,
+)
 
 function emptyForm() {
   return {
@@ -67,6 +78,8 @@ async function handleRemove(row: any) {
 onMounted(() => {
   page.init()
   loadSemesters()
+  void loadCompetitionTypes()
+  void loadAwardLevels()
 })
 </script>
 
@@ -106,7 +119,7 @@ onMounted(() => {
         <el-form-item label="竞赛类型" required>
           <el-select v-model="page.form.competitionType" placeholder="请选择" class="form-select">
             <el-option
-              v-for="t in COMPETITION_TYPES"
+              v-for="t in competitionTypeOptions"
               :key="t.value"
               :label="t.label"
               :value="t.value"
@@ -115,7 +128,12 @@ onMounted(() => {
         </el-form-item>
         <el-form-item label="获奖等级" required>
           <el-select v-model="page.form.awardLevel" placeholder="请选择" class="form-select">
-            <el-option v-for="t in AWARD_LEVELS" :key="t.value" :label="t.label" :value="t.value" />
+            <el-option
+              v-for="t in awardLevelOptions"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="获奖时间" required

@@ -36,7 +36,8 @@ const detailFields = computed(() => {
   return config.columns.map((c: ColumnDef) => {
     let value = record[c.prop]
     if (c.dictOptions && typeof value === 'string') {
-      const opt = c.dictOptions.find((o) => o.value === value)
+      const options = c.displayOptions ?? c.dictOptions
+      const opt = options.find((o) => o.value === value)
       value = opt ? opt.label : value
     }
     if (c.type === 'status' || c.prop === 'status') {

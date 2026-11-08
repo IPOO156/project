@@ -3,6 +3,7 @@ import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { SCHOLARSHIP_GRADES } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -12,6 +13,12 @@ import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
+
+/** 获奖等级：后端字典优先，常量兜底 */
+const { options: scholarshipGradeOptions, load: loadScholarshipGrades } = useRemoteDict(
+  'scholarship_award_level',
+  SCHOLARSHIP_GRADES,
+)
 
 function emptyForm() {
   return {
@@ -60,6 +67,7 @@ async function handleRemove(row: any) {
 onMounted(() => {
   page.init()
   loadSemesters()
+  void loadScholarshipGrades()
 })
 </script>
 
@@ -102,7 +110,7 @@ onMounted(() => {
         <el-form-item label="获奖等级" required>
           <el-select v-model="page.form.scholarshipGrade" placeholder="请选择" class="form-select">
             <el-option
-              v-for="t in SCHOLARSHIP_GRADES"
+              v-for="t in scholarshipGradeOptions"
               :key="t.value"
               :label="t.label"
               :value="t.value"
