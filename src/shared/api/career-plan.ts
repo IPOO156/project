@@ -152,17 +152,22 @@ export function downloadCareerPlanFile(
   )
 }
 
-/** 预览职业规划文件（GET /profile/career-plans/{planId}/preview） */
-export function previewCareerPlanFile(
+/**
+ * 预览职业规划文件（GET /profile/career-plans/{planId}/preview）
+ * 后端代理流式返回 PDF（Content-Type: application/pdf），不是 JSON 信封；
+ * 接口为无状态 JWT 认证，浏览器直接打开地址不会携带 Authorization，必须按 blob 接收后本地生成地址。
+ * PDF 生成可能较慢，与下载一致单独放宽超时。
+ */
+export async function getCareerPlanPreviewBlob(
   planId: number,
   purpose: 'internal' | 'external' = 'external',
-): Promise<{
-  previewUrl: string
-  fileName: string
-  purpose: string
-  generatedAt: string
-}> {
-  return request.get(`/profile/career-plans/${planId}/preview`, { params: { purpose } })
+): Promise<Blob> {
+  const response = (await request.get(`/profile/career-plans/${planId}/preview`, {
+    params: { purpose },
+    responseType: 'blob',
+    timeout: 60_000,
+  })) as unknown as { data: Blob }
+  return response.data instanceof Blob ? response.data : new Blob([response.data])
 }
 
 /** 删除整份职业规划（DELETE /profile/career-plans/{planId}） */

@@ -5,7 +5,7 @@ import { computed, ref, watch } from 'vue'
 import {
   downloadCareerPlanFile,
   getCareerPlanDetail,
-  previewCareerPlanFile,
+  getCareerPlanPreviewBlob,
 } from '@/shared/api/career-plan'
 import { useDict } from '@/shared/composables/composables'
 import { APPLICATION_STATUS, APPLICATION_STATUS_CODE_MAP } from '@/shared/constants/dict'
@@ -122,13 +122,26 @@ async function handleDownload() {
 
 async function handlePreview() {
   if (props.planId == null) return
+  // 预览接口需携带 Authorization（无状态 JWT），不能把后端地址直接交给 window.open；
+  // 先在点击事件内同步打开空白窗口，待 blob 就绪后再导航——await 之后开窗会被浏览器拦截。
+  const previewWindow = window.open('', '_blank')
+  if (previewWindow) previewWindow.opener = null
   fileLoading.value = true
   try {
-    const res = await previewCareerPlanFile(props.planId, 'internal')
-    if (res?.previewUrl) {
-      window.open(res.previewUrl, '_blank', 'noopener')
+    const blob = await getCareerPlanPreviewBlob(props.planId, 'internal')
+    if (!previewWindow) {
+      ElMessage.warning('预览窗口被浏览器拦截，请允许本站弹出窗口后重试')
+      return
     }
+    // 后端已返回 application/pdf；个别浏览器 blob.type 缺失时显式补上，保证内嵌渲染而非下载
+    const pdfBlob =
+      blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' })
+    const url = URL.createObjectURL(pdfBlob)
+    previewWindow.location.href = url
+    // 新窗口加载 PDF 需要时间，延迟释放；立即 revoke 会导致标签页打开空白地址
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
   } catch {
+    previewWindow?.close()
     // 接口失败已由请求拦截器统一提示
   } finally {
     fileLoading.value = false
