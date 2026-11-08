@@ -63,3 +63,85 @@ describe('字典集中维护', () => {
 
   // 学期选项已改由 useSemesters 从后端获取，dict 不再内置学期列表。
 })
+
+describe('业务字典与后端 dictionaries 表对齐', () => {
+  function valuesOf(options: readonly { value: string }[]): string[] {
+    return options.map((option) => option.value)
+  }
+
+  it('竞赛类型使用 competition_type，竞赛级别单独使用 competition_level', () => {
+    expect(valuesOf(dict.COMPETITION_TYPES)).toEqual([
+      'academic',
+      'technology',
+      'innovation',
+      'art',
+      'sports',
+      'other',
+    ])
+    expect(valuesOf(dict.COMPETITION_LEVELS)).toEqual([
+      'national',
+      'provincial',
+      'school',
+      'college',
+    ])
+  })
+
+  it('获奖等级、项目级别、研究类型与后端 seed 一致', () => {
+    expect(valuesOf(dict.AWARD_LEVELS)).toEqual([
+      'special',
+      'first',
+      'second',
+      'third',
+      'excellence',
+    ])
+    expect(valuesOf(dict.PROJECT_LEVELS)).toEqual(['national', 'provincial', 'school', 'college'])
+    expect(valuesOf(dict.RESEARCH_TYPES)).toEqual(['basic', 'applied', 'experimental', 'other'])
+  })
+
+  it('组织级别、行业类型、企业类型、奖学金字典与后端 seed 一致', () => {
+    expect(valuesOf(dict.ORGANIZATION_LEVELS)).toEqual(['school', 'college', 'department', 'other'])
+    expect(valuesOf(dict.INDUSTRY_TYPES)).toHaveLength(11)
+    expect(valuesOf(dict.INDUSTRY_TYPES)).toContain('internet')
+    expect(valuesOf(dict.INNOVATION_COMPANY_TYPES)).toContain('limited_liability')
+    expect(valuesOf(dict.SCHOLARSHIP_LEVELS)).toEqual([
+      'national',
+      'provincial',
+      'school',
+      'enterprise',
+    ])
+    expect(valuesOf(dict.SCHOLARSHIP_GRADES)).toEqual(['special', 'first', 'second', 'third'])
+  })
+
+  it('canonical 下拉不包含只用于旧数据展示的码', () => {
+    expect(valuesOf(dict.COMPETITION_TYPES)).not.toContain('national')
+    expect(valuesOf(dict.RESEARCH_TYPES)).not.toContain('development')
+    expect(valuesOf(dict.ORGANIZATION_LEVELS)).not.toContain('club')
+    expect(valuesOf(dict.ORGANIZATION_LEVELS)).not.toContain('class')
+    expect(valuesOf(dict.INDUSTRY_TYPES)).not.toContain('it')
+    expect(valuesOf(dict.INDUSTRY_TYPES)).not.toContain('media')
+    expect(valuesOf(dict.INDUSTRY_TYPES)).not.toContain('business')
+    expect(valuesOf(dict.SCHOLARSHIP_LEVELS)).not.toContain('college')
+    expect(valuesOf(dict.INNOVATION_COMPANY_TYPES)).not.toContain('创业实践')
+  })
+
+  it('旧数据展示数组补充 legacy 码且不与 canonical 重复', () => {
+    expect(valuesOf(dict.COMPETITION_TYPE_DISPLAY_OPTIONS)).toContain('national')
+    expect(valuesOf(dict.RESEARCH_TYPE_DISPLAY_OPTIONS)).toContain('development')
+    expect(valuesOf(dict.ORGANIZATION_LEVEL_DISPLAY_OPTIONS)).toContain('club')
+    expect(valuesOf(dict.INDUSTRY_TYPE_DISPLAY_OPTIONS)).toContain('it')
+    expect(valuesOf(dict.SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS)).toContain('college')
+    expect(valuesOf(dict.COMPANY_TYPE_DISPLAY_OPTIONS)).toContain('创业实践')
+
+    for (const options of [
+      dict.COMPETITION_TYPE_DISPLAY_OPTIONS,
+      dict.RESEARCH_TYPE_DISPLAY_OPTIONS,
+      dict.ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
+      dict.INDUSTRY_TYPE_DISPLAY_OPTIONS,
+      dict.SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS,
+      dict.COMPANY_TYPE_DISPLAY_OPTIONS,
+    ]) {
+      const values = valuesOf(options)
+      expect(new Set(values).size).toBe(values.length)
+    }
+  })
+})

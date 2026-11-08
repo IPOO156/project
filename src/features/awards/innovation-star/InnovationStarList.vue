@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { INDUSTRY_TYPES } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -13,6 +14,12 @@ import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
+
+/** 行业类型：后端字典优先，常量兜底 */
+const { options: industryTypeOptions, load: loadIndustryTypes } = useRemoteDict(
+  'industry_type',
+  INDUSTRY_TYPES,
+)
 
 function emptyForm() {
   return {
@@ -70,6 +77,7 @@ async function handleRemove(row: any) {
 onMounted(() => {
   page.init()
   loadSemesters()
+  void loadIndustryTypes()
 })
 </script>
 
@@ -121,7 +129,7 @@ onMounted(() => {
         <el-form-item label="行业类型" required>
           <el-select v-model="page.form.industryType" placeholder="请选择" class="form-select">
             <el-option
-              v-for="t in INDUSTRY_TYPES"
+              v-for="t in industryTypeOptions"
               :key="t.value"
               :label="t.label"
               :value="t.value"

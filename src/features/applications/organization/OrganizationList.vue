@@ -3,6 +3,7 @@ import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { ORGANIZATION_LEVELS } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -12,6 +13,12 @@ import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
+
+/** 组织级别：后端字典优先，常量兜底 */
+const { options: organizationLevelOptions, load: loadOrganizationLevels } = useRemoteDict(
+  'organization_level',
+  ORGANIZATION_LEVELS,
+)
 
 function emptyForm() {
   return {
@@ -63,6 +70,7 @@ async function handleRemove(row: any) {
 onMounted(() => {
   page.init()
   loadSemesters()
+  void loadOrganizationLevels()
 })
 </script>
 
@@ -103,7 +111,7 @@ onMounted(() => {
             class="form-select"
           >
             <el-option
-              v-for="l in ORGANIZATION_LEVELS"
+              v-for="l in organizationLevelOptions"
               :key="l.value"
               :label="l.label"
               :value="l.value"

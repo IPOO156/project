@@ -5,7 +5,8 @@ import { useAwardReviewStore } from '@/app/stores/stores'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import {
   AWARD_LEVELS,
-  COMPETITION_TYPES,
+  COMPETITION_LEVELS,
+  INDUSTRY_TYPE_DISPLAY_OPTIONS,
   INDUSTRY_TYPES,
   PROJECT_LEVELS,
 } from '@/shared/constants/dict'
@@ -60,7 +61,7 @@ const detailFields = computed(() => {
     typeFields = [
       { label: '竞赛名称', value: r.competitionName || r.title.replace(' - 竞赛之星报名', '') },
       { label: '竞赛时间', value: r.competitionDate || '-' },
-      { label: '竞赛级别', value: dictLabel(COMPETITION_TYPES, r.competitionLevel || '') },
+      { label: '竞赛级别', value: dictLabel(COMPETITION_LEVELS, r.competitionLevel || '') },
       { label: '获奖等级', value: dictLabel(AWARD_LEVELS, r.awardLevel || '') },
     ]
   } else if (r.type === 'scientificProject') {
@@ -87,7 +88,7 @@ const detailFields = computed(() => {
   } else if (r.type === 'innovationStar') {
     typeFields = [
       { label: '公司名称', value: r.companyName || r.title.replace(' - 双创之星报名', '') },
-      { label: '行业类型', value: dictLabel(INDUSTRY_TYPES, r.industryType || '') },
+      { label: '行业类型', value: dictLabel(INDUSTRY_TYPE_DISPLAY_OPTIONS, r.industryType || '') },
       { label: '申报人排名', value: r.ranking || '-' },
       { label: '注册时间', value: r.registerDate || '-' },
     ]
@@ -230,7 +231,7 @@ async function handleSave() {
               class="form-control"
             >
               <el-option
-                v-for="t in COMPETITION_TYPES"
+                v-for="t in COMPETITION_LEVELS"
                 :key="t.value"
                 :label="t.label"
                 :value="t.value"

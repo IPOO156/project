@@ -4,13 +4,20 @@
 import {
   AWARD_LEVELS,
   CERTIFICATE_TYPES,
+  COMPANY_TYPE_DISPLAY_OPTIONS,
+  COMPETITION_TYPE_DISPLAY_OPTIONS,
   COMPETITION_TYPES,
+  INDUSTRY_TYPE_DISPLAY_OPTIONS,
   INDUSTRY_TYPES,
   INNOVATION_COMPANY_TYPES,
+  ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
   ORGANIZATION_LEVELS,
   PROJECT_LEVELS,
+  RESEARCH_TYPE_DISPLAY_OPTIONS,
+  RESEARCH_TYPES,
   REVIEW_STATUS_FILTER_OPTIONS,
   SCHOLARSHIP_GRADES,
+  SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS,
   SCHOLARSHIP_LEVELS,
 } from '@/shared/constants/dict'
 
@@ -24,6 +31,8 @@ export interface ColumnDef {
   width?: number | string
   minWidth?: number | string
   dictOptions?: ReadonlyArray<{ label: string; value: string }>
+  /** 查看态展示用（含旧数据码）；编辑态仍使用 dictOptions，避免停用值被重新提交 */
+  displayOptions?: ReadonlyArray<{ label: string; value: string }>
   type?: 'text' | 'status' | 'date'
   showOverflowTooltip?: boolean
 }
@@ -50,7 +59,13 @@ export const REVIEW_COLUMNS: Record<string, TypeColumnConfig> = {
     label: '学科竞赛',
     columns: [
       { prop: 'competitionName', label: '竞赛名称', minWidth: 200, showOverflowTooltip: true },
-      { prop: 'competitionType', label: '竞赛类型', width: 100, dictOptions: COMPETITION_TYPES },
+      {
+        prop: 'competitionType',
+        label: '竞赛类型',
+        width: 100,
+        dictOptions: COMPETITION_TYPES,
+        displayOptions: COMPETITION_TYPE_DISPLAY_OPTIONS,
+      },
       { prop: 'awardLevel', label: '获奖等级', width: 100, dictOptions: AWARD_LEVELS },
       { prop: 'awardDate', label: '获奖时间', width: 120 },
       { prop: 'submitDate', label: '提交日期', width: 120 },
@@ -68,8 +83,20 @@ export const REVIEW_COLUMNS: Record<string, TypeColumnConfig> = {
     label: '创新创业',
     columns: [
       { prop: 'companyName', label: '公司/项目名称', minWidth: 200, showOverflowTooltip: true },
-      { prop: 'industryType', label: '行业类型', width: 110, dictOptions: INDUSTRY_TYPES },
-      { prop: 'companyType', label: '企业类型', width: 110, dictOptions: INNOVATION_COMPANY_TYPES },
+      {
+        prop: 'industryType',
+        label: '行业类型',
+        width: 110,
+        dictOptions: INDUSTRY_TYPES,
+        displayOptions: INDUSTRY_TYPE_DISPLAY_OPTIONS,
+      },
+      {
+        prop: 'companyType',
+        label: '企业类型',
+        width: 110,
+        dictOptions: INNOVATION_COMPANY_TYPES,
+        displayOptions: COMPANY_TYPE_DISPLAY_OPTIONS,
+      },
       { prop: 'teamRole', label: '团队角色', width: 100 },
       { prop: 'registerDate', label: '注册时间', width: 120 },
       { prop: 'submitDate', label: '提交日期', width: 120 },
@@ -87,7 +114,13 @@ export const REVIEW_COLUMNS: Record<string, TypeColumnConfig> = {
     columns: [
       { prop: 'projectName', label: '项目名称', minWidth: 200, showOverflowTooltip: true },
       { prop: 'projectLevel', label: '项目级别', width: 100, dictOptions: PROJECT_LEVELS },
-      { prop: 'researchType', label: '研究类型', minWidth: 130 },
+      {
+        prop: 'researchType',
+        label: '研究类型',
+        minWidth: 130,
+        dictOptions: RESEARCH_TYPES,
+        displayOptions: RESEARCH_TYPE_DISPLAY_OPTIONS,
+      },
       { prop: 'teamRole', label: '团队角色', width: 100 },
       { prop: 'projectDate', label: '项目时间', width: 120 },
       { prop: 'submitDate', label: '提交日期', width: 120 },
@@ -109,6 +142,7 @@ export const REVIEW_COLUMNS: Record<string, TypeColumnConfig> = {
         label: '奖学金等级',
         width: 130,
         dictOptions: SCHOLARSHIP_LEVELS,
+        displayOptions: SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS,
       },
       {
         prop: 'scholarshipGrade',
@@ -171,6 +205,7 @@ export const REVIEW_COLUMNS: Record<string, TypeColumnConfig> = {
         label: '组织级别',
         width: 100,
         dictOptions: ORGANIZATION_LEVELS,
+        displayOptions: ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
       },
       { prop: 'startDate', label: '开始时间', width: 120 },
       { prop: 'endDate', label: '结束时间', width: 120 },

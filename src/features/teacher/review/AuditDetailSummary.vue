@@ -5,37 +5,35 @@ import {
   AUDIT_DETAIL_LABELS,
   AWARD_LEVELS,
   CERTIFICATE_TYPES,
-  COMPETITION_TYPES,
-  INDUSTRY_TYPES,
-  ORGANIZATION_LEVELS,
+  COMPANY_TYPE_DISPLAY_OPTIONS,
+  COMPETITION_LEVELS,
+  COMPETITION_TYPE_DISPLAY_OPTIONS,
+  INDUSTRY_TYPE_DISPLAY_OPTIONS,
+  ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
   PROJECT_LEVELS,
-  RESEARCH_TYPES,
+  RESEARCH_TYPE_DISPLAY_OPTIONS,
   ROLE_OPTIONS,
   SCHOLARSHIP_GRADES,
-  SCHOLARSHIP_LEVELS,
+  SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS,
 } from '@/shared/constants/dict'
 
 const props = defineProps<{ detail: AuditPendingDetail }>()
 
 /** 填报内容字段 → 枚举字典（用于 displayValue 翻译原始枚举码） */
 const DETAIL_ENUM_MAP: Record<string, readonly { label: string; value: string }[]> = {
-  competitionType: COMPETITION_TYPES,
+  competitionType: COMPETITION_TYPE_DISPLAY_OPTIONS,
+  competitionLevel: COMPETITION_LEVELS,
   awardLevel: AWARD_LEVELS,
   projectLevel: PROJECT_LEVELS,
   participantRole: ROLE_OPTIONS,
   scholarshipGrade: SCHOLARSHIP_GRADES,
-  scholarshipLevel: SCHOLARSHIP_LEVELS,
-  researchType: RESEARCH_TYPES,
-  projectType: RESEARCH_TYPES,
+  scholarshipLevel: SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS,
+  researchType: RESEARCH_TYPE_DISPLAY_OPTIONS,
+  projectType: RESEARCH_TYPE_DISPLAY_OPTIONS,
   certType: CERTIFICATE_TYPES,
-  organizationLevel: ORGANIZATION_LEVELS,
-  industryType: INDUSTRY_TYPES,
-  companyType: [
-    { label: '创业实践', value: '创业实践' },
-    { label: '创业计划', value: '创业计划' },
-    { label: '实体注册', value: '实体注册' },
-    { label: '其他', value: '其他' },
-  ],
+  organizationLevel: ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
+  industryType: INDUSTRY_TYPE_DISPLAY_OPTIONS,
+  companyType: COMPANY_TYPE_DISPLAY_OPTIONS,
 }
 
 /** 填报内容/基础信息字段展开 */

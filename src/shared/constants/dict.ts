@@ -1,5 +1,33 @@
 import type { NotificationCategory } from '@/shared/types/types'
 
+// 业务下拉字典统一迁至 businessDict.ts（取值与后端 dictionaries 表对齐），此处 re-export 保持既有导入不变。
+export {
+  AWARD_LEVELS,
+  CERTIFICATE_TYPES,
+  COMPANY_TYPE_DISPLAY_OPTIONS,
+  COMPETITION_LEVELS,
+  COMPETITION_TYPE_DISPLAY_OPTIONS,
+  COMPETITION_TYPES,
+  INDUSTRY_TYPE_DISPLAY_OPTIONS,
+  INDUSTRY_TYPES,
+  INNOVATION_COMPANY_TYPES,
+  LEGACY_COMPANY_TYPES,
+  LEGACY_COMPETITION_TYPES,
+  LEGACY_INDUSTRY_TYPES,
+  LEGACY_ORGANIZATION_LEVELS,
+  LEGACY_RESEARCH_TYPES,
+  LEGACY_SCHOLARSHIP_LEVELS,
+  ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
+  ORGANIZATION_LEVELS,
+  POLITICAL_STATUS_OPTIONS,
+  PROJECT_LEVELS,
+  RESEARCH_TYPE_DISPLAY_OPTIONS,
+  RESEARCH_TYPES,
+  SCHOLARSHIP_GRADES,
+  SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS,
+  SCHOLARSHIP_LEVELS,
+} from './businessDict'
+
 // 各申报模块的中文映射
 export const APPLICATION_TYPE_MAP: Record<string, string> = {
   competition: '学科竞赛',
@@ -80,87 +108,6 @@ export const APPROVAL_STATUS_OPTIONS = [
   { label: '已通过', value: 'approved' },
   { label: '已驳回', value: 'rejected' },
   { label: '已撤销', value: 'withdrawn' },
-] as const
-
-// 竞赛类型
-export const COMPETITION_TYPES = [
-  { label: '国家级', value: 'national' },
-  { label: '省部级', value: 'provincial' },
-  { label: '校级', value: 'school' },
-  { label: '院级', value: 'college' },
-] as const
-
-// 获奖等级
-export const AWARD_LEVELS = [
-  { label: '一等奖', value: 'first' },
-  { label: '二等奖', value: 'second' },
-  { label: '三等奖', value: 'third' },
-  { label: '优秀奖', value: 'excellence' },
-  { label: '特等奖', value: 'special' },
-] as const
-
-// 项目级别
-export const PROJECT_LEVELS = [
-  { label: '国家级', value: 'national' },
-  { label: '省部级', value: 'provincial' },
-  { label: '校级', value: 'school' },
-  { label: '院级', value: 'college' },
-] as const
-
-// 研究类型（后端 /applications/research 的 projectType 枚举码，中文会返回 10003 格式错误）
-export const RESEARCH_TYPES = [
-  { label: '基础研究', value: 'basic' },
-  { label: '应用研究', value: 'applied' },
-  { label: '试验发展', value: 'development' },
-] as const
-
-// 证书类型
-export const CERTIFICATE_TYPES = [
-  { label: '技能证书', value: 'skill' },
-  { label: '语言证书', value: 'language' },
-  { label: '专业证书', value: 'professional' },
-  { label: '其他', value: 'other' },
-] as const
-
-// 组织级别
-export const ORGANIZATION_LEVELS = [
-  { label: '校级', value: 'school' },
-  { label: '院级', value: 'college' },
-  { label: '社团级', value: 'club' },
-  { label: '班级', value: 'class' },
-] as const
-
-// 行业类型
-export const INDUSTRY_TYPES = [
-  { label: '信息技术', value: 'it' },
-  { label: '教育培训', value: 'education' },
-  { label: '文化传媒', value: 'media' },
-  { label: '商贸服务', value: 'business' },
-  { label: '其他', value: 'other' },
-] as const
-
-// 奖学金级别（一/二/三等奖）
-export const SCHOLARSHIP_GRADES = [
-  { label: '一等奖', value: 'first' },
-  { label: '二等奖', value: 'second' },
-  { label: '三等奖', value: 'third' },
-] as const
-
-// 创新创业企业类型
-export const INNOVATION_COMPANY_TYPES = [
-  { label: '创业实践', value: '创业实践' },
-  { label: '创业计划', value: '创业计划' },
-  { label: '实体注册', value: '实体注册' },
-  { label: '其他', value: '其他' },
-] as const
-
-// 奖学金等级
-export const SCHOLARSHIP_LEVELS = [
-  { label: '国家奖学金', value: 'national' },
-  { label: '省级奖学金', value: 'provincial' },
-  { label: '校级奖学金', value: 'school' },
-  { label: '院级奖学金', value: 'college' },
-  { label: '企业奖学金', value: 'enterprise' },
 ] as const
 
 // 成长时间轴事件类型

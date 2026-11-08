@@ -406,7 +406,7 @@ onMounted(() => {
               <DictColumn
                 v-if="col.dictOptions"
                 :value="row[col.prop]"
-                :options="col.dictOptions"
+                :options="col.displayOptions ?? col.dictOptions"
               />
               <StatusTag v-else-if="col.type === 'status'" :status="row[col.prop]" size="small" />
               <span v-else>{{ row[col.prop] }}</span>

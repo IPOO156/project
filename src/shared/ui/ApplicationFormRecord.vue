@@ -1,4 +1,8 @@
 <script setup lang="ts" generic="T">
+import { onMounted } from 'vue'
+
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
+import { ROLE_OPTIONS } from '@/shared/constants/dict'
 import ApplicationRecordTable from './ApplicationRecordTable.vue'
 import RejectionBanner from './RejectionBanner.vue'
 import StatusTag from './StatusTag.vue'
@@ -51,6 +55,14 @@ const emit = defineEmits<{
   (e: 'update:extendedForm', field: string, value: any): void
 }>()
 
+/** 本人角色：后端字典优先，常量兜底 */
+const { options: participantRoleOptions, load: loadParticipantRoles } = useRemoteDict(
+  'participant_role',
+  ROLE_OPTIONS,
+)
+
+onMounted(() => void loadParticipantRoles())
+
 function canEdit(s: string) {
   return s === 'draft' || !s || s === 'rejected'
 }
@@ -85,11 +97,11 @@ function canEdit(s: string) {
                 :model-value="extendedForm.role"
                 placeholder="请选择"
                 @update:model-value="emit('update:extendedForm', 'role', $event)"
-                ><el-option label="负责人" value="leader" /><el-option
-                  label="成员"
-                  value="member" /><el-option
-                  label="独立完成"
-                  value="individual" /></el-select></el-form-item
+                ><el-option
+                  v-for="r in participantRoleOptions"
+                  :key="r.value"
+                  :label="r.label"
+                  :value="r.value" /></el-select></el-form-item
           ></el-col>
           <el-col :span="12"
             ><el-form-item label="证书编号"

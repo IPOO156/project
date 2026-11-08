@@ -3,6 +3,7 @@ import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { INNOVATION_COMPANY_TYPES } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -12,6 +13,12 @@ import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
+
+/** 公司类型：后端字典优先，常量兜底 */
+const { options: companyTypeOptions, load: loadCompanyTypes } = useRemoteDict(
+  'company_type',
+  INNOVATION_COMPANY_TYPES,
+)
 
 function emptyForm() {
   return {
@@ -63,6 +70,7 @@ async function handleRemove(row: any) {
 onMounted(() => {
   page.init()
   loadSemesters()
+  void loadCompanyTypes()
 })
 </script>
 
@@ -105,7 +113,7 @@ onMounted(() => {
         <el-form-item label="公司类型" required>
           <el-select v-model="page.form.companyType" placeholder="请选择" class="form-select">
             <el-option
-              v-for="t in INNOVATION_COMPANY_TYPES"
+              v-for="t in companyTypeOptions"
               :key="t.value"
               :label="t.label"
               :value="t.value"
