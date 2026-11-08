@@ -101,6 +101,16 @@ html:has(#app :is(.layout--teacher, .layout--admin)) .el-drawer.btt {
   border-radius: var(--mc-radius-large) var(--mc-radius-large) 0 0;
 }
 
+/* ── ①c 键盘焦点兜底
+
+   学生端没有统一的 focus-visible 规则（教师/管理员端在 _buttons.scss 里有），
+   这里给原生可聚焦元素补一个最低限度的描边。用 :where() 保证零特异性，
+   不会覆盖各组件自己的焦点样式。 */
+:where(a, button, [role='button'], [tabindex='0']):focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
 /* ── ①b 窄屏宽度兜底
 
    EP 的 el-dialog 用内联 width 写死宽度且没有 max-width，el-drawer 的 size 同样无上限，

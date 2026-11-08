@@ -221,7 +221,6 @@ function handleDragEndVisual() {
   &:focus-visible {
     background: var(--el-fill-color-light);
     color: var(--el-text-color-primary);
-    outline: none;
   }
 
   .is-spinning {
@@ -322,7 +321,6 @@ function handleDragEndVisual() {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     border-color: var(--el-color-primary-light-7);
-    outline: none;
 
     .qitem__icon {
       transform: scale(1.08);

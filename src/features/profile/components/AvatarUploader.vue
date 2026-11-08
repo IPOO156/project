@@ -338,7 +338,6 @@ const previewImageStyle = computed(() => {
   &:hover,
   &:focus-visible {
     border-color: var(--el-color-primary);
-    outline: none;
 
     .avatar-preview__overlay {
       opacity: 1;
