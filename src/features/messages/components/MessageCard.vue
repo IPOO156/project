@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Notification, NotificationCategory } from '@/shared/types/types'
 import { Archive, Bell, Bot, ChevronRight, Mail, MailOpen, MessageSquare } from 'lucide-vue-next'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useThemeStore } from '@/app/stores/stores'
 import { notificationCategoryLabel } from '@/shared/constants/dict'
@@ -58,6 +59,23 @@ function handleCardClick() {
   if (props.item.isRead !== 1) emit('read', props.item.id)
   if (props.item.jumpUrl) router.push(props.item.jumpUrl)
 }
+
+/** 整卡可跳转：批量模式下只允许勾选，不再整卡跳转 */
+const isNavigable = computed(() => Boolean(props.item.jumpUrl) && !props.batchMode)
+
+const cardAriaLabel = computed(() => {
+  const parts = [props.item.title, categoryLabel(props.item.category)]
+  if (props.item.isRead !== 1) parts.push('未读')
+  return parts.join('，')
+})
+
+/** 键盘触发：Enter / Space 与点击等价；忽略来自卡内按钮（标为已读、归档等）的冒泡按键 */
+function handleCardKeydown(event: KeyboardEvent) {
+  if (!isNavigable.value || event.target !== event.currentTarget) return
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  event.preventDefault()
+  handleCardClick()
+}
 </script>
 
 <template>
@@ -66,9 +84,13 @@ function handleCardClick() {
     :class="{
       'is-unread': item.isRead !== 1,
       'is-archived': item.isArchived === 1,
-      'is-clickable': !!item.jumpUrl && !batchMode,
+      'is-clickable': isNavigable,
     }"
+    :role="isNavigable ? 'button' : undefined"
+    :tabindex="isNavigable ? 0 : undefined"
+    :aria-label="isNavigable ? cardAriaLabel : undefined"
     @click="handleCardClick"
+    @keydown="handleCardKeydown"
   >
     <label v-if="batchMode" class="message-card__checkbox" @click.stop>
       <input type="checkbox" :checked="checked" @change="emit('toggleSelect', item.id)" />
@@ -167,6 +189,12 @@ function handleCardClick() {
   }
   &.is-clickable {
     cursor: pointer;
+
+    // 焦点环对齐成就卡等可点卡片：暖木色描边，不用浏览器默认蓝框
+    &:focus-visible {
+      outline: 2px solid var(--mc-wood);
+      outline-offset: 2px;
+    }
   }
 
   &__icon {
