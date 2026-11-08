@@ -553,6 +553,14 @@ html.dark {
     color: #cbd5e1;
   }
 
+  .score-indicator__total {
+    border-top-color: #3b82f6;
+  }
+
+  .score-indicator__total-value {
+    color: #60a5fa;
+  }
+
   .calc-detail {
     border-top-color: #334155;
   }
