@@ -14,7 +14,6 @@ import type {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Check, ChevronDown, History, Plus, RefreshCw, Rocket, X } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
-
 import {
   createIndicator,
   deleteIndicator,
@@ -25,11 +24,15 @@ import {
   updateIndicatorsStatusBatch,
   updateIndicatorStatus,
 } from '@/shared/api/teacher-api'
+
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import RowActions from '@/shared/ui/RowActions.vue'
 import IndicatorVersionsDrawer from './IndicatorVersionsDrawer.vue'
 
 const loading = ref(false)
 const tree = ref<AdminIndicatorTree | null>(null)
+// 首次拿到非空指标树后只播一次，切换分类 / 刷新改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => tree.value?.indicators?.length ?? 0)
 
 // ─── 各动作独立 Loading（与列表 loading 分离，避免整表转圈） ───
 const saving = ref(false)
@@ -270,7 +273,7 @@ onMounted(() => void load())
 </script>
 
 <template>
-  <div class="mc-page">
+  <div class="mc-page" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">指标配置</h2>
@@ -454,6 +457,18 @@ onMounted(() => void load())
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 /* 发布弹窗内对发布前置条件（权重校验、打包草稿）的说明文案，弱化显示 */
 .indicator-page__publish-hint {
   font-size: 12px;

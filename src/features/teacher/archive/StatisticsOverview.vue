@@ -5,6 +5,7 @@ import { Search } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getSemesters, getStatisticsOverview } from '@/shared/api/teacher-api'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 
 /**
@@ -45,6 +46,8 @@ const filterOpen = ref(false)
 
 const overviewLoading = ref(false)
 const statsRows = ref<OrgOverviewRow[]>([])
+// 首次拿到非空汇总后只播一次，筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => statsRows.value.length)
 const parentOrg = ref<StatisticsParentOrg | null>(null)
 const cacheHit = ref<boolean | null>(null)
 
@@ -158,7 +161,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="statistics-overview">
+  <div class="statistics-overview" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-card statistics-overview__card">
       <div class="mc-card__head">
         <span class="mc-card__title">统计看板</span>
@@ -296,6 +299,18 @@ onMounted(async () => {
 
 <style scoped lang="scss">
 @use '@/assets/styles/variables.scss' as *;
+
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
 
 .statistics-overview {
   &__card {

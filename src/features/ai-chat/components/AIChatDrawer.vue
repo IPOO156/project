@@ -138,8 +138,8 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
             <div v-if="loading" class="ai-drawer__msg ai-drawer__msg--loading">
               <ChatAvatar role="ai" />
               <div class="ai-drawer__bubble ai-drawer__bubble--loading">
-                <Sparkles :size="16" class="ai-drawer__thinking-icon" />
-                <span>AI Thinking...</span>
+                <Sparkles :size="14" class="ai-drawer__thinking-icon" />
+                <span>AI 思考中…</span>
               </div>
             </div>
           </div>

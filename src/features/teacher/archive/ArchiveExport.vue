@@ -24,6 +24,7 @@ import {
   submitAdminArchiveExport,
   submitArchiveExport,
 } from '@/shared/api/teacher-api'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { usePollingTask } from '@/shared/composables/usePollingTask'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
@@ -139,6 +140,9 @@ const filteredTasks = computed(() => {
   }
   return list
 })
+
+// 首次拿到非空导出记录后只播一次，筛选 / 轮询刷新改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => filteredTasks.value.length)
 
 /** 研究数据导出任务单任务轮询（admin /admin/exports/{jobId}，无教师端等价接口，超管专属） */
 const researchPolling = usePollingTask<ExportJobItem>({
@@ -301,7 +305,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="mc-page archive-export">
+  <div class="mc-page archive-export" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">档案导出</h2>
@@ -495,6 +499,18 @@ onUnmounted(() => {
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .archive-export {
   &__count {
     font-size: 13px;

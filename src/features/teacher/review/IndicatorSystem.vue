@@ -60,7 +60,7 @@ const { activeTab } = useTabRoute<TabKey>(availableKeys, 'dimension')
 </script>
 
 <template>
-  <div class="mc-page hub-page indicator-system">
+  <div class="mc-page hub-page indicator-system page-enter">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">指标体系</h2>

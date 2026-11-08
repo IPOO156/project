@@ -3,6 +3,7 @@ import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { AWARD_LEVELS, COMPETITION_TYPES } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -42,6 +43,8 @@ const page = reactive(
   ),
 )
 
+const staggerActive = useFirstLoadStagger(() => page.records.length)
+
 function handleEditClick(row: any) {
   page.form.competitionName = row.competitionName || ''
   page.form.competitionDate = row.competitionDate || ''
@@ -73,6 +76,8 @@ onMounted(() => {
 
 <template>
   <ApplicationFormRecord
+    class="page-enter"
+    :class="{ 'is-stagger-armed': staggerActive }"
     alert-title="竞赛之星报名说明"
     alert-description="竞赛之星用于评选在学科竞赛中表现突出的同学。请填写参赛信息及获奖情况，提交后可在下方查看报名记录。"
     :show-records="true"
@@ -184,6 +189,19 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+.page-enter {
+  @include page-enter;
+}
+
+.page-enter.is-stagger-armed {
+  --mc-row-duration: 0.32s;
+  --mc-row-delay: 0.04s;
+  --mc-row-offset: 60px;
+  --mc-row-easing: #{$ease-out-cubic};
+
+  @include table-row-staggered(20);
+}
+
 .form-select {
   width: 200px;
 }

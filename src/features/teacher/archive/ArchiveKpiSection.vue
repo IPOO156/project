@@ -80,7 +80,7 @@ defineProps<Props>()
   &__kpi {
     position: relative;
     padding: 16px 16px 16px;
-    border-radius: 6px;
+    border-radius: $radius-card;
     background: var(--el-bg-color);
     border: 1px solid var(--el-border-color-lighter);
     transition: none;

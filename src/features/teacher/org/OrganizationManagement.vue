@@ -19,8 +19,9 @@ import type {
 import { ElMessage } from 'element-plus'
 import { Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, reactive, ref } from 'vue'
-
 import { listClasses, listColleges, listMajors, listSchools } from '@/shared/api/teacher-api'
+
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { COMMON_STATUS } from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 
@@ -120,6 +121,8 @@ const currentMajorName = computed(() => {
 // ── 班级列表 ──
 const classLoading = ref(false)
 const classList = ref<OrgClassItem[]>([])
+// 首次拿到非空专业 / 班级列表后只播一次，切换筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => majors.value.length + classList.value.length)
 const classTotal = ref(0)
 const classPage = ref(1)
 const classPerPage = ref(10)
@@ -265,7 +268,7 @@ onMounted(() => void loadSchools())
 </script>
 
 <template>
-  <div class="mc-page org-management">
+  <div class="mc-page org-management page-enter" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">组织架构</h2>
@@ -494,6 +497,18 @@ onMounted(() => void loadSchools())
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .org-management {
   &__filter-select {
     width: 190px;

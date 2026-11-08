@@ -22,6 +22,20 @@ export function resolveFileName(headers: unknown): string | null {
 }
 
 /**
+ * 用已有地址（签名 URL / data URL）触发下载。
+ * 后端需在响应头给 Content-Disposition: attachment，否则跨域地址的 download 属性不生效。
+ */
+export function downloadFromUrl(url: string, fileName: string): void {
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  link.rel = 'noopener'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+/**
  * 以 blob 方式请求文件并触发浏览器下载。
  * 接口需要携带 Authorization，因此不能直接用 <a href> 打开后端地址；
  * responseType=blob 时请求拦截器会把完整响应交回这里（见 request.ts）。

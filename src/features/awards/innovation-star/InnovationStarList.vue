@@ -3,6 +3,7 @@ import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { INDUSTRY_TYPES } from '@/shared/constants/dict'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -41,6 +42,8 @@ const page = reactive(
   ),
 )
 
+const staggerActive = useFirstLoadStagger(() => page.records.length)
+
 function handleEditClick(row: any) {
   page.form.companyName = row.companyName || ''
   page.form.industryType = row.industryType || ''
@@ -72,6 +75,8 @@ onMounted(() => {
 
 <template>
   <ApplicationFormRecord
+    class="page-enter"
+    :class="{ 'is-stagger-armed': staggerActive }"
     alert-title="双创之星报名说明"
     alert-description="双创之星用于评选在创新创业实践中表现突出的同学。请填写公司信息、行业类型、申报人排名及注册时间，提交后可在下方查看报名记录。"
     :show-records="true"
@@ -181,6 +186,19 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
+.page-enter {
+  @include page-enter;
+}
+
+.page-enter.is-stagger-armed {
+  --mc-row-duration: 0.32s;
+  --mc-row-delay: 0.04s;
+  --mc-row-offset: 60px;
+  --mc-row-easing: #{$ease-out-cubic};
+
+  @include table-row-staggered(20);
+}
+
 .form-select,
 .form-input {
   width: 200px;

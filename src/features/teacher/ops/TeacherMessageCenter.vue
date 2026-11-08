@@ -5,6 +5,7 @@ import { Inbox, RefreshCw, Search } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useTeacherMessageStore } from '@/app/stores/stores'
 import { useDebounce } from '@/shared/composables/useDebounce'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { NOTIFICATION_CATEGORY, notificationCategoryLabel } from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
@@ -18,6 +19,8 @@ import { formatDateTime } from '@/shared/utils/time'
  */
 
 const store = useTeacherMessageStore()
+// 首次拿到非空消息后只播一次，切视图 / 翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => store.list.length)
 
 // ── 视图 / 筛选 ──
 const viewMode = ref<'inbox' | 'archived'>('inbox')
@@ -150,7 +153,7 @@ onMounted(() => void loadList())
 </script>
 
 <template>
-  <div class="mc-page">
+  <div class="mc-page page-enter" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">消息中心</h2>
@@ -321,6 +324,18 @@ onMounted(() => void loadList())
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .mc-filter-bar--msg {
   display: flex;
   justify-content: space-between;

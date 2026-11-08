@@ -49,6 +49,24 @@ $spacing-xl: 24px;
 $spacing-2xl: 32px;
 
 // 圆角
+// ── 语义档位（φ 阶梯 9 / 14 / 23）—— 仅教师端 / 管理员端消费 ──
+// 9：控件与小容器（按钮 / 输入 / 下拉 / 分页 / 消息条 / 页签容器 / 卡片）
+// 14：高度 ≥72px 且承载大块内容的大面（大卡片 / 抽屉 / 面板；抽屉贴屏幕边的两角为 0）
+// 23：高度 ≥96px 的大面（首屏主卡 / 空态大块 / 大媒体区）；当前无消费者，仅保留定义
+// 锁定值：列表行 0、表格单元格 0、行内 chip 6、tag 4、checkbox 4、radio 50%
+// 同心规则：内层 = max(0, 外层 − 内边距)；弹窗内距 16 > 外圆角 14 时普通控件仍取 9
+// 落地范围：只在 `#app :is(.layout--teacher, .layout--admin)` 及其浮层作用域生效，
+//   学生端与登录页继续使用下方 BASE 值（4 / 6 / 8 / 12 / 16）。
+$radius-row: 0;
+$radius-tag: 4px;
+$radius-choice: 4px;
+$radius-chip: 6px;
+$radius-control: 9px;
+$radius-card: 9px;
+$radius-large: 14px;
+$radius-hero: 23px;
+
+// BASE 档位：学生端 / 登录页沿用的既有取值，不得随教师端改造而变
 $radius-sm: 4px;
 $radius-base: 6px;
 $radius-lg: 8px;
@@ -114,6 +132,7 @@ $ease-accelerate: cubic-bezier(0.4, 0, 1, 1); // 出场（加速）
 $ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1); // 强调入场（弹性）
 $ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1); // 强减速入场（登录页大面板/文字入场）
 $ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); // 抽屉/边栏滑入（iOS 手感）
+$ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1); // 短位移收尾（与表格刷入同源，无回弹）
 
 /**
  * 统一 UI 过渡属性
@@ -141,24 +160,28 @@ $ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); // 抽屉/边栏滑入（iOS 手�
  *   --mc-row-duration: 单个动画时长，默认 0.6s
  *   --mc-row-delay:   行间延迟，默认 0.08s
  *   --mc-row-easing:  缓动函数，默认 $ease-emphasized
- *   --mc-row-offset:  水平滑入偏移量，默认 -60px
+ *   --mc-row-offset:  水平滑入偏移量，默认 60px（正值 = 从右侧进入，向左落位）
  * 用法：
  *   .my-table { @include table-row-staggered(50); }
+ * 注意：内部选择器用 :deep() 穿透，必须包含在有 scoped 属性的组件元素上；
+ * 否则 scoped 属性会被追加到 .el-table__row（由 el-table 子组件渲染，不带父组件 scope），规则永远不命中。
  */
 @mixin table-row-staggered($max-rows: 50) {
-  .el-table__row {
+  :deep(.el-table__row) {
     --_duration: var(--mc-row-duration, 0.6s);
     --_delay: var(--mc-row-delay, 0.08s);
     --_easing: var(--mc-row-easing, #{$ease-emphasized});
 
-    opacity: 0;
+    opacity: 1;
     // 不声明 will-change：表格/列表最多 50 行，常驻合成层会白占显存；
-    // 动画运行期间浏览器会自动提升图层，结束后回收
-    animation: table-row-brush var(--_duration) var(--_easing) both;
+    // 动画运行期间浏览器会自动提升图层，结束后回收。
+    // 用 backwards 而不是 both：动画结束回到基础样式（opacity:1 / transform:none），
+    // 卡片的 hover/active 位移与缩放才不会被 forwards 终态锁死。
+    animation: table-row-brush var(--_duration) var(--_easing) backwards;
   }
 
   @for $i from 1 through $max-rows {
-    .el-table__body .el-table__row:nth-child(#{$i}) {
+    :deep(.el-table__body .el-table__row:nth-child(#{$i})) {
       animation-delay: calc((#{$i} - 1) * var(--_delay));
     }
   }
@@ -167,7 +190,8 @@ $ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); // 抽屉/边栏滑入（iOS 手�
 @keyframes table-row-brush {
   from {
     opacity: 0;
-    transform: translateX(var(--mc-row-offset, -60px)) scale(0.96);
+    // 起始为 +X（行在落位点右侧），终态 0：视觉上从右往左刷入
+    transform: translateX(var(--mc-row-offset, 60px)) scale(var(--mc-row-scale, 0.96));
   }
 
   to {
@@ -178,18 +202,21 @@ $ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); // 抽屉/边栏滑入（iOS 手�
 
 /**
  * 列表项/卡片逐行刷入动画
- * 与表格动画保持一致的节奏，默认从左侧滑入并带轻微缩放
+ * 与表格动画保持一致的节奏，默认从右侧滑入并带轻微缩放
  */
+
 @mixin list-item-staggered($max-items: 50) {
   > * {
     --_duration: var(--mc-row-duration, 0.6s);
     --_delay: var(--mc-row-delay, 0.08s);
     --_easing: var(--mc-row-easing, #{$ease-emphasized});
 
-    opacity: 0;
+    opacity: 1;
     // 不声明 will-change：表格/列表最多 50 行，常驻合成层会白占显存；
-    // 动画运行期间浏览器会自动提升图层，结束后回收
-    animation: table-row-brush var(--_duration) var(--_easing) both;
+    // 动画运行期间浏览器会自动提升图层，结束后回收。
+    // 用 backwards 而不是 both：动画结束回到基础样式（opacity:1 / transform:none），
+    // 卡片的 hover/active 位移与缩放才不会被 forwards 终态锁死。
+    animation: table-row-brush var(--_duration) var(--_easing) backwards;
   }
 
   @for $i from 1 through $max-items {
@@ -197,4 +224,14 @@ $ease-drawer: cubic-bezier(0.32, 0.72, 0, 1); // 抽屉/边栏滑入（iOS 手�
       animation-delay: calc((#{$i} - 1) * var(--_delay));
     }
   }
+}
+
+/**
+ * 页面入场动画：从右侧 60px 落位，仅使用 transform + opacity。
+ * 参数与列表刷入同源（60px / 0.32s / 出缓 / backwards），不新造数值。
+ * overflow-x: clip 避免横移期间出现横向滚动条，且不会产生新的滚动容器。
+ */
+@mixin page-enter {
+  animation: page-enter-in 0.32s $ease-decelerate backwards;
+  overflow-x: clip;
 }

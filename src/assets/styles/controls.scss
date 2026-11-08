@@ -132,14 +132,14 @@ html:has(#app :is(.layout--teacher, .layout--admin)) .el-select-dropdown__item:h
 
 /* ══════════════════════════════════════════════════════════════════
    C. 标签 —— el-tag
-   teacher-console.scss 内的两处圆角（6 / 4）保持原样：本文件后引入，
-   同权重（1,2,0）按源序后来居上 → 这里写 6 即生效。
+
+   tag 属锁定值，固定 4px，不随控件档位（9px）走。
    ══════════════════════════════════════════════════════════════════ */
 
 #app :is(.layout--teacher, .layout--admin) .el-tag {
   height: var(--mc-tag-h);
   padding: 0 var(--mc-tag-px);
-  border-radius: var(--mc-ctl-radius);
+  border-radius: var(--mc-radius-tag);
   font-size: var(--mc-tag-font);
   font-weight: 500;
   line-height: 1.5;
@@ -162,7 +162,7 @@ html:has(#app :is(.layout--teacher, .layout--admin)) .el-select-dropdown__item:h
 #app :is(.layout--teacher, .layout--admin) .el-checkbox {
   --el-checkbox-input-width: var(--mc-choice-size);
   --el-checkbox-input-height: var(--mc-choice-size);
-  --el-checkbox-border-radius: var(--mc-ctl-radius);
+  --el-checkbox-border-radius: var(--mc-radius-choice);
   --el-checkbox-text-color: var(--mc-ctl-label);
   --el-checkbox-checked-text-color: var(--mc-ctl-label);
   --el-checkbox-checked-bg-color: var(--mc-choice-fill);

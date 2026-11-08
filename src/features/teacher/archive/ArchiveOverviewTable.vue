@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ArchiveOverviewRow } from '@/shared/types/teacher'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 
 interface Props {
@@ -10,7 +11,9 @@ interface Props {
   loading: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+// 首次拿到非空汇总后只播一次，筛选 / 刷新改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => props.rows.length)
 
 /**
  * 单条组织档案在状态分布条中的占比（按总数归一化，避免除 0）。
@@ -30,7 +33,7 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
 
 <template>
   <!-- 组织汇总表 -->
-  <section class="mc-card archive-view__overview">
+  <section class="mc-card archive-view__overview" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-card__head">
       <span class="mc-card__title">组织汇总 · {{ dimension }}</span>
       <span class="archive-view__count">{{ rows.length }} 个组织</span>
@@ -119,6 +122,18 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
 @use 'sass:color';
 @use '@/assets/styles/variables.scss' as *;
 
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .archive-view {
   /* ── 数量徽标 ── */
   &__count {
@@ -160,7 +175,7 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
   &__ratio-bar {
     display: flex;
     height: 6px;
-    border-radius: 6px;
+    border-radius: $radius-chip;
     overflow: hidden;
     background: var(--el-fill-color-light);
   }
@@ -233,7 +248,7 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
     font-weight: 600;
     background: var(--el-bg-color);
     padding: 0 4px;
-    border-radius: 6px;
+    border-radius: $radius-chip;
   }
 }
 </style>

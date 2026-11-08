@@ -2,6 +2,7 @@ import type { Notification, NotificationFilters } from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { getNotifications } from '@/shared/api/notification'
+import { notificationCategoryLabel } from '@/shared/constants/dict'
 import { mergeNotifications } from './notificationHelpers'
 import { createNotificationMutations } from './notificationMutations'
 
@@ -106,7 +107,7 @@ export const useNotificationStore = defineStore('notification', () => {
     const newNotification: Notification = {
       id: `notif-${Date.now()}`,
       category: notification.category,
-      categoryLabel: notification.category,
+      categoryLabel: notificationCategoryLabel(notification.category),
       title: notification.title,
       content: notification.content,
       isRead: 0,

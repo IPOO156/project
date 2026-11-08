@@ -7,7 +7,7 @@ import type {
 } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Filter, Search, X } from 'lucide-vue-next'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useActivityStore, useSubmissionStore } from '@/app/stores/stores'
 import { sourcePathOf } from '@/shared/api/submission'
@@ -45,67 +45,98 @@ const submissionPageNum = ref(1)
 const submissionPageSize = ref(10)
 
 // ─── 表格逐行刷入动画触发 ───
+// 判定依据：firstLoad 标记（activityStaggerArmed / submissionStaggerArmed）。
+// 只在「首次拿到一份新数据集」时消费一次标记并挂载动画类；
+// 翻页/切换页签/筛选/排序只调用 stop*（清理类名），不会重新武装标记，因此一律不刷。
 const activityTableKey = ref(0)
 const submissionTableKey = ref(0)
+const activityStaggerActive = ref(false)
+const submissionStaggerActive = ref(false)
+const activityStaggerArmed = ref(true)
+const submissionStaggerArmed = ref(true)
+
+// 仅用于回收动画类，不参与触发判定
+let activityStaggerTimer: number | null = null
+let submissionStaggerTimer: number | null = null
+const STAGGER_CLEANUP_MS = 2200
 
 // ─── 报名记录行内删除 Loading（记录正在删除的行 id，防连点） ───
 const deletingId = ref<string | null>(null)
 // ─── 报名记录行内撤回 Loading（同删除，记录正在撤回的行 id） ───
 const withdrawingId = ref<string | null>(null)
 
-function bumpActivityAnimation() {
+function triggerActivityStagger() {
+  if (!activityStaggerArmed.value) return
+  activityStaggerArmed.value = false
   activityTableKey.value++
+  activityStaggerActive.value = true
+  if (activityStaggerTimer !== null) window.clearTimeout(activityStaggerTimer)
+  activityStaggerTimer = window.setTimeout(() => {
+    activityStaggerActive.value = false
+    activityStaggerTimer = null
+  }, STAGGER_CLEANUP_MS)
 }
 
-function bumpSubmissionAnimation() {
+function triggerSubmissionStagger() {
+  if (!submissionStaggerArmed.value) return
+  submissionStaggerArmed.value = false
   submissionTableKey.value++
+  submissionStaggerActive.value = true
+  if (submissionStaggerTimer !== null) window.clearTimeout(submissionStaggerTimer)
+  submissionStaggerTimer = window.setTimeout(() => {
+    submissionStaggerActive.value = false
+    submissionStaggerTimer = null
+  }, STAGGER_CLEANUP_MS)
+}
+
+function stopActivityStagger() {
+  activityStaggerActive.value = false
+  if (activityStaggerTimer !== null) {
+    window.clearTimeout(activityStaggerTimer)
+    activityStaggerTimer = null
+  }
+}
+
+function stopSubmissionStagger() {
+  submissionStaggerActive.value = false
+  if (submissionStaggerTimer !== null) {
+    window.clearTimeout(submissionStaggerTimer)
+    submissionStaggerTimer = null
+  }
 }
 
 watch(
   () => activityStore.loading,
   (loading) => {
-    if (!loading) {
-      bumpActivityAnimation()
-    }
+    if (!loading) triggerActivityStagger()
   },
 )
 
 watch(
   () => submissionStore.loading,
   (loading) => {
-    if (!loading) {
-      bumpSubmissionAnimation()
-    }
+    if (!loading) triggerSubmissionStagger()
   },
 )
 
 watch(activeTab, (tab) => {
-  if (tab === 'activity' && !activityStore.loading) {
-    bumpActivityAnimation()
-  } else if (tab === 'submission' && !submissionStore.loading) {
-    bumpSubmissionAnimation()
+  if (tab === 'activity') {
+    stopSubmissionStagger()
+    if (!activityStore.loading) triggerActivityStagger()
+  } else {
+    stopActivityStagger()
+    if (!submissionStore.loading) triggerSubmissionStagger()
   }
 })
 
-watch(
-  [activityPageNum, activityPageSize],
-  () => {
-    if (activeTab.value === 'activity') {
-      bumpActivityAnimation()
-    }
-  },
-  { flush: 'post' },
-)
+watch([activityPageNum, activityPageSize], () => stopActivityStagger(), { flush: 'post' })
 
-watch(
-  [submissionPageNum, submissionPageSize],
-  () => {
-    if (activeTab.value === 'submission') {
-      bumpSubmissionAnimation()
-    }
-  },
-  { flush: 'post' },
-)
+watch([submissionPageNum, submissionPageSize], () => stopSubmissionStagger(), { flush: 'post' })
+
+onBeforeUnmount(() => {
+  stopActivityStagger()
+  stopSubmissionStagger()
+})
 
 // 状态筛选含「草稿」：草稿自动保存（isDraft=1）会把记录落库为 status=0（草稿），
 // 此前硬编码剔除 draft 导致全为草稿的记录在状态筛选时选任何状态都筛不出（0 条）。
@@ -309,12 +340,12 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-loading="activityStore.loading" class="mc-card">
-        <el-table
-          :key="activityTableKey"
-          :data="activityPaginated"
-          class="mc-table mc-table--staggered u-w-full"
-        >
+      <div
+        v-loading="activityStore.loading"
+        class="mc-card"
+        :class="{ 'mc-card--staggered': activityStaggerActive }"
+      >
+        <el-table :key="activityTableKey" :data="activityPaginated" class="mc-table u-w-full">
           <el-table-column type="index" label="序号" width="64" align="center" />
           <el-table-column prop="text" label="动态内容" min-width="360" show-overflow-tooltip />
           <el-table-column label="状态" width="100" align="center">
@@ -413,12 +444,12 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-loading="submissionStore.loading" class="mc-card">
-        <el-table
-          :key="submissionTableKey"
-          :data="submissionPaginated"
-          class="mc-table mc-table--staggered u-w-full"
-        >
+      <div
+        v-loading="submissionStore.loading"
+        class="mc-card"
+        :class="{ 'mc-card--staggered': submissionStaggerActive }"
+      >
+        <el-table :key="submissionTableKey" :data="submissionPaginated" class="mc-table u-w-full">
           <el-table-column type="index" label="序号" width="64" align="center" />
           <el-table-column prop="title" label="名称" min-width="220" show-overflow-tooltip />
           <el-table-column label="类型" width="130" align="center">
@@ -569,13 +600,18 @@ onMounted(() => {
   :deep(.el-table) {
     @include mc-table;
   }
+}
 
-  // 表格行不做逐行入场动画：分页/筛选后整表重复动画会拖慢阅读，
-  // 密集业务表格应以稳定呈现为先。
-  &--staggered {
-    :deep(.el-table__row) {
-      animation: none;
-    }
-  }
+// 逐行刷入样式挂在表格外层 .mc-card 上（见 triggerActivityStagger / triggerSubmissionStagger），
+// 只在首次拿到新数据集时挂载；翻页、筛选、排序不会挂载。最多前 20 行参与延迟。
+// 选择器落在本组件渲染的元素上，scoped 属性才能命中。
+.mc-card--staggered {
+  // 0.32s / 40ms：20 行总时长 = 19 × 40ms + 0.32s = 1.08s
+  // 缓动 easeOutCubic（无回弹），短位移下收尾比 $ease-emphasized 更干脆
+  --mc-row-duration: 0.32s;
+  --mc-row-delay: 0.04s;
+  --mc-row-easing: #{$ease-out-cubic};
+
+  @include table-row-staggered(20);
 }
 </style>

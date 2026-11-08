@@ -15,7 +15,6 @@ import type { ScheduledTaskItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Clock, Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
-
 import {
   deleteScheduledTask,
   getScheduledTaskDetail,
@@ -23,6 +22,8 @@ import {
   triggerScheduledTask,
   updateScheduledTaskStatus,
 } from '@/shared/api/teacher-api'
+
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { SCHEDULED_TASK_GROUPS } from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
@@ -33,6 +34,8 @@ import ScheduledTaskFormDialog from './ScheduledTaskFormDialog.vue'
 
 const loading = ref(false)
 const list = ref<ScheduledTaskItem[]>([])
+// 首次拿到非空任务后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => list.value.length)
 const total = ref(0)
 const page = ref(1)
 const perPage = ref(10)
@@ -194,7 +197,7 @@ onMounted(() => void loadList())
 </script>
 
 <template>
-  <div class="mc-page scheduled-task">
+  <div class="mc-page scheduled-task" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">定时任务管理</h2>
@@ -347,6 +350,18 @@ onMounted(() => void loadList())
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .scheduled-task {
   &__total {
     font-size: 13px;

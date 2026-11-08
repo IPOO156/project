@@ -336,7 +336,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mc-page teacher-dashboard">
+  <div class="mc-page teacher-dashboard page-enter">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">{{ isAdmin ? '治理总览' : '工作台' }}</h2>

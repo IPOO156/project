@@ -118,7 +118,7 @@ function goTo(path: string) {
 </script>
 
 <template>
-  <PageContainer>
+  <PageContainer class="page-enter">
     <PageHeader title="申报看板" subtitle="总览各类型申报情况，快速了解档案完整度" />
 
     <el-alert
@@ -227,6 +227,10 @@ function goTo(path: string) {
 </template>
 
 <style scoped lang="scss">
+.page-enter {
+  @include page-enter;
+}
+
 .board-error {
   margin-bottom: 16px;
 }
@@ -347,16 +351,21 @@ html.dark {
   }
   .stat-card__icon {
     background: rgba(255, 255, 255, 0.06);
+    // 基础色 #64748b 在深色卡片底上实测 2.98:1，按同色相提亮到 #94a3b8（约 5.1:1）
+    color: #94a3b8;
 
     // 彩色修饰类需重申，避免被基础覆盖的高特异性吞掉；夜间略提透明度保证可见
     &--warning {
       background: rgba(230, 162, 60, 0.14);
+      color: #e6a23c;
     }
     &--success {
       background: rgba(103, 194, 58, 0.14);
+      color: #67c23a;
     }
     &--primary {
       background: rgba(64, 158, 255, 0.14);
+      color: var(--el-color-primary);
     }
   }
 

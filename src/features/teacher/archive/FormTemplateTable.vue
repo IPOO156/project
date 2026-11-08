@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import type { FormTemplateItem } from '@/shared/types/teacher'
 import { RefreshCw, Search } from 'lucide-vue-next'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
 
-defineProps<{
+const props = defineProps<{
   list: FormTemplateItem[]
   total: number
   loading: boolean
   deletingId: number | null
   categoryOptions: { value: string; label: string }[]
 }>()
-
 const emit = defineEmits<{
   (e: 'search'): void
   (e: 'reset'): void
@@ -22,6 +22,10 @@ const emit = defineEmits<{
   (e: 'setDefault', item: FormTemplateItem): void
   (e: 'delete', item: FormTemplateItem): void
 }>()
+
+// 首次拿到非空模板后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => props.list.length)
+
 const page = defineModel<number>('page', { required: true })
 const perPage = defineModel<number>('perPage', { required: true })
 const category = defineModel<string>('category', { required: true })
@@ -64,7 +68,7 @@ const keyword = defineModel<string>('keyword', { required: true })
     </el-form>
   </div>
 
-  <div class="mc-card">
+  <div class="mc-card" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-card__head">
       <span class="mc-card__title">模板列表</span>
       <span class="form-customization__count">{{ total }} 个</span>
@@ -157,6 +161,18 @@ const keyword = defineModel<string>('keyword', { required: true })
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .form-customization {
   &__count {
     font-size: 13px;

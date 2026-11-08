@@ -36,6 +36,13 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/features/growth-timeline/GrowthTimeline.vue'),
         meta: { title: '成长时间轴', fullBleed: true },
       },
+      // ─── 成果墙 ───
+      {
+        path: 'achievements',
+        name: 'AchievementWall',
+        component: () => import('@/features/achievements/AchievementWall.vue'),
+        meta: { title: '成果墙' },
+      },
       // ─── AI 助手 ───
       {
         path: 'ai-chat',
@@ -165,7 +172,7 @@ const routes: RouteRecordRaw[] = [
             path: 'activities',
             name: 'MessageActivities',
             component: () => import('@/features/messages/activities/ActivityList.vue'),
-            meta: { title: '全部动态' },
+            meta: { title: '动态中心' },
           },
         ],
       },

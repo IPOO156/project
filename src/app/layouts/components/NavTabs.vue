@@ -19,7 +19,7 @@ import { X } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { isNavigationFailure, NavigationFailureType, useRoute, useRouter } from 'vue-router'
 import { useTabsStore } from '@/app/stores/useTabsStore'
-import { findMenuItemByPath } from '@/shared/constants/menu'
+import { findMenuItemByRoute } from '@/shared/constants/menu'
 import TabContextMenu from './TabContextMenu.vue'
 
 const router = useRouter()
@@ -45,7 +45,7 @@ const dropIndex = ref<number | null>(null)
  * - 状态缺失时（如刷新后从 sessionStorage 恢复），fallback 到菜单配置
  */
 function getTabIcon(tab: (typeof tabs.value)[number]) {
-  return tab.icon ?? findMenuItemByPath(tab.path)?.icon
+  return tab.icon ?? findMenuItemByRoute(tab.path)?.icon
 }
 
 function onDragStart(index: number) {
@@ -424,7 +424,6 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
     width: 14px;
     height: 14px;
     color: currentColor;
-    opacity: 0.8;
   }
 
   &__item:hover .nav-tabs__surface {

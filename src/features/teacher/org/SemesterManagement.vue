@@ -27,6 +27,7 @@ import {
   updateSemesterStatus,
   uploadFile,
 } from '@/shared/api/teacher-api'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { COMMON_STATUS } from '@/shared/constants/dict'
@@ -51,6 +52,8 @@ const { me } = useTeacherMe()
 // ── 5. 响应式数据 ──
 const loading = ref(false)
 const list = ref<SemesterListItem[]>([])
+// 首次拿到非空学期后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => list.value.length)
 const total = ref(0)
 const page = ref(1)
 const perPage = ref(20)
@@ -285,7 +288,7 @@ function openImportResult() {
 </script>
 
 <template>
-  <div class="mc-page semester-management">
+  <div class="mc-page semester-management" :class="{ 'is-stagger-armed': staggerActive }">
     <div class="mc-page-head">
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">学期管理</h2>
@@ -537,6 +540,18 @@ function openImportResult() {
 </template>
 
 <style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
 .semester-management {
   &__date-range {
     white-space: nowrap;

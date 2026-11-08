@@ -4,15 +4,17 @@ import { ElMessage } from 'element-plus'
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAppStore, useUserStore } from '@/app/stores/stores'
+import { useAppStore, useThemeStore, useUserStore } from '@/app/stores/stores'
+import logoIconDark from '@/assets/logo/logo-icon-dark.png'
 import logoIcon from '@/assets/logo/logo-icon.png'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
-import { menuItems } from '@/shared/constants/menu'
+import { findMenuItemByRoute, menuItems } from '@/shared/constants/menu'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 const userStore = useUserStore()
+const themeStore = useThemeStore()
 // 教师端菜单按 /auth/me 的权限码过滤（见 teacherModuleRegistry）
 const { menuGroups, baselineFallback } = useTeacherAuthz()
 
@@ -52,7 +54,9 @@ const activeMenu = computed(() => {
     if (path.startsWith('/teacher/student-detail')) return '/teacher/archive-view'
     return path
   }
-  return path
+  // 学生端菜单入口未必与路由一一对应（入口可能指向模块内其它页面），
+  // 按模块 routePrefix 兜底解析成真实菜单项索引，避免高亮整块丢失。
+  return findMenuItemByRoute(path)?.path ?? path
 })
 
 /** 当前路由所在分组（用于自动展开） */
@@ -99,7 +103,11 @@ function handleMenuSelect(index: string) {
     <!-- Logo -->
     <div class="sidebar__logo">
       <div class="sidebar__logo-icon">
-        <img :src="logoIcon" alt="档鉴未来" class="sidebar__logo-img" />
+        <img
+          :src="themeStore.isDark ? logoIconDark : logoIcon"
+          alt="档鉴未来"
+          class="sidebar__logo-img"
+        />
       </div>
       <transition name="fade">
         <span v-show="!appStore.isSidebarCollapsed" class="sidebar__logo-text">{{
@@ -440,8 +448,5 @@ html.dark .sidebar__logo-icon {
   box-shadow:
     0 0 12px rgba(148, 163, 184, 0.3),
     inset 0 0 0 1px rgba(148, 163, 184, 0.25);
-}
-html.dark .sidebar__logo-img {
-  filter: brightness(1.3);
 }
 </style>

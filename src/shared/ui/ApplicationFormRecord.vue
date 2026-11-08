@@ -58,7 +58,8 @@ function canEdit(s: string) {
 
 <template>
   <div class="app-page">
-    <StudentInfoBar v-if="enrollmentInfo" v-bind="enrollmentInfo" />
+    <!-- 常驻渲染：数据到达后原地替换占位短横线，避免异步插入把下方内容整体下推 -->
+    <StudentInfoBar v-bind="enrollmentInfo ?? {}" />
     <RejectionBanner
       v-if="rejectionReason && (status === 'rejected' || status === 'pending')"
       :reason="rejectionReason"
