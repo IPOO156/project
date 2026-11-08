@@ -195,7 +195,7 @@ async function handleAvatarUpload(base64: string) {
       <el-descriptions-item label="联系邮箱">{{ contactEmail || '-' }}</el-descriptions-item>
       <el-descriptions-item label="手机号">{{ contactPhone || '-' }}</el-descriptions-item>
     </el-descriptions>
-    <el-form v-else :model="formData" label-width="100px" class="profile-form">
+    <el-form v-else :model="formData" label-width="112px" class="profile-form">
       <p class="contact-hint">
         联系邮箱、手机号、紧急联系人电话在展示时已脱敏；保存前请重新填写这三项。
       </p>

@@ -21,6 +21,13 @@ interface ResumeData {
 
 const props = defineProps<{ data: ResumeData }>()
 
+/** 年级文案：后端 grade 可能已带「级」，避免渲染成「2023级级」 */
+const gradeText = computed(() => {
+  const grade = props.data.userInfo.grade || ''
+  if (!grade) return ''
+  return grade.endsWith('级') ? grade : `${grade}级`
+})
+
 const gradeSummary = computed(() => {
   const map = new Map<
     string,
@@ -127,9 +134,7 @@ defineExpose({
               <span class="edu-school">{{ data.userInfo.college || '所在院校' }}</span>
               <span class="edu-major">{{ data.userInfo.major || '' }} · 本科</span>
             </div>
-            <div class="edu-right">
-              {{ data.userInfo.grade || '' }}级 · {{ data.userInfo.className || '' }}
-            </div>
+            <div class="edu-right">{{ gradeText }} · {{ data.userInfo.className || '' }}</div>
           </div>
           <div v-if="gradeSummary.length" class="gpa-row">
             <span class="gpa-label">平均绩点</span>
