@@ -35,6 +35,8 @@ const filters = reactive({
 })
 
 const loading = ref(false)
+/** 加载失败：与「确实没有审核记录」区分开 */
+const loadError = ref(false)
 const list = ref<AuditHistoryItem[]>([])
 // 首次拿到非空审核记录后只播一次，翻页 / 筛选改变行数不会重播
 const staggerActive = useFirstLoadStagger(() => list.value.length)
@@ -60,9 +62,17 @@ async function loadList() {
     const res = await listAuditHistory(buildQuery())
     list.value = res?.list ?? []
     total.value = res?.pagination?.total ?? list.value.length
+    loadError.value = false
+    // 当前页被清空（如筛选后条数变少）时回退一页，避免停留在空页
+    if (page.value > 1 && list.value.length === 0) {
+      page.value -= 1
+      void loadList()
+    }
   } catch {
+    // 失败与空列表要区分：保留错误标记，由表格空态区渲染可重试提示
     list.value = []
     total.value = 0
+    loadError.value = true
   } finally {
     loading.value = false
   }
@@ -204,7 +214,12 @@ onMounted(() => void loadList())
             </template>
           </el-table-column>
           <template #empty>
-            <EmptyState text="暂无审核记录" compact />
+            <EmptyState v-if="loadError" text="审核记录加载失败" compact>
+              <el-button type="primary" size="small" :icon="RefreshCw" @click="loadList">
+                重新加载
+              </el-button>
+            </EmptyState>
+            <EmptyState v-else text="暂无审核记录" compact />
           </template>
         </el-table>
 

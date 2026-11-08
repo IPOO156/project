@@ -25,7 +25,7 @@ import {
   submitArchiveExport,
 } from '@/shared/api/teacher-api'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
-import { usePollingTask } from '@/shared/composables/usePollingTask'
+import { TASK_STATUS_FAILED, usePollingTask } from '@/shared/composables/usePollingTask'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { EXPORT_TYPES } from '@/shared/constants/dict'
@@ -160,6 +160,15 @@ const researchPolling = usePollingTask<ExportJobItem>({
   onFinish: (_id, ok) => {
     if (ok) ElMessage.success('导出完成，可下载')
     else ElMessage.error('导出失败')
+  },
+  onError: (id) => {
+    // 连续拉取进度失败：轮询已停止，把本地任务标记为失败，避免永久停在「处理中」
+    const task = exportTasks.value.find((t) => t.exportJobId === id)
+    if (task) {
+      task.status = TASK_STATUS_FAILED
+      task.statusLabel = '失败'
+    }
+    ElMessage.error('导出任务进度查询连续失败，请刷新页面后重试')
   },
 })
 

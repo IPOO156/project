@@ -208,7 +208,9 @@ async function loadSemesters() {
   try {
     semesters.value = await getSemesters()
   } catch {
+    // 学期下拉为空时用户无法触发重算，必须明确提示而不是静默留白
     semesters.value = []
+    ElMessage.warning('学期加载失败，请刷新页面重试')
   }
 }
 
@@ -255,6 +257,10 @@ const polling = usePollingTask<ScoreRecalculationTask>({
   onFinish: (_id, ok) => {
     if (ok) ElMessage.success('评分重算完成')
     else ElMessage.error('评分重算失败')
+  },
+  onError: () => {
+    // 连续拉取任务状态失败：轮询已自行停止，提示用户刷新后重新查看
+    ElMessage.error('任务进度查询连续失败，已停止自动刷新，请刷新页面查看结果')
   },
 })
 
