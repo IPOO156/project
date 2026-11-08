@@ -29,6 +29,7 @@ import { TASK_STATUS_FAILED, usePollingTask } from '@/shared/composables/usePoll
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { EXPORT_TYPES } from '@/shared/constants/dict'
+import DateRangePicker from '@/shared/ui/DateRangePicker.vue'
 import { formatDateTime } from '@/shared/utils/time'
 import GradeImportPanel from './GradeImportPanel.vue'
 import ResearchExportDialog from './ResearchExportDialog.vue'
@@ -56,7 +57,7 @@ const filters = reactive({
   majorId: undefined as number | undefined,
   classId: undefined as number | undefined,
   status: '',
-  dateRange: [] as string[],
+  dateRange: null as [string, string] | null,
 })
 
 const scopeOptions = ['全校', '学院', '专业', '班级']
@@ -129,9 +130,10 @@ const filteredTasks = computed(() => {
   if (filters.status === '已完成') list = list.filter((t) => t.status === 2)
   else if (filters.status === '失败') list = list.filter((t) => t.status === 3)
   else if (filters.status === '处理中') list = list.filter((t) => t.status !== 2 && t.status !== 3)
-  if (filters.dateRange?.length === 2 && filters.dateRange[0] && filters.dateRange[1]) {
-    const start = new Date(filters.dateRange[0]).getTime()
-    const end = new Date(filters.dateRange[1]).getTime() + 86_400_000
+  if (filters.dateRange?.[0] && filters.dateRange?.[1]) {
+    // 用本地零点解析：new Date('YYYY-MM-DD') 按 UTC 解析，东八区会整体偏移 8 小时
+    const start = new Date(`${filters.dateRange[0]}T00:00:00`).getTime()
+    const end = new Date(`${filters.dateRange[1]}T00:00:00`).getTime() + 86_400_000
     list = list.filter((t) => {
       if (!t.createdAt) return true
       const ts = new Date(t.createdAt).getTime()
@@ -357,11 +359,9 @@ onUnmounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="时间">
-          <el-date-picker
+          <DateRangePicker
             v-model="filters.dateRange"
             class="u-w-240"
-            type="daterange"
-            range-separator="至"
             start-placeholder="开始"
             end-placeholder="结束"
           />

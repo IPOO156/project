@@ -15,6 +15,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { getExportLogs, getLoginLogs, getSystemLogs } from '@/shared/api/teacher-api'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { EXPORT_TYPE_OPTIONS, LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
+import DateRangePicker from '@/shared/ui/DateRangePicker.vue'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import { toDayRangeBounds } from '@/shared/utils/time'
 import ExportLogTable from './ExportLogTable.vue'
@@ -32,7 +33,7 @@ const isScoped = computed(() => !canAccessAny(['log:view']))
 const filters = reactive({
   action: '',
   module: '',
-  dateRange: [] as string[],
+  dateRange: null as [string, string] | null,
 })
 
 const actionOptions = [
@@ -54,7 +55,7 @@ const loading = ref(false)
 const loginFilters = reactive({
   loginStatus: '' as '' | 1 | 0,
   ipAddress: '',
-  dateRange: [] as string[],
+  dateRange: null as [string, string] | null,
 })
 const loginStatusOptions = [
   { value: '', label: '全部状态' },
@@ -77,7 +78,7 @@ const loginLoading = ref(false)
 const exportFilters = reactive({
   exportType: '',
   isAnonymized: '' as '' | 1 | 0,
-  dateRange: [] as string[],
+  dateRange: null as [string, string] | null,
 })
 /**
  * 匿名状态：匿名导出仅由「研究数据导出」（archive_research）产生
@@ -151,7 +152,7 @@ function handleSearch() {
 function handleReset() {
   filters.action = ''
   filters.module = ''
-  filters.dateRange = []
+  filters.dateRange = null
   page.value = 1
   void load()
 }
@@ -198,7 +199,7 @@ function handleLoginSearch() {
 function handleLoginReset() {
   loginFilters.loginStatus = ''
   loginFilters.ipAddress = ''
-  loginFilters.dateRange = []
+  loginFilters.dateRange = null
   loginPage.value = 1
   void loadLogin()
 }
@@ -245,7 +246,7 @@ function handleExportSearch() {
 function handleExportReset() {
   exportFilters.exportType = ''
   exportFilters.isAnonymized = ''
-  exportFilters.dateRange = []
+  exportFilters.dateRange = null
   exportPage.value = 1
   void loadExport()
 }
@@ -311,14 +312,11 @@ function handleRefresh() {
               </el-select>
             </el-form-item>
             <el-form-item label="时间范围">
-              <el-date-picker
+              <DateRangePicker
                 v-model="filters.dateRange"
                 class="u-w-260"
-                type="daterange"
-                range-separator="至"
                 start-placeholder="开始时间"
                 end-placeholder="结束时间"
-                value-format="YYYY-MM-DD"
               />
             </el-form-item>
             <el-form-item>
@@ -378,14 +376,11 @@ function handleRefresh() {
               />
             </el-form-item>
             <el-form-item label="时间范围">
-              <el-date-picker
+              <DateRangePicker
                 v-model="loginFilters.dateRange"
                 class="u-w-260"
-                type="daterange"
-                range-separator="至"
                 start-placeholder="开始时间"
                 end-placeholder="结束时间"
-                value-format="YYYY-MM-DD"
               />
             </el-form-item>
             <el-form-item>
@@ -460,14 +455,11 @@ function handleRefresh() {
               </el-tooltip>
             </el-form-item>
             <el-form-item label="时间范围">
-              <el-date-picker
+              <DateRangePicker
                 v-model="exportFilters.dateRange"
                 class="u-w-260"
-                type="daterange"
-                range-separator="至"
                 start-placeholder="开始时间"
                 end-placeholder="结束时间"
-                value-format="YYYY-MM-DD"
               />
             </el-form-item>
             <el-form-item>

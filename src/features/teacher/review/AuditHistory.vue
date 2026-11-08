@@ -5,6 +5,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { listAuditHistory } from '@/shared/api/teacher-api'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { AUDIT_ACTIONS, AUDIT_BUSINESS_TYPES } from '@/shared/constants/dict'
+import DateRangePicker from '@/shared/ui/DateRangePicker.vue'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import { formatDateTime } from '@/shared/utils/time'
 
@@ -30,7 +31,7 @@ const typeOptions = computed(() => [
 const filters = reactive({
   type: '' as string,
   action: '' as number | '',
-  dateRange: [] as string[],
+  dateRange: null as [string, string] | null,
   keyword: '',
 })
 
@@ -86,7 +87,7 @@ function handleSearch() {
 function handleReset() {
   filters.type = ''
   filters.action = ''
-  filters.dateRange = []
+  filters.dateRange = null
   filters.keyword = ''
   handleSearch()
 }
@@ -143,14 +144,11 @@ onMounted(() => void loadList())
           </el-select>
         </el-form-item>
         <el-form-item label="处理时间">
-          <el-date-picker
+          <DateRangePicker
             v-model="filters.dateRange"
             class="u-w-240"
-            type="daterange"
-            range-separator="至"
             start-placeholder="开始日期"
             end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
           />
         </el-form-item>
         <el-form-item label="关键词">

@@ -31,6 +31,7 @@ import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { COMMON_STATUS } from '@/shared/constants/dict'
+import DateRangePicker from '@/shared/ui/DateRangePicker.vue'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
@@ -443,14 +444,11 @@ function openImportResult() {
           />
         </el-form-item>
         <el-form-item label="起止日期" required>
-          <el-date-picker
+          <DateRangePicker
             v-model="form.dateRange"
             class="u-w-full"
-            type="daterange"
-            range-separator="至"
             start-placeholder="开始日期"
             end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
           />
         </el-form-item>
       </el-form>
