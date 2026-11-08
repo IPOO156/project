@@ -182,6 +182,9 @@ const staggerActive = useFirstLoadStagger(() => props.list.length)
     font-size: 14px;
     font-weight: 600;
     color: var(--el-text-color-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   &__student-no {
     font-size: 13px;
@@ -194,11 +197,15 @@ const staggerActive = useFirstLoadStagger(() => props.list.length)
   }
   &__org-node {
     display: inline-flex;
+    max-width: 100%;
     padding: 4px 8px;
     font-size: 12px;
     border-radius: $radius-base;
     background: var(--el-color-primary-light-9);
     color: var(--el-color-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     &.is-soft {
       background: var(--el-fill-color-light);
       color: var(--el-text-color-secondary);

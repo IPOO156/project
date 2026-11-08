@@ -888,8 +888,13 @@ html.dark #app .layout--admin {
     }
 
     .col-primary {
+      display: inline-block;
+      max-width: 100%;
       font-weight: 600;
       color: var(--el-text-color-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .col-secondary {

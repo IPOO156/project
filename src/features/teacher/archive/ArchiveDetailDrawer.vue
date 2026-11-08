@@ -179,6 +179,9 @@ const detailEntries = computed(() => {
     font-weight: 600;
     color: var(--el-text-color-primary);
     letter-spacing: -0.01em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   &__drawer-hero-line {
     margin-top: 8px;

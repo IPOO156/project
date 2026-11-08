@@ -175,7 +175,7 @@ function openEdit(row: UserListItem) {
 
 async function handleSaveEdit() {
   if (!editForm.name.trim()) {
-    ElMessage.warning('姓名不能为空')
+    ElMessage.warning('请填写姓名')
     return
   }
   if (!editUser.value) return
@@ -256,7 +256,7 @@ onMounted(() => {
         <el-table v-loading="loading" class="u-w-full" :data="users" max-height="600">
           <el-table-column type="index" label="序号" width="56" align="right" />
           <el-table-column prop="userNo" label="学号" width="120" class-name="col-secondary" />
-          <el-table-column label="姓名" width="112">
+          <el-table-column label="姓名" width="112" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="col-primary">{{ row.name }}</span>
             </template>

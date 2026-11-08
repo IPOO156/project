@@ -516,6 +516,18 @@ watch(
   }
 }
 
+// ─── 窄屏：7 列表格给最小宽度 + 横向滚动，避免列被压到不可读 ───
+@media (max-width: 768px) {
+  .score-indicator {
+    overflow-x: auto;
+  }
+
+  .score-indicator__table,
+  .calc-detail__table {
+    min-width: 560px;
+  }
+}
+
 // ─── 夜间模式适配 ───
 // 表头/信息条降为填充层深色，分数徽章改低透明度叠色，
 // 硬编码深色文字亮化保证可读
