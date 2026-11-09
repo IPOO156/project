@@ -579,6 +579,15 @@ const { extinguishedRings } = useRingEffects(
   }
 }
 
+@media (max-width: 340px) {
+  // 320px 级超窄屏：400 × 0.75 = 300px，最外圈直径 267px，左右各留 26px 不裁切。
+  // 注意与 .hero-rings 的 --hero-scale 保持同一份来源，小球定位依赖它。
+  .hero-rings {
+    --hero-scale: 0.75;
+    --hero-svg-size: 300px;
+  }
+}
+
 .hero-rings__scroll {
   position: absolute;
   bottom: 2.5rem;
