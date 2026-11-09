@@ -162,5 +162,10 @@ function onEndChange(value: unknown) {
   :deep(.el-date-editor) {
     width: 100%;
   }
+
+  // 窄屏触控高度统一 ≥40px（Element Plus 默认 32px 偏小）
+  :deep(.el-input__wrapper) {
+    min-height: 40px;
+  }
 }
 </style>
