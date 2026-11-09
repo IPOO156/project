@@ -138,15 +138,45 @@ describe('useUserStore 资料与密码', () => {
     )
   })
 
-  it('updateAvatar 非 data URL 直接缓存，接口失败时保留本地值', async () => {
+  it('updateAvatar 非 data URL 直接写入缓存，不调上传接口', async () => {
     const store = useUserStore()
     store.setUserInfo(userInfo())
 
-    mocks.uploadAvatar.mockRejectedValueOnce(new Error('upload failed'))
-    await store.updateAvatar('data:image/png;base64,AAAA')
+    await store.updateAvatar('https://oss.example.com/avatar.jpg')
 
-    expect(store.avatar).toBe('data:image/png;base64,AAAA')
-    expect(localStorage.getItem('user_avatar_cache')).toBe('data:image/png;base64,AAAA')
+    expect(mocks.uploadAvatar).not.toHaveBeenCalled()
+    expect(store.avatar).toBe('https://oss.example.com/avatar.jpg')
+    expect(localStorage.getItem('user_avatar_cache')).toBe('https://oss.example.com/avatar.jpg')
+  })
+
+  it('data URL 上传成功后缓存后端返回地址，文件名后缀与 JPEG 内容一致', async () => {
+    const store = useUserStore()
+    store.setUserInfo(userInfo())
+    mocks.uploadAvatar.mockResolvedValueOnce({
+      avatarUrl: 'https://oss.example.com/new.jpg',
+      objectKey: 'avatar/new.jpg',
+    })
+
+    await store.updateAvatar('data:image/jpeg;base64,AAAA')
+
+    const file = mocks.uploadAvatar.mock.calls[0]?.[0] as File
+    expect(file.type).toBe('image/jpeg')
+    expect(file.name.endsWith('.jpg')).toBe(true)
+    expect(store.avatar).toBe('https://oss.example.com/new.jpg')
+    expect(localStorage.getItem('user_avatar_cache')).toBe('https://oss.example.com/new.jpg')
+  })
+
+  it('上传失败向上抛出，不写入 base64、不改变原头像', async () => {
+    const store = useUserStore()
+    store.setUserInfo(userInfo({ avatar: 'https://oss.example.com/old.jpg' }))
+    mocks.uploadAvatar.mockRejectedValueOnce(new Error('文件内容与扩展名不匹配: png'))
+
+    await expect(store.updateAvatar('data:image/jpeg;base64,AAAA')).rejects.toThrow(
+      '文件内容与扩展名不匹配',
+    )
+
+    expect(store.avatar).toBe('https://oss.example.com/old.jpg')
+    expect(localStorage.getItem('user_avatar_cache')).toBeNull()
   })
 })
 
