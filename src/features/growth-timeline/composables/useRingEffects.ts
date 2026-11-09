@@ -10,7 +10,7 @@ export function useRingEffects(
   selectedAngle: Ref<number>,
   onComplete: (id: string) => void,
 ) {
-  const { rings, findRing } = useSemesterRings()
+  const { rings, findRingForExperience } = useSemesterRings()
   const ringCount = computed(() => rings.value.length)
   const extinguishedRings = ref<Set<number>>(new Set())
   const isReversing = ref(false)
@@ -26,7 +26,8 @@ export function useRingEffects(
     if (!selectedId.value) return -1
     const exp = experiences.value.find((e) => e.id === selectedId.value)
     if (!exp) return -1
-    const ring = findRing(exp.semester)
+    // 与小球定位保持同一套年轮解析：学期缺失时按日期推断，避免回缩动画错圈
+    const ring = findRingForExperience(exp)
     return Math.max(0, (ring?.level ?? 1) - 1)
   }
 

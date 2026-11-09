@@ -44,7 +44,7 @@ const emit = defineEmits<{
 const BASE_RADIUS = 52
 const RING_STEP = 18
 
-const { rings: semesterRings, findRing, semesterLabel } = useSemesterRings()
+const { rings: semesterRings, findRingForExperience, semesterLabel } = useSemesterRings()
 
 const rings = computed<RingItem[]>(() => {
   return semesterRings.value.map((ring, index) => {
@@ -69,9 +69,8 @@ function getSubOrbitOffsets(_count: number): number[] {
 function initElectronAngles() {
   const byLevel = new Map<number, GrowthExperience[]>()
   props.experiences.forEach((exp) => {
-    // 学期只来自后端，缺失时不落到默认年轮，避免把无学期事件错画成「大一上」
-    if (!exp.semester) return
-    const ring = findRing(exp.semester)
+    // 学期只认后端；缺失时按事件日期推导入学年轮，仅用于小球定位
+    const ring = findRingForExperience(exp)
     if (!ring) return
     if (!byLevel.has(ring.level)) {
       byLevel.set(ring.level, [])
@@ -95,8 +94,7 @@ watch(() => props.experiences, initElectronAngles, { immediate: true, deep: true
 const electrons = computed<ElectronItem[]>(() => {
   const byLevel = new Map<number, GrowthExperience[]>()
   props.experiences.forEach((exp) => {
-    if (!exp.semester) return
-    const ring = findRing(exp.semester)
+    const ring = findRingForExperience(exp)
     if (!ring) return
     if (!byLevel.has(ring.level)) {
       byLevel.set(ring.level, [])
