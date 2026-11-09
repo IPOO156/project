@@ -4,7 +4,6 @@ import type { RingItem } from './HeroRings.types'
 interface Props {
   rings: RingItem[]
   extinguishedRings: Set<number>
-  scrollY: number
   center?: number
 }
 
@@ -13,28 +12,13 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const CENTER = props.center
-
-function parallaxScale(index: number) {
-  return Math.min(1 + props.scrollY * 0.0004 * (index + 1), 1.3).toFixed(3)
-}
-
-function parallaxOpacity() {
-  return Math.max(0, 0.5 - props.scrollY * 0.001).toFixed(3)
-}
 </script>
 
 <template>
   <svg class="hero-rings__svg" :viewBox="`0 0 ${CENTER * 2} ${CENTER * 2}`">
-    <g
-      v-for="(ring, index) in rings"
-      :key="ring.r"
-      class="hero-rings__ring-wrap"
-      :style="{
-        // 每圈的视差缩放/透明度随滚动动态变化
-        transform: `scale(${parallaxScale(index)})`,
-        opacity: parallaxOpacity(),
-      }"
-    >
+    <!-- 滚动视差（缩放 + 透明度）统一由父层 .hero-rings__system 施加，
+         环与小球共享同一变换矩阵，避免两套缩放造成错位 -->
+    <g v-for="(ring, index) in rings" :key="ring.r" class="hero-rings__ring-wrap">
       <circle
         class="hero-rings__ring"
         :class="{ 'is-extinguished': extinguishedRings.has(index) }"

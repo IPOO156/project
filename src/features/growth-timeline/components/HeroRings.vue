@@ -148,6 +148,38 @@ function tick() {
 const electronsVisible = ref(false)
 const scrollY = ref(0)
 
+/**
+ * 滚动视差：只作用在 .hero-rings__system 这一层（环 + 小球 + 中心按钮同处一个
+ * 变换矩阵），层内不再有第二套缩放，避免小球与年轮圈错位。
+ * zoom 与响应式缩放 --hero-scale（渲染尺寸 / 400）相互独立，互不复用。
+ */
+const RING_ZOOM_MAX = 1.1
+const RING_ZOOM_RATE = 0.00015
+const RING_OPACITY_BASE = 0.5
+const RING_OPACITY_RATE = 0.001
+
+const reducedMotion = ref(false)
+let motionQuery: MediaQueryList | null = null
+
+function syncReducedMotion(event?: MediaQueryListEvent) {
+  reducedMotion.value = event ? event.matches : (motionQuery?.matches ?? false)
+}
+
+const ringZoom = computed(() =>
+  reducedMotion.value ? 1 : Math.min(1 + scrollY.value * RING_ZOOM_RATE, RING_ZOOM_MAX),
+)
+
+const ringOpacity = computed(() =>
+  reducedMotion.value
+    ? RING_OPACITY_BASE
+    : Math.max(0, RING_OPACITY_BASE - scrollY.value * RING_OPACITY_RATE),
+)
+
+const systemParallaxStyle = computed(() => ({
+  '--ring-zoom': ringZoom.value.toFixed(4),
+  '--ring-parallax-opacity': ringOpacity.value.toFixed(4),
+}))
+
 const heroRingsRef = ref<HTMLElement | null>(null)
 
 /**
@@ -157,12 +189,19 @@ const heroRingsRef = ref<HTMLElement | null>(null)
  */
 function resolveScrollContainer(): HTMLElement | null {
   let parent = heroRingsRef.value?.parentElement ?? null
+  let firstScrollable: HTMLElement | null = null
   while (parent) {
     const { overflowY } = getComputedStyle(parent)
-    if (overflowY === 'auto' || overflowY === 'scroll') return parent
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      // 注意：只设 overflow-x: hidden 的容器（如 .growth-timeline-page）会被浏览器
+      // 把 overflow-y 提升为 auto，但内容并不在其中滚动（scrollHeight === clientHeight）。
+      // 因此优先取「真正有滚动余量」的那一层（通常是 .layout__content）。
+      if (parent.scrollHeight > parent.clientHeight + 1) return parent
+      firstScrollable ??= parent
+    }
     parent = parent.parentElement
   }
-  return null
+  return firstScrollable
 }
 
 let scrollTarget: HTMLElement | null = null
@@ -243,6 +282,11 @@ onMounted(() => {
     electronsVisible.value = true
   }, 2000)
   bindScroll()
+  // 滚动联动动效（非 CSS keyframe）单独尊重系统的「减少动效」偏好：
+  // 开启后 zoom 固定为 1、透明度固定回基线，不做滚动视差。
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  syncReducedMotion()
+  motionQuery.addEventListener('change', syncReducedMotion)
 })
 
 // keep-alive 缓存后滚动容器可能变化：激活时重新绑定并取一次当前滚动位置
@@ -254,6 +298,8 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(rafId)
   }
   unbindScroll()
+  motionQuery?.removeEventListener('change', syncReducedMotion)
+  motionQuery = null
 })
 
 function handleElectronClick(event: MouseEvent, id: string) {
@@ -313,8 +359,8 @@ const { extinguishedRings } = useRingEffects(
       </svg>
     </div>
 
-    <div class="hero-rings__system">
-      <HeroRingsOrbit :rings="rings" :extinguished-rings="extinguishedRings" :scroll-y="scrollY" />
+    <div class="hero-rings__system" :style="systemParallaxStyle">
+      <HeroRingsOrbit :rings="rings" :extinguished-rings="extinguishedRings" />
       <HeroRingsNucleus @add="emit('add')" />
       <HeroRingsElectrons
         :electrons="electrons"
@@ -387,11 +433,17 @@ const { extinguishedRings } = useRingEffects(
 }
 
 .hero-rings__system {
+  // 滚动视差变量由模板内联注入（--ring-zoom 与 --hero-scale 分离）：
+  // 环、球、中心按钮共享同一个 transform，层内不存在第二个缩放。
+  --ring-zoom: 1;
+  --ring-parallax-opacity: 0.5;
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  transform: scale(var(--ring-zoom));
+  opacity: var(--ring-parallax-opacity);
   transform-origin: center;
   z-index: 1;
 }
