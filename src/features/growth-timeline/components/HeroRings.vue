@@ -371,7 +371,10 @@ const { extinguishedRings } = useRingEffects(
 
 <style scoped lang="scss">
 .hero-rings {
+  // --hero-scale 必须等于「渲染尺寸 / viewBox 尺寸(400)」，
+  // 小球的圆周定位依赖它，改 --hero-svg-size 时两者要同步改。
   --hero-scale: 1.75;
+  --hero-svg-size: 700px;
   position: relative;
   min-height: 100svh;
   display: flex;
@@ -552,6 +555,13 @@ const { extinguishedRings } = useRingEffects(
 }
 
 @media (max-width: 768px) {
+  // 窄屏按可用宽度收紧年轮：400 × 0.9 = 360px，最外圈直径 320px，
+  // 375 / 390 下都能完整成环，不再被 hero 的 overflow 裁掉左右两侧。
+  .hero-rings {
+    --hero-scale: 0.9;
+    --hero-svg-size: 360px;
+  }
+
   .hero-rings__poem-scroll {
     gap: 0.55rem;
   }

@@ -62,8 +62,10 @@ function parallaxOpacity() {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 700px;
-  height: 700px;
+  // 尺寸由 .hero-rings 的 --hero-svg-size 统一控制（窄屏会收紧），
+  // 小球用同一份 --hero-scale 定位，两者必须同步变化才能保持对齐。
+  width: var(--hero-svg-size, 700px);
+  height: var(--hero-svg-size, 700px);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }

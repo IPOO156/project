@@ -60,7 +60,9 @@ function setViewMode(mode: ViewMode) {
 }
 
 function getHeroScale() {
-  return window.innerWidth <= 768 ? 1.05 : HERO_SCALE
+  // 需与 HeroRings.vue 中 --hero-scale 的两档取值保持一致：
+  // 桌面 700/400 = 1.75，≤768px 360/400 = 0.9
+  return window.innerWidth <= 768 ? 0.9 : HERO_SCALE
 }
 
 function getSystemCenter() {
