@@ -205,6 +205,7 @@ async function handleAvatarUpload(base64: string) {
             ><el-input
               v-model="formData.email"
               size="small"
+              maxlength="254"
               placeholder="请输入联系邮箱" /></el-form-item
         ></el-col>
         <el-col :span="12"
@@ -212,6 +213,7 @@ async function handleAvatarUpload(base64: string) {
             ><el-input
               v-model="formData.phone"
               size="small"
+              maxlength="11"
               placeholder="请输入手机号" /></el-form-item
         ></el-col>
         <el-col :span="24"
@@ -220,13 +222,19 @@ async function handleAvatarUpload(base64: string) {
         ></el-col>
         <el-col :span="12"
           ><el-form-item label="紧急联系人" required
-            ><el-input v-model="formData.emergencyName" size="small" /></el-form-item
+            ><el-input
+              v-model="formData.emergencyName"
+              size="small"
+              maxlength="50"
+              show-word-limit /></el-form-item
         ></el-col>
         <el-col :span="12"
           ><el-form-item label="关系" required
             ><el-input
               v-model="formData.emergencyRelation"
               size="small"
+              maxlength="20"
+              show-word-limit
               placeholder="如：父亲" /></el-form-item
         ></el-col>
         <el-col :span="12"
@@ -234,6 +242,7 @@ async function handleAvatarUpload(base64: string) {
             ><el-input
               v-model="formData.emergencyPhone"
               size="small"
+              maxlength="11"
               placeholder="请输入紧急联系人电话" /></el-form-item
         ></el-col>
         <el-col :span="12"

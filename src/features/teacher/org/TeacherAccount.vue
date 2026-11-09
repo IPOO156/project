@@ -199,6 +199,7 @@ onMounted(() => void load())
           <el-input
             v-model="search.keyword"
             class="u-w-180"
+            maxlength="50"
             placeholder="姓名 / 工号"
             clearable
             @keyup.enter="handleSearch"
@@ -328,7 +329,8 @@ onMounted(() => void load())
             v-model="passwordForm.newPassword"
             type="password"
             show-password
-            placeholder="输入新密码（至少 6 位）"
+            maxlength="32"
+            placeholder="输入新密码（6-32 位）"
           />
         </el-form-item>
       </el-form>
@@ -384,13 +386,13 @@ onMounted(() => void load())
           <span>{{ editUser?.userNo }}</span>
         </el-form-item>
         <el-form-item label="姓名" required>
-          <el-input v-model="editForm.name" placeholder="姓名" />
+          <el-input v-model="editForm.name" maxlength="50" show-word-limit placeholder="姓名" />
         </el-form-item>
         <el-form-item label="邮箱">
-          <el-input v-model="editForm.email" placeholder="邮箱" />
+          <el-input v-model="editForm.email" maxlength="254" placeholder="邮箱" />
         </el-form-item>
         <el-form-item label="手机">
-          <el-input v-model="editForm.phone" placeholder="手机" />
+          <el-input v-model="editForm.phone" maxlength="11" placeholder="手机" />
         </el-form-item>
       </el-form>
       <template #footer>
