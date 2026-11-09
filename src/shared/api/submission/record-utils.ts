@@ -1,5 +1,5 @@
 import type { ActivityType } from '../activities'
-import type { ApplicationType } from '@/shared/types/types'
+import type { ApplicationType, SubmissionRecordType } from '@/shared/types/types'
 
 /** 从表单数据推导申报标题（各类型主名称字段），无匹配时返回空串 */
 export function deriveRecordTitle(data: Record<string, any>): string {
@@ -33,17 +33,27 @@ export const STAR_TYPES: ApplicationType[] = [
  * 申报/报名类型 → /activities 的活动分类。
  * 撤回接口 PUT /activities/{id}/withdraw 需携带 type 参数。
  */
-export function activityCategoryOf(applicationType: ApplicationType): ActivityType {
+export function activityCategoryOf(applicationType: SubmissionRecordType): ActivityType {
+  // 职业规划来自 career_plans 表，与 archives/award_applications 的 id 各自独立；
+  // 若归为 archive，删除/撤回归会打到同 id 的档案记录上。
+  if (applicationType === 'career_plan') return 'career_plan'
   return STAR_TYPES.includes(applicationType) ? 'award' : 'archive'
 }
 
 /**
  * 申报/报名类型 → 来源页路由。
  * archive 走 /applications?tab=，award 走 /awards/*；
+ * career_plan 走 /profile/career-plan，并带 ?planId=<id> 让目标页直接打开该规划详情
+ *（/activities 同时聚合职业规划记录，此前会被当作未知 tab 回落到竞赛申报页）。
  * 传 editId 时携带编辑参数（?edit=<id>），目标页 useApplicationPage 读到后自动进入该记录的编辑态
  *（消息中心「编辑」按钮跳转用，见 2026-08-31 修改记录）。
  */
-export function sourcePathOf(type: ApplicationType, editId?: string): string {
+export function sourcePathOf(type: SubmissionRecordType, editId?: string): string {
+  if (type === 'career_plan') {
+    return editId
+      ? `/profile/career-plan?planId=${encodeURIComponent(editId)}`
+      : '/profile/career-plan'
+  }
   const STAR_ROUTES: Record<string, string> = {
     competitionStar: '/awards/competition-star',
     innovationStar: '/awards/innovation-star',

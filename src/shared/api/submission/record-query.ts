@@ -1,5 +1,10 @@
 import type { ActivityListItem } from '../activities'
-import type { ApplicationType, SubmissionFilters, SubmissionRecord } from '@/shared/types/types'
+import type {
+  ApplicationType,
+  SubmissionFilters,
+  SubmissionRecord,
+  SubmissionRecordType,
+} from '@/shared/types/types'
 import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 // 6.1 动态记录/6.5 撤销：申报记录数据源从 /submissions 迁移到 /activities（后端对学生端仅实现 /activities 系列）
 import { getActivities } from '../activities'
@@ -21,20 +26,31 @@ export const STATUS_MAP: Record<number, SubmissionRecord['status']> = {
  */
 function mapActivityToSubmission(item: ActivityListItem): SubmissionRecord {
   const rawType = (item.archive_type ?? item.archiveType ?? '') as string
+  // /activities 聚合三张表：career_plan 记录没有 archive_type，只能靠顶级 type 字段识别。
+  // 否则 type 为空串，sourcePath 会拼成 /applications?tab=（回落到竞赛申报页），
+  // 删除/撤回也会被 activityCategoryOf 误归为 archive，打到同 id 的档案记录上。
+  const isCareerPlan = item.type === 'career_plan'
   // 后端 archive_type 为下划线别名（academic_competition / competition_star…），归一化为前端 ApplicationType key，
   // 否则奖项之星类记录 activityCategoryOf 会错误归类为 archive，删除/撤回接口 type 传错
-  const type = (ARCHIVE_TYPE_TO_KEY[rawType] ?? rawType) as ApplicationType
+  const type: SubmissionRecordType = isCareerPlan
+    ? 'career_plan'
+    : ((ARCHIVE_TYPE_TO_KEY[rawType] ?? rawType) as ApplicationType)
   return {
     id: String(item.id),
     type,
-    typeLabel:
-      item.archive_type_label ?? item.archiveTypeLabel ?? APPLICATION_TYPE_MAP[type] ?? item.title,
+    typeLabel: isCareerPlan
+      ? (APPLICATION_TYPE_MAP.career_plan ?? item.title)
+      : (item.archive_type_label ??
+        item.archiveTypeLabel ??
+        APPLICATION_TYPE_MAP[type] ??
+        item.title),
     title: item.title ?? '',
     submitDate: (item.submit_time ?? item.submitTime ?? '').slice(0, 10),
     semester: item.semester_name ?? item.semesterName ?? '',
     status: STATUS_MAP[item.status] ?? 'pending',
-    // 来源页路由（查看按钮跳转）；编辑按钮由 sourcePathOf(type, id) 带 edit 参数跳转
-    sourcePath: sourcePathOf(type),
+    // 来源页路由（查看按钮跳转）；编辑按钮由 sourcePathOf(type, id) 带 edit 参数跳转。
+    // 职业规划带上自身 id，目标页据此直接打开该规划详情。
+    sourcePath: sourcePathOf(type, isCareerPlan ? String(item.id) : undefined),
     // 后端 6.1 返回 can_withdraw/can_edit/can_delete（实测下划线），驼峰为文档别名；操作按钮据此控制
     canWithdraw: item.can_withdraw ?? item.canWithdraw,
     canEdit: item.can_edit ?? item.canEdit,

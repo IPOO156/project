@@ -5,7 +5,8 @@
  */
 import type { TagProps } from 'element-plus'
 import type { CareerPlanRecord } from '@/shared/types/types'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useDict } from '@/shared/composables/composables'
 import { APPLICATION_STATUS } from '@/shared/constants/dict'
 import CareerPlanDetail from './CareerPlanDetail.vue'
@@ -41,6 +42,36 @@ const copyDialogVisible = ref(false)
 function openDetail(row: any) {
   detailPlanId.value = Number(row.id)
   detailVisible.value = true
+}
+
+/**
+ * 从动态记录/提交记录点「查看」会进入 /profile/career-plan?planId=<id>，
+ * 这里读取该参数直接打开对应规划详情，避免用户落到列表后还要自己找。
+ */
+const route = useRoute()
+const router = useRouter()
+
+watch(
+  () => route.query.planId,
+  (raw) => {
+    const id = Number(raw)
+    if (Number.isInteger(id) && id > 0) {
+      detailPlanId.value = id
+      detailVisible.value = true
+    }
+  },
+  { immediate: true },
+)
+
+/** 关闭详情时清掉地址栏的 planId，避免下次点同一条「查看」时 URL 未变、不重新打开 */
+function closeDetail() {
+  detailVisible.value = false
+  detailPlanId.value = null
+  if (route.query.planId != null) {
+    const query = { ...route.query }
+    delete query.planId
+    router.replace({ path: route.path, query })
+  }
 }
 
 function openCopyDialog() {
@@ -117,7 +148,7 @@ const getStatusType = computed(
     <CareerPlanDetail
       :visible="detailVisible"
       :plan-id="detailPlanId"
-      @close="detailVisible = false"
+      @close="closeDetail"
       @refresh="emit('refresh')"
     />
 
