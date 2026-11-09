@@ -314,10 +314,16 @@ export type ApplicationType =
   | 'softwareCopyright'
   | 'paper'
 
+/**
+ * 提交记录类型：申报表单类型，或 /activities 聚合返回的 career_plan（职业规划）。
+ * career_plan 没有对应的申报表单页，跳转与接口 type 需单独映射，不能当作 archive 处理。
+ */
+export type SubmissionRecordType = ApplicationType | 'career_plan'
+
 // 提交记录
 export interface SubmissionRecord {
   id: string
-  type: ApplicationType
+  type: SubmissionRecordType
   typeLabel: string
   title: string
   submitDate: string

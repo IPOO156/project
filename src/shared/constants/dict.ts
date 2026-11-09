@@ -45,6 +45,9 @@ export const APPLICATION_TYPE_MAP: Record<string, string> = {
   scientificProject: '科研项目',
   softwareCopyright: '科研之星-软著',
   paper: '科研之星-论文',
+  // /activities 动态记录聚合的三表之一（career_plans），不是申报表单类型；
+  // 报名记录/提交记录的类型筛选与回显需要它，路由单独映射到 /profile/career-plan
+  career_plan: '职业规划',
 }
 
 // 学期选项统一由 useSemesters 从后端 GET /common/semesters 获取，前端不再内置学期列表。
