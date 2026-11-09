@@ -29,14 +29,8 @@ export interface FormRecord {
   [key: string]: any
 }
 
-const semesters = ['2023-2024-1', '2023-2024-2', '2024-2025-1', '2024-2025-2']
-
 function genId(): string {
   return `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
-}
-
-function pick<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]
 }
 
 /** 各类型的中文名称 */
@@ -183,7 +177,8 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
       typeLabel: label,
       title,
       submitDate: new Date().toISOString().slice(0, 10),
-      semester: pick(semesters),
+      // 学期以调用方传入的真实提交数据为准（extra 覆盖），缺失时留空，不编造学期
+      semester: '',
       ...extra,
     })
   }
