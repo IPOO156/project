@@ -1,4 +1,8 @@
-import type { SubmissionFilters, SubmissionRecord } from '@/shared/types/types'
+import type {
+  SubmissionFilters,
+  SubmissionRecord,
+  SubmissionRecordType,
+} from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { deleteActivity } from '@/shared/api/activities'
@@ -102,9 +106,10 @@ export const useSubmissionStore = defineStore('submission', () => {
    * 后端把撤回落库为草稿（can_edit=true），故本地置「已撤回」态并记入 withdrawnIds，
    * 供重拉列表（fetchRecords）时强制保持不可编辑。
    */
-  async function withdrawRecord(id: string): Promise<void> {
+  async function withdrawRecord(id: string, type?: SubmissionRecordType): Promise<void> {
     const rec = getRecordById(id)
-    await withdrawSubmission(id, rec ? activityCategoryOf(rec.type) : 'archive')
+    const recordType = type ?? rec?.type
+    await withdrawSubmission(id, recordType ? activityCategoryOf(recordType) : 'archive')
     if (!withdrawnIds.value.includes(id)) {
       withdrawnIds.value.push(id)
       persistWithdrawnIds()
@@ -129,9 +134,10 @@ export const useSubmissionStore = defineStore('submission', () => {
    * 删除提交记录：调 6.4 DELETE /activities/{id}?type=（按记录类型推导分类），
    * 成功后才移除本地记录；失败抛出交由调用方提示，本地记录保留。
    */
-  async function deleteSubmission(id: string): Promise<void> {
+  async function deleteSubmission(id: string, type?: SubmissionRecordType): Promise<void> {
     const rec = getRecordById(id)
-    await deleteActivity(Number(id), rec ? activityCategoryOf(rec.type) : 'archive')
+    const recordType = type ?? rec?.type
+    await deleteActivity(Number(id), recordType ? activityCategoryOf(recordType) : 'archive')
     // 删除已撤回记录时同步清理持久化标记，避免遗留脏 id
     const wi = withdrawnIds.value.indexOf(id)
     if (wi >= 0) {
@@ -163,7 +169,9 @@ export const useSubmissionStore = defineStore('submission', () => {
     filteredRecords.value = filteredRecords.value.filter((r) => r.id !== id)
   }
   function getRecordById(id: string): SubmissionRecord | undefined {
-    return records.value.find((r) => r.id === id)
+    // 筛选请求只写 filteredRecords，且全量缓存有 60s TTL，可能不含刚提交的记录；
+    // 只查 records 会让撤回/删除拿不到记录类型而回退成 archive，请求打到错误的源表。
+    return records.value.find((r) => r.id === id) ?? filteredRecords.value.find((r) => r.id === id)
   }
 
   /**

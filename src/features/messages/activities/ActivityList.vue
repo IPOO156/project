@@ -226,7 +226,7 @@ async function handleDeleteSubmission(row: SubmissionRecord) {
       type: 'warning',
     })
     deletingId.value = row.id
-    await submissionStore.deleteSubmission(row.id)
+    await submissionStore.deleteSubmission(row.id, row.type)
     ElMessage.success('已删除')
   } catch {
     // 用户取消；删除失败由全局拦截器统一提示，本地记录保留
@@ -248,7 +248,7 @@ async function handleWithdrawSubmission(row: SubmissionRecord) {
   }
   withdrawingId.value = row.id
   try {
-    await submissionStore.withdrawRecord(row.id)
+    await submissionStore.withdrawRecord(row.id, row.type)
     ElMessage.success('已撤回')
   } catch {
     /* 失败提示由 request.ts 拦截器统一给出 */
