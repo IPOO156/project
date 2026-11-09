@@ -31,7 +31,6 @@ const {
 
 const BASE_RADIUS = 52
 const RING_STEP = 18
-const HERO_SCALE = 1.75
 const { findRing } = useSemesterRings()
 
 const orbitPaused = ref(false)
@@ -60,9 +59,12 @@ function setViewMode(mode: ViewMode) {
 }
 
 function getHeroScale() {
-  // 需与 HeroRings.vue 中 --hero-scale 的两档取值保持一致：
-  // 桌面 700/400 = 1.75，≤768px 360/400 = 0.9
-  return window.innerWidth <= 768 ? 0.9 : HERO_SCALE
+  // 单一来源：直接读 HeroRings.vue 里定义的 --hero-scale（桌面 1.75 / 窄屏 0.9 / ≤340px 0.75），
+  // 年轮半径与小球定位共用同一个值，避免两处常量手工同步漏改。
+  const hero = document.getElementById('hero')
+  const raw = hero ? getComputedStyle(hero).getPropertyValue('--hero-scale') : ''
+  const scale = Number.parseFloat(raw)
+  return Number.isFinite(scale) && scale > 0 ? scale : 1.75
 }
 
 function getSystemCenter() {
