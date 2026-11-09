@@ -63,8 +63,11 @@ function handleCardClick() {
 /** 整卡可跳转：批量模式下只允许勾选，不再整卡跳转 */
 const isNavigable = computed(() => Boolean(props.item.jumpUrl) && !props.batchMode)
 
+/** 标题可能为空（异常/草稿数据），统一兜底，避免出现空白行和空 aria-label */
+const displayTitle = computed(() => props.item.title?.trim() || '无标题')
+
 const cardAriaLabel = computed(() => {
-  const parts = [props.item.title, categoryLabel(props.item.category)]
+  const parts = [displayTitle.value, categoryLabel(props.item.category)]
   if (props.item.isRead !== 1) parts.push('未读')
   return parts.join('，')
 })
@@ -105,8 +108,13 @@ function handleCardKeydown(event: KeyboardEvent) {
         <span class="message-card__category">{{ categoryLabel(item.category) }}</span>
         <span v-if="item.isRead !== 1" class="message-card__unread">未读</span>
         <h3 class="message-card__title">
-          {{ item.title }}
-          <el-tag v-if="item.isArchived === 1" size="small" type="info" effect="plain"
+          <span class="message-card__title-text" :title="displayTitle">{{ displayTitle }}</span>
+          <el-tag
+            v-if="item.isArchived === 1"
+            size="small"
+            type="info"
+            effect="plain"
+            class="message-card__archive-tag"
             >已归档</el-tag
           >
         </h3>
@@ -171,7 +179,8 @@ function handleCardKeydown(event: KeyboardEvent) {
     box-shadow 0.2s ease,
     border-color 0.2s ease;
 
-  &:hover {
+  // 仅整卡可跳转时给 hover 反馈；批量模式下卡片本身不可点，避免误导
+  &.is-clickable:hover {
     border-color: #d4a574;
   }
 
@@ -195,6 +204,11 @@ function handleCardKeydown(event: KeyboardEvent) {
       outline: 2px solid var(--mc-wood);
       outline-offset: 2px;
     }
+
+    // 按下时给一点回弹反馈，和成就卡/快捷入口保持一致的轻量手感
+    &:active {
+      transform: scale(0.995);
+    }
   }
 
   &__icon {
@@ -216,9 +230,15 @@ function handleCardKeydown(event: KeyboardEvent) {
     align-items: center;
     gap: 8px;
     margin-bottom: 4px;
+    min-width: 0;
   }
   &__category {
     flex-shrink: 0;
+    // 后端可下发自定义分类名，超长时截断，避免把标题挤成 0 宽
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     padding: 1px 8px;
     border-radius: 6px;
     background: var(--mc-bg);
@@ -237,14 +257,26 @@ function handleCardKeydown(event: KeyboardEvent) {
     line-height: 1.5;
   }
   &__title {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
     margin: 0;
     font-size: 14px;
     font-weight: 500;
     color: var(--mc-text);
     line-height: 1.5;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  }
+  &__title-text {
+    // 单行省略：标题再长也不换行、不挤压右侧时间/标签
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &__archive-tag {
+    flex-shrink: 0;
   }
   &__content {
     margin: 0 0 8px;
@@ -316,6 +348,10 @@ function handleCardKeydown(event: KeyboardEvent) {
   background: transparent;
   &:hover {
     background: var(--mc-bg);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--mc-wood);
+    outline-offset: 1px;
   }
   &--read {
     color: var(--mc-sage);
