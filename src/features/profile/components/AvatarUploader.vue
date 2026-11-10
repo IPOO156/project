@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { Upload, User, X, ZoomIn, ZoomOut } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 
 const props = withDefaults(
   defineProps<{
@@ -36,7 +36,78 @@ const isDragging = ref(false)
 const dragPosition = ref({ x: 0, y: 0 })
 const startDrag = ref({ x: 0, y: 0 })
 
-const hasAvatar = computed(() => !!props.modelValue)
+const hasAvatar = computed(() => !!props.modelValue || !!localPreview.value)
+// 头像地址失效（如预签名 URL 过期、OSS 拒绝访问）时 <img> 会渲染成破图图标，
+// 这里回退到占位图标；地址变化后重置，等待新地址重新加载。
+const imageFailed = ref(false)
+// 本地裁剪预览（handleConfirm 后立即显示 base64，后端 OSS URL 返回前先顶一下）
+const localPreview = ref<string>('')
+const showImage = computed(() => {
+  if (localPreview.value) return true
+  return hasAvatar.value && !imageFailed.value
+})
+// img 的 src：优先本地预览，否则用 prop 的后端 URL
+const imgSrc = computed(() => localPreview.value || props.modelValue)
+
+// OSS 请求被代理/网络挂断时既不会触发 load 也不会触发 error，<img> 会一直空白，
+// 超时后回退占位图标，避免头像区域长时间空着。
+const IMAGE_LOAD_TIMEOUT_MS = 10000
+let imageLoadTimer: ReturnType<typeof setTimeout> | undefined
+
+function stopImageLoadTimer() {
+  if (imageLoadTimer) {
+    clearTimeout(imageLoadTimer)
+    imageLoadTimer = undefined
+  }
+}
+
+function startImageLoadTimer() {
+  stopImageLoadTimer()
+  const src = imgSrc.value
+  if (!src || src.startsWith('data:')) return
+  imageLoadTimer = setTimeout(() => {
+    imageFailed.value = true
+  }, IMAGE_LOAD_TIMEOUT_MS)
+}
+
+// 后端 OSS URL 返回后先预加载，确认可用才撤掉 base64 预览；
+// 地址不可达时保留本地预览，避免刚上传成功的头像立刻变空白。
+function preloadRemoteImage(url: string) {
+  const probe = new Image()
+  probe.onload = () => {
+    if (props.modelValue === url) localPreview.value = ''
+  }
+  probe.src = url
+}
+
+watch(
+  () => props.modelValue,
+  (val) => {
+    if (val && !val.startsWith('data:')) preloadRemoteImage(val)
+  },
+)
+
+watch(
+  imgSrc,
+  () => {
+    imageFailed.value = false
+    startImageLoadTimer()
+  },
+  { immediate: true },
+)
+
+onUnmounted(stopImageLoadTimer)
+
+function handleImageLoad() {
+  stopImageLoadTimer()
+  // 超时后请求仍未中断，晚到的加载成功可以恢复显示
+  imageFailed.value = false
+}
+
+function handleImageError() {
+  stopImageLoadTimer()
+  imageFailed.value = true
+}
 
 const avatarStyle = computed(() => ({
   width: `${props.size}px`,
@@ -194,6 +265,13 @@ function generateCroppedAvatar(): string {
   const outputCtx = outputCanvas.getContext('2d')
   if (!outputCtx) return ''
 
+  // 经典 Canvas 陷阱：JPEG 没有透明通道，圆形裁剪后画布其余像素 alpha=0，
+  // 直接 toDataURL('image/jpeg') 时各内核会自行填充透明像素（部分内核呈红色），
+  // 导致头像边缘出现一圈红边。先铺不透明白底再绘制，透明区域不再参与 JPEG 编码；
+  // 页面用 border-radius 裁圆，四角白底不可见。
+  outputCtx.fillStyle = '#ffffff'
+  outputCtx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE)
+
   const cropOffset = (PREVIEW_SIZE - CROP_FRAME_SIZE) / 2
   outputCtx.drawImage(
     previewCanvas,
@@ -213,6 +291,8 @@ function generateCroppedAvatar(): string {
 function handleConfirm() {
   const result = generateCroppedAvatar()
   if (!result) return
+  // 先本地预览裁剪结果（base64），后端返回 OSS URL 前不让头像区域空白
+  localPreview.value = result
   emit('update:modelValue', result)
   emit('upload', result)
   previewVisible.value = false
@@ -226,6 +306,7 @@ function handleCancel() {
 
 function handleRemove(e: Event) {
   e.stopPropagation()
+  localPreview.value = ''
   emit('update:modelValue', '')
   emit('upload', '')
 }
@@ -253,22 +334,33 @@ const previewImageStyle = computed(() => {
       @keydown.enter="triggerSelect"
       @keydown.space.prevent="triggerSelect"
     >
-      <img v-if="hasAvatar" :src="modelValue" class="avatar-preview__image" alt="用户头像" />
+      <!-- 用 v-show 隐藏而不是卸载：慢请求超时后仍保留请求，后续加载成功可自动恢复显示 -->
+      <img
+        v-if="hasAvatar"
+        v-show="showImage"
+        :src="imgSrc"
+        class="avatar-preview__image"
+        alt="用户头像"
+        @load="handleImageLoad"
+        @error="handleImageError"
+      />
       <User v-else :size="size * 0.4" class="avatar-preview__placeholder" />
       <div class="avatar-preview__overlay">
         <Upload :size="20" />
         <span>更换头像</span>
       </div>
-      <button
-        v-if="hasAvatar"
-        class="avatar-preview__remove"
-        type="button"
-        aria-label="删除头像"
-        @click="handleRemove"
-      >
-        <X :size="14" />
-      </button>
     </div>
+    <!-- 删除按钮放在圆形预览之外：预览容器 overflow:hidden 会把它裁成红色残片 -->
+    <button
+      v-if="hasAvatar"
+      class="avatar-uploader__remove"
+      type="button"
+      title="删除头像"
+      aria-label="删除头像"
+      @click.stop="handleRemove"
+    >
+      <X :size="12" />
+    </button>
 
     <input
       ref="inputRef"
@@ -322,7 +414,15 @@ const previewImageStyle = computed(() => {
 
 <style scoped lang="scss">
 .avatar-uploader {
+  position: relative;
   display: inline-block;
+
+  // 预览容器是圆形裁切（overflow:hidden），删除按钮挂在这里才不会被裁成红色残片；
+  // 指针悬停整块头像区域（含按钮自身）时显示。
+  &:hover .avatar-uploader__remove {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .avatar-preview {
@@ -372,27 +472,49 @@ const previewImageStyle = computed(() => {
     opacity: 0;
     transition: opacity 0.2s;
   }
+}
 
-  &__remove {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 50%;
-    background: rgba(239, 68, 68, 0.9);
+.avatar-uploader__remove {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--el-border-color);
+  border-radius: 50%;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+  transform: translate(25%, -25%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s,
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
+
+  // 平时保持中性色，只有指针真正指向删除按钮时才转为危险色，
+  // 避免鼠标一进入头像区域就出现一个醒目的红点
+  &:hover {
+    background: var(--el-color-danger);
+    border-color: var(--el-color-danger);
     color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transform: translate(30%, -30%);
-    transition: background-color 0.2s;
+  }
 
-    &:hover {
-      background: rgba(220, 38, 38, 0.95);
-    }
+  // 键盘 Tab 聚焦到按钮时同样显示（不用父容器 :focus-within，
+  // 否则裁剪弹窗关闭后焦点回到头像，按钮会一直挂在上边）
+  &:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+    outline: 2px solid var(--el-color-primary);
+    outline-offset: 1px;
   }
 }
 

@@ -93,6 +93,12 @@ export function useApplicationPage(
    */
   async function removeRecord(id: string) {
     if (id === DRAFT_LOCAL_ID) {
+      // 本地草稿已关联后端草稿时，列表里显示的是同一份草稿；只清本地副本的话，
+      // 下次刷新后端草稿会重新出现。这里连同后端记录一起删除，删除失败则不清理本地。
+      const linked = records.value.find((r) => r.id === DRAFT_LOCAL_ID)?.backendId
+      if (linked != null) {
+        await deleteActivity(Number(linked), activityCategoryOf(appType))
+      }
       clearDraft()
     } else if (/^\d+$/.test(id)) {
       await deleteActivity(Number(id), activityCategoryOf(appType))
@@ -287,15 +293,16 @@ export function useApplicationPage(
   }
 
   async function handleSaveDraft() {
-    // 后端无草稿增删改接口（仅 POST 支持 isDraft=1，且无删除/更新端点），草稿统一本地持久化：
-    // saveNow 写入 localStorage，随后 loadRecords 把本地草稿合并进列表，保证刷新后草稿仍可见。
+    // 草稿双写：本地 localStorage 兜底，同时调用 isDraft=1 建后端草稿 / autosave 更新。
+    // 必须等后端保存结束再刷新列表：后端保存成功会删掉本地副本，列表只保留一条草稿记录，
+    // 否则本地草稿与后端草稿同时出现（2026-11-10 修复重复展示）。
     // 保存后表单转空白待填写态：修改草稿需在下拉记录里点"编辑"回填，正常情况表单保持空白。
-    saveNow()
+    const backendSaved = await saveNow()
     currentStatus.value = 'draft'
     await loadRecords()
     resetForm()
     cancelEdit()
-    ElMessage.success('草稿已保存')
+    ElMessage.success(backendSaved ? '草稿已保存' : '草稿已保存到本地')
   }
 
   async function handleWithdraw(row: any) {
@@ -313,8 +320,11 @@ export function useApplicationPage(
     // 后端真实记录（非本地临时 rec- / draft-local 记录）：拉取 6.2 详情补齐表单字段（列表仅含摘要字段）
     const isBackendRecord =
       row.id && row.id !== DRAFT_LOCAL_ID && !String(row.id).startsWith('rec-')
-    // 真实记录回填其 id，后续自动保存走 autosave；本地草稿/临时记录无服务端 id，首次保存走 isDraft=1 建草稿
-    setRecordId(isBackendRecord ? Number(row.id) : null)
+    // 真实记录回填其 id，后续自动保存走 autosave；本地草稿若已关联后端草稿（backendId），
+    // 同样回填该 id，避免再次保存时又 POST 一条新草稿；无关联时才走 isDraft=1 建草稿
+    setRecordId(
+      isBackendRecord ? Number(row.id) : row.backendId != null ? Number(row.backendId) : null,
+    )
     if (isBackendRecord) {
       try {
         const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))

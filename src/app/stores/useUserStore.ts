@@ -1,13 +1,14 @@
 import type { UserInfo } from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { changePassword as apiChangePassword } from '@/shared/api/auth'
+import { changePassword as apiChangePassword, getCurrentUser } from '@/shared/api/auth'
 import { uploadAvatar as apiUpload } from '@/shared/api/common'
 import { updateProfileContact } from '@/shared/api/student'
 import { logout as apiLogout } from '@/shared/api/user'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import {
   USER_AVATAR_CACHE_KEY,
+  USER_AVATAR_LOCAL_CACHE_KEY,
   USER_INFO_CACHE_KEY,
   USER_SCOPED_PREFIXES,
 } from '@/shared/constants/storageKeys'
@@ -60,6 +61,41 @@ function writeAvatarCache(avatar: string | undefined) {
   }
 }
 
+/**
+ * 本机头像图片缓存：保存本机上传的裁剪图 base64 与后端 objectKey。
+ * 只缓存图片本体，不承担跨设备同步；objectKey 用于后端头像被其他端替换时判定失效。
+ */
+interface LocalAvatarCache {
+  dataUrl: string
+  objectKey?: string
+}
+
+function readLocalAvatarCache(): LocalAvatarCache | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(USER_AVATAR_LOCAL_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<LocalAvatarCache>
+    if (!parsed.dataUrl?.startsWith('data:image/')) return null
+    return { dataUrl: parsed.dataUrl, objectKey: parsed.objectKey }
+  } catch {
+    return null
+  }
+}
+
+function writeLocalAvatarCache(cache: LocalAvatarCache | null) {
+  if (typeof window === 'undefined') return
+  try {
+    if (cache) {
+      localStorage.setItem(USER_AVATAR_LOCAL_CACHE_KEY, JSON.stringify(cache))
+    } else {
+      localStorage.removeItem(USER_AVATAR_LOCAL_CACHE_KEY)
+    }
+  } catch {
+    // 隐私模式或存储已满时静默失败：不影响头像地址本身
+  }
+}
+
 export const useUserStore = defineStore('user', () => {
   // state
   const token = ref(getToken())
@@ -69,11 +105,16 @@ export const useUserStore = defineStore('user', () => {
   // 上传失败不写缓存、保留原头像，由调用方提示失败（避免把未落库的 Base64 当成功）
   const cachedAvatar = ref<string | undefined>(readAvatarCache())
 
+  // 本机上传的图片本体：刷新后优先展示，避免 OSS 预签名地址加载不出来时头像空白
+  const localAvatarCache = ref<LocalAvatarCache | null>(readLocalAvatarCache())
+
   // getters
   const isLoggedIn = computed(() => !!token.value)
   const userName = computed(() => userInfo.value?.realName ?? userInfo.value?.username ?? '')
   const studentId = computed(() => userInfo.value?.studentId ?? '')
-  const avatar = computed(() => userInfo.value?.avatar || cachedAvatar.value)
+  const avatar = computed(
+    () => localAvatarCache.value?.dataUrl || userInfo.value?.avatar || cachedAvatar.value,
+  )
 
   // ── 教师端登录类型 ──
   // 模块级权限判定（菜单/守卫/组件分支）统一走 useTeacherAuthz()，
@@ -123,12 +164,54 @@ export const useUserStore = defineStore('user', () => {
       const res = await apiUpload(dataUrlToFile(avatarUrl))
       if (!res?.avatarUrl) throw new Error('头像上传未返回地址')
       effective = res.avatarUrl
+      // 本机上传：留存裁剪图本体，刷新后即使 OSS 地址暂时加载不出来也能显示
+      localAvatarCache.value = { dataUrl: avatarUrl, objectKey: res.objectKey }
+      writeLocalAvatarCache(localAvatarCache.value)
+    } else {
+      // 删除头像，或外部直接传入地址（非本机上传）：旧的本机图片不再对应当前头像
+      localAvatarCache.value = null
+      writeLocalAvatarCache(null)
     }
     cachedAvatar.value = effective
     writeAvatarCache(effective)
+    // 同步写入 user_info_cache：否则刷新后 userInfo 仍是旧头像地址，
+    // 虽然 avatar getter 回退到 cachedAvatar 仍能显示，但两处数据会长期不一致。
     if (userInfo.value) {
-      userInfo.value = { ...userInfo.value, avatar: effective }
+      setUserInfo({ ...userInfo.value, avatar: effective })
     }
+  }
+
+  /**
+   * 从 GET /auth/me 刷新头像地址（应用启动时调用一次）。
+   *
+   * 后端头像只存 OSS objectKey，读取时现签预签名 URL（有效期 7 天），
+   * 本地缓存或 user_info_cache 里的旧签名 URL 过期后 <img> 会变成破图。
+   * 刷新失败不阻断启动：401 由请求拦截器统一处理，其余异常保留本地缓存。
+   */
+  async function refreshAvatar() {
+    if (!isLoggedIn.value) return
+    const me = await getCurrentUser().catch(() => null)
+    if (!me) return
+    const fresh = me.avatar || undefined
+    if (!fresh) {
+      // 后端已无头像（如在其他端删除）：同步清掉本地缓存，避免继续展示旧图
+      cachedAvatar.value = undefined
+      writeAvatarCache(undefined)
+      localAvatarCache.value = null
+      writeLocalAvatarCache(null)
+      if (userInfo.value?.avatar) setUserInfo({ ...userInfo.value, avatar: undefined })
+      return
+    }
+    // 后端头像对象已更换（在其他设备重新上传）时，本机旧图不再有效：
+    // 预签名 URL 路径中包含 objectKey（avatar/<uuid>.jpg），据此判断是否仍是同一张图。
+    const localKey = localAvatarCache.value?.objectKey
+    if (localKey && !fresh.includes(localKey.replace(/^\//, ''))) {
+      localAvatarCache.value = null
+      writeLocalAvatarCache(null)
+    }
+    cachedAvatar.value = fresh
+    writeAvatarCache(fresh)
+    if (userInfo.value) setUserInfo({ ...userInfo.value, avatar: fresh })
   }
 
   /**
@@ -193,8 +276,10 @@ export const useUserStore = defineStore('user', () => {
     token.value = ''
     userInfo.value = null
     cachedAvatar.value = undefined
+    localAvatarCache.value = null
     clearAuth()
     localStorage.removeItem(USER_AVATAR_CACHE_KEY)
+    localStorage.removeItem(USER_AVATAR_LOCAL_CACHE_KEY)
     // 清理当前用户的表单草稿与撤回标记（含 PII）。必须在删除 user_info_cache 之前，
     // 否则 storageScope 已退化为 anonymous，找不到 ::u<id> 键。
     clearCurrentUserScopedStorage(USER_SCOPED_PREFIXES)
@@ -223,6 +308,7 @@ export const useUserStore = defineStore('user', () => {
     setToken,
     setUserInfo,
     updateAvatar,
+    refreshAvatar,
     updateUserInfo,
     changePassword,
     logout,

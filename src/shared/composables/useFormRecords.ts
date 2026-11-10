@@ -26,7 +26,15 @@ export interface FormRecord {
   submitDate: string
   semester: string
   status?: string
+  /** 本地草稿关联的后端草稿 id：用于列表去重与「编辑」时定位后端记录 */
+  backendId?: number
   [key: string]: any
+}
+
+/** 正数 id 归一化；非法值返回 undefined（不伪造 id） */
+function toBackendId(value: unknown): number | undefined {
+  const n = Number(value)
+  return Number.isFinite(n) && n > 0 ? n : undefined
 }
 
 function genId(): string {
@@ -68,7 +76,8 @@ const RESEARCH_STAR_TITLE_HINTS: Record<string, string> = {
 /** 判断本地草稿是否含有效内容（学期/空附件不算） */
 function isNonEmptyDraft(data: Record<string, unknown>): boolean {
   return Object.entries(data).some(([k, v]) => {
-    if (k === 'semester' || k === 'proofMaterials') return false
+    // __backendId 是草稿关联的后端 id 元数据，不代表用户填写了内容
+    if (k === 'semester' || k === 'proofMaterials' || k === '__backendId') return false
     if (v === undefined || v === null || v === '') return false
     if (Array.isArray(v) && v.length === 0) return false
     return true
@@ -109,6 +118,8 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
         semester: (data.semester as string) || '',
         status: 'draft',
         ...data,
+        // 显式放在展开之后：data 里的 __backendId 是元数据，不直接当业务字段用
+        backendId: toBackendId(data.__backendId),
       }
     } catch {
       return null
@@ -140,7 +151,7 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
       const aliases = ARCHIVE_TYPE_ALIASES[type] ?? []
       const accepted = new Set([type, ...aliases])
       const researchHint = RESEARCH_STAR_TITLE_HINTS[type]
-      const real = list
+      let real = list
         .filter((a) => {
           const archiveType = a.archive_type ?? a.archiveType ?? ''
           // 科研之星主记录统一 archive_type=research_star，按提交后 title 中的子类中文名定位子页签
@@ -159,7 +170,22 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
           semester: a.semester_name ?? a.semesterName ?? '',
           status: STATUS_MAP[a.status] ?? 'pending',
         }))
-      const draft = readLocalDraft()
+      let draft = readLocalDraft()
+      if (draft) {
+        const draftTitle = draft.title
+        // 本地草稿与后端草稿是同一份内容时只保留一行（否则「保存草稿」后会看到两条学科草稿）。
+        // 旧版本的本地快照没有 __backendId：按「草稿状态 + 同标题」补一次关联判断。
+        if (draft.backendId == null) {
+          const matched = real.find(
+            (r) => r.status === 'draft' && r.title && r.title === draftTitle,
+          )
+          if (matched) draft = { ...draft, backendId: toBackendId(matched.id) }
+        }
+        const linkedId = draft.backendId
+        if (linkedId != null) {
+          real = real.filter((r) => r.id !== String(linkedId))
+        }
+      }
       records.value = draft ? [draft, ...real] : real
     } catch {
       // 拉取失败保持已有列表，避免提交成功瞬间网络抖动导致记录"消失"

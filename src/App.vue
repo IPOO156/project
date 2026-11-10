@@ -6,9 +6,11 @@ import { useUserStore } from '@/app/stores/stores'
 const userStore = useUserStore()
 
 onMounted(() => {
-  // 如果有 token，尝试获取用户信息
+  // 有 token 时刷新一次头像：后端只存 objectKey、读取时现签 7 天有效的 URL，
+  // 本地缓存的旧签名 URL 过期后会让顶部栏/基本资料显示破图。
+  // 不 await：头像刷新不应阻塞首屏渲染。
   if (userStore.isLoggedIn) {
-    // 实际项目中这里会调接口获取用户信息
+    userStore.refreshAvatar()
   }
 })
 </script>

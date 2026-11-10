@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   logoutApi: vi.fn(),
   changePassword: vi.fn(),
+  getCurrentUser: vi.fn(),
   uploadAvatar: vi.fn(),
   updateProfileContact: vi.fn(),
   teacherClear: vi.fn(),
@@ -13,7 +14,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('@/shared/api/user', () => ({ logout: mocks.logoutApi }))
-vi.mock('@/shared/api/auth', () => ({ changePassword: mocks.changePassword }))
+vi.mock('@/shared/api/auth', () => ({
+  changePassword: mocks.changePassword,
+  getCurrentUser: mocks.getCurrentUser,
+}))
 vi.mock('@/shared/api/common', () => ({ uploadAvatar: mocks.uploadAvatar }))
 vi.mock('@/shared/api/student', () => ({ updateProfileContact: mocks.updateProfileContact }))
 vi.mock('@/shared/composables/useTeacherMe', () => ({
@@ -45,6 +49,7 @@ beforeEach(() => {
   setActivePinia(createPinia())
   mocks.logoutApi.mockReset().mockResolvedValue(undefined)
   mocks.changePassword.mockReset().mockResolvedValue(undefined)
+  mocks.getCurrentUser.mockReset().mockResolvedValue({ avatar: null })
   mocks.uploadAvatar.mockReset()
   mocks.updateProfileContact.mockReset().mockResolvedValue(undefined)
   mocks.teacherClear.mockReset()
@@ -162,8 +167,82 @@ describe('useUserStore 资料与密码', () => {
     const file = mocks.uploadAvatar.mock.calls[0]?.[0] as File
     expect(file.type).toBe('image/jpeg')
     expect(file.name.endsWith('.jpg')).toBe(true)
-    expect(store.avatar).toBe('https://oss.example.com/new.jpg')
+    // 头像地址仍缓存 OSS 签名 URL，但展示优先用本机裁剪图（见下一个用例）
     expect(localStorage.getItem('user_avatar_cache')).toBe('https://oss.example.com/new.jpg')
+    expect(store.avatar).toBe('data:image/jpeg;base64,AAAA')
+    expect(JSON.parse(localStorage.getItem('user_avatar_local_cache') as string)).toEqual({
+      dataUrl: 'data:image/jpeg;base64,AAAA',
+      objectKey: 'avatar/new.jpg',
+    })
+  })
+
+  it('刷新后（重建 store）本机上传的头像仍优先展示', async () => {
+    const store = useUserStore()
+    store.setUserInfo(userInfo())
+    mocks.uploadAvatar.mockResolvedValueOnce({
+      avatarUrl: 'https://oss.example.com/new.jpg',
+      objectKey: 'avatar/new.jpg',
+    })
+    await store.updateAvatar('data:image/jpeg;base64,AAAA')
+
+    // 模拟页面刷新：重新创建 Pinia 与 store，只能从 localStorage 恢复
+    setActivePinia(createPinia())
+    const reloaded = useUserStore()
+
+    expect(reloaded.avatar).toBe('data:image/jpeg;base64,AAAA')
+  })
+
+  it('删除头像时清掉本机图片缓存', async () => {
+    const store = useUserStore()
+    store.setUserInfo(userInfo())
+    mocks.uploadAvatar.mockResolvedValueOnce({
+      avatarUrl: 'https://oss.example.com/new.jpg',
+      objectKey: 'avatar/new.jpg',
+    })
+    await store.updateAvatar('data:image/jpeg;base64,AAAA')
+
+    await store.updateAvatar(undefined)
+
+    expect(store.avatar).toBeUndefined()
+    expect(localStorage.getItem('user_avatar_local_cache')).toBeNull()
+  })
+
+  it('refreshAvatar 发现后端头像已换（objectKey 不同）时清掉本机图片', async () => {
+    const store = useUserStore()
+    store.setToken('tk-avatar')
+    store.setUserInfo(userInfo())
+    mocks.uploadAvatar.mockResolvedValueOnce({
+      avatarUrl: 'https://oss.example.com/avatar/old.jpg',
+      objectKey: 'avatar/old.jpg',
+    })
+    await store.updateAvatar('data:image/jpeg;base64,AAAA')
+
+    mocks.getCurrentUser.mockResolvedValueOnce({
+      avatar: 'https://oss.example.com/avatar/new.jpg?x-oss-expires=1',
+    })
+    await store.refreshAvatar()
+
+    expect(localStorage.getItem('user_avatar_local_cache')).toBeNull()
+    expect(store.avatar).toBe('https://oss.example.com/avatar/new.jpg?x-oss-expires=1')
+  })
+
+  it('refreshAvatar 仍是同一张图时保留本机图片', async () => {
+    const store = useUserStore()
+    store.setToken('tk-avatar')
+    store.setUserInfo(userInfo())
+    mocks.uploadAvatar.mockResolvedValueOnce({
+      avatarUrl: 'https://oss.example.com/avatar/new.jpg?x-oss-expires=old',
+      objectKey: 'avatar/new.jpg',
+    })
+    await store.updateAvatar('data:image/jpeg;base64,AAAA')
+
+    mocks.getCurrentUser.mockResolvedValueOnce({
+      avatar: 'https://oss.example.com/avatar/new.jpg?x-oss-expires=new',
+    })
+    await store.refreshAvatar()
+
+    expect(store.avatar).toBe('data:image/jpeg;base64,AAAA')
+    expect(localStorage.getItem('user_avatar_local_cache')).not.toBeNull()
   })
 
   it('上传失败向上抛出，不写入 base64、不改变原头像', async () => {
@@ -177,6 +256,64 @@ describe('useUserStore 资料与密码', () => {
 
     expect(store.avatar).toBe('https://oss.example.com/old.jpg')
     expect(localStorage.getItem('user_avatar_cache')).toBeNull()
+    expect(localStorage.getItem('user_avatar_local_cache')).toBeNull()
+  })
+
+  it('updateAvatar 成功后把新地址同步进 user_info_cache', async () => {
+    const store = useUserStore()
+    store.setUserInfo(userInfo({ avatar: 'https://oss.example.com/old.jpg' }))
+
+    await store.updateAvatar('https://oss.example.com/new.jpg')
+
+    const cachedUser = JSON.parse(localStorage.getItem('user_info_cache') as string)
+    expect(cachedUser.avatar).toBe('https://oss.example.com/new.jpg')
+  })
+
+  it('refreshAvatar 用 /auth/me 的现签地址覆盖本地缓存', async () => {
+    const store = useUserStore()
+    store.setToken('tk-avatar')
+    store.setUserInfo(userInfo({ avatar: 'https://oss.example.com/expired.jpg' }))
+    mocks.getCurrentUser.mockResolvedValueOnce({ avatar: 'https://oss.example.com/fresh.jpg' })
+
+    await store.refreshAvatar()
+
+    expect(store.avatar).toBe('https://oss.example.com/fresh.jpg')
+    expect(localStorage.getItem('user_avatar_cache')).toBe('https://oss.example.com/fresh.jpg')
+    expect(JSON.parse(localStorage.getItem('user_info_cache') as string).avatar).toBe(
+      'https://oss.example.com/fresh.jpg',
+    )
+  })
+
+  it('refreshAvatar 接口失败时保留本地缓存，不打断启动', async () => {
+    const store = useUserStore()
+    store.setToken('tk-avatar')
+    store.setUserInfo(userInfo({ avatar: 'https://oss.example.com/cached.jpg' }))
+    localStorage.setItem('user_avatar_cache', 'https://oss.example.com/cached.jpg')
+    mocks.getCurrentUser.mockRejectedValueOnce(new Error('OSS 未启用'))
+
+    await expect(store.refreshAvatar()).resolves.toBeUndefined()
+
+    expect(store.avatar).toBe('https://oss.example.com/cached.jpg')
+    expect(localStorage.getItem('user_avatar_cache')).toBe('https://oss.example.com/cached.jpg')
+  })
+
+  it('refreshAvatar 后端已无头像时清空本地缓存', async () => {
+    const store = useUserStore()
+    store.setToken('tk-avatar')
+    store.setUserInfo(userInfo({ avatar: 'https://oss.example.com/removed.jpg' }))
+
+    await store.refreshAvatar()
+
+    expect(store.avatar).toBeUndefined()
+    expect(localStorage.getItem('user_avatar_cache')).toBeNull()
+  })
+
+  it('未登录时不请求 /auth/me', async () => {
+    const store = useUserStore()
+
+    await store.refreshAvatar()
+
+    expect(mocks.getCurrentUser).not.toHaveBeenCalled()
   })
 })
 
@@ -184,6 +321,7 @@ describe('useUserStore 登出', () => {
   it('先带旧 token 调后端，再清空身份、头像与用户级草稿', async () => {
     localStorage.setItem('user_info_cache', JSON.stringify({ id: 2, loginType: 'student' }))
     localStorage.setItem('user_avatar_cache', 'cached.png')
+    localStorage.setItem('user_avatar_local_cache', '{"dataUrl":"data:image/jpeg;base64,AAAA"}')
     localStorage.setItem('form_draft_x::u2', '{}')
     localStorage.setItem('submission:withdrawnIds::u2', '[]')
     const store = useUserStore()
@@ -198,6 +336,7 @@ describe('useUserStore 登出', () => {
     expect(sessionStorage.getItem('token')).toBeNull()
     expect(localStorage.getItem('user_info_cache')).toBeNull()
     expect(localStorage.getItem('user_avatar_cache')).toBeNull()
+    expect(localStorage.getItem('user_avatar_local_cache')).toBeNull()
     expect(localStorage.getItem('form_draft_x::u2')).toBeNull()
     expect(localStorage.getItem('submission:withdrawnIds::u2')).toBeNull()
     expect(mocks.teacherClear).toHaveBeenCalled()

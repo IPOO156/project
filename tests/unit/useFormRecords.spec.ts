@@ -192,6 +192,77 @@ describe('useFormRecords 本地草稿', () => {
     })
   })
 
+  it('本地草稿携带 __backendId 时隐藏同 id 的后端草稿，只展示一行', async () => {
+    api.getActivities.mockResolvedValue({
+      total: 1,
+      list: [
+        activity({
+          id: 9,
+          archive_type: 'academic_competition',
+          title: '草稿杯',
+          status: 0,
+        }),
+      ],
+    })
+    localStorage.setItem(
+      'form_draft_competition::anonymous',
+      JSON.stringify({ competitionName: '草稿杯', __backendId: 9 }),
+    )
+
+    const { records } = useFormRecords('competition', 'form_draft_competition')
+    await flush()
+
+    expect(records.value.map((r) => r.id)).toEqual([DRAFT_LOCAL_ID])
+    expect(records.value[0].backendId).toBe(9)
+  })
+
+  it('旧本地草稿（无 __backendId）按同标题 + 草稿状态关联后端草稿', async () => {
+    api.getActivities.mockResolvedValue({
+      total: 1,
+      list: [
+        activity({
+          id: 9,
+          archive_type: 'academic_competition',
+          title: '草稿杯',
+          status: 0,
+        }),
+      ],
+    })
+    localStorage.setItem(
+      'form_draft_competition::anonymous',
+      JSON.stringify({ competitionName: '草稿杯' }),
+    )
+
+    const { records } = useFormRecords('competition', 'form_draft_competition')
+    await flush()
+
+    expect(records.value.map((r) => r.id)).toEqual([DRAFT_LOCAL_ID])
+    expect(records.value[0].backendId).toBe(9)
+  })
+
+  it('同标题但已提交（非草稿）的后端记录不与本地草稿合并', async () => {
+    api.getActivities.mockResolvedValue({
+      total: 1,
+      list: [
+        activity({
+          id: 9,
+          archive_type: 'academic_competition',
+          title: '草稿杯',
+          status: 1,
+        }),
+      ],
+    })
+    localStorage.setItem(
+      'form_draft_competition::anonymous',
+      JSON.stringify({ competitionName: '草稿杯' }),
+    )
+
+    const { records } = useFormRecords('competition', 'form_draft_competition')
+    await flush()
+
+    expect(records.value.map((r) => r.id)).toEqual([DRAFT_LOCAL_ID, '9'])
+  })
+
   it('草稿只有学期或空附件时不展示', async () => {
     api.getActivities.mockResolvedValue({ total: 0, list: [] })
     localStorage.setItem(
