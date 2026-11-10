@@ -16,14 +16,26 @@ import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import { clearAuth, getToken, setToken as persistToken } from '@/shared/utils/token'
 import { resetUserScopedStores } from './sessionReset'
 
-/** 将 base64 data URL 转为 File 对象（头像上传用） */
+/** MIME → 文件扩展名（头像裁剪固定输出 JPEG，但按实际 MIME 取后缀，避免与内容不一致） */
+const MIME_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
+
+/**
+ * 将 base64 data URL 转为 File 对象（头像上传用）。
+ * 文件名后缀必须与图片真实内容一致：后端按扩展名做魔数校验，
+ * 裁剪结果始终是 JPEG，若沿用 .png 文件名会被拒为「文件内容与扩展名不匹配」。
+ */
 function dataUrlToFile(dataUrl: string): File {
   const [meta, data] = dataUrl.split(',')
   const mime = meta.match(/data:(.*?);/)?.[1] || 'image/png'
+  const ext = MIME_EXTENSIONS[mime] ?? 'png'
   const bin = atob(data)
   const arr = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
-  return new File([arr], `avatar-${Date.now()}.png`, { type: mime })
+  return new File([arr], `avatar-${Date.now()}.${ext}`, { type: mime })
 }
 
 function readAvatarCache(): string | undefined {
@@ -53,8 +65,8 @@ export const useUserStore = defineStore('user', () => {
   const token = ref(getToken())
   const userInfo = ref<UserInfo | null>(loadUserInfoCache())
 
-  // 头像本地缓存：上传接口（POST /common/upload/avatar）成功返回 OSS URL 后写入本地，
-  // 上传失败时回退展示已选 Base64，避免刷新后头像丢失
+  // 头像本地缓存：上传接口（POST /common/upload/avatar）成功返回 OSS URL 后写入本地；
+  // 上传失败不写缓存、保留原头像，由调用方提示失败（避免把未落库的 Base64 当成功）
   const cachedAvatar = ref<string | undefined>(readAvatarCache())
 
   // getters
@@ -98,20 +110,19 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  /**
+   * 更新头像：base64 先上传换取后端 OSS 地址，成功后才写本地缓存。
+   * 上传失败必须向上抛出（接口错误已由请求拦截器统一提示）：
+   * 此前吞掉异常并把 base64 写进缓存，调用方仍提示「头像更新成功」，
+   * 用户看到的是未落库的本地预览，刷新后头像丢失且全程没有任何失败提示。
+   */
   async function updateAvatar(avatarUrl: string | undefined) {
     let effective = avatarUrl
-    if (avatarUrl) {
-      try {
-        // 本地选择的 base64 头像需先转 File 上传，成功后使用后端返回的 OSS 签名 URL
-        if (avatarUrl.startsWith('data:')) {
-          const res = await apiUpload(dataUrlToFile(avatarUrl))
-          effective = res.avatarUrl || avatarUrl
-        } else {
-          effective = avatarUrl
-        }
-      } catch {
-        /* 上传失败保留本地缓存 */
-      }
+    if (avatarUrl?.startsWith('data:')) {
+      // 本地选择的 base64 头像需先转 File 上传，成功后使用后端返回的 OSS 签名 URL
+      const res = await apiUpload(dataUrlToFile(avatarUrl))
+      if (!res?.avatarUrl) throw new Error('头像上传未返回地址')
+      effective = res.avatarUrl
     }
     cachedAvatar.value = effective
     writeAvatarCache(effective)

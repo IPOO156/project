@@ -128,7 +128,15 @@ function cancelEdit() {
 }
 
 async function handleAvatarUpload(base64: string) {
-  await userStore.updateAvatar(base64 || undefined)
+  try {
+    await userStore.updateAvatar(base64 || undefined)
+  } catch (e) {
+    // 接口失败已由请求拦截器统一提示；非 HTTP 异常（如响应缺少头像地址）需本地兜底
+    if (!(e as { response?: unknown })?.response) {
+      ElMessage.error('头像更新失败，请稍后重试')
+    }
+    return
+  }
   ElMessage.success(base64 ? '头像更新成功' : '头像已删除')
 }
 </script>
