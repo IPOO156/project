@@ -10,6 +10,23 @@ import { scopedStorageKey } from '@/shared/utils/storageScope'
 
 const DEBOUNCE_MS = 800
 
+/**
+ * 不写入本地草稿（localStorage）的高敏字段：学号、证件号。
+ * 这些值可随登录档案/表单重新带出，跳过只影响「本地草稿回填」这一个场景，不影响表单结构与提交；
+ * 但能避免明文 PII 随草稿长期留在磁盘上（共用电脑、XSS 读取 localStorage）。
+ * 当前各申报页表单均未包含这些字段，属预防性约束；日后新增字段时按小写 key 匹配即生效。
+ */
+const PII_DRAFT_KEYS = new Set([
+  'studentid',
+  'studentno',
+  'studentnumber',
+  'idcard',
+  'idcardno',
+  'idnumber',
+  'identityno',
+  'certno',
+])
+
 function isNonEmpty(data: Record<string, unknown>): boolean {
   return Object.values(data).some((v) => {
     if (v == null || v === '') return false
@@ -64,6 +81,12 @@ export function useFormDraft<T extends Record<string, unknown>>(
       // 后端记录 id（archiveId/applicationId）由 setRecordId 维护，仅用于 autosave 寻址，不写入本地草稿内容
       delete snapshot.archiveId
       delete snapshot.applicationId
+      // 学号/证件号等 PII 不落本地草稿，避免明文长期留在磁盘
+      for (const k of Object.keys(snapshot)) {
+        if (PII_DRAFT_KEYS.has(k.toLowerCase())) delete snapshot[k]
+      }
+      // 过滤后已无内容（表单只剩 PII 字段）则不写，避免留下空快照
+      if (Object.keys(snapshot).length === 0) return
       localStorage.setItem(storageKey, JSON.stringify(snapshot))
     } catch {
       /* ignore */
