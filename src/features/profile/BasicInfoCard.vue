@@ -11,6 +11,7 @@ import { useArchiveStore, useUserStore } from '@/app/stores/stores'
 import { getDict } from '@/shared/api/common'
 import { updatePoliticalStatus, updateStudentStatus } from '@/shared/api/student'
 import { STUDENT_STATUS_OPTIONS } from '@/shared/constants/dict'
+import { isValidEmail } from '@/shared/utils/validateEmail'
 import AvatarUploader from './components/AvatarUploader.vue'
 
 const archiveStore = useArchiveStore()
@@ -92,6 +93,10 @@ async function saveEdit() {
   const missing = required.find(([key]) => !String(formData.value[key] ?? '').trim())
   if (missing) {
     ElMessage.warning(`请填写${missing[1]}`)
+    return
+  }
+  if (!isValidEmail(String(formData.value.email ?? ''))) {
+    ElMessage.warning('请输入正确的邮箱地址')
     return
   }
   // 三类保存（联系方式 PUT /profile/contact、政治面貌、学生状态）任一失败即终止流程，
@@ -198,6 +203,7 @@ async function handleAvatarUpload(base64: string) {
     <el-form v-else :model="formData" label-width="112px" class="profile-form">
       <p class="contact-hint">
         联系邮箱、手机号、紧急联系人电话在展示时已脱敏；保存前请重新填写这三项。
+        联系邮箱同时是「忘记密码」的验证码接收地址，请填写本人常用邮箱。
       </p>
       <el-row :gutter="12">
         <el-col :span="12"

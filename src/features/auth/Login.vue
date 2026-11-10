@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useThemeRipple } from '@/app/composables/useThemeRipple'
 import { useThemeStore } from '@/app/stores/stores'
 import { isRoleMatchedLoginTab } from '@/shared/config/teacherModuleRegistry'
+import { validatePasswordStrength } from '@/shared/utils/validatePassword'
 import ChangePasswordDialog from './components/ChangePasswordDialog.vue'
 import LoginBackground from './components/LoginBackground.vue'
 import LoginHero from './components/LoginHero.vue'
@@ -51,6 +52,10 @@ const focusConfirmPassword = ref(false)
 // 刚登录成功时登录表单里还留着本次输入的初始密码，直接复用；
 // 只有刷新过页面（内存中没有密码）才要求用户补输原密码。
 const needOldPassword = computed(() => !loginForm.password)
+/** 强制改密时的强度实时提示：与提交校验同一套规则，避免提示与拦截文案不一致 */
+const forcePasswordStrength = computed(() =>
+  changeForm.newPassword ? validatePasswordStrength(changeForm.newPassword) : null,
+)
 const isEntered = ref(false)
 const showCard = ref(false)
 const forgotDialogVisible = ref(false)
@@ -166,6 +171,17 @@ onMounted(() => {
                     />
                   </div>
                   <p class="login__hint">6-32 位，需同时包含大小写字母、数字与特殊字符</p>
+                  <p
+                    v-if="forcePasswordStrength"
+                    class="login__hint"
+                    :class="{ 'is-error': !forcePasswordStrength.valid }"
+                  >
+                    {{
+                      forcePasswordStrength.valid
+                        ? '密码强度符合要求'
+                        : forcePasswordStrength.message
+                    }}
+                  </p>
                 </el-form-item>
                 <el-form-item>
                   <div
