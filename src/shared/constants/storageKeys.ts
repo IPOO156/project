@@ -13,6 +13,13 @@ export const USER_INFO_CACHE_KEY = 'user_info_cache'
 /** 头像本地缓存：上传接口成功返回 OSS URL / Base64 后写入，避免刷新后头像丢失 */
 export const USER_AVATAR_CACHE_KEY = 'user_avatar_cache'
 
+/**
+ * 头像图片本机缓存（{ dataUrl, objectKey }）：仅本机上传成功后写入裁剪图本体。
+ * 刷新后优先展示本机图片，避免 OSS 预签名地址加载不出来（网络不可达、缓存过期）时头像空白；
+ * 后端头像对象已变更或删除时需同步清除，清除逻辑见 useUserStore.refreshAvatar。
+ */
+export const USER_AVATAR_LOCAL_CACHE_KEY = 'user_avatar_local_cache'
+
 /** 教师当前登录者身份缓存（/auth/me 的 roles / permissions / scopes） */
 export const TEACHER_ME_KEY = 'teacher_me'
 

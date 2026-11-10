@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { USER_SCOPED_PREFIXES } from '@/shared/constants/storageKeys'
+import { USER_AVATAR_LOCAL_CACHE_KEY, USER_SCOPED_PREFIXES } from '@/shared/constants/storageKeys'
 import bookCursor from '@/shared/utils/bookCursor'
 import { markMustChangePassword } from '@/shared/utils/forcePasswordChange'
 import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
@@ -145,6 +145,7 @@ function clearAuthCaches() {
     localStorage.removeItem('user_info_cache')
     localStorage.removeItem('teacher_me')
     localStorage.removeItem('user_avatar_cache')
+    localStorage.removeItem(USER_AVATAR_LOCAL_CACHE_KEY)
     sessionStorage.removeItem('app:visited-tabs')
   } catch {
     /* 隐私模式下存储不可用时忽略 */

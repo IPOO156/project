@@ -6,6 +6,7 @@ import {
   LOADING_TIP_HIDDEN_KEY,
   TEACHER_ME_KEY,
   USER_AVATAR_CACHE_KEY,
+  USER_AVATAR_LOCAL_CACHE_KEY,
   USER_INFO_CACHE_KEY,
 } from '@/shared/constants/storageKeys'
 import { clearUserScopedStorage } from '@/shared/utils/session'
@@ -20,10 +21,11 @@ function loginAs(id: string | number) {
 }
 
 describe('clearUserScopedStorage', () => {
-  it('清空 5 个账号级固定键', () => {
+  it('清空 6 个账号级固定键', () => {
     const scopedKeys = [
       USER_INFO_CACHE_KEY,
       USER_AVATAR_CACHE_KEY,
+      USER_AVATAR_LOCAL_CACHE_KEY,
       TEACHER_ME_KEY,
       LOADING_TIP_FAVORITES_KEY,
       LOADING_TIP_HIDDEN_KEY,
