@@ -16,6 +16,7 @@ import { useSemesterRings } from './composables/useSemesterRings'
 
 const {
   experiences,
+  summary,
   selectedExperience,
   selectedId,
   formVisible,
@@ -262,7 +263,7 @@ function handleScrollToGrowth() {
       </section>
 
       <GrowthQuote />
-      <SummarySection :experiences="experiences" />
+      <SummarySection :experiences="experiences" :summary="summary" />
       <GrowthFooter />
     </template>
 
