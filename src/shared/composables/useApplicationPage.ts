@@ -71,12 +71,32 @@ export function useApplicationPage(
       },
     )
   }
+  // 扩展信息（本人角色/证书编号等）独立于主表单维护，模板中由 ApplicationFormRecord 双向绑定
+  const extendedForm = reactive({
+    role: '',
+    certNumber: '',
+    issuingAuthority: '',
+    acquisitionDate: '',
+    validityPeriod: '',
+  })
+  function resetExtendedForm() {
+    Object.assign(extendedForm, {
+      role: '',
+      certNumber: '',
+      issuingAuthority: '',
+      acquisitionDate: '',
+      validityPeriod: '',
+    })
+  }
+
   // autoRestore=false：申报表单默认空白，不自动回填草稿；修改草稿走下拉记录"编辑"回填
   // minDraftFields：必填字段未填齐前不建后端草稿（扩展表 NOT NULL 列会被后端 409 拒绝），仅本地兜底
+  // extras：扩展信息不在 form 内，需一并并入草稿/建草稿请求体（提交路径 doSubmit 已合并）
   const { clearDraft, saveNow, setRecordId } = useFormDraft(effectiveDraftKey, form, {
     autoRestore: false,
     type,
     minDraftFields: requiredFields.map((f) => f.key),
+    extras: extendedForm,
   })
   const {
     records,
@@ -115,23 +135,6 @@ export function useApplicationPage(
     cancelEdit,
     closeDetail,
   } = useFormEdit()
-
-  const extendedForm = reactive({
-    role: '',
-    certNumber: '',
-    issuingAuthority: '',
-    acquisitionDate: '',
-    validityPeriod: '',
-  })
-  function resetExtendedForm() {
-    Object.assign(extendedForm, {
-      role: '',
-      certNumber: '',
-      issuingAuthority: '',
-      acquisitionDate: '',
-      validityPeriod: '',
-    })
-  }
 
   const enrollmentInfo = ref<any>(undefined)
   async function loadEnrollmentInfo() {

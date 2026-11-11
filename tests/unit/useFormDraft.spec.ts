@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp, h } from 'vue'
+import { createApp, h, reactive } from 'vue'
 
 const api = vi.hoisted(() => ({
   createDraft: vi.fn(),
@@ -28,7 +28,7 @@ let app: ReturnType<typeof createApp> | undefined
  * 通过真实组件挂载获取 setup 上下文（onMounted/watch 才能正常工作）。
  * 表单用普通对象即可：本测试只手动调用 saveNow，不依赖深层 watch 的防抖。
  */
-function mountDraft(form: Record<string, unknown>) {
+function mountDraft(form: Record<string, unknown>, extras?: Record<string, unknown>) {
   let draft!: ReturnType<typeof useFormDraft>
   app = createApp({
     setup() {
@@ -38,6 +38,7 @@ function mountDraft(form: Record<string, unknown>) {
         autoRestore: false,
         type: 'competition',
         minDraftFields: ['competitionName'],
+        extras,
       })
       return () => h('div')
     },
@@ -128,6 +129,65 @@ describe('useFormDraft 保存草稿与后端联动', () => {
     expect(raw.competitionName).toBe('草稿杯')
     // 列表据此识别本地草稿与后端记录为同一份，避免重复展示
     expect(raw.__backendId).toBe(5)
+    app?.unmount()
+  })
+})
+
+describe('useFormDraft 扩展字段（本人角色等）', () => {
+  function extras() {
+    return reactive({
+      role: 'individual',
+      certNumber: 'C-2026-001',
+      issuingAuthority: '',
+      acquisitionDate: '',
+      validityPeriod: '',
+    })
+  }
+
+  it('首次保存草稿时扩展字段并入建草稿请求体', async () => {
+    api.createDraft.mockResolvedValue(21)
+    const form: Record<string, unknown> = { competitionName: '草稿杯' }
+    const draft = mountDraft(form, extras())
+
+    const saved = await draft.saveNow()
+
+    expect(saved).toBe(true)
+    expect(api.createDraft).toHaveBeenCalledWith(
+      'competition',
+      expect.objectContaining({
+        competitionName: '草稿杯',
+        role: 'individual',
+        certNumber: 'C-2026-001',
+      }),
+    )
+    app?.unmount()
+  })
+
+  it('已有后端 id 时扩展字段并入 autosave 请求体', async () => {
+    api.autosaveApplication.mockResolvedValue(undefined)
+    const form: Record<string, unknown> = { competitionName: '草稿杯', archiveId: 5 }
+    const draft = mountDraft(form, extras())
+
+    await draft.saveNow()
+
+    expect(api.buildContractPayload).toHaveBeenCalledWith(
+      'competition',
+      expect.objectContaining({ role: 'individual', certNumber: 'C-2026-001', isDraft: 1 }),
+    )
+    app?.unmount()
+  })
+
+  it('后端保存失败时扩展字段写入本地快照，编辑回填不丢', async () => {
+    api.createDraft.mockRejectedValue(new Error('boom'))
+    const form: Record<string, unknown> = { competitionName: '草稿杯' }
+    const draft = mountDraft(form, extras())
+
+    const saved = await draft.saveNow()
+
+    expect(saved).toBe(false)
+    const raw = JSON.parse(localStorage.getItem(DRAFT_KEY) as string)
+    expect(raw.role).toBe('individual')
+    expect(raw.certNumber).toBe('C-2026-001')
     app?.unmount()
   })
 })
