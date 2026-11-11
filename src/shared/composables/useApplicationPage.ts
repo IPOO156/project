@@ -176,7 +176,7 @@ export function useApplicationPage(
               // duplicate_detection_rules.detect_fields，需放在 fields 内；平铺字段会被忽略。
               fields: {
                 ...(data.certNumber ? { certificateNo: data.certNumber } : {}),
-                ...(data.acquisitionDate ? { obtainTime: data.acquisitionDate } : {}),
+                ...(data.acquisitionDate ? { obtainedTime: data.acquisitionDate } : {}),
                 title,
               },
             })

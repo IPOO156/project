@@ -76,10 +76,10 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
       competitionName: 'competitionName',
       competitionType: 'competitionType',
       awardLevel: 'awardLevel',
-      // 后端 DTO 字段为 obtainTime（ApplicationService 的 CompetitionRequest/... 实测）
-      obtainTime: 'awardDate',
+      // 字段名以接口文档为准：obtainedTime（7.1 学科竞赛申报）
+      obtainedTime: 'awardDate',
     },
-    dateFields: ['obtainTime'],
+    dateFields: ['obtainedTime'],
   },
   scholarship: {
     endpoint: '/applications/scholarship',
@@ -87,14 +87,15 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
       scholarshipName: 'awardName',
       scholarshipCategory: 'scholarshipLevel',
       awardLevel: 'scholarshipGrade',
-      obtainTime: 'acquireDate',
+      // 7.2 奖学金申报：obtainedTime
+      obtainedTime: 'acquireDate',
     },
-    dateFields: ['obtainTime'],
+    dateFields: ['obtainedTime'],
   },
   certificate: {
     endpoint: '/applications/certificate',
-    mapping: { certificateType: 'certType', certificateName: 'certName', obtainTime: 'certDate' },
-    dateFields: ['obtainTime'],
+    mapping: { certificateType: 'certType', certificateName: 'certName', obtainedTime: 'certDate' },
+    dateFields: ['obtainedTime'],
   },
   innovation: {
     endpoint: '/applications/innovation',

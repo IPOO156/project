@@ -187,7 +187,7 @@ describe('buildContractPayload', () => {
       evidenceFileIds: [21, 22],
       competitionName: '蓝桥杯',
       awardLevel: '国家级',
-      obtainTime: '2025-09-01',
+      obtainedTime: '2025-09-01',
     })
   })
 
@@ -255,7 +255,7 @@ describe('buildContractPayload', () => {
     expect(withoutEvidence.achievementEvidence).toBeUndefined()
   })
 
-  it('通用字段只有非空才附加，acquisitionDate 作为 obtainTime 兜底', async () => {
+  it('通用字段只有非空才附加，acquisitionDate 作为 obtainedTime 兜底', async () => {
     const result = await payload.buildContractPayload('certificate', {
       role: 'individual',
       certNumber: 'C-001',
@@ -268,16 +268,16 @@ describe('buildContractPayload', () => {
     expect(result.certificateNo).toBe('C-001')
     expect(result.issuingUnit).toBe('教育部')
     expect(result.validUntil).toBe('2030-06-01')
-    expect(result.obtainTime).toBe('2025-05-06')
+    expect(result.obtainedTime).toBe('2025-05-06')
   })
 
-  it('契约已映射 obtainTime 时不被 acquisitionDate 覆盖', async () => {
+  it('契约已映射 obtainedTime 时不被 acquisitionDate 覆盖', async () => {
     const result = await payload.buildContractPayload('competition', {
       competitionName: 'x',
       awardDate: '2025-01-02',
       acquisitionDate: '2025-09-09',
     })
 
-    expect(result.obtainTime).toBe('2025-01-02')
+    expect(result.obtainedTime).toBe('2025-01-02')
   })
 })
