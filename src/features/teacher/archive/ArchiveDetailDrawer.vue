@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ArchiveAdminDetail } from '@/shared/types/teacher'
 import { computed } from 'vue'
+import { buildArchiveDetailEntries, formatArchiveValue } from '@/shared/utils/archiveDetailDisplay'
 import { formatDateTime } from '@/shared/utils/time'
 import { statusLabel, statusTagType } from './archiveStatus'
 
@@ -22,16 +23,7 @@ const visible = computed({
   set: (v: boolean) => emit('update:modelValue', v),
 })
 
-function renderValue(v: unknown) {
-  if (v == null) return '-'
-  if (typeof v === 'object') return JSON.stringify(v)
-  return String(v)
-}
-
-const detailEntries = computed(() => {
-  if (!props.detail?.details) return []
-  return Object.entries(props.detail.details)
-})
+const detailEntries = computed(() => buildArchiveDetailEntries(props.detail?.details))
 </script>
 
 <template>
@@ -113,9 +105,11 @@ const detailEntries = computed(() => {
             <span class="archive-view__drawer-section-count">{{ detailEntries.length }} 项</span>
           </p>
           <ul class="archive-view__kv">
-            <li v-for="[key, value] in detailEntries" :key="key" class="archive-view__kv-item">
-              <span class="archive-view__kv-key">{{ key }}</span>
-              <span class="archive-view__kv-value">{{ renderValue(value) }}</span>
+            <li v-for="item in detailEntries" :key="item.key" class="archive-view__kv-item">
+              <span class="archive-view__kv-key">{{ item.label }}</span>
+              <span class="archive-view__kv-value">{{
+                formatArchiveValue(item.key, item.value)
+              }}</span>
             </li>
           </ul>
         </section>
