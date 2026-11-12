@@ -46,6 +46,9 @@ function buildQuery(): AuditPendingQuery {
   return {
     type: filters.type || undefined,
     keyword: filters.keyword.trim() || undefined,
+    // 待审核按提交时间倒序：最近提交的排在最前（后端不传 sortOrder 时默认升序「先提交先审」）。
+    // 详情接口也复用本查询参数计算上一条 / 下一条，保持列表与翻页顺序一致。
+    sortOrder: 'desc',
     page: page.value,
     per_page: perPage.value,
   }
