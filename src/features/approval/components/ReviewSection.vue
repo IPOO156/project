@@ -5,6 +5,7 @@ import { CheckCircle, Clock, Search, XCircle } from 'lucide-vue-next'
 // Tab形式展示10个申报类型，查看/编辑弹窗支持修改后重新提交
 import { computed, onMounted, ref, watch } from 'vue'
 import { useReviewStore, useSubmissionStore } from '@/app/stores/stores'
+import DateRangePicker from '@/shared/ui/DateRangePicker.vue'
 import DictColumn from '@/shared/ui/DictColumn.vue'
 import StatusTag from '@/shared/ui/StatusTag.vue'
 import {
@@ -295,14 +296,11 @@ onMounted(() => {
             :value="opt.value"
           />
         </el-select>
-        <el-date-picker
+        <DateRangePicker
           v-model="dateRange"
-          type="daterange"
-          range-separator="至"
           start-placeholder="开始日期"
           end-placeholder="结束日期"
           class="filter-date"
-          value-format="YYYY-MM-DD"
         />
         <el-button @click="handleReset">重置</el-button>
       </template>

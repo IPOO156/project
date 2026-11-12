@@ -11,6 +11,7 @@ import { useArchiveStore, useUserStore } from '@/app/stores/stores'
 import { updatePoliticalStatus, updateStudentStatus } from '@/shared/api/student'
 import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { POLITICAL_STATUS_OPTIONS, STUDENT_STATUS_OPTIONS } from '@/shared/constants/dict'
+import { isValidEmail } from '@/shared/utils/validateEmail'
 import AvatarUploader from './components/AvatarUploader.vue'
 
 const archiveStore = useArchiveStore()
@@ -92,6 +93,10 @@ async function saveEdit() {
   const missing = required.find(([key]) => !String(formData.value[key] ?? '').trim())
   if (missing) {
     ElMessage.warning(`请填写${missing[1]}`)
+    return
+  }
+  if (!isValidEmail(String(formData.value.email ?? ''))) {
+    ElMessage.warning('请输入正确的邮箱地址')
     return
   }
   // 三类保存（联系方式 PUT /profile/contact、政治面貌、学生状态）任一失败即终止流程，
@@ -207,9 +212,10 @@ async function handleAvatarUpload(base64: string) {
       <el-descriptions-item label="关系">{{ emergencyRelation || '-' }}</el-descriptions-item>
       <el-descriptions-item label="紧急联系电话">{{ emergencyPhone || '-' }}</el-descriptions-item>
     </el-descriptions>
-    <el-form v-else :model="formData" label-width="100px" class="profile-form">
+    <el-form v-else :model="formData" label-width="112px" class="profile-form">
       <p class="contact-hint">
         联系邮箱、手机号、紧急联系人电话在展示时已脱敏；保存前请重新填写这三项。
+        联系邮箱同时是「忘记密码」的验证码接收地址，请填写本人常用邮箱。
       </p>
       <el-row :gutter="12">
         <el-col :span="12"
@@ -217,6 +223,7 @@ async function handleAvatarUpload(base64: string) {
             ><el-input
               v-model="formData.email"
               size="small"
+              maxlength="254"
               placeholder="请输入联系邮箱" /></el-form-item
         ></el-col>
         <el-col :span="12"
@@ -224,6 +231,7 @@ async function handleAvatarUpload(base64: string) {
             ><el-input
               v-model="formData.phone"
               size="small"
+              maxlength="11"
               placeholder="请输入手机号" /></el-form-item
         ></el-col>
         <el-col :span="24"
@@ -232,13 +240,19 @@ async function handleAvatarUpload(base64: string) {
         ></el-col>
         <el-col :span="12"
           ><el-form-item label="紧急联系人" required
-            ><el-input v-model="formData.emergencyName" size="small" /></el-form-item
+            ><el-input
+              v-model="formData.emergencyName"
+              size="small"
+              maxlength="50"
+              show-word-limit /></el-form-item
         ></el-col>
         <el-col :span="12"
           ><el-form-item label="关系" required
             ><el-input
               v-model="formData.emergencyRelation"
               size="small"
+              maxlength="20"
+              show-word-limit
               placeholder="如：父亲" /></el-form-item
         ></el-col>
         <el-col :span="12"
@@ -246,6 +260,7 @@ async function handleAvatarUpload(base64: string) {
             ><el-input
               v-model="formData.emergencyPhone"
               size="small"
+              maxlength="11"
               placeholder="请输入紧急联系人电话" /></el-form-item
         ></el-col>
         <el-col :span="12"

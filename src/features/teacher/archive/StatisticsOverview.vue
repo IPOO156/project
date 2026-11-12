@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { OrgOverviewRow, SemesterItem, StatisticsParentOrg } from '@/shared/types/teacher'
 import { ElMessage } from 'element-plus'
-import { Search } from 'lucide-vue-next'
+import { RefreshCw, Search } from 'lucide-vue-next'
 
 import { computed, onMounted, reactive, ref } from 'vue'
 import { getSemesters, getStatisticsOverview } from '@/shared/api/teacher-api'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
+import EmptyState from '@/shared/ui/EmptyState.vue'
 
 /**
  * StatisticsOverview - 统计看板（/teacher/statistics/overview）
@@ -45,6 +46,8 @@ const filterOpen = ref(false)
 /* ── 数据（/teacher/statistics/overview）── */
 
 const overviewLoading = ref(false)
+/** 加载失败：与「确实没有数据」区分开，避免把错误伪装成空态 */
+const overviewError = ref(false)
 const statsRows = ref<OrgOverviewRow[]>([])
 // 首次拿到非空汇总后只播一次，筛选改变行数不会重播
 const staggerActive = useFirstLoadStagger(() => statsRows.value.length)
@@ -107,6 +110,7 @@ const kpiCards = computed(() => [
 
 async function loadOverview() {
   overviewLoading.value = true
+  overviewError.value = false
   try {
     const scopeType = DIMENSION_ORG_TYPE[dimension.value]
     let scopeId: number | undefined
@@ -124,6 +128,9 @@ async function loadOverview() {
     parentOrg.value = res.parentOrg
     cacheHit.value = res.cacheHit
   } catch {
+    // 请求失败由拦截器统一提示；这里保留错误标记，让页面显示可重试的错误态，
+    // 而不是把 KPI 归零后显示「暂无统计数据」误导用户。
+    overviewError.value = true
     statsRows.value = []
     parentOrg.value = null
     cacheHit.value = null
@@ -235,7 +242,7 @@ onMounted(async () => {
         </div>
       </transition>
       <div v-loading="overviewLoading" class="mc-card__body">
-        <el-row :gutter="16" class="statistics-overview__kpis">
+        <el-row v-if="!overviewError" :gutter="16" class="statistics-overview__kpis">
           <el-col v-for="kpi in kpiCards" :key="kpi.label" :xs="12" :sm="8" :md="4">
             <div class="kpi-item">
               <span class="kpi-item__label">{{ kpi.label }}</span>
@@ -291,7 +298,10 @@ onMounted(async () => {
             </template>
           </el-table-column>
         </el-table>
-        <el-empty v-else-if="!overviewLoading" description="暂无统计数据" />
+        <EmptyState v-if="overviewError" text="统计数据加载失败" compact>
+          <el-button type="primary" :icon="RefreshCw" @click="handleSearch">重新加载</el-button>
+        </EmptyState>
+        <EmptyState v-else-if="!overviewLoading" text="暂无统计数据" compact />
       </div>
     </div>
   </div>

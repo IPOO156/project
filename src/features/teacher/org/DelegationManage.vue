@@ -303,7 +303,6 @@ onMounted(() => void loadList())
       </div>
       <div class="mc-card__body">
         <el-table v-loading="loading" :data="list" stripe>
-          <el-table-column prop="delegationId" label="委托ID" width="90" />
           <el-table-column label="委托方" width="150">
             <template #default="{ row }">
               {{ row.delegator?.name ?? '-'

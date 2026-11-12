@@ -168,6 +168,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
             <button
               type="button"
               class="ai-drawer__send"
+              aria-label="发送"
               :disabled="!inputValue.trim() || loading"
               @click="handleSend"
             >

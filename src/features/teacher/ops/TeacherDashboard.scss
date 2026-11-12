@@ -27,12 +27,21 @@
   border-radius: 6px;
   overflow: hidden;
 
-  @media (max-width: 900px) {
+  /* 1200 以下四列会让副指标说明被截断，降为两列两行 */
+  @media (max-width: 1200px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    &__item:nth-child(n + 3) {
+      border-top: 1px solid var(--el-border-color-lighter);
+    }
   }
 
   @media (max-width: 560px) {
     grid-template-columns: 1fr;
+
+    &__item:nth-child(n + 2) {
+      border-top: 1px solid var(--el-border-color-lighter);
+    }
   }
 
   &__item {
@@ -221,7 +230,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr);
   gap: 16px;
-  align-items: start;
+  /* 两列等高：右侧「快捷入口 + 角色」比左侧待办卡高，若按内容顶对齐，
+     左列下方会留出大块空白。 */
+  align-items: stretch;
 }
 
 .dash-side {
@@ -375,10 +386,15 @@
 }
 
 /* ── 快捷入口 ── */
+/* 双列：6 个入口由 6 行降为 3 行，右侧栏高度与左侧待办卡接近，避免单列拉高整列 */
 .quick-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+
+  @media (max-width: 560px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .quick-link {
@@ -425,10 +441,14 @@
 
   &__desc {
     font-size: 13px;
+    line-height: 1.4;
     color: var(--el-text-color-secondary);
+    // 文案在双列栅格里只有约 146px，单行省略会被误读成「被裁断」，
+    // 改为最多两行折行，完整展示入口说明。
+    display: -webkit-box;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
 }
 
@@ -557,14 +577,6 @@
 }
 
 @media (max-width: 768px) {
-  .dash-kpis {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    &__item:nth-child(n + 3) {
-      border-top: 1px solid var(--el-border-color-lighter);
-    }
-  }
-
   .dash-side {
     grid-template-columns: minmax(0, 1fr);
   }

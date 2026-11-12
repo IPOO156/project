@@ -26,12 +26,14 @@ interface Props {
   selectedId?: string | null
   paused?: boolean
   reverseTrigger?: number
+  restoreTrigger?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selectedId: null,
   paused: false,
   reverseTrigger: 0,
+  restoreTrigger: 0,
 })
 
 const emit = defineEmits<{
@@ -44,7 +46,7 @@ const emit = defineEmits<{
 const BASE_RADIUS = 52
 const RING_STEP = 18
 
-const { rings: semesterRings, findRing, semesterLabel } = useSemesterRings()
+const { rings: semesterRings, findRingForExperience, semesterLabel } = useSemesterRings()
 
 const rings = computed<RingItem[]>(() => {
   return semesterRings.value.map((ring, index) => {
@@ -69,9 +71,8 @@ function getSubOrbitOffsets(_count: number): number[] {
 function initElectronAngles() {
   const byLevel = new Map<number, GrowthExperience[]>()
   props.experiences.forEach((exp) => {
-    // 学期只来自后端，缺失时不落到默认年轮，避免把无学期事件错画成「大一上」
-    if (!exp.semester) return
-    const ring = findRing(exp.semester)
+    // 学期只认后端；缺失时按事件日期推导入学年轮，仅用于小球定位
+    const ring = findRingForExperience(exp)
     if (!ring) return
     if (!byLevel.has(ring.level)) {
       byLevel.set(ring.level, [])
@@ -95,8 +96,7 @@ watch(() => props.experiences, initElectronAngles, { immediate: true, deep: true
 const electrons = computed<ElectronItem[]>(() => {
   const byLevel = new Map<number, GrowthExperience[]>()
   props.experiences.forEach((exp) => {
-    if (!exp.semester) return
-    const ring = findRing(exp.semester)
+    const ring = findRingForExperience(exp)
     if (!ring) return
     if (!byLevel.has(ring.level)) {
       byLevel.set(ring.level, [])
@@ -150,6 +150,38 @@ function tick() {
 const electronsVisible = ref(false)
 const scrollY = ref(0)
 
+/**
+ * 滚动视差：只作用在 .hero-rings__system 这一层（环 + 小球 + 中心按钮同处一个
+ * 变换矩阵），层内不再有第二套缩放，避免小球与年轮圈错位。
+ * zoom 与响应式缩放 --hero-scale（渲染尺寸 / 400）相互独立，互不复用。
+ */
+const RING_ZOOM_MAX = 1.1
+const RING_ZOOM_RATE = 0.00015
+const RING_OPACITY_BASE = 0.5
+const RING_OPACITY_RATE = 0.001
+
+const reducedMotion = ref(false)
+let motionQuery: MediaQueryList | null = null
+
+function syncReducedMotion(event?: MediaQueryListEvent) {
+  reducedMotion.value = event ? event.matches : (motionQuery?.matches ?? false)
+}
+
+const ringZoom = computed(() =>
+  reducedMotion.value ? 1 : Math.min(1 + scrollY.value * RING_ZOOM_RATE, RING_ZOOM_MAX),
+)
+
+const ringOpacity = computed(() =>
+  reducedMotion.value
+    ? RING_OPACITY_BASE
+    : Math.max(0, RING_OPACITY_BASE - scrollY.value * RING_OPACITY_RATE),
+)
+
+const systemParallaxStyle = computed(() => ({
+  '--ring-zoom': ringZoom.value.toFixed(4),
+  '--ring-parallax-opacity': ringOpacity.value.toFixed(4),
+}))
+
 const heroRingsRef = ref<HTMLElement | null>(null)
 
 /**
@@ -159,12 +191,19 @@ const heroRingsRef = ref<HTMLElement | null>(null)
  */
 function resolveScrollContainer(): HTMLElement | null {
   let parent = heroRingsRef.value?.parentElement ?? null
+  let firstScrollable: HTMLElement | null = null
   while (parent) {
     const { overflowY } = getComputedStyle(parent)
-    if (overflowY === 'auto' || overflowY === 'scroll') return parent
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+      // 注意：只设 overflow-x: hidden 的容器（如 .growth-timeline-page）会被浏览器
+      // 把 overflow-y 提升为 auto，但内容并不在其中滚动（scrollHeight === clientHeight）。
+      // 因此优先取「真正有滚动余量」的那一层（通常是 .layout__content）。
+      if (parent.scrollHeight > parent.clientHeight + 1) return parent
+      firstScrollable ??= parent
+    }
     parent = parent.parentElement
   }
-  return null
+  return firstScrollable
 }
 
 let scrollTarget: HTMLElement | null = null
@@ -245,6 +284,11 @@ onMounted(() => {
     electronsVisible.value = true
   }, 2000)
   bindScroll()
+  // 滚动联动动效（非 CSS keyframe）单独尊重系统的「减少动效」偏好：
+  // 开启后 zoom 固定为 1、透明度固定回基线，不做滚动视差。
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  syncReducedMotion()
+  motionQuery.addEventListener('change', syncReducedMotion)
 })
 
 // keep-alive 缓存后滚动容器可能变化：激活时重新绑定并取一次当前滚动位置
@@ -256,26 +300,86 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(rafId)
   }
   unbindScroll()
+  motionQuery?.removeEventListener('change', syncReducedMotion)
+  motionQuery = null
 })
 
 function handleElectronClick(event: MouseEvent, id: string) {
-  const target = event.currentTarget as HTMLElement | null
-  const rect = target?.getBoundingClientRect()
+  // 窄屏（320px 档）小球间距只有约 14px，48×48 热区必然互相覆盖，
+  // 事件可能落在相邻圈的球上。指针点击时按「离指针最近的球心」重新解析，
+  // 键盘触发的 click（detail === 0）没有坐标，仍沿用当前聚焦的球。
+  let targetId = id
+  let rect: DOMRect | undefined
+  if (event.detail !== 0) {
+    const resolved = resolveNearestElectron(event.clientX, event.clientY)
+    if (resolved) {
+      targetId = resolved.id
+      rect = resolved.rect
+    }
+  }
+  if (!rect) {
+    const button = findElectronButton(targetId) ?? (event.currentTarget as HTMLElement | null)
+    rect = button?.getBoundingClientRect()
+  }
   const pos = rect
     ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
     : { x: 0, y: 0 }
-  selectedElectronAngle.value = electronAngles.value[id] ?? 0
-  emit('select', id, pos)
+  selectedElectronAngle.value = electronAngles.value[targetId] ?? 0
+  emit('select', targetId, pos)
+}
+
+/** DOM 顺序与 electrons 数组一致（HeroRingsElectrons 用 v-for 渲染） */
+function findElectronButton(id: string): HTMLElement | null {
+  const index = electrons.value.findIndex((electron) => electron.id === id)
+  if (index < 0) return null
+  const buttons = heroRingsRef.value?.querySelectorAll<HTMLElement>('.hero-rings__electron')
+  return buttons?.[index] ?? null
+}
+
+function resolveNearestElectron(x: number, y: number): { id: string; rect: DOMRect } | null {
+  const buttons = heroRingsRef.value?.querySelectorAll<HTMLElement>('.hero-rings__electron')
+  if (!buttons || buttons.length === 0) return null
+  let bestIndex = -1
+  let bestRect: DOMRect | null = null
+  let bestDistance = Number.POSITIVE_INFINITY
+  buttons.forEach((button, index) => {
+    const rect = button.getBoundingClientRect()
+    const distance = Math.hypot(rect.left + rect.width / 2 - x, rect.top + rect.height / 2 - y)
+    if (distance < bestDistance) {
+      bestDistance = distance
+      bestIndex = index
+      bestRect = rect
+    }
+  })
+  const bestId = electrons.value[bestIndex]?.id
+  return bestId && bestRect ? { id: bestId, rect: bestRect } : null
 }
 
 const selectedIdRef = computed(() => props.selectedId ?? null)
 const selectedElectronAngle = ref(0)
-const { extinguishedRings } = useRingEffects(
+const { extinguishedRings, restoreRings } = useRingEffects(
   toRef(props, 'experiences'),
   selectedIdRef,
   toRef(props, 'reverseTrigger'),
   selectedElectronAngle,
   (id) => emit('reverseComplete', id),
+)
+
+// 关闭详情后立即恢复年轮：被熄掉的圈跳过入场错峰延迟（0.2 + i*0.25s）直接生长，
+// 只对真正回缩过的圈生效，避免影响未参与回缩的内圈与首次入场动画。
+const immediateRingIndexes = ref<Set<number>>(new Set())
+
+watch(
+  () => props.restoreTrigger,
+  (next, prev) => {
+    if (!next || next === prev || extinguishedRings.value.size === 0) return
+    // 累积而不是覆盖：已经享受过「立即生长」的圈继续保持 0 延迟，
+    // 否则下一次回缩范围变小时，这些圈的 animation-delay 变化会让它们重播。
+    const nextIndexes = new Set(immediateRingIndexes.value)
+    extinguishedRings.value.forEach((index) => nextIndexes.add(index))
+    immediateRingIndexes.value = nextIndexes
+    restoreRings()
+  },
 )
 </script>
 
@@ -315,8 +419,12 @@ const { extinguishedRings } = useRingEffects(
       </svg>
     </div>
 
-    <div class="hero-rings__system">
-      <HeroRingsOrbit :rings="rings" :extinguished-rings="extinguishedRings" :scroll-y="scrollY" />
+    <div class="hero-rings__system" :style="systemParallaxStyle">
+      <HeroRingsOrbit
+        :rings="rings"
+        :extinguished-rings="extinguishedRings"
+        :immediate-rings="immediateRingIndexes"
+      />
       <HeroRingsNucleus @add="emit('add')" />
       <HeroRingsElectrons
         :electrons="electrons"
@@ -373,7 +481,10 @@ const { extinguishedRings } = useRingEffects(
 
 <style scoped lang="scss">
 .hero-rings {
+  // --hero-scale 必须等于「渲染尺寸 / viewBox 尺寸(400)」，
+  // 小球的圆周定位依赖它，改 --hero-svg-size 时两者要同步改。
   --hero-scale: 1.75;
+  --hero-svg-size: 700px;
   position: relative;
   min-height: 100svh;
   display: flex;
@@ -386,11 +497,17 @@ const { extinguishedRings } = useRingEffects(
 }
 
 .hero-rings__system {
+  // 滚动视差变量由模板内联注入（--ring-zoom 与 --hero-scale 分离）：
+  // 环、球、中心按钮共享同一个 transform，层内不存在第二个缩放。
+  --ring-zoom: 1;
+  --ring-parallax-opacity: 0.5;
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  transform: scale(var(--ring-zoom));
+  opacity: var(--ring-parallax-opacity);
   transform-origin: center;
   z-index: 1;
 }
@@ -554,6 +671,13 @@ const { extinguishedRings } = useRingEffects(
 }
 
 @media (max-width: 768px) {
+  // 窄屏按可用宽度收紧年轮：400 × 0.9 = 360px，最外圈直径 320px，
+  // 375 / 390 下都能完整成环，不再被 hero 的 overflow 裁掉左右两侧。
+  .hero-rings {
+    --hero-scale: 0.9;
+    --hero-svg-size: 360px;
+  }
+
   .hero-rings__poem-scroll {
     gap: 0.55rem;
   }
@@ -568,6 +692,15 @@ const { extinguishedRings } = useRingEffects(
 
   .hero-rings__char {
     font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 340px) {
+  // 320px 级超窄屏：400 × 0.75 = 300px，最外圈直径 267px，左右各留 26px 不裁切。
+  // 注意与 .hero-rings 的 --hero-scale 保持同一份来源，小球定位依赖它。
+  .hero-rings {
+    --hero-scale: 0.75;
+    --hero-svg-size: 300px;
   }
 }
 

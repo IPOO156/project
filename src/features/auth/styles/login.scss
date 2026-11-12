@@ -439,6 +439,10 @@
     line-height: 1.6;
     color: var(--login-text-faint);
     transition: color 0.5s ease;
+    /* 强制改密时密码强度不达标的提示色 */
+    &.is-error {
+      color: #ef4444;
+    }
   }
   &__caps-warning {
     margin: 0;

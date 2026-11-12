@@ -93,7 +93,6 @@ const emit = defineEmits<{
   &:hover,
   &:focus-visible {
     text-decoration: underline;
-    outline: none;
   }
 }
 

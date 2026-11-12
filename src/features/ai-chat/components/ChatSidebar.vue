@@ -102,14 +102,19 @@ function formatConvTime(conv: Conversation): string {
 
       <div v-if="props.conversations.length === 0" class="cs__empty">暂无历史对话</div>
 
-      <ul v-else class="cs__list">
+      <ul v-else class="cs__list" role="listbox" aria-label="历史对话">
         <li
           v-for="conv in props.conversations"
           :key="conv.id"
           class="cs__item"
           :class="{ 'is-active': conv.id === props.currentId }"
+          role="option"
+          tabindex="0"
+          :aria-selected="conv.id === props.currentId"
           :title="displayTitle(conv)"
           @click="emit('switch', conv.id)"
+          @keydown.enter.self="emit('switch', conv.id)"
+          @keydown.space.prevent.self="emit('switch', conv.id)"
         >
           <!-- 编辑模式：输入框 -->
           <input
@@ -165,7 +170,7 @@ function formatConvTime(conv: Conversation): string {
             {{ props.userRole || '学生' }}
           </div>
         </div>
-        <button class="cs__settings" title="设置" @click="emit('opensettings')">
+        <button class="cs__settings" title="设置" aria-label="设置" @click="emit('opensettings')">
           <Settings :size="16" />
         </button>
       </div>

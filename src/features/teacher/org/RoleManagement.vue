@@ -241,7 +241,6 @@ function openPermissionAssign(row: RoleListItem) {
     <div class="mc-card">
       <div class="mc-card__body">
         <el-table v-loading="loading" class="u-w-full" :data="list" stripe>
-          <el-table-column prop="roleId" label="角色ID" width="72" align="center" />
           <el-table-column prop="roleName" label="角色名称" min-width="100" />
           <el-table-column prop="roleCode" label="角色编码" min-width="90" />
           <el-table-column label="级别" width="120" align="center">

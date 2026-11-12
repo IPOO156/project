@@ -22,10 +22,16 @@ const activeTab = ref('settings')
 const settingsLoading = ref(false)
 const settings = ref<SettingItem[]>([])
 
+/** 后端分组编码 → 中文标题（未登记的分组原样展示，不吞掉未知分组） */
+const GROUP_LABELS: Record<string, string> = {
+  score: '评分配置',
+  basic: '基础配置',
+}
+
 const settingsGroups = computed(() => {
   const groups = new Map<string, SettingItem[]>()
   for (const s of settings.value) {
-    const key = s.group || '基础配置'
+    const key = GROUP_LABELS[s.group ?? ''] ?? s.group ?? '基础配置'
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(s)
   }
@@ -109,7 +115,7 @@ onMounted(() => {
                 <div class="system-config__setting-info">
                   <p class="system-config__setting-name">{{ item.settingName }}</p>
                   <p class="system-config__setting-desc">
-                    {{ item.description || item.settingKey }}
+                    {{ item.description || '暂无说明' }}
                   </p>
                 </div>
                 <div class="system-config__setting-value">
@@ -142,7 +148,7 @@ onMounted(() => {
     >
       <el-form label-width="80px">
         <el-form-item label="配置项">
-          <el-input :model-value="settingDialog.key" disabled />
+          <el-input :model-value="settingDialog.name" disabled />
         </el-form-item>
         <el-form-item label="配置值" required>
           <el-input

@@ -197,12 +197,22 @@ async function handleAdd() {
           <el-row :gutter="16">
             <el-col :span="12">
               <el-form-item label="学号 / 工号" required>
-                <el-input v-model="form.userNo" placeholder="学号（学生）或工号（教师/管理员）" />
+                <el-input
+                  v-model="form.userNo"
+                  maxlength="20"
+                  show-word-limit
+                  placeholder="学号（学生）或工号（教师/管理员）"
+                />
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="真实姓名" required>
-                <el-input v-model="form.name" placeholder="真实姓名" />
+                <el-input
+                  v-model="form.name"
+                  maxlength="50"
+                  show-word-limit
+                  placeholder="真实姓名"
+                />
               </el-form-item>
             </el-col>
           </el-row>
@@ -213,13 +223,19 @@ async function handleAdd() {
                   v-model="form.password"
                   type="password"
                   show-password
-                  placeholder="至少 6 位"
+                  maxlength="32"
+                  placeholder="6-32 位"
                 />
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="确认密码" required>
-                <el-input v-model="form.confirmPassword" type="password" show-password />
+                <el-input
+                  v-model="form.confirmPassword"
+                  type="password"
+                  show-password
+                  maxlength="32"
+                />
               </el-form-item>
             </el-col>
           </el-row>
@@ -257,12 +273,12 @@ async function handleAdd() {
           <el-row :gutter="16">
             <el-col :span="12">
               <el-form-item label="邮箱">
-                <el-input v-model="form.email" placeholder="邮箱地址" />
+                <el-input v-model="form.email" maxlength="254" placeholder="邮箱地址" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="手机">
-                <el-input v-model="form.phone" placeholder="手机号码" />
+                <el-input v-model="form.phone" maxlength="11" placeholder="手机号码" />
               </el-form-item>
             </el-col>
           </el-row>

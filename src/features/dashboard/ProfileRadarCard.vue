@@ -219,7 +219,15 @@ const radarOption = computed(() => {
       :class="{ 'profile-card__body--empty': profileSummary.length === 0 }"
     >
       <div class="profile-chart">
-        <div class="profile-chart__canvas" @click="emit('viewProfile')">
+        <div
+          class="profile-chart__canvas"
+          role="button"
+          tabindex="0"
+          aria-label="查看个人档案"
+          @click="emit('viewProfile')"
+          @keydown.enter="emit('viewProfile')"
+          @keydown.space.prevent="emit('viewProfile')"
+        >
           <VChart
             v-if="radarOption"
             class="profile-chart__echart"
@@ -322,7 +330,6 @@ const radarOption = computed(() => {
   &:hover,
   &:focus-visible {
     text-decoration: underline;
-    outline: none;
   }
 }
 
@@ -491,7 +498,6 @@ const radarOption = computed(() => {
     &:hover,
     &:focus-visible {
       text-decoration: underline;
-      outline: none;
     }
   }
 

@@ -107,17 +107,17 @@ function handleClosed() {
           <el-descriptions-item label="模板名称">{{ detail.templateName }}</el-descriptions-item>
           <el-descriptions-item label="模板编码">{{ detail.templateCode }}</el-descriptions-item>
           <el-descriptions-item label="导出类型">
-            {{ detail.exportTypeLabel ?? detail.exportType }}
+            {{ detail.exportTypeLabel ?? '—' }}
           </el-descriptions-item>
           <el-descriptions-item label="范围">
-            {{ detail.scopeTypeLabel ?? detail.scopeType ?? '-' }}
+            {{ detail.scopeTypeLabel ?? '—' }}
           </el-descriptions-item>
           <el-descriptions-item label="渲染模式">
-            {{ detail.templateModeLabel ?? detail.templateMode ?? '-' }}
+            {{ detail.templateModeLabel ?? '—' }}
           </el-descriptions-item>
           <el-descriptions-item label="纸张 / 方向">
             {{ detail.paperSize ?? '-' }} /
-            {{ detail.orientationLabel ?? detail.orientation ?? '-' }}
+            {{ detail.orientationLabel ?? '—' }}
           </el-descriptions-item>
           <el-descriptions-item label="版本 / 默认">
             v{{ detail.version }} / {{ detail.isDefault === 1 ? '默认' : '非默认' }}

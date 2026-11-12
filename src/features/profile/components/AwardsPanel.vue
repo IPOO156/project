@@ -31,7 +31,10 @@ defineProps<{
         <div class="award-item__body">
           <div class="award-item__name">{{ a.category }}</div>
           <div class="award-item__meta">
-            <el-tag size="small" type="warning" effect="plain">{{ a.maxLevel }}</el-tag>
+            <!-- activities 回落数据没有奖项等级，此时不渲染空标签 -->
+            <el-tag v-if="a.maxLevel" size="small" type="warning" effect="plain">
+              {{ a.maxLevel }}
+            </el-tag>
             <span>共 {{ a.totalCount }} 项</span>
             <span v-if="a.latestTime">最近 {{ a.latestTime }}</span>
           </div>

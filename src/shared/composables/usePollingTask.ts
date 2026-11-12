@@ -30,6 +30,9 @@ export const TASK_STATUS_FAILED = 3
 /** 默认轮询间隔（毫秒） */
 const DEFAULT_INTERVAL = 3000
 
+/** 默认连续失败上限：接口持续异常时停止轮询，避免无限重试 */
+const DEFAULT_MAX_FAILURES = 3
+
 export interface PollingTaskOptions<T> {
   /** 按任务 id 拉取最新状态 */
   fetch: (id: number) => Promise<T>
@@ -42,8 +45,12 @@ export interface PollingTaskOptions<T> {
   onUpdate: (data: T, id: number) => boolean
   /** 轮询间隔（毫秒），默认 3000 */
   interval?: number
+  /** 连续失败上限，达到后停止轮询并触发 onError，默认 3 */
+  maxFailures?: number
   /** 任务到达终态时回调，ok 为 true 表示成功完成 */
   onFinish?: (id: number, ok: boolean) => void
+  /** 连续失败达到上限时回调（此时轮询已停止，避免接口异常时无限重试） */
+  onError?: (id: number, error: unknown) => void
 }
 
 export interface UsePollingTaskReturn {
@@ -59,7 +66,10 @@ export interface UsePollingTaskReturn {
 
 export function usePollingTask<T>(options: PollingTaskOptions<T>): UsePollingTaskReturn {
   const timers = new Map<number, ReturnType<typeof setInterval>>()
+  /** 每个任务的连续失败次数；成功一次即清零 */
+  const failures = new Map<number, number>()
   const interval = options.interval ?? DEFAULT_INTERVAL
+  const maxFailures = options.maxFailures ?? DEFAULT_MAX_FAILURES
 
   function stop(id: number) {
     const timer = timers.get(id)
@@ -67,11 +77,13 @@ export function usePollingTask<T>(options: PollingTaskOptions<T>): UsePollingTas
       clearInterval(timer)
       timers.delete(id)
     }
+    failures.delete(id)
   }
 
   function stopAll() {
     timers.forEach((timer) => clearInterval(timer))
     timers.clear()
+    failures.clear()
   }
 
   function isPolling(id: number): boolean {
@@ -92,13 +104,22 @@ export function usePollingTask<T>(options: PollingTaskOptions<T>): UsePollingTas
             stop(id)
             return
           }
+          failures.delete(id)
           const status = options.getStatus(data)
           if (status === TASK_STATUS_FINISHED || status === TASK_STATUS_FAILED) {
             stop(id)
             options.onFinish?.(id, status === TASK_STATUS_FINISHED)
           }
-        } catch {
-          // 静默处理单次轮询失败，下个周期重试
+        } catch (error) {
+          // 单次失败继续等下一周期；连续失败达到上限则停止并通知调用方，
+          // 避免接口持续异常时每 3 秒无限重试、进度永久停在「进行中」。
+          const count = (failures.get(id) ?? 0) + 1
+          if (count >= maxFailures) {
+            stop(id)
+            options.onError?.(id, error)
+            return
+          }
+          failures.set(id, count)
         }
       }, interval),
     )

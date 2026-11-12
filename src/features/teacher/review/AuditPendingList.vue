@@ -7,6 +7,7 @@ import { batchApproveAuditTasks, listAuditPending } from '@/shared/api/teacher-a
 import { useDebounce } from '@/shared/composables/useDebounce'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { AUDIT_BUSINESS_TYPES } from '@/shared/constants/dict'
+import EmptyState from '@/shared/ui/EmptyState.vue'
 import { formatDateTime } from '@/shared/utils/time'
 import AuditDetailDialog from './AuditDetailDialog.vue'
 
@@ -33,6 +34,8 @@ const filters = reactive({
 
 // ── 列表 ──
 const loading = ref(false)
+/** 加载失败：与「确实没有待审任务」区分开 */
+const loadError = ref(false)
 const list = ref<AuditPendingItem[]>([])
 // 首次拿到非空待审列表后只播一次，翻页 / 筛选改变行数不会重播
 const staggerActive = useFirstLoadStagger(() => list.value.length)
@@ -60,14 +63,17 @@ async function loadList() {
     const res = await listAuditPending(buildQuery())
     list.value = res?.list ?? []
     total.value = res?.pagination?.total ?? list.value.length
+    loadError.value = false
     // 当前页被审批空后回退一页
     if (page.value > 1 && list.value.length === 0) {
       page.value -= 1
       void loadList()
     }
   } catch {
+    // 失败与空列表要区分：保留错误标记，由表格空态区渲染可重试提示
     list.value = []
     total.value = 0
+    loadError.value = true
   } finally {
     loading.value = false
   }
@@ -91,7 +97,7 @@ function onKeywordInput() {
 // ── 展示辅助 ──
 function businessLabel(row: AuditPendingItem): string {
   if (row.archiveTypeLabel) return row.archiveTypeLabel
-  return AUDIT_BUSINESS_TYPES[row.type] ?? row.type
+  return AUDIT_BUSINESS_TYPES[row.type] ?? '其他业务'
 }
 
 function statusTagType(status: number): 'success' | 'warning' | 'info' | 'danger' {
@@ -301,6 +307,14 @@ onMounted(() => void loadList())
               </el-button>
             </template>
           </el-table-column>
+          <template #empty>
+            <EmptyState v-if="loadError" text="待审核列表加载失败" compact>
+              <el-button type="primary" size="small" :icon="RefreshCw" @click="loadList">
+                重新加载
+              </el-button>
+            </EmptyState>
+            <EmptyState v-else text="暂无待审核任务" compact />
+          </template>
         </el-table>
 
         <div class="audit-pagination">

@@ -4,7 +4,9 @@
  *
  * 纯展示子组件：只负责菜单定位与渲染，具体的关闭/导航动作由父组件 NavTabs 处理。
  */
-defineProps<{
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+
+const props = defineProps<{
   visible: boolean
   x: number
   y: number
@@ -14,17 +16,66 @@ defineProps<{
   hasClosableTabs: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   closeCurrent: []
   closeOthers: []
   closeAll: []
+  /** 请求关闭菜单（Escape 或焦点离开时由父组件收起） */
+  close: []
 }>()
+
+const menuRef = ref<HTMLElement>()
+
+/** 当前可用菜单项：跳过 disabled 项，方向键只在可操作项之间移动 */
+function focusableItems(): HTMLButtonElement[] {
+  return Array.from(
+    menuRef.value?.querySelectorAll<HTMLButtonElement>('.nav-tabs__menu-item:not(:disabled)') ?? [],
+  )
+}
+
+watch(
+  () => props.visible,
+  async (visible) => {
+    if (!visible) return
+    await nextTick()
+    focusableItems()[0]?.focus()
+  },
+)
+
+function onKeydown(event: KeyboardEvent) {
+  if (!props.visible) return
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    emit('close')
+    return
+  }
+  const items = focusableItems()
+  if (items.length === 0) return
+  const index = items.indexOf(document.activeElement as HTMLButtonElement)
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    items[(index + 1) % items.length]?.focus()
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    items[(index - 1 + items.length) % items.length]?.focus()
+  } else if (event.key === 'Home') {
+    event.preventDefault()
+    items[0]?.focus()
+  } else if (event.key === 'End') {
+    event.preventDefault()
+    items[items.length - 1]?.focus()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
   <Teleport to="body">
     <div
       v-if="visible"
+      ref="menuRef"
       class="nav-tabs__menu"
       :style="{ top: `${y}px`, left: `${x}px` }"
       role="menu"
