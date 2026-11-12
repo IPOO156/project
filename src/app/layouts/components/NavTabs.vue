@@ -314,6 +314,7 @@ function onKeydown(e: KeyboardEvent, path: string, index: number) {
       @close-current="onCloseCurrent"
       @close-others="onCloseOthers"
       @close-all="onCloseAll"
+      @close="hideContextMenu"
     />
   </div>
 </template>

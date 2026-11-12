@@ -13,7 +13,7 @@ import type { ScheduledTaskItem } from '@/shared/types/teacher'
  * 教师端无等价接口，属管理端功能，前端在此统一展示。
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Clock, Plus, RefreshCw, Search } from 'lucide-vue-next'
+import { Clock, Info, Plus, RefreshCw, Search } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import {
   deleteScheduledTask,
@@ -53,10 +53,12 @@ function runStatusTagType(status: number | null): 'success' | 'danger' | 'info' 
   return 'info'
 }
 
-/** 分组字段允许自定义文本：已知分组显示中文，未知值原样显示并用 title 保留原码 */
+/** 分组字段允许自定义文本：已知分组显示中文；未收录的中文分组原样显示，英文分组归一为「其他分组」 */
 function taskGroupLabel(group: string | null) {
   if (!group) return '-'
-  return SCHEDULED_TASK_GROUPS[group] ?? group
+  if (SCHEDULED_TASK_GROUPS[group]) return SCHEDULED_TASK_GROUPS[group]
+  // 分组是自由文本，未收录的英文分组不直接外露
+  return /[\u4E00-\u9FA5]/.test(group) ? group : '其他分组'
 }
 
 async function loadList() {
@@ -70,6 +72,11 @@ async function loadList() {
     })
     list.value = res?.list ?? []
     total.value = res?.total ?? list.value.length
+    // 删除末页最后一条后回退一页，避免停留在空页
+    if (page.value > 1 && list.value.length === 0) {
+      page.value -= 1
+      void loadList()
+    }
   } catch {
     list.value = []
     total.value = 0
@@ -245,11 +252,21 @@ onMounted(() => void loadList())
       </div>
       <div class="mc-card__body">
         <el-table v-loading="loading" :data="list" stripe>
-          <el-table-column prop="taskName" label="任务名称" min-width="160" />
-          <el-table-column prop="taskCode" label="任务编码" width="170" show-overflow-tooltip>
-            <template #default="{ row }"
-              ><span class="mc-num">{{ row.taskCode }}</span></template
-            >
+          <!-- 任务编码是给运维排障的内部标识，不作为普通列展示：
+               中文任务名为主，编码收进名称旁的提示图标与详情抽屉。 -->
+          <el-table-column prop="taskName" label="任务名称" min-width="200">
+            <template #default="{ row }">
+              <div class="scheduled-task__name">
+                <span class="scheduled-task__name-text">{{ row.taskName }}</span>
+                <el-tooltip
+                  v-if="row.taskCode"
+                  :content="`任务编码：${row.taskCode}`"
+                  placement="top"
+                >
+                  <Info :size="13" class="scheduled-task__name-code" />
+                </el-tooltip>
+              </div>
+            </template>
           </el-table-column>
           <el-table-column prop="taskGroup" label="分组" width="110">
             <template #default="{ row }">
@@ -363,6 +380,25 @@ onMounted(() => void loadList())
 }
 
 .scheduled-task {
+  &__name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  &__name-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__name-code {
+    flex-shrink: 0;
+    color: var(--el-text-color-placeholder);
+    cursor: help;
+  }
+
   &__total {
     font-size: 13px;
     color: var(--el-text-color-secondary);

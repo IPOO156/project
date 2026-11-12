@@ -92,6 +92,8 @@ async function handleApprove() {
   try {
     await approveAuditTask(detail.value.taskId, {})
     ElMessage.success('已审核通过')
+    // 评分重算由后端在最后一步通过时异步触发（接口文档 4.3），前端不再重复调用：
+    // 审核教师通常没有 score:recalculate 权限，主动调用只会弹「重算失败」误导用户。
     handleClose()
     emit('processed')
   } catch {

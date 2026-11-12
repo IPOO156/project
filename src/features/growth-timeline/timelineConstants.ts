@@ -118,6 +118,27 @@ export function findRingBySemester(semester: string, cohortYear: number): Semest
   return buildSemesterRings(cohortYear)[level - 1]
 }
 
+/**
+ * 按事件日期推导入学年轮层级（1~8）。
+ * 仅用于「后端未回传学期时，把年轮小球放回对应圆周」这类纯视觉定位；
+ * 不作为学期展示、回填或提交的依据（学期仍只认后端 semesterName）。
+ */
+export function inferRingLevelByDate(dateStr: string, cohortYear: number): number | undefined {
+  if (!dateStr) return undefined
+  const date = new Date(`${dateStr.slice(0, 10)}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return undefined
+
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  // 学年从 9 月起算：9~12 月属当年第一学期，1 月仍属上一年 9 月开始的第一学期，
+  // 2~8 月属上一学年第二学期。
+  const startYear = month >= 9 ? year : year - 1
+  const term = month >= 9 || month <= 1 ? 1 : 2
+  const level = (startYear - cohortYear) * 2 + term
+
+  return level >= 1 && level <= SEMESTER_RING_COUNT ? level : undefined
+}
+
 export function getSemesterIndex(semester: string, cohortYear: number): number {
   return findRingBySemester(semester, cohortYear)?.level ?? 0
 }

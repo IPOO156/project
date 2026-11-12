@@ -14,14 +14,18 @@ export interface ArchiveExportPreviewSection {
 /** 导出用途（§4.17：internal 内部查看 / external 外部投递） */
 export type ArchivePurpose = 'internal' | 'external'
 
-/** 预览不可用时回退的固定栏目 */
+/**
+ * 预览不可用时回退的固定栏目。
+ * 必须使用档案导出栏目 code（文档 4.16 / 5.x：academicInfo、dimensionScores、awards、
+ * practices、careerPlans），此前误用了简历栏目 code（education/skills/certificates/
+ * selfEvaluation），后端会因「导出栏目不存在」直接 400。
+ */
 const ARCHIVE_FALLBACK_SECTIONS: readonly ArchiveExportPreviewSection[] = [
-  { code: 'education', name: '教育背景', selected: true, disabled: false },
-  { code: 'awards', name: '获奖情况', selected: true, disabled: false },
-  { code: 'skills', name: '技能与兴趣', selected: true, disabled: false },
+  { code: 'academicInfo', name: '学籍信息', selected: true, disabled: false },
+  { code: 'dimensionScores', name: '画像分数', selected: true, disabled: false },
+  { code: 'awards', name: '获奖记录', selected: true, disabled: false },
   { code: 'practices', name: '实践经历', selected: true, disabled: false },
-  { code: 'certificates', name: '证书', selected: true, disabled: false },
-  { code: 'selfEvaluation', name: '自我评价', selected: true, disabled: false },
+  { code: 'careerPlans', name: '成长规划', selected: true, disabled: false },
 ]
 
 /** 格式化后端返回的业务有效期（expireAt）为 YYYY-MM-DD HH:mm */

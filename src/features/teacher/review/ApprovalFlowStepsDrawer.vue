@@ -45,19 +45,19 @@ const scopeRuleOptions = [
 ]
 
 function scopeTypeLabel(type: number) {
-  return scopeTypeOptions.find((t) => t.value === type)?.label ?? String(type)
+  return scopeTypeOptions.find((t) => t.value === type)?.label ?? '其他范围'
 }
 
 function scopeRuleLabel(rule: string | null | undefined) {
   if (!rule) return '-'
-  return scopeRuleOptions.find((r) => r.value === rule)?.label ?? rule
+  return scopeRuleOptions.find((r) => r.value === rule)?.label ?? '自定义规则'
 }
 
-/** 退回动作编码 → 中文；未知值原样显示 */
+/** 退回动作编码 → 中文；未知值不再原样显示编码 */
 function rejectActionLabel(action: string | null | undefined) {
   if (!action || action === 'end') return '结束'
   if (action === 'return') return '退回'
-  return action
+  return '其他动作'
 }
 
 const loading = ref(false)
@@ -81,11 +81,11 @@ async function loadRoles() {
   }
 }
 
-/** 角色 id → 显示名（角色名（编码）），未命中退回 id 本身，不隐藏信息 */
+/** 角色 id → 显示名，未命中显示「角色 + 编号」，不把英文角色编码抛给用户 */
 function roleLabel(roleId: number | null | undefined): string {
   if (roleId == null) return '-'
   const role = roles.value.find((r) => r.roleId === roleId)
-  return role ? `${role.roleName}（${role.roleCode}）` : `角色 ID ${roleId}`
+  return role ? role.roleName : `角色 ${roleId}`
 }
 
 const stepDialogVisible = ref(false)
@@ -111,7 +111,7 @@ const stepForm = reactive<ApprovalFlowStep>({
 const roleOptions = computed<{ value: number; label: string }[]>(() => {
   const options = roles.value.map((r) => ({
     value: r.roleId,
-    label: `${r.roleName}（${r.roleCode}）`,
+    label: r.roleName,
   }))
   if (stepForm.roleId != null && !options.some((o) => o.value === stepForm.roleId)) {
     options.push({ value: stepForm.roleId, label: `角色 ID ${stepForm.roleId}（已不存在）` })

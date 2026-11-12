@@ -47,6 +47,27 @@ const pickerVisible = ref(false)
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp']
 
+/** 与组件 tip 文案一致的上传限制；仅拦截浏览器选择层拦不住的文件（拖拽/改选"所有文件"） */
+const MAX_FILE_SIZE_MB = 10
+const ALLOWED_EXTS = [...IMAGE_EXTS, 'pdf']
+const ALLOWED_MIMES = ['application/pdf']
+
+/** 返回不合规原因，null 表示通过 */
+function validateFile(file: File): string | null {
+  if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+    return `「${file.name}」超过 ${MAX_FILE_SIZE_MB}MB，请压缩后重试`
+  }
+  const type = (file.type || '').toLowerCase()
+  const typeOk =
+    ALLOWED_EXTS.includes(extOf(file.name)) ||
+    type.startsWith('image/') ||
+    ALLOWED_MIMES.includes(type)
+  if (!typeOk) {
+    return `「${file.name}」格式不支持，仅支持 jpg / png / pdf`
+  }
+  return null
+}
+
 /** 读取文件回填的 fileId（后端返回后写入，未上传成功则为 undefined） */
 function getFileId(file: UploadFile | UploadUserFile): number | undefined {
   const fileId = (file as EvidenceUploadFile).fileId
@@ -121,9 +142,17 @@ function handlePicked(files: PickedAchievementFile[]) {
  * 提交映射（submission.ts toEvidenceFileIds）据此生成 evidenceFileIds。
  */
 async function handleChange(_file: UploadFile, list: UploadUserFile[]) {
-  const pending = list.filter((f) => getFileId(f) === undefined && f.status !== 'uploading')
+  // accept 只是选择器过滤，拖拽或手动切「所有文件」仍可绕过；上传前在此兜底校验类型与大小
+  const accepted = list.filter((f) => {
+    if (!f.raw || f.status === 'success' || getFileId(f) !== undefined) return true
+    const reason = validateFile(f.raw)
+    if (reason) ElMessage.warning(reason)
+    return !reason
+  })
+  const target = accepted.length === list.length ? list : accepted
+  const pending = target.filter((f) => getFileId(f) === undefined && f.status !== 'uploading')
   if (pending.length === 0) {
-    fileList.value = [...list]
+    fileList.value = [...target]
     return
   }
   uploading.value = true
@@ -134,7 +163,7 @@ async function handleChange(_file: UploadFile, list: UploadUserFile[]) {
       if (!raw) continue
       f.status = 'uploading'
       if (typeof uid === 'number') progressMap[uid] = 0
-      fileList.value = [...list]
+      fileList.value = [...target]
       try {
         const res = await uploadFile({
           file: raw,
@@ -148,7 +177,7 @@ async function handleChange(_file: UploadFile, list: UploadUserFile[]) {
         })
         ;(f as EvidenceUploadFile).fileId = res.fileId
         f.status = 'success'
-        fileList.value = [...list]
+        fileList.value = [...target]
       } catch (e) {
         f.status = 'fail'
         // 响应拦截器已 toast 业务错误；这里仅兜底"静默 404"等无 message 的场景，避免重复弹窗
@@ -156,7 +185,7 @@ async function handleChange(_file: UploadFile, list: UploadUserFile[]) {
           (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
           (e as Error)?.message
         if (!msg) ElMessage.error('文件上传失败，请重试')
-        fileList.value = [...list]
+        fileList.value = [...target]
       } finally {
         if (typeof uid === 'number') delete progressMap[uid]
       }
@@ -164,7 +193,7 @@ async function handleChange(_file: UploadFile, list: UploadUserFile[]) {
   } finally {
     uploading.value = false
     // 失败文件移出列表，避免把未上传成功的文件带进 evidenceFileIds
-    const kept = list.filter(
+    const kept = target.filter(
       (f) => f.status === 'success' || f.status === 'uploading' || getFileId(f) !== undefined,
     )
     fileList.value = kept

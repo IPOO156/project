@@ -346,7 +346,6 @@ onMounted(() => void loadAnnouncements())
       </div>
       <div class="mc-card__body">
         <el-table v-loading="announcementLoading" :data="announcements" stripe>
-          <el-table-column prop="announcementId" label="ID" width="70" />
           <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
           <el-table-column prop="content" label="内容" min-width="220" show-overflow-tooltip />
           <el-table-column label="对象" width="100" align="center">

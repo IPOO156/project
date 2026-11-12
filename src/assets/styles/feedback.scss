@@ -101,6 +101,36 @@ html:has(#app :is(.layout--teacher, .layout--admin)) .el-drawer.btt {
   border-radius: var(--mc-radius-large) var(--mc-radius-large) 0 0;
 }
 
+/* ── ①c 键盘焦点兜底
+
+   学生端没有统一的 focus-visible 规则（教师/管理员端在 _buttons.scss 里有），
+   这里给原生可聚焦元素补一个最低限度的描边。用 :where() 保证零特异性，
+   不会覆盖各组件自己的焦点样式。 */
+:where(a, button, [role='button'], [tabindex='0']):focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+/* ── ①b 窄屏宽度兜底
+
+   EP 的 el-dialog 用内联 width 写死宽度且没有 max-width，el-drawer 的 size 同样无上限，
+   390 宽下 760px 弹窗 / 860px 抽屉会整块溢出到视口外。
+   这里只加宽度上限与顶部留白，不改任何组件的视觉外观。 */
+@media (max-width: 768px) {
+  .el-dialog {
+    max-width: calc(100vw - 24px);
+    margin-top: 8vh;
+  }
+
+  .el-drawer {
+    max-width: 100vw;
+  }
+
+  .el-message-box {
+    max-width: calc(100vw - 24px);
+  }
+}
+
 /* ── ②b 面板内按钮 —— 把 _buttons.scss 的素面语言下沉到浮层
 
    _buttons.scss 的作用域是 `#app .layout--teacher/.layout--admin`，浮层按钮在 body 下，

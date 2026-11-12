@@ -1,5 +1,5 @@
 import type { PaginatedData, PaginationParams } from '@/shared/types/types'
-import { reactive } from 'vue'
+import { computed, reactive } from 'vue'
 import { usePagination } from './usePagination'
 
 export function useTableQuery<T>(
@@ -7,11 +7,23 @@ export function useTableQuery<T>(
   defaultForm: Record<string, unknown> = {},
 ) {
   const searchForm = reactive<Record<string, unknown>>({ ...defaultForm })
-  const { loading, list, pagination, fetchData, resetPage } = usePagination<T>(fetchFn)
+  const {
+    loading,
+    list,
+    pagination: rawPagination,
+    fetchData: request,
+    resetPage,
+    pageNum,
+    pageSize,
+  } = usePagination<T>(fetchFn)
+
+  function fetchData(extra?: Record<string, unknown>) {
+    return request({ ...searchForm, ...extra })
+  }
 
   async function handleSearch() {
     resetPage()
-    await fetchData(searchForm)
+    await fetchData()
   }
 
   async function handleReset() {
@@ -19,12 +31,30 @@ export function useTableQuery<T>(
     await handleSearch()
   }
 
+  /**
+   * 翻页 / 改每页条数同样要带上当前筛选条件。
+   * usePagination 内部的 onChange 只带分页参数，这里用同一份 searchForm 重新拼一次，
+   * 避免「先搜索再翻页」时筛选条件丢失。
+   */
+  const pagination = computed(() => ({
+    ...rawPagination.value,
+    onChange: (page: number) => {
+      pageNum.value = page
+      void fetchData()
+    },
+    onPageSizeChange: (size: number) => {
+      pageSize.value = size
+      pageNum.value = 1
+      void fetchData()
+    },
+  }))
+
   return {
     searchForm,
     loading,
     list,
     pagination,
-    fetchData: (extra?: Record<string, unknown>) => fetchData({ ...searchForm, ...extra }),
+    fetchData,
     handleSearch,
     handleReset,
   }

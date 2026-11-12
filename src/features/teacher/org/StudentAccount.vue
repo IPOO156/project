@@ -175,7 +175,7 @@ function openEdit(row: UserListItem) {
 
 async function handleSaveEdit() {
   if (!editForm.name.trim()) {
-    ElMessage.warning('姓名不能为空')
+    ElMessage.warning('请填写姓名')
     return
   }
   if (!editUser.value) return
@@ -222,6 +222,7 @@ onMounted(() => {
           <el-input
             v-model="search.keyword"
             class="u-w-180"
+            maxlength="50"
             placeholder="姓名 / 学号"
             clearable
             @keyup.enter="handleSearch"
@@ -256,7 +257,7 @@ onMounted(() => {
         <el-table v-loading="loading" class="u-w-full" :data="users" max-height="600">
           <el-table-column type="index" label="序号" width="56" align="right" />
           <el-table-column prop="userNo" label="学号" width="120" class-name="col-secondary" />
-          <el-table-column label="姓名" width="112">
+          <el-table-column label="姓名" width="112" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="col-primary">{{ row.name }}</span>
             </template>
@@ -295,22 +296,18 @@ onMounted(() => {
                 <el-button text type="primary" size="small" @click="openEdit(row as UserListItem)">
                   编辑
                 </el-button>
-                <el-button
-                  text
-                  type="warning"
-                  size="small"
-                  @click="openPasswordDialog(row as UserListItem)"
-                >
-                  重置密码
-                </el-button>
-                <el-button
-                  text
-                  :type="row.status === 1 ? 'danger' : 'success'"
-                  size="small"
-                  @click="handleToggleStatus(row as UserListItem)"
-                >
-                  {{ row.status === 1 ? '禁用账号' : '启用账号' }}
-                </el-button>
+                <!-- 低风险操作沉到「更多」：4 个文字按钮并排会超出操作列宽，
+                     在最右侧列被表格 overflow 裁掉，导致「禁用账号」不可点 -->
+                <template #more>
+                  <el-dropdown-item @click="openPasswordDialog(row as UserListItem)">
+                    重置密码
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleToggleStatus(row as UserListItem)">
+                    <span :class="row.status === 1 ? 'row-actions__danger' : ''">
+                      {{ row.status === 1 ? '禁用账号' : '启用账号' }}
+                    </span>
+                  </el-dropdown-item>
+                </template>
               </RowActions>
             </template>
           </el-table-column>
@@ -348,7 +345,8 @@ onMounted(() => {
             v-model="passwordForm.newPassword"
             type="password"
             show-password
-            placeholder="输入新密码（至少 6 位）"
+            maxlength="32"
+            placeholder="输入新密码（6-32 位）"
           />
         </el-form-item>
       </el-form>
@@ -396,13 +394,13 @@ onMounted(() => {
           <span>{{ editUser?.userNo }}</span>
         </el-form-item>
         <el-form-item label="姓名" required>
-          <el-input v-model="editForm.name" placeholder="姓名" />
+          <el-input v-model="editForm.name" maxlength="50" show-word-limit placeholder="姓名" />
         </el-form-item>
         <el-form-item label="邮箱">
-          <el-input v-model="editForm.email" placeholder="邮箱" />
+          <el-input v-model="editForm.email" maxlength="254" placeholder="邮箱" />
         </el-form-item>
         <el-form-item label="手机">
-          <el-input v-model="editForm.phone" placeholder="手机" />
+          <el-input v-model="editForm.phone" maxlength="11" placeholder="手机" />
         </el-form-item>
       </el-form>
       <template #footer>

@@ -45,10 +45,10 @@ function actionTag(action: string | null): LogActionTag {
   return LOG_ACTION_TYPES[action ?? '']?.tag ?? 'info'
 }
 function actionLabel(action: string | null): string {
-  return LOG_ACTION_TYPES[action ?? '']?.label ?? action ?? '-'
+  return LOG_ACTION_TYPES[action ?? '']?.label ?? '其他操作'
 }
 function moduleLabel(module: string | null): string {
-  return LOG_MODULES[module ?? ''] ?? module ?? '-'
+  return LOG_MODULES[module ?? ''] ?? '其他模块'
 }
 </script>
 

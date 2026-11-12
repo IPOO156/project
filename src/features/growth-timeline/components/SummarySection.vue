@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
+import type { GrowthSummary } from '../composables/useGrowthTimeline'
 import type { GrowthExperience } from '../timelineConstants'
 import { computed, ref, watch } from 'vue'
 import { useScrollReveal } from '../composables/useScrollReveal'
 
 interface Props {
   experiences: GrowthExperience[]
+  /** 后端 summary（成长时间轴列表接口汇总）；有值时优先展示后端口径 */
+  summary?: GrowthSummary | null
 }
 
 const props = defineProps<Props>()
@@ -17,13 +20,24 @@ const { isVisible } = useScrollReveal(sectionRef, {
 })
 
 const totalSkills = computed(() => props.experiences.reduce((sum, e) => sum + e.skills.length, 0))
-const avgGrowth = computed(() => {
-  return props.experiences.length
-    ? Math.round(
-        props.experiences.reduce((sum, e) => sum + e.skills.reduce((s, k) => s + k.growth, 0), 0) /
-          Math.max(totalSkills.value, 1),
-      )
-    : 0
+const totalGrowth = computed(() =>
+  props.experiences.reduce((sum, e) => sum + e.skills.reduce((s, k) => s + k.growth, 0), 0),
+)
+
+/**
+ * 四张卡的取值：后端 summary 优先，字段缺失才回落到本地事件计算。
+ * null 表示「没有数据」，与真实的 0 区分，模板中渲染为占位符「—」。
+ */
+const stats = computed(() => {
+  const summary = props.summary
+  return {
+    experiences: summary?.experiences ?? props.experiences.length,
+    skills: summary?.skills ?? (totalSkills.value > 0 ? totalSkills.value : null),
+    avgGrowth:
+      summary?.averageGrowth ??
+      (totalSkills.value > 0 ? Math.round(totalGrowth.value / totalSkills.value) : null),
+    potential: summary?.potential ?? null,
+  }
 })
 
 const displayExperiences = ref(0)
@@ -46,26 +60,18 @@ function animateValue(targetRef: Ref<number>, target: number, duration = 1200) {
   requestAnimationFrame(step)
 }
 
+function animateAll() {
+  animateValue(displayExperiences, stats.value.experiences)
+  animateValue(displayTotalSkills, stats.value.skills ?? 0)
+  animateValue(displayAvgGrowth, stats.value.avgGrowth ?? 0)
+}
+
 watch(isVisible, (visible) => {
-  if (!visible) return
-  animateValue(displayExperiences, props.experiences.length)
-  animateValue(displayTotalSkills, totalSkills.value)
-  animateValue(displayAvgGrowth, avgGrowth.value)
+  if (visible) animateAll()
 })
 
-watch(
-  () => props.experiences.length,
-  (newVal) => {
-    if (isVisible.value) animateValue(displayExperiences, newVal)
-  },
-)
-
-watch(totalSkills, (newVal) => {
-  if (isVisible.value) animateValue(displayTotalSkills, newVal)
-})
-
-watch(avgGrowth, (newVal) => {
-  if (isVisible.value) animateValue(displayAvgGrowth, newVal)
+watch(stats, () => {
+  if (isVisible.value) animateAll()
 })
 </script>
 
@@ -83,15 +89,17 @@ watch(avgGrowth, (newVal) => {
           <div class="summary-label">经历</div>
         </div>
         <div class="summary-card" :class="{ 'is-revealed': isVisible }">
-          <div class="summary-value">{{ displayTotalSkills }}</div>
+          <div class="summary-value">{{ stats.skills === null ? '—' : displayTotalSkills }}</div>
           <div class="summary-label">技能</div>
         </div>
         <div class="summary-card" :class="{ 'is-revealed': isVisible }">
-          <div class="summary-value">{{ displayAvgGrowth }}%</div>
+          <div class="summary-value">
+            {{ stats.avgGrowth === null ? '—' : `${displayAvgGrowth}%` }}
+          </div>
           <div class="summary-label">平均成长</div>
         </div>
         <div class="summary-card" :class="{ 'is-revealed': isVisible }">
-          <div class="summary-value">∞</div>
+          <div class="summary-value">{{ stats.potential ?? '—' }}</div>
           <div class="summary-label">潜力</div>
         </div>
       </div>

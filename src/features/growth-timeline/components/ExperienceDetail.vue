@@ -104,57 +104,68 @@ function handleBackdropClick(event: MouseEvent) {
 <template>
   <div
     v-show="isAnimating || isOpen"
-    class="experience-detail"
+    class="experience-detail-shell"
     :class="{ 'is-open': isOpen }"
-    @click="handleBackdropClick"
   >
-    <button class="detail-close" aria-label="关闭" title="关闭" @click.stop="handleClose">
-      <X :size="24" />
-    </button>
+    <div class="experience-detail" :class="{ 'is-open': isOpen }" @click="handleBackdropClick">
+      <div v-if="experience" class="detail-content">
+        <div class="detail-header">
+          <span v-if="semesterLabel" class="detail-semester">{{ semesterLabel }}</span>
+          <span v-if="experience.statusLabel" class="detail-status">{{
+            experience.statusLabel
+          }}</span>
+          <span class="detail-date">{{ experience.date }}</span>
+        </div>
 
-    <div v-if="experience" class="detail-content">
-      <div class="detail-header">
-        <span v-if="semesterLabel" class="detail-semester">{{ semesterLabel }}</span>
-        <span v-if="experience.statusLabel" class="detail-status">{{
-          experience.statusLabel
-        }}</span>
-        <span class="detail-date">{{ experience.date }}</span>
-      </div>
+        <h2 class="detail-title">{{ experience.title }}</h2>
+        <p class="detail-desc">{{ experience.description }}</p>
 
-      <h2 class="detail-title">{{ experience.title }}</h2>
-      <p class="detail-desc">{{ experience.description }}</p>
+        <div class="detail-tags">
+          <span v-for="tag in experience.tags" :key="tag" class="detail-tag">{{ tag }}</span>
+        </div>
 
-      <div class="detail-tags">
-        <span v-for="tag in experience.tags" :key="tag" class="detail-tag">{{ tag }}</span>
-      </div>
-
-      <div class="detail-skills">
-        <h3 class="detail-subtitle">能力成长</h3>
-        <div v-for="skill in experience.skills" :key="skill.name" class="detail-skill">
-          <div class="skill-row">
-            <span class="skill-name">{{ skill.name }}</span>
-            <span class="skill-value">{{ skill.growth }}%</span>
-          </div>
-          <div class="skill-track">
-            <div class="skill-fill" :style="{ '--skill-growth': `${skill.growth}%` }" />
+        <div class="detail-skills">
+          <h3 class="detail-subtitle">能力成长</h3>
+          <div v-for="skill in experience.skills" :key="skill.name" class="detail-skill">
+            <div class="skill-row">
+              <span class="skill-name">{{ skill.name }}</span>
+              <span class="skill-value">{{ skill.growth }}%</span>
+            </div>
+            <div class="skill-track">
+              <div class="skill-fill" :style="{ '--skill-growth': `${skill.growth}%` }" />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="detail-actions">
-        <button class="detail-delete" aria-label="删除" title="删除" @click="handleDelete">
-          <Trash2 :size="20" />
-        </button>
+        <div class="detail-actions">
+          <button class="detail-delete" aria-label="删除" title="删除" @click="handleDelete">
+            <Trash2 :size="20" />
+          </button>
+        </div>
       </div>
     </div>
+
+    <!-- 关闭按钮放在滚动容器之外：.experience-detail 带 transform，
+         fixed 子元素会退化为相对它定位并随内容滚出视口 -->
+    <button class="detail-close" aria-label="关闭" title="关闭" @click="handleClose">
+      <X :size="24" />
+    </button>
   </div>
 </template>
 
 <style scoped lang="scss">
-.experience-detail {
+.experience-detail-shell {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: $z-overlay;
+  // 外壳不参与命中，避免面板缩放到 0 时整屏拦截页面点击
+  pointer-events: none;
+}
+
+.experience-detail {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   background: var(--gt-bg-page, #f4efe6);
   overflow-y: auto;
   transform: scale(0);
@@ -166,6 +177,7 @@ function handleBackdropClick(event: MouseEvent) {
     opacity 0.45s ease,
     border-radius 0.55s ease;
   will-change: transform, opacity;
+  pointer-events: auto;
 }
 
 .experience-detail.is-open {
@@ -175,7 +187,7 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 .detail-close {
-  position: fixed;
+  position: absolute;
   top: 5rem;
   right: 2rem;
   width: 44px;
@@ -189,7 +201,14 @@ function handleBackdropClick(event: MouseEvent) {
   align-items: center;
   justify-content: center;
   z-index: $z-overlay;
+  pointer-events: auto;
   @include transition-ui($duration-slow);
+}
+
+// 跟随面板一起淡入淡出（按钮已移出面板的 opacity 过渡范围）
+.experience-detail-shell:not(.is-open) .detail-close {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .detail-close:hover {
@@ -368,13 +387,16 @@ function handleBackdropClick(event: MouseEvent) {
 }
 
 @media (max-width: 768px) {
+  // 窄屏：顶部 56px 是站点顶栏（含用户头像），关闭按钮必须落在顶栏下方，
+  // 并留出右侧安全区，避免刘海屏/横屏时贴边。
   .detail-close {
-    top: 1rem;
-    right: 1rem;
+    top: calc(#{$header-height} + 12px);
+    right: calc(16px + env(safe-area-inset-right, 0px));
   }
 
+  // 顶部预留关闭按钮的高度，避免标题/日期/标签被按钮压住
   .detail-content {
-    padding: 10vh 1.25rem 4rem;
+    padding: calc(#{$header-height} + 68px) 1.25rem 4rem;
   }
 
   .detail-actions {

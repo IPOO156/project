@@ -157,7 +157,7 @@ function openEdit(row: UserListItem) {
 
 async function handleSaveEdit() {
   if (!editForm.name.trim()) {
-    ElMessage.warning('姓名不能为空')
+    ElMessage.warning('请填写姓名')
     return
   }
   if (!editUser.value) return
@@ -199,6 +199,7 @@ onMounted(() => void load())
           <el-input
             v-model="search.keyword"
             class="u-w-180"
+            maxlength="50"
             placeholder="姓名 / 工号"
             clearable
             @keyup.enter="handleSearch"
@@ -228,7 +229,7 @@ onMounted(() => void load())
         <el-table v-loading="loading" class="u-w-full" :data="users" max-height="600">
           <el-table-column type="index" label="序号" width="56" align="right" />
           <el-table-column prop="userNo" label="工号" width="120" class-name="col-secondary" />
-          <el-table-column label="姓名" width="112">
+          <el-table-column label="姓名" width="112" show-overflow-tooltip>
             <template #default="{ row }">
               <span class="col-primary">{{ row.name }}</span>
             </template>
@@ -238,7 +239,12 @@ onMounted(() => void load())
               <span class="col-secondary">{{ row.genderLabel ?? '-' }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="角色" width="112" class-name="col-secondary">
+          <el-table-column
+            label="角色"
+            width="112"
+            class-name="col-secondary"
+            show-overflow-tooltip
+          >
             <template #default="{ row }">{{ row.roleNames?.join('、') ?? '-' }}</template>
           </el-table-column>
           <el-table-column
@@ -270,22 +276,17 @@ onMounted(() => void load())
                 <el-button text type="primary" size="small" @click="openEdit(row as UserListItem)">
                   编辑
                 </el-button>
-                <el-button
-                  text
-                  type="warning"
-                  size="small"
-                  @click="openPasswordDialog(row as UserListItem)"
-                >
-                  重置密码
-                </el-button>
-                <el-button
-                  text
-                  :type="row.status === 1 ? 'danger' : 'success'"
-                  size="small"
-                  @click="handleToggleStatus(row as UserListItem)"
-                >
-                  {{ row.status === 1 ? '禁用账号' : '启用账号' }}
-                </el-button>
+                <!-- 与学生列表同因：4 个文字按钮并排超出操作列宽，最右侧被裁，沉到「更多」 -->
+                <template #more>
+                  <el-dropdown-item @click="openPasswordDialog(row as UserListItem)">
+                    重置密码
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleToggleStatus(row as UserListItem)">
+                    <span :class="row.status === 1 ? 'row-actions__danger' : ''">
+                      {{ row.status === 1 ? '禁用账号' : '启用账号' }}
+                    </span>
+                  </el-dropdown-item>
+                </template>
               </RowActions>
             </template>
           </el-table-column>
@@ -323,7 +324,8 @@ onMounted(() => void load())
             v-model="passwordForm.newPassword"
             type="password"
             show-password
-            placeholder="输入新密码（至少 6 位）"
+            maxlength="32"
+            placeholder="输入新密码（6-32 位）"
           />
         </el-form-item>
       </el-form>
@@ -379,13 +381,13 @@ onMounted(() => void load())
           <span>{{ editUser?.userNo }}</span>
         </el-form-item>
         <el-form-item label="姓名" required>
-          <el-input v-model="editForm.name" placeholder="姓名" />
+          <el-input v-model="editForm.name" maxlength="50" show-word-limit placeholder="姓名" />
         </el-form-item>
         <el-form-item label="邮箱">
-          <el-input v-model="editForm.email" placeholder="邮箱" />
+          <el-input v-model="editForm.email" maxlength="254" placeholder="邮箱" />
         </el-form-item>
         <el-form-item label="手机">
-          <el-input v-model="editForm.phone" placeholder="手机" />
+          <el-input v-model="editForm.phone" maxlength="11" placeholder="手机" />
         </el-form-item>
       </el-form>
       <template #footer>

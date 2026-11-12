@@ -7,6 +7,7 @@ import {
   useThemeStore,
   useUserStore,
 } from '@/app/stores/stores'
+import { getActivities } from '@/shared/api/activities'
 import { getDataCompleteness } from '@/shared/api/student'
 import { calcAggregateScore } from '@/shared/utils/score'
 import BasicInfoCard from './BasicInfoCard.vue'
@@ -42,11 +43,54 @@ onMounted(() => {
   archiveStore.fetchArchive()
   if (submissionStore.records.length === 0) submissionStore.fetchRecords()
   loadCompleteness()
+  void loadActivityAwards()
 })
 
 const interests = computed(() => archiveStore.interests)
-/** 个人奖项：只读展示 /profile/info 的 personalAwards 类别汇总（方案一，后端无 CRUD，不做手动增删改） */
-const personalAwards = computed(() => archiveStore.profileData?.personalAwards ?? [])
+
+/**
+ * 奖项兜底：/profile/info 的 personalAwards 依赖后端聚合，实测奖项审核通过后仍返回空数组，
+ * 导致「审核通过但档案里看不到奖项」。档案页本身不依赖 /achievements（成果墙），
+ * 这里直接用已有 GET /activities?type=award&status=2 在本地按类别汇总，保证审核通过的奖项可见。
+ * 后端 personalAwards 恢复聚合后优先使用后端口径，避免两份数据叠加。
+ */
+interface AwardSummary {
+  category: string
+  totalCount: number
+  maxLevel: string
+  latestTime: string
+}
+const activityAwards = ref<AwardSummary[]>([])
+
+async function loadActivityAwards() {
+  try {
+    const res = await getActivities({ type: 'award', status: 2, perPage: 100 })
+    const groups = new Map<string, { totalCount: number; latestTime: string }>()
+    for (const item of res.list) {
+      const category = item.archive_type_label || item.archiveTypeLabel || '奖项'
+      const time = (item.submit_time ?? item.submitTime ?? '').slice(0, 10)
+      const current = groups.get(category) ?? { totalCount: 0, latestTime: '' }
+      current.totalCount += 1
+      if (time > current.latestTime) current.latestTime = time
+      groups.set(category, current)
+    }
+    // activities 列表不带奖项等级，maxLevel 留空，由 AwardsPanel 隐藏等级标签
+    activityAwards.value = [...groups.entries()].map(([category, value]) => ({
+      category,
+      totalCount: value.totalCount,
+      maxLevel: '',
+      latestTime: value.latestTime,
+    }))
+  } catch {
+    activityAwards.value = []
+  }
+}
+
+/** 个人奖项：优先 /profile/info 的后端聚合，为空时回落到申报记录汇总 */
+const personalAwards = computed<AwardSummary[]>(() => {
+  const fromProfile = archiveStore.profileData?.personalAwards ?? []
+  return fromProfile.length > 0 ? fromProfile : activityAwards.value
+})
 /**
  * 获奖总数 = 各类别 totalCount 之和（后端按类别聚合，不再用列表行数）。
  * 加载失败时返回占位符：0 会在失败时与「确实没有获奖」混淆。
@@ -129,6 +173,7 @@ const totalCourses = computed<number | string>(() =>
 /** 加载失败后重试：带 force 绕过 store 的 60s 缓存，否则会直接返回而不会重新请求 */
 function handleRetryArchive() {
   void archiveStore.fetchArchive(true)
+  void loadActivityAwards()
 }
 
 // 无评分计算结果时返回 null（模板显占位符）：显示 0 会让学生误读为「本次得分就是 0 分」，

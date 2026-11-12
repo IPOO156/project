@@ -32,6 +32,12 @@ const paginatedList = computed(() => {
 
 const total = computed(() => submissionStore.filteredRecords.length)
 
+// 删除记录后总页数可能变少，把页码收敛到最后一页，避免停留在空页
+watch(total, (next) => {
+  const maxPage = Math.max(1, Math.ceil(next / pageSize.value))
+  if (pageNum.value > maxPage) pageNum.value = maxPage
+})
+
 const typeOptions = computed(() => {
   const map = APPLICATION_TYPE_MAP as Record<string, string>
   return Object.entries(map).map(([value, label]) => ({ value, label }))

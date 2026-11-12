@@ -186,6 +186,8 @@ const keyword = defineModel<string>('keyword', { required: true })
   // 模板编码是下划线分隔的长标识，保持单行，避免在字符中间断行
   &__code {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__default {

@@ -19,13 +19,13 @@ const detail = ref<ScheduledTaskDetail | null>(null)
 const groupLabel = computed(() => {
   const group = detail.value?.taskGroup
   if (!group) return '-'
-  return SCHEDULED_TASK_GROUPS[group] ? `${SCHEDULED_TASK_GROUPS[group]}（${group}）` : group
+  return SCHEDULED_TASK_GROUPS[group] ?? '其他分组'
 })
 
 const runTypeLabel = computed(() => {
   const runType = detail.value?.runType
   if (runType == null) return '-'
-  return detail.value?.runTypeLabel ?? SCHEDULED_RUN_TYPES[runType] ?? String(runType)
+  return detail.value?.runTypeLabel ?? SCHEDULED_RUN_TYPES[runType] ?? '未知方式'
 })
 
 const paramsText = computed(() => {

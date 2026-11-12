@@ -189,7 +189,12 @@ function handleMenuSelect(index: string) {
 
     <!-- 折叠 -->
     <div class="sidebar__footer">
-      <el-button text class="sidebar__collapse-btn" @click="appStore.toggleSidebar()">
+      <el-button
+        text
+        class="sidebar__collapse-btn"
+        :aria-label="appStore.isSidebarCollapsed ? '展开侧边栏' : '收起侧边栏'"
+        @click="appStore.toggleSidebar()"
+      >
         <component :is="appStore.isSidebarCollapsed ? ChevronRight : ChevronLeft" :size="16" />
         <span v-show="!appStore.isSidebarCollapsed">收起</span>
       </el-button>

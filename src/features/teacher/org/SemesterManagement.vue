@@ -7,7 +7,7 @@
  */
 
 // ── 1. 外部依赖导入 ──
-import type { UploadFile } from 'element-plus'
+import type { UploadFile, UploadInstance } from 'element-plus'
 import type {
   SemesterImportResult,
   SemesterListItem,
@@ -31,6 +31,7 @@ import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { COMMON_STATUS } from '@/shared/constants/dict'
+import DateRangePicker from '@/shared/ui/DateRangePicker.vue'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
@@ -75,6 +76,8 @@ const form = reactive({
 const importDialogVisible = ref(false)
 const importing = ref(false)
 const importFile = ref<File | null>(null)
+const semesterUploadRef = ref<UploadInstance>()
+const MAX_IMPORT_SIZE_MB = 10
 const importOverwrite = ref(false)
 const importResult = ref<SemesterImportResult | null>(null)
 const resultDialogVisible = ref(false)
@@ -238,7 +241,25 @@ async function handleTemplateDownload() {
 }
 
 function handleFileChange(file: UploadFile) {
-  importFile.value = file.raw ?? null
+  // accept 只过滤选择器，拖拽仍可能带入非 xlsx / 超大文件，选完即校验避免提交后才失败
+  const raw = file.raw
+  if (!raw) {
+    importFile.value = null
+    return
+  }
+  if (!/\.xlsx$/i.test(raw.name)) {
+    ElMessage.warning('仅支持 .xlsx 格式的学期导入文件')
+    semesterUploadRef.value?.clearFiles()
+    importFile.value = null
+    return
+  }
+  if (raw.size > MAX_IMPORT_SIZE_MB * 1024 * 1024) {
+    ElMessage.warning(`文件不能超过 ${MAX_IMPORT_SIZE_MB}MB`)
+    semesterUploadRef.value?.clearFiles()
+    importFile.value = null
+    return
+  }
+  importFile.value = raw
 }
 
 function handleFileRemove() {
@@ -443,14 +464,11 @@ function openImportResult() {
           />
         </el-form-item>
         <el-form-item label="起止日期" required>
-          <el-date-picker
+          <DateRangePicker
             v-model="form.dateRange"
             class="u-w-full"
-            type="daterange"
-            range-separator="至"
             start-placeholder="开始日期"
             end-placeholder="结束日期"
-            value-format="YYYY-MM-DD"
           />
         </el-form-item>
       </el-form>
@@ -475,6 +493,7 @@ function openImportResult() {
         </el-form-item>
         <el-form-item label="学期文件" required>
           <el-upload
+            ref="semesterUploadRef"
             class="u-w-full"
             drag
             :auto-upload="false"

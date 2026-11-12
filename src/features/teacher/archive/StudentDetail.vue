@@ -274,7 +274,7 @@ onMounted(() => void loadAll())
                 />
               </div>
             </div>
-            <el-empty v-else description="暂无数画像数据" :image-size="72" />
+            <el-empty v-else description="暂无画像数据" :image-size="72" />
           </div>
         </div>
 

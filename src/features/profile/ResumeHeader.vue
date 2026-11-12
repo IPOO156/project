@@ -7,6 +7,12 @@
 import type { UserInfo } from '@/shared/types/types'
 
 defineProps<{ userInfo: Partial<UserInfo> }>()
+
+/** 年级文案：后端 grade 可能已带「级」，避免渲染成「2023级级」 */
+function formatGrade(grade?: string) {
+  if (!grade) return ''
+  return grade.endsWith('级') ? grade : `${grade}级`
+}
 </script>
 
 <template>
@@ -72,7 +78,7 @@ defineProps<{ userInfo: Partial<UserInfo> }>()
           <path d="M2 17l10 5 10-5" />
           <path d="M2 12l10 5 10-5" />
         </svg>
-        {{ userInfo.grade }}级
+        {{ formatGrade(userInfo.grade) }}
       </span>
       <span v-if="userInfo.className" class="contact-item">
         <svg

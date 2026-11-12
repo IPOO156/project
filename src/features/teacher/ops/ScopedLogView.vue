@@ -4,6 +4,7 @@ import { RefreshCw, Search } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
 import { listTeacherLogs } from '@/shared/api/teacher-api'
 import { LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
+import DateRangePicker from '@/shared/ui/DateRangePicker.vue'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import { toDayRangeBounds } from '@/shared/utils/time'
 import LogTable from './LogTable.vue'
@@ -27,7 +28,7 @@ const filters = reactive({
   module: '',
   grade: '',
   keyword: '',
-  dateRange: [] as string[],
+  dateRange: null as [string, string] | null,
 })
 
 const logs = ref<SystemLogItem[]>([])
@@ -70,7 +71,7 @@ function handleReset() {
   filters.module = ''
   filters.grade = ''
   filters.keyword = ''
-  filters.dateRange = []
+  filters.dateRange = null
   handleSearch()
 }
 
@@ -124,14 +125,11 @@ onMounted(() => void load())
           />
         </el-form-item>
         <el-form-item label="时间范围">
-          <el-date-picker
+          <DateRangePicker
             v-model="filters.dateRange"
             class="u-w-250"
-            type="daterange"
-            range-separator="至"
             start-placeholder="开始时间"
             end-placeholder="结束时间"
-            value-format="YYYY-MM-DD"
           />
         </el-form-item>
         <el-form-item>

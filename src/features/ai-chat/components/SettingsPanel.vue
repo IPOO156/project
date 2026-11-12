@@ -42,7 +42,7 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
     <aside v-if="props.visible" class="sp">
       <header class="sp__header">
         <h3 class="sp__title">助手设置</h3>
-        <button class="sp__close" title="关闭" @click="emit('close')">
+        <button class="sp__close" title="关闭" aria-label="关闭" @click="emit('close')">
           <X :size="20" />
         </button>
       </header>
@@ -220,6 +220,12 @@ function onToggle(key: keyof ChatSettings, value: boolean) {
       opacity: 0;
       width: 0;
       height: 0;
+
+      // 隐藏原生 checkbox 后仍要保留键盘焦点提示
+      &:focus-visible + .sp__slider {
+        outline: 2px solid var(--el-color-primary);
+        outline-offset: 2px;
+      }
     }
   }
 

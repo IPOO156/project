@@ -6,7 +6,6 @@ import { request } from '@/shared/api/api'
 interface UploadOptions {
   url?: string
   maxSize?: number // MB
-  accept?: string[]
   multiple?: boolean
 }
 
@@ -19,7 +18,6 @@ export function useUpload(options: UploadOptions = {}) {
   const defaultOptions: UploadOptions = {
     url: '/common/upload',
     maxSize: 10,
-    accept: ['.jpg', '.png', '.pdf', '.doc', '.docx'],
     multiple: false,
   }
 
