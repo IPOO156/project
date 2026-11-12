@@ -88,122 +88,135 @@ onMounted(() => {
 </script>
 
 <template>
-  <ApplicationFormRecord
-    class="page-enter"
-    :class="{ 'is-stagger-armed': staggerActive }"
-    alert-title="竞赛之星报名说明"
-    alert-description="竞赛之星用于评选在学科竞赛中表现突出的同学。请填写参赛信息及获奖情况，提交后可在下方查看报名记录。"
-    :show-records="true"
-    :records="page.records"
-    :submitting="page.submitting"
-    :is-editing="page.isEditing"
-    :status="page.currentStatus"
-    :rejection-reason="page.rejectionReason"
-    :enrollment-info="page.enrollmentInfo"
-    :show-extended-fields="true"
-    :extended-form="page.extendedForm"
-    @update:extended-form="
-      (field: string, val: string) => {
-        ;(page.extendedForm as Record<string, string>)[field] = val
-      }
-    "
-    @save-draft="page.handleSaveDraft"
-    @submit="page.handleSubmit"
-    @view="(row: FormRecord) => page.viewRecord(row)"
-    @edit="(row: FormRecord) => handleEditClick(row)"
-    @remove="(row: FormRecord) => handleRemove(row)"
-    @cancel="page.handleCancel"
-    @withdraw="(row: FormRecord) => page.handleWithdraw(row)"
-    @correction="(row: FormRecord) => page.handleCorrection(row)"
-    @score="(row: FormRecord) => page.handleViewScore(row)"
-  >
-    <template #form>
-      <el-form :model="page.form" label-width="120px">
-        <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
-            <el-option
-              v-for="s in semesterOptions"
-              :key="s.value"
-              :label="s.label"
-              :value="s.value"
+  <div class="award-page">
+    <!-- 单根节点（且根前不能有顶层注释）：DefaultLayout 的路由 <Transition mode="out-in">
+         只接受单根可动画组件，多根=Fragment 时离开后不会重置 isLeaving，
+         后续所有页面都渲染为空，必须刷新才能恢复。 -->
+    <ApplicationFormRecord
+      class="page-enter"
+      :class="{ 'is-stagger-armed': staggerActive }"
+      alert-title="竞赛之星报名说明"
+      alert-description="竞赛之星用于评选在学科竞赛中表现突出的同学。请填写参赛信息及获奖情况，提交后可在下方查看报名记录。"
+      :show-records="true"
+      :records="page.records"
+      :submitting="page.submitting"
+      :is-editing="page.isEditing"
+      :status="page.currentStatus"
+      :rejection-reason="page.rejectionReason"
+      :enrollment-info="page.enrollmentInfo"
+      :show-extended-fields="true"
+      :hidden-extended-fields="['acquisitionDate']"
+      :extended-form="page.extendedForm"
+      @update:extended-form="
+        (field: string, val: string) => {
+          ;(page.extendedForm as Record<string, string>)[field] = val
+        }
+      "
+      @save-draft="page.handleSaveDraft"
+      @submit="page.handleSubmit"
+      @view="(row: FormRecord) => page.viewRecord(row)"
+      @edit="(row: FormRecord) => handleEditClick(row)"
+      @remove="(row: FormRecord) => handleRemove(row)"
+      @cancel="page.handleCancel"
+      @withdraw="(row: FormRecord) => page.handleWithdraw(row)"
+      @correction="(row: FormRecord) => page.handleCorrection(row)"
+      @score="(row: FormRecord) => page.handleViewScore(row)"
+    >
+      <template #form>
+        <el-form :model="page.form" label-width="120px">
+          <el-form-item label="学期" required>
+            <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+              <el-option
+                v-for="s in semesterOptions"
+                :key="s.value"
+                :label="s.label"
+                :value="s.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="竞赛名称" required
+            ><el-input v-model="page.form.competitionName"
+          /></el-form-item>
+          <el-form-item label="参赛时间" required>
+            <el-date-picker
+              v-model="page.form.competitionDate"
+              type="month"
+              format="YYYY-MM"
+              value-format="YYYY-MM"
+              :disabled-date="page.disabledDate"
             />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="竞赛名称" required
-          ><el-input v-model="page.form.competitionName"
-        /></el-form-item>
-        <el-form-item label="参赛时间" required>
-          <el-date-picker
-            v-model="page.form.competitionDate"
-            type="month"
-            format="YYYY-MM"
-            value-format="YYYY-MM"
-            :disabled-date="page.disabledDate"
-          />
-        </el-form-item>
-        <el-form-item label="竞赛级别" required>
-          <el-select v-model="page.form.competitionLevel" placeholder="请选择" class="form-select">
-            <el-option
-              v-for="t in competitionLevelOptions"
-              :key="t.value"
-              :label="t.label"
-              :value="t.value"
+          </el-form-item>
+          <el-form-item label="竞赛级别" required>
+            <el-select
+              v-model="page.form.competitionLevel"
+              placeholder="请选择"
+              class="form-select"
+            >
+              <el-option
+                v-for="t in competitionLevelOptions"
+                :key="t.value"
+                :label="t.label"
+                :value="t.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="获奖级别" required>
+            <el-select v-model="page.form.awardLevel" placeholder="请选择" class="form-select">
+              <el-option
+                v-for="t in awardLevelOptions"
+                :key="t.value"
+                :label="t.label"
+                :value="t.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="佐证材料" required>
+            <ProofUpload
+              v-model:file-list="page.form.proofMaterials"
+              :status="page.currentStatus"
             />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="获奖级别" required>
-          <el-select v-model="page.form.awardLevel" placeholder="请选择" class="form-select">
-            <el-option
-              v-for="t in awardLevelOptions"
-              :key="t.value"
-              :label="t.label"
-              :value="t.value"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="佐证材料" required>
-          <ProofUpload v-model:file-list="page.form.proofMaterials" :status="page.currentStatus" />
-        </el-form-item>
-      </el-form>
-    </template>
-    <template #columns>
-      <el-table-column type="index" label="序号" width="60" />
-      <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
-      <el-table-column prop="submitDate" label="提交日期" width="120" />
-    </template>
-  </ApplicationFormRecord>
+          </el-form-item>
+        </el-form>
+      </template>
+      <template #columns>
+        <el-table-column type="index" label="序号" width="60" />
+        <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="submitDate" label="提交日期" width="120" />
+      </template>
+    </ApplicationFormRecord>
 
-  <CorrectionDialog
-    :visible="page.correctionVisible"
-    :submitting="page.correctionSubmitting"
-    :original-record="page.originalSnapshot"
-    :form="page.correctionForm"
-    @update:visible="
-      (v: boolean) => {
-        if (!v) page.closeCorrection()
-      }
-    "
-    @update:form="(field: string, val: string) => page.setChangedField(field, val)"
-    @submit="page.submitCorrection"
-  />
-  <ScoreIndicatorDialog
-    :visible="page.indicatorVisible"
-    :loading="page.indicatorLoading"
-    :title="page.indicatorTitle"
-    :indicators="page.indicators"
-    @close="page.closeIndicator"
-  />
-  <RecordDetailDialog
-    :visible="page.detailVisible"
-    :record="page.detailRecord"
-    :loading="page.detailLoading"
-    @update:visible="
-      (v) => {
-        if (!v) page.closeDetail()
-      }
-    "
-    @close="page.closeDetail"
-  />
+    <CorrectionDialog
+      :visible="page.correctionVisible"
+      :submitting="page.correctionSubmitting"
+      :original-record="page.originalSnapshot"
+      :form="page.correctionForm"
+      @update:visible="
+        (v: boolean) => {
+          if (!v) page.closeCorrection()
+        }
+      "
+      @update:form="(field: string, val: string) => page.setChangedField(field, val)"
+      @submit="page.submitCorrection"
+    />
+    <ScoreIndicatorDialog
+      :visible="page.indicatorVisible"
+      :loading="page.indicatorLoading"
+      :title="page.indicatorTitle"
+      :indicators="page.indicators"
+      @close="page.closeIndicator"
+    />
+    <RecordDetailDialog
+      :visible="page.detailVisible"
+      :record="page.detailRecord"
+      :loading="page.detailLoading"
+      @update:visible="
+        (v) => {
+          if (!v) page.closeDetail()
+        }
+      "
+      @close="page.closeDetail"
+    />
+  </div>
 </template>
 
 <style scoped lang="scss">

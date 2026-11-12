@@ -88,6 +88,7 @@ onMounted(() => {
     :rejection-reason="page.rejectionReason"
     :enrollment-info="page.enrollmentInfo"
     :show-extended-fields="true"
+    :hidden-extended-fields="['acquisitionDate']"
     :extended-form="page.extendedForm"
     @update:extended-form="
       (field: string, val: string) => {

@@ -46,4 +46,26 @@ test.describe('学生端主链路（mock）', () => {
     await expect(page.getByRole('heading', { name: '页面不存在' })).toBeVisible({ timeout: 15000 })
     await expect(page.getByRole('button', { name: /回到首页/ })).toBeVisible()
   })
+
+  test('奖项报名页离开后返回不空白', async ({ page }) => {
+    await login(page, 'student', { userNo: '202401002', password: 'mock-password' })
+
+    /**
+     * 回归：DefaultLayout 用 <Transition mode="out-in"> 包裹路由组件，
+     * 路由组件若为多根节点（Fragment），离开时 isLeaving 不会被复位，
+     * 之后整个路由出口渲染空，必须刷新才恢复（2026-11-12 反馈）。
+     */
+    const pageBody = () => page.locator('section.layout__page-body').first()
+
+    for (const path of ['competition-star', 'scientific-star', 'innovation-star']) {
+      await page.goto(`/awards/${path}`)
+      await expect(pageBody()).not.toBeEmpty({ timeout: 15000 })
+
+      await page.locator('.sidebar__el-menu .el-menu-item', { hasText: '首页' }).first().click()
+      await expect(pageBody()).not.toBeEmpty({ timeout: 15000 })
+
+      await page.goBack()
+      await expect(pageBody()).not.toBeEmpty({ timeout: 15000 })
+    }
+  })
 })
