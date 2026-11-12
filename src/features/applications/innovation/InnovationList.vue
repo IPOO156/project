@@ -40,6 +40,7 @@ const page = reactive(
     { key: 'teamRole', label: '团队角色' },
     { key: 'registerDate', label: '注册时间' },
     { key: 'semester', label: '学期' },
+    { key: 'proofMaterials', label: '佐证材料' },
   ]),
 )
 
@@ -136,7 +137,7 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="佐证材料">
+        <el-form-item label="佐证材料" required>
           <ProofUpload
             v-model:file-list="page.form.proofMaterials"
             :status="page.currentStatus"

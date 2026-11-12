@@ -7,6 +7,7 @@ import {
   getTeacherMenuItems,
   isAuthzDataMissing,
   isModuleAllowed,
+  isRoleMatchedLoginTab,
 } from '@/shared/config/teacherModuleRegistry'
 
 const mocks = vi.hoisted(() => ({ getCurrentUser: vi.fn() }))
@@ -46,6 +47,28 @@ beforeEach(() => {
   localStorage.clear()
   mocks.getCurrentUser.mockReset()
   useTeacherMe().clear()
+})
+
+describe('登录入口与角色匹配', () => {
+  it('管理端页签接受全部教师侧角色（含系主任 / 院长）', () => {
+    for (const role of ['admin', 'teacher', 'counselor', 'department_head', 'college_dean']) {
+      expect(isRoleMatchedLoginTab([role], 'admin')).toBe(true)
+      expect(isRoleMatchedLoginTab([role], 'student')).toBe(false)
+    }
+  })
+
+  it('学生页签只接受 student 角色', () => {
+    expect(isRoleMatchedLoginTab(['student'], 'student')).toBe(true)
+    expect(isRoleMatchedLoginTab(['student'], 'admin')).toBe(false)
+  })
+
+  it('系主任 / 院长在授权数据缺失时回退到审核相关基线菜单', () => {
+    for (const role of ['department_head', 'college_dean']) {
+      const modules = getBaselineModuleIds([role])
+      expect(modules).toContain('teacher-dashboard')
+      expect(modules).toContain('material-review')
+    }
+  })
 })
 
 describe('isModuleAllowed 判定顺序', () => {

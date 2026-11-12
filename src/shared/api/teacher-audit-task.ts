@@ -19,7 +19,10 @@ import request from './request'
 
 /* ===================== 待审核任务（/teacher/audits）===================== */
 
-/** 待审核列表（范围/学期/关键字过滤，sortBy 默认 submit_time） */
+/**
+ * 待审核列表（范围/学期/关键字过滤，sortBy 默认 submit_time）。
+ * sortOrder 不传时后端按提交时间升序（先提交先审）；教师端传 desc，最近提交的排在最前。
+ */
 export function listAuditPending(params: AuditPendingQuery): Promise<PageResult<AuditPendingItem>> {
   return request.get('/teacher/audits/pending', { params })
 }

@@ -36,11 +36,21 @@ export const STUDENT_ROLE_CODE = 'student'
 /**
  * 教师端（含管理员）可登录角色码。
  *
- * 与 ROLE_BASELINE_MODULES 的键同源：能进教师端的角色 = teacher / counselor / admin。
+ * 与 ROLE_BASELINE_MODULES 的键同源：能进教师端的角色 = 管理员 / 教师 / 辅导员 / 系主任 / 院长。
  * 注意这是**登录入口**的判据，与模块级授权是两回事 —— 后者仍以 /auth/me 的
  * permissionCode 为准（见 useTeacherAuthz），本常量只用来回答「这个账号能不能从这个页签进」。
+ *
+ * 后端登录按角色 level 判定（student=1，其余为管理端），前端此前只列到 counselor，
+ * 导致 department_head / college_dean 账号后端允许登录、前端却提示「不是管理端账号」。
+ * 新增教师侧角色时必须同步本名单（数据库 roles 表新增角色不会自动进入前端白名单）。
  */
-export const TEACHER_SIDE_ROLE_CODES: readonly string[] = [ADMIN_ROLE_CODE, 'teacher', 'counselor']
+export const TEACHER_SIDE_ROLE_CODES: readonly string[] = [
+  ADMIN_ROLE_CODE,
+  'teacher',
+  'counselor',
+  'department_head',
+  'college_dean',
+]
 
 /** 账号角色是否匹配所选登录入口（student 页签 / 教师端页签） */
 export function isRoleMatchedLoginTab(roles: string[], tab: 'student' | 'admin'): boolean {
@@ -94,6 +104,17 @@ export const ROLE_BASELINE_MODULES: Record<string, string[]> = {
     'system-settings',
   ],
   counselor: ['teacher-dashboard', 'messages', 'material-review', 'heat-map', 'system-settings'],
+  // 系主任 / 院长为多级审批流的中间与终审节点（数据库 role_permissions 尚未授权）。
+  // 授权数据为空时至少保证其能进入工作台并处理材料审核，与辅导员同口径；
+  // 后端补齐角色权限码后本基线不再生效（非空数据一律按 permissions 判定）。
+  department_head: [
+    'teacher-dashboard',
+    'messages',
+    'material-review',
+    'heat-map',
+    'system-settings',
+  ],
+  college_dean: ['teacher-dashboard', 'messages', 'material-review', 'heat-map', 'system-settings'],
 }
 
 /**
