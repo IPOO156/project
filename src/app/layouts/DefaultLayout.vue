@@ -183,6 +183,9 @@ watch(isLoading, async (loading) => {
           <section class="layout__page-body">
             <router-view v-slot="{ Component, route: routeSlot }">
               <!-- key 用 path（含 params、不含 query）：同页仅改 query 时不再整页重挂/重播路由过渡 -->
+              <!-- 路由页面组件必须是单根元素（根节点前也不能放顶层注释，否则编译为 Fragment）：
+                   out-in 模式下 Fragment 离开时不会复位 isLeaving，之后整个路由出口渲染为空，
+                   只能刷新恢复（2026-11-12 竞赛之星/双创之星空白反馈）。 -->
               <Transition name="layout-route" mode="out-in">
                 <keep-alive :max="20">
                   <component :is="Component" :key="routeSlot.path" />

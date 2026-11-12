@@ -16,7 +16,6 @@ const { semesterOptions, load: loadSemesters } = useSemesters()
 function emptyForm() {
   return {
     softName: '',
-    issuer: '',
     ranking: '',
     approveDate: '',
     semester: '',
@@ -32,7 +31,6 @@ const page = reactive(
     'software-copyright',
     [
       { key: 'softName', label: '软著名称' },
-      { key: 'issuer', label: '颁发单位' },
       { key: 'ranking', label: '排名/总人数' },
       { key: 'approveDate', label: '获批时间' },
       { key: 'semester', label: '学期' },
@@ -46,7 +44,6 @@ const staggerActive = useFirstLoadStagger(() => page.records.length)
 
 function handleEditClick(row: any) {
   page.form.softName = row.softName || ''
-  page.form.issuer = row.issuer || ''
   page.form.ranking = row.ranking || ''
   page.form.approveDate = row.approveDate || ''
   page.form.semester = row.semester || ''
@@ -88,6 +85,7 @@ onMounted(() => {
     :rejection-reason="page.rejectionReason"
     :enrollment-info="page.enrollmentInfo"
     :show-extended-fields="true"
+    :hidden-extended-fields="['acquisitionDate']"
     :extended-form="page.extendedForm"
     @update:extended-form="
       (field: string, val: string) => {
@@ -108,9 +106,6 @@ onMounted(() => {
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="软著名称" required
           ><el-input v-model="page.form.softName"
-        /></el-form-item>
-        <el-form-item label="颁发单位" required
-          ><el-input v-model="page.form.issuer"
         /></el-form-item>
         <el-form-item label="排名/总人数" required>
           <el-input v-model="page.form.ranking" placeholder="如：1/4" class="form-input" />

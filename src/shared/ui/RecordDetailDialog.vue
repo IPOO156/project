@@ -102,7 +102,6 @@ const FIELD_LABELS: Record<string, string> = {
   company: '实习公司',
   /* 软件著作权 */
   softName: '软著名称',
-  issuer: '颁发单位',
   approveDate: '获批时间',
   /* 发表论文 */
   journalName: '期刊名称',

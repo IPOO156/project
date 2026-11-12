@@ -99,7 +99,7 @@ const AWARD_DETAIL_GENERIC_MAP: Record<string, string> = {
  * innovation_star→award_innovation_stars、research_star→award_research_stars 及其
  * projects/software/papers 子表），但 `ActivityService.buildAwardDetail` 目前不查子表、未随详情返回，
  * 属后端缺口（见 2026-08-31 修改记录「遗留事项」）。此处预置映射，后端补齐返回后编辑回填自动生效。
- * 软著 issuer（颁发单位）取 award_applications.issuing_unit 通用列（软著子表无颁发单位列）。
+ * 软著子表无颁发单位列，颁发单位统一走 award_applications.issuing_unit 通用列（扩展表单「发证单位」）。
  */
 const AWARD_SPECIFIC_DETAIL_MAP: Record<string, Record<string, string>> = {
   competitionStar: {
@@ -124,7 +124,6 @@ const AWARD_SPECIFIC_DETAIL_MAP: Record<string, Record<string, string>> = {
     softwareName: 'softName',
     rankTotal: 'ranking',
     approvedTime: 'approveDate',
-    issuingUnit: 'issuer',
   },
   paper: {
     journalName: 'journalName',
@@ -141,7 +140,7 @@ const AWARD_SPECIFIC_DETAIL_MAP: Record<string, Record<string, string>> = {
  */
 export function mapDetailToForm(type: string, detail: any): Record<string, any> {
   const nested = (detail?.detail ?? {}) as Record<string, any>
-  // 奖项类 = 通用字段 + 星类专属字段（具体优先，合并后 issuingUnit 同进 issuingAuthority 与软著 issuer）
+  // 奖项类 = 通用字段 + 星类专属字段（具体优先；issuingUnit 统一映射为扩展表单「发证单位」）
   const map = STAR_TYPES.includes(type as ApplicationType)
     ? { ...AWARD_DETAIL_GENERIC_MAP, ...(AWARD_SPECIFIC_DETAIL_MAP[type] ?? {}) }
     : (DETAIL_TO_FORM_MAP[type] ?? {})
