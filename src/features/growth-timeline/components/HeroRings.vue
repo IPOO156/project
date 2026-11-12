@@ -26,12 +26,14 @@ interface Props {
   selectedId?: string | null
   paused?: boolean
   reverseTrigger?: number
+  restoreTrigger?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selectedId: null,
   paused: false,
   reverseTrigger: 0,
+  restoreTrigger: 0,
 })
 
 const emit = defineEmits<{
@@ -303,23 +305,81 @@ onBeforeUnmount(() => {
 })
 
 function handleElectronClick(event: MouseEvent, id: string) {
-  const target = event.currentTarget as HTMLElement | null
-  const rect = target?.getBoundingClientRect()
+  // 窄屏（320px 档）小球间距只有约 14px，48×48 热区必然互相覆盖，
+  // 事件可能落在相邻圈的球上。指针点击时按「离指针最近的球心」重新解析，
+  // 键盘触发的 click（detail === 0）没有坐标，仍沿用当前聚焦的球。
+  let targetId = id
+  let rect: DOMRect | undefined
+  if (event.detail !== 0) {
+    const resolved = resolveNearestElectron(event.clientX, event.clientY)
+    if (resolved) {
+      targetId = resolved.id
+      rect = resolved.rect
+    }
+  }
+  if (!rect) {
+    const button = findElectronButton(targetId) ?? (event.currentTarget as HTMLElement | null)
+    rect = button?.getBoundingClientRect()
+  }
   const pos = rect
     ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
     : { x: 0, y: 0 }
-  selectedElectronAngle.value = electronAngles.value[id] ?? 0
-  emit('select', id, pos)
+  selectedElectronAngle.value = electronAngles.value[targetId] ?? 0
+  emit('select', targetId, pos)
+}
+
+/** DOM 顺序与 electrons 数组一致（HeroRingsElectrons 用 v-for 渲染） */
+function findElectronButton(id: string): HTMLElement | null {
+  const index = electrons.value.findIndex((electron) => electron.id === id)
+  if (index < 0) return null
+  const buttons = heroRingsRef.value?.querySelectorAll<HTMLElement>('.hero-rings__electron')
+  return buttons?.[index] ?? null
+}
+
+function resolveNearestElectron(x: number, y: number): { id: string; rect: DOMRect } | null {
+  const buttons = heroRingsRef.value?.querySelectorAll<HTMLElement>('.hero-rings__electron')
+  if (!buttons || buttons.length === 0) return null
+  let bestIndex = -1
+  let bestRect: DOMRect | null = null
+  let bestDistance = Number.POSITIVE_INFINITY
+  buttons.forEach((button, index) => {
+    const rect = button.getBoundingClientRect()
+    const distance = Math.hypot(rect.left + rect.width / 2 - x, rect.top + rect.height / 2 - y)
+    if (distance < bestDistance) {
+      bestDistance = distance
+      bestIndex = index
+      bestRect = rect
+    }
+  })
+  const bestId = electrons.value[bestIndex]?.id
+  return bestId && bestRect ? { id: bestId, rect: bestRect } : null
 }
 
 const selectedIdRef = computed(() => props.selectedId ?? null)
 const selectedElectronAngle = ref(0)
-const { extinguishedRings } = useRingEffects(
+const { extinguishedRings, restoreRings } = useRingEffects(
   toRef(props, 'experiences'),
   selectedIdRef,
   toRef(props, 'reverseTrigger'),
   selectedElectronAngle,
   (id) => emit('reverseComplete', id),
+)
+
+// 关闭详情后立即恢复年轮：被熄掉的圈跳过入场错峰延迟（0.2 + i*0.25s）直接生长，
+// 只对真正回缩过的圈生效，避免影响未参与回缩的内圈与首次入场动画。
+const immediateRingIndexes = ref<Set<number>>(new Set())
+
+watch(
+  () => props.restoreTrigger,
+  (next, prev) => {
+    if (!next || next === prev || extinguishedRings.value.size === 0) return
+    // 累积而不是覆盖：已经享受过「立即生长」的圈继续保持 0 延迟，
+    // 否则下一次回缩范围变小时，这些圈的 animation-delay 变化会让它们重播。
+    const nextIndexes = new Set(immediateRingIndexes.value)
+    extinguishedRings.value.forEach((index) => nextIndexes.add(index))
+    immediateRingIndexes.value = nextIndexes
+    restoreRings()
+  },
 )
 </script>
 
@@ -360,7 +420,11 @@ const { extinguishedRings } = useRingEffects(
     </div>
 
     <div class="hero-rings__system" :style="systemParallaxStyle">
-      <HeroRingsOrbit :rings="rings" :extinguished-rings="extinguishedRings" />
+      <HeroRingsOrbit
+        :rings="rings"
+        :extinguished-rings="extinguishedRings"
+        :immediate-rings="immediateRingIndexes"
+      />
       <HeroRingsNucleus @add="emit('add')" />
       <HeroRingsElectrons
         :electrons="electrons"

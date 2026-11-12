@@ -22,6 +22,39 @@ export function useRingEffects(
   const REVERSE_STEP_MS = 250
   const EXTINGUISH_DURATION_MS = 2000
 
+  // ringExtinguish 的缓动是 $ease-standard = cubic-bezier(0.4, 0, 0.2, 1)，
+  // 线条前沿的角度进度是时间的非线性函数（前段快、后段慢）。
+  // 展开时刻必须按同一条曲线的反函数求解，否则按 x = 角度/360 线性近似，
+  // 前沿已经扫过小球一大截（实测最多超前约 96°）详情才展开。
+  const EASE_STANDARD_P1X = 0.4
+  const EASE_STANDARD_P1Y = 0
+  const EASE_STANDARD_P2X = 0.2
+  const EASE_STANDARD_P2Y = 1
+
+  function bezierAxis(t: number, p1: number, p2: number) {
+    const inv = 1 - t
+    return 3 * inv * inv * t * p1 + 3 * inv * t * t * p2 + t * t * t
+  }
+
+  /** 已知动画的进度（角度占比），反解出对应的时间进度（0~1），与 CSS 缓动一致 */
+  function easeStandardProgressToTime(progress: number) {
+    const target = Math.min(Math.max(progress, 0), 1)
+    if (target <= 0) return 0
+    if (target >= 1) return 1
+    let low = 0
+    let high = 1
+    // 曲线的 y 轴单调递增，二分 24 次即可到浮点精度
+    for (let i = 0; i < 24; i++) {
+      const mid = (low + high) / 2
+      if (bezierAxis(mid, EASE_STANDARD_P1Y, EASE_STANDARD_P2Y) < target) {
+        low = mid
+      } else {
+        high = mid
+      }
+    }
+    return bezierAxis((low + high) / 2, EASE_STANDARD_P1X, EASE_STANDARD_P2X)
+  }
+
   function getSelectedRingIndex() {
     if (!selectedId.value) return -1
     const exp = experiences.value.find((e) => e.id === selectedId.value)
@@ -68,7 +101,8 @@ export function useRingEffects(
     // CSS rotate 角度从 12 点钟方向顺时针测量，因此相对 3 点钟的偏移为 angle - 90。
     const targetStartDelay = (maxIndex - targetIndex) * REVERSE_STEP_MS
     const relativeAngle = (((selectedAngle.value - 90) % 360) + 360) % 360
-    const meetDuration = targetStartDelay + (relativeAngle / 360) * EXTINGUISH_DURATION_MS
+    const meetDuration =
+      targetStartDelay + easeStandardProgressToTime(relativeAngle / 360) * EXTINGUISH_DURATION_MS
 
     let completeFired = false
     reverseTimeouts.push(

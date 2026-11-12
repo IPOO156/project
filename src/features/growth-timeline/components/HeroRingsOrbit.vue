@@ -5,10 +5,13 @@ interface Props {
   rings: RingItem[]
   extinguishedRings: Set<number>
   center?: number
+  /** 需要跳过入场错峰延迟、立即开始生长的圈（关闭详情后恢复年轮时使用） */
+  immediateRings?: Set<number>
 }
 
 const props = withDefaults(defineProps<Props>(), {
   center: 200,
+  immediateRings: () => new Set<number>(),
 })
 
 const CENTER = props.center
@@ -34,7 +37,7 @@ const CENTER = props.center
         :style="{
           // 动态 dasharray 用于 ringDrawIn / ringExtinguish 动画
           '--ring-dasharray': `${ring.dasharray}px`,
-          'animation-delay': `${ring.delay}s`,
+          'animation-delay': `${immediateRings.has(index) ? 0 : ring.delay}s`,
         }"
       />
     </g>
