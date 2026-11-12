@@ -17,6 +17,7 @@ import {
 import {
   buildSemesterMonthDisabledDate,
   isMonthInSemester,
+  parseSemesterRange,
   sanitizeSemesterMonthPair,
 } from '@/shared/utils/semester'
 import { useCorrection } from './useCorrection'
@@ -279,11 +280,17 @@ export function useApplicationPage(
       ElMessage.warning(`请填写必填项：${missing.map((f) => f.label).join('、')}`)
       return
     }
-    // 学期-日期联动校验：若配置了 monthField，提交前校验日期是否在所选学期内
+    // 学期-日期联动校验：若配置了 monthField，提交前校验日期是否在所选学期内。
+    // 这里**只校验、不清空**表单：清空动作只属于「学期切换」场景（见上方 watch）。
+    // 提交时若直接清空，用户会看到“日期自己消失”，且输入内容丢失（2026-11-12 反馈）。
+    // 学期名称无法解析时跳过校验（不做误判），避免管理员自定义学期名导致永远无法提交。
     if (semesterMonthConfig) {
       const { monthField, monthFieldLabel } = semesterMonthConfig
-      sanitizeSemesterMonthPair(form, monthField, 'semester')
-      if (!isMonthInSemester((form as Record<string, unknown>)[monthField], form.semester)) {
+      const range = parseSemesterRange(form.semester)
+      if (
+        range &&
+        !isMonthInSemester((form as Record<string, unknown>)[monthField], form.semester)
+      ) {
         ElMessage.error(`${monthFieldLabel}与学期不匹配，请重新选择`)
         return
       }

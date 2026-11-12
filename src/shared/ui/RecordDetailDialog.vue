@@ -1,6 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { APPLICATION_STATUS } from '@/shared/constants/dict'
+import {
+  APPLICATION_STATUS,
+  AWARD_LEVELS,
+  COMPANY_TYPE_DISPLAY_OPTIONS,
+  COMPETITION_LEVELS,
+  COMPETITION_TYPE_DISPLAY_OPTIONS,
+  INDUSTRY_TYPE_DISPLAY_OPTIONS,
+  ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
+  PROJECT_LEVELS,
+  RESEARCH_TYPE_DISPLAY_OPTIONS,
+  ROLE_OPTIONS,
+  SCHOLARSHIP_GRADES,
+  SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS,
+} from '@/shared/constants/dict'
 
 /**
  * RecordDetailDialog - 申报/奖项记录「查看」详情弹窗
@@ -100,6 +113,27 @@ const FIELD_LABELS: Record<string, string> = {
   endDate: '结束时间',
 }
 
+/**
+ * 枚举字段 → 字典（key 与 FIELD_LABELS 对齐）。
+ *
+ * 「查看」展示的是后端详情原值（competitionType=academic、awardLevel=special 等），
+ * 不翻译会把枚举码直接暴露给学生（2026-11-12 反馈）。字典统一取自 businessDict，
+ * 与表单下拉同源；找不到时原样展示，不做猜测。
+ */
+const ENUM_OPTIONS: Record<string, readonly { label: string; value: string }[]> = {
+  competitionType: COMPETITION_TYPE_DISPLAY_OPTIONS,
+  competitionLevel: COMPETITION_LEVELS,
+  awardLevel: AWARD_LEVELS,
+  projectLevel: PROJECT_LEVELS,
+  researchType: RESEARCH_TYPE_DISPLAY_OPTIONS,
+  organizationLevel: ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
+  industryType: INDUSTRY_TYPE_DISPLAY_OPTIONS,
+  companyType: COMPANY_TYPE_DISPLAY_OPTIONS,
+  scholarshipLevel: SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS,
+  scholarshipGrade: SCHOLARSHIP_GRADES,
+  role: ROLE_OPTIONS,
+}
+
 function handleClose() {
   emit('update:visible', false)
   emit('close')
@@ -111,12 +145,53 @@ function isEmpty(v: unknown): boolean {
   return false
 }
 
+/**
+ * 证明材料：只展示文件名，不展示上传组件的内部结构（uid/url/status/fileId）。
+ * 列表接口可能把附件原样返回为对象数组，历史数据还可能是 JSON 字符串，两种都要兼容。
+ */
+function formatProofMaterials(val: unknown): string {
+  // 兼容三种形态：UploadUserFile 对象数组（前端提交前）、JSON 字符串（历史/列表接口）、普通字符串数组
+  let parsedVal = val
+  if (typeof parsedVal === 'string') {
+    try {
+      parsedVal = JSON.parse(parsedVal)
+    } catch {
+      /* 非 JSON 字符串按原文展示 */
+    }
+  }
+  const rawList = Array.isArray(parsedVal) ? parsedVal : [parsedVal]
+  const names = rawList
+    .map((item) => {
+      let entry = item
+      if (typeof entry === 'string') {
+        try {
+          entry = JSON.parse(entry)
+        } catch {
+          return entry
+        }
+      }
+      if (entry && typeof entry === 'object') {
+        const obj = entry as Record<string, unknown>
+        return String(obj.name ?? obj.fileName ?? obj.file_name ?? '')
+      }
+      return entry == null ? '' : String(entry)
+    })
+    .filter((name) => name !== '')
+  return names.join('、')
+}
+
 function formatValue(key: string, val: unknown): string {
   if (key === 'status') {
     return APPLICATION_STATUS[val as keyof typeof APPLICATION_STATUS]?.label ?? String(val)
   }
+  if (key === 'proofMaterials') return formatProofMaterials(val)
   if (Array.isArray(val))
     return val.map((i) => (typeof i === 'object' ? JSON.stringify(i) : String(i))).join('、')
+  const options = ENUM_OPTIONS[key]
+  if (options) {
+    const hit = options.find((option) => String(option.value) === String(val))
+    if (hit) return hit.label
+  }
   if (typeof val === 'object') return JSON.stringify(val)
   return String(val)
 }
