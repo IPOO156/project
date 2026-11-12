@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ArchiveAdminDetail } from '@/shared/types/teacher'
 import { computed } from 'vue'
+import { AUDIT_DETAIL_LABELS } from '@/shared/constants/dict'
 import { formatDateTime } from '@/shared/utils/time'
 import { statusLabel, statusTagType } from './archiveStatus'
 
@@ -22,9 +23,23 @@ const visible = computed({
   set: (v: boolean) => emit('update:modelValue', v),
 })
 
-function renderValue(v: unknown) {
-  if (v == null) return '-'
-  if (typeof v === 'object') return JSON.stringify(v)
+/** 扩展字段键名 → 中文标签：后端已给中文的直出，英文键走统一映射，未知键不裸奔 */
+function fieldLabel(key: string): string {
+  if (/[\u4E00-\u9FA5]/.test(key)) return key
+  return AUDIT_DETAIL_LABELS[key] ?? '其他信息'
+}
+
+/** 扩展字段值：数组按顿号拼接、对象展开为「中文键：值」，避免把 JSON 片段直接抛给用户 */
+function renderValue(v: unknown): string {
+  if (v == null || v === '') return '-'
+  if (Array.isArray(v)) {
+    return v.length ? v.map((item) => renderValue(item)).join('、') : '-'
+  }
+  if (typeof v === 'object') {
+    const entries = Object.entries(v as Record<string, unknown>)
+    if (!entries.length) return '-'
+    return entries.map(([k, val]) => `${fieldLabel(k)}：${renderValue(val)}`).join('；')
+  }
   return String(v)
 }
 
@@ -114,7 +129,7 @@ const detailEntries = computed(() => {
           </p>
           <ul class="archive-view__kv">
             <li v-for="[key, value] in detailEntries" :key="key" class="archive-view__kv-item">
-              <span class="archive-view__kv-key">{{ key }}</span>
+              <span class="archive-view__kv-key">{{ fieldLabel(key) }}</span>
               <span class="archive-view__kv-value">{{ renderValue(value) }}</span>
             </li>
           </ul>

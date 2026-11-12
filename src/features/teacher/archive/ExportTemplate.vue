@@ -288,7 +288,7 @@ onMounted(() => void load())
             show-overflow-tooltip
           />
           <el-table-column label="导出类型" width="110" show-overflow-tooltip>
-            <template #default="{ row }">{{ row.exportTypeLabel ?? row.exportType }}</template>
+            <template #default="{ row }">{{ row.exportTypeLabel ?? '—' }}</template>
           </el-table-column>
           <el-table-column prop="version" label="版本" width="60" align="center" />
           <!-- 标签「默认」约 38px + 单元格内边距 24px，60px 会裁掉右侧 -->

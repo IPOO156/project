@@ -38,11 +38,12 @@ const staggerActive = useFirstLoadStagger(() => props.list.length)
     </div>
     <div class="mc-card__body">
       <el-table v-loading="loading" class="u-w-full" :data="list">
-        <el-table-column label="档案" min-width="220">
+        <el-table-column label="档案" min-width="320">
           <template #default="{ row }">
             <div class="archive-view__doc">
               <span class="archive-view__doc-type">{{ row.archiveTypeName ?? '-' }}</span>
-              <span class="archive-view__doc-title">{{ row.title }}</span>
+              <!-- 长档案名此前被压到 217px 且无 tooltip，鼠标悬停可看全称 -->
+              <span class="archive-view__doc-title" :title="row.title">{{ row.title }}</span>
             </div>
           </template>
         </el-table-column>

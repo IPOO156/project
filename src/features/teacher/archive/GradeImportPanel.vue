@@ -401,8 +401,8 @@ function stopDetailPolling() {
         :closable="false"
         show-icon
         class="grade-import__config-hint"
-        title="后端暂无成绩导入配置"
-        description="接口返回 404，说明库里还没有这条配置（接口本身正常）。保存后会自动新建一条默认配置。"
+        title="暂无成绩导入配置"
+        description="系统里还没有保存过成绩导入配置，保存后会自动创建一份默认配置。"
       />
       <el-form label-width="110px">
         <el-form-item label="允许扩展名">

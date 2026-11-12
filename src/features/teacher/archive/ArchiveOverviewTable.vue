@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ArchiveOverviewRow } from '@/shared/types/teacher'
+import { ARCHIVE_TYPE_TO_KEY } from '@/shared/api/submission/archive-type'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
+import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 
 interface Props {
@@ -28,6 +30,16 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
     draft: row.draftCount ?? 0,
   }
   return Math.max(0, Math.min(100, (map[key] / total) * 100))
+}
+
+/**
+ * 档案类型展示名：后端返回的是 archive_type 编码（如 social_practice），
+ * 先经别名表归一到前端类型 key，再取中文名；已是中文的直出，未知编码不裸奔。
+ */
+function archiveTypeLabel(type: string): string {
+  if (/[\u4E00-\u9FA5]/.test(type)) return type
+  const key = ARCHIVE_TYPE_TO_KEY[type] ?? type
+  return APPLICATION_TYPE_MAP[key] ?? '其他类型'
 }
 </script>
 
@@ -103,7 +115,7 @@ function ratioWidth(row: ArchiveOverviewRow, key: 'approved' | 'pending' | 'reje
                 :key="t.archiveType"
                 class="archive-view__type-chip"
               >
-                <span class="archive-view__type-name">{{ t.archiveType }}</span>
+                <span class="archive-view__type-name">{{ archiveTypeLabel(t.archiveType) }}</span>
                 <span class="archive-view__type-count mc-num">{{ t.count }}</span>
               </span>
             </div>
