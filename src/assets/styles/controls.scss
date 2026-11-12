@@ -131,6 +131,32 @@ html:has(#app :is(.layout--teacher, .layout--admin)) .el-select-dropdown__item:h
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   B2. 选择器宽度 —— 统一尺寸规则
+
+   EP 的按需样式随路由 chunk 晚于全局样式注入，其
+   `.el-select{width:var(--el-select-width)}` 与 `.u-w-120` 同为 0,1,0，
+   晚到者胜 → 显式宽度被改回 100%；在 inline-flex 表单项里 100% 又解析为
+   内容宽，空值时只剩「一个箭头 + 内边距」（约 40px），看起来像坏控件。
+   规则：
+     1) 宽度工具类提权为「布局前缀 + 标签 + 工具类」，任何加载顺序下都生效；
+     2) 未指定宽度的选择器统一给 120px 下限，空值不再塌陷。
+   ══════════════════════════════════════════════════════════════════ */
+
+@each $w in 92, 110, 120, 130, 140, 150, 160, 170, 180, 200, 220, 240, 250, 260 {
+  #app :is(.layout--teacher, .layout--admin) :is(.el-select, .el-date-editor, .el-input).u-w-#{$w} {
+    width: #{$w}px;
+  }
+}
+
+#app :is(.layout--teacher, .layout--admin) :is(.el-select, .el-date-editor, .el-input).u-w-full {
+  width: 100%;
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-select {
+  min-width: 120px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
    C. 标签 —— el-tag
 
    tag 属锁定值，固定 4px，不随控件档位（9px）走。

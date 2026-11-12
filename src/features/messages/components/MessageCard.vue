@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Notification, NotificationCategory } from '@/shared/types/types'
+import { ElMessage } from 'element-plus'
 import { Archive, Bell, Bot, ChevronRight, Mail, MailOpen, MessageSquare } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
@@ -54,10 +55,34 @@ function getCategoryIcon(category: NotificationCategory) {
   return icons[category] ?? Mail
 }
 
+/**
+ * 后端下发的 jumpUrl 存在指向已下线页面的历史数据（如 /profile/export、/profile/resume/export），
+ * 直接 router.push 会落到 404。这里先做一次路由解析：命中历史地址改用等价现有页面，
+ * 仍无法解析则提示「页面已下线」，不再跳 404。
+ */
+const JUMP_URL_FALLBACK: Record<string, string> = {
+  '/profile/export': '/profile/info',
+  '/profile/resume/export': '/profile/info',
+}
+
+function resolveJumpUrl(raw: string): string | null {
+  const target = JUMP_URL_FALLBACK[raw] ?? raw
+  const res = router.resolve(target)
+  const hit = res.matched.some((r) => r.name && r.name !== 'NotFound')
+  return hit ? target : null
+}
+
 function handleCardClick() {
   if (props.batchMode) return
   if (props.item.isRead !== 1) emit('read', props.item.id)
-  if (props.item.jumpUrl) router.push(props.item.jumpUrl)
+  const url = props.item.jumpUrl
+  if (!url) return
+  const target = resolveJumpUrl(url)
+  if (!target) {
+    ElMessage.warning('该消息关联的页面已下线')
+    return
+  }
+  router.push(target)
 }
 
 /** 整卡可跳转：批量模式下只允许勾选，不再整卡跳转 */

@@ -82,8 +82,31 @@ const statusOptions = computed(() => [
   })),
 ])
 
+/**
+ * 字典类型编码 → 中文名。后端只下发 dict_type 编码（award_level 等），
+ * 直接展示英文 key 对非技术用户不可读；未登记的编码保留原值并弱化显示。
+ */
+const DICT_TYPE_LABELS: Record<string, string> = {
+  award_level: '获奖等级',
+  award_category: '奖项类别',
+  competition_level: '竞赛级别',
+  company_type: '企业类型',
+  political_status: '政治面貌',
+  certificate_type: '证书类型',
+  paper_level: '论文级别',
+  patent_type: '专利类型',
+  project_level: '项目级别',
+  archive_type: '档案类型',
+  application_type: '申报类型',
+}
+
+function dictTypeLabel(dictType: string | null | undefined): string {
+  if (!dictType) return '-'
+  return DICT_TYPE_LABELS[dictType] ?? dictType
+}
+
 const drawerTitle = computed(() =>
-  currentDictType.value ? `${currentDictType.value} · 字典项` : '字典项',
+  currentDictType.value ? `${dictTypeLabel(currentDictType.value)} · 字典项` : '字典项',
 )
 
 // ── 7. Watch ──
@@ -325,7 +348,15 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
       </div>
       <div class="mc-card__body">
         <el-table v-loading="typeLoading" class="u-w-full" :data="typeList" stripe>
-          <el-table-column prop="dictType" label="字典类型" min-width="180" show-overflow-tooltip />
+          <el-table-column label="字典类型" min-width="180" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span>{{ dictTypeLabel(row.dictType) }}</span>
+              <!-- 中文名之外保留原始编码，便于和后端/接口对账 -->
+              <span v-if="DICT_TYPE_LABELS[row.dictType]" class="dict-management__code">
+                {{ row.dictType }}
+              </span>
+            </template>
+          </el-table-column>
           <el-table-column label="字典项数量" width="120" align="center">
             <template #default="{ row }">{{ row.itemCount ?? '-' }}</template>
           </el-table-column>
@@ -513,6 +544,12 @@ function statusTag(status: number | null): 'success' | 'danger' | 'info' {
   &__total {
     font-size: 13px;
     color: var(--el-text-color-secondary);
+  }
+
+  &__code {
+    margin-left: 6px;
+    font-size: 12px;
+    color: var(--el-text-color-placeholder);
   }
 
   &__pagination {

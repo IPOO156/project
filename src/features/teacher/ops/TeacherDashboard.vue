@@ -35,7 +35,7 @@ import {
 } from '@/shared/api/teacher-api'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import { useTeacherMe } from '@/shared/composables/useTeacherMe'
-import { AUDIT_ACTIONS } from '@/shared/constants/dict'
+import { AUDIT_ACTIONS, LOG_ACTION_TYPES, LOG_MODULES } from '@/shared/constants/dict'
 import { useDashboardOption } from './useDashboardOption'
 
 const router = useRouter()
@@ -294,13 +294,20 @@ interface RecentItem {
 }
 const recentLogs = ref<RecentItem[]>([])
 
+/** 操作描述缺失时用「模块 + 操作」中文名兜底，避免把英文枚举拼给用户看 */
+function formatLogAction(module: string | null, action: string | null): string {
+  const moduleName = module ? (LOG_MODULES[module] ?? '') : ''
+  const actionName = action ? (LOG_ACTION_TYPES[action]?.label ?? '') : ''
+  return [moduleName, actionName].filter(Boolean).join(' · ') || '系统操作'
+}
+
 async function loadRecent() {
   if (canViewSystemLogs.value) {
     try {
       const logs = await getSystemLogs({ page: 1, per_page: 5 })
       recentLogs.value = logs.list.map((l) => ({
         user: l.operatorName ?? '系统',
-        action: l.description ?? `${l.module ?? ''}${l.action ?? ''}`,
+        action: l.description ?? formatLogAction(l.module, l.action),
         time: l.createdAt ? l.createdAt.slice(11, 16) : '',
         status: 'success' as const,
       }))
@@ -502,6 +509,7 @@ onMounted(() => {
                 :key="link.path"
                 type="button"
                 class="quick-link"
+                :title="link.desc"
                 @click="router.push(link.path)"
               >
                 <component :is="link.icon" :size="16" class="quick-link__icon" />
