@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Notification, NotificationCategory } from '@/shared/types/types'
+import { ElMessage } from 'element-plus'
 import { Archive, Bell, Bot, ChevronRight, Mail, MailOpen, MessageSquare } from 'lucide-vue-next'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useThemeStore } from '@/app/stores/stores'
 import { notificationCategoryLabel } from '@/shared/constants/dict'
@@ -53,10 +55,54 @@ function getCategoryIcon(category: NotificationCategory) {
   return icons[category] ?? Mail
 }
 
+/**
+ * 后端下发的 jumpUrl 存在指向已下线页面的历史数据（如 /profile/export、/profile/resume/export），
+ * 直接 router.push 会落到 404。这里先做一次路由解析：命中历史地址改用等价现有页面，
+ * 仍无法解析则提示「页面已下线」，不再跳 404。
+ */
+const JUMP_URL_FALLBACK: Record<string, string> = {
+  '/profile/export': '/profile/info',
+  '/profile/resume/export': '/profile/info',
+}
+
+function resolveJumpUrl(raw: string): string | null {
+  const target = JUMP_URL_FALLBACK[raw] ?? raw
+  const res = router.resolve(target)
+  const hit = res.matched.some((r) => r.name && r.name !== 'NotFound')
+  return hit ? target : null
+}
+
 function handleCardClick() {
   if (props.batchMode) return
   if (props.item.isRead !== 1) emit('read', props.item.id)
-  if (props.item.jumpUrl) router.push(props.item.jumpUrl)
+  const url = props.item.jumpUrl
+  if (!url) return
+  const target = resolveJumpUrl(url)
+  if (!target) {
+    ElMessage.warning('该消息关联的页面已下线')
+    return
+  }
+  router.push(target)
+}
+
+/** 整卡可跳转：批量模式下只允许勾选，不再整卡跳转 */
+const isNavigable = computed(() => Boolean(props.item.jumpUrl) && !props.batchMode)
+
+/** 标题可能为空（异常/草稿数据），统一兜底，避免出现空白行和空 aria-label */
+const displayTitle = computed(() => props.item.title?.trim() || '无标题')
+
+const cardAriaLabel = computed(() => {
+  const parts = [displayTitle.value, categoryLabel(props.item.category)]
+  if (props.item.isRead !== 1) parts.push('未读')
+  return parts.join('，')
+})
+
+/** 键盘触发：Enter / Space 与点击等价；忽略来自卡内按钮（标为已读、归档等）的冒泡按键 */
+function handleCardKeydown(event: KeyboardEvent) {
+  if (!isNavigable.value || event.target !== event.currentTarget) return
+  if (event.key !== 'Enter' && event.key !== ' ') return
+  event.preventDefault()
+  handleCardClick()
 }
 </script>
 
@@ -66,9 +112,13 @@ function handleCardClick() {
     :class="{
       'is-unread': item.isRead !== 1,
       'is-archived': item.isArchived === 1,
-      'is-clickable': !!item.jumpUrl && !batchMode,
+      'is-clickable': isNavigable,
     }"
+    :role="isNavigable ? 'button' : undefined"
+    :tabindex="isNavigable ? 0 : undefined"
+    :aria-label="isNavigable ? cardAriaLabel : undefined"
     @click="handleCardClick"
+    @keydown="handleCardKeydown"
   >
     <label v-if="batchMode" class="message-card__checkbox" @click.stop>
       <input type="checkbox" :checked="checked" @change="emit('toggleSelect', item.id)" />
@@ -83,8 +133,13 @@ function handleCardClick() {
         <span class="message-card__category">{{ categoryLabel(item.category) }}</span>
         <span v-if="item.isRead !== 1" class="message-card__unread">未读</span>
         <h3 class="message-card__title">
-          {{ item.title }}
-          <el-tag v-if="item.isArchived === 1" size="small" type="info" effect="plain"
+          <span class="message-card__title-text" :title="displayTitle">{{ displayTitle }}</span>
+          <el-tag
+            v-if="item.isArchived === 1"
+            size="small"
+            type="info"
+            effect="plain"
+            class="message-card__archive-tag"
             >已归档</el-tag
           >
         </h3>
@@ -149,7 +204,8 @@ function handleCardClick() {
     box-shadow 0.2s ease,
     border-color 0.2s ease;
 
-  &:hover {
+  // 仅整卡可跳转时给 hover 反馈；批量模式下卡片本身不可点，避免误导
+  &.is-clickable:hover {
     border-color: #d4a574;
   }
 
@@ -167,6 +223,17 @@ function handleCardClick() {
   }
   &.is-clickable {
     cursor: pointer;
+
+    // 焦点环对齐成就卡等可点卡片：暖木色描边，不用浏览器默认蓝框
+    &:focus-visible {
+      outline: 2px solid var(--mc-wood);
+      outline-offset: 2px;
+    }
+
+    // 按下时给一点回弹反馈，和成就卡/快捷入口保持一致的轻量手感
+    &:active {
+      transform: scale(0.995);
+    }
   }
 
   &__icon {
@@ -188,9 +255,15 @@ function handleCardClick() {
     align-items: center;
     gap: 8px;
     margin-bottom: 4px;
+    min-width: 0;
   }
   &__category {
     flex-shrink: 0;
+    // 后端可下发自定义分类名，超长时截断，避免把标题挤成 0 宽
+    max-width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     padding: 1px 8px;
     border-radius: 6px;
     background: var(--mc-bg);
@@ -209,14 +282,26 @@ function handleCardClick() {
     line-height: 1.5;
   }
   &__title {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
     margin: 0;
     font-size: 14px;
     font-weight: 500;
     color: var(--mc-text);
     line-height: 1.5;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  }
+  &__title-text {
+    // 单行省略：标题再长也不换行、不挤压右侧时间/标签
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  &__archive-tag {
+    flex-shrink: 0;
   }
   &__content {
     margin: 0 0 8px;
@@ -288,6 +373,10 @@ function handleCardClick() {
   background: transparent;
   &:hover {
     background: var(--mc-bg);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--mc-wood);
+    outline-offset: 1px;
   }
   &--read {
     color: var(--mc-sage);

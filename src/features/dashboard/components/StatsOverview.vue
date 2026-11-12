@@ -347,7 +347,6 @@ function handleCardKeydown(event: KeyboardEvent, path?: string) {
   &--clickable:hover,
   &--clickable:focus-visible {
     background: var(--el-fill-color-lighter);
-    outline: none;
   }
 
   &__row {

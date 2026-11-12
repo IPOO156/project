@@ -14,7 +14,7 @@ import type { ExportJobItem, TeacherExportJob, TeacherExportTemplate } from '@/s
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, FileDown, FlaskConical, Trash2 } from 'lucide-vue-next'
 
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import {
   deleteTeacherExportJob,
   downloadFile,
@@ -25,10 +25,12 @@ import {
   submitArchiveExport,
 } from '@/shared/api/teacher-api'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
-import { usePollingTask } from '@/shared/composables/usePollingTask'
+import { TASK_STATUS_FAILED, usePollingTask } from '@/shared/composables/usePollingTask'
 import { scopeCascade, useScopeFilter } from '@/shared/composables/useScopeFilter'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
 import { EXPORT_TYPES } from '@/shared/constants/dict'
+import DateRangePicker from '@/shared/ui/DateRangePicker.vue'
 import { formatDateTime } from '@/shared/utils/time'
 import GradeImportPanel from './GradeImportPanel.vue'
 import ResearchExportDialog from './ResearchExportDialog.vue'
@@ -38,14 +40,19 @@ import ResearchExportDialog from './ResearchExportDialog.vue'
 // 裸用 hasPermission 会让管理员看不到这些入口。
 // 管理端档案导出（/admin/exports/archives，全校范围）对应后端 archive:export；admin 角色直通。
 // 不持该码时走教师端 /teacher/exports（学院范围，export:execute）。
-const { canAccessAny } = useTeacherAuthz()
+const { canAccessAny, isAdmin } = useTeacherAuthz()
 const useAdminExport = computed(() => canAccessAny(['archive:export']))
 /** 教师端档案导出（/teacher/exports/**）：export:execute */
 const canExportExecute = computed(() => canAccessAny(['export:execute']))
 /** 研究数据导出（/admin/exports/research）：export:research */
 const canExportResearch = computed(() => canAccessAny(['export:research']))
-/** 成绩导入面板：grade:import */
-const canImportGrade = computed(() => canAccessAny(['grade:import']))
+/**
+ * 成绩导入面板：grade:import
+ * 后端成绩导入只有 /admin/grades/*（管理员鉴权），教师即使持 grade:import 也必然 403，
+ * 且教师端没有等价接口（p45）。入口先按 admin 角色收敛，避免教师一进页面就被
+ * 「没有权限执行此操作」的 toast 打断。
+ */
+const canImportGrade = computed(() => isAdmin.value)
 
 /** 组织范围下拉项（学院/专业/班级，来自 /auth/me 的 scopes） */
 const { colleges, majors, classes } = useScopeFilter()
@@ -56,11 +63,31 @@ const filters = reactive({
   majorId: undefined as number | undefined,
   classId: undefined as number | undefined,
   status: '',
-  dateRange: [] as string[],
+  dateRange: null as [string, string] | null,
 })
 
-const scopeOptions = ['全校', '学院', '专业', '班级']
+/**
+ * 组织范围选项按当前账号的实际 scopes 收敛：
+ * 只有持校级（scopeType=1）范围时才提供「全校」，学院/专业/班级教师默认落在本人学院，
+ * 避免出现「显示全校、实际只能看本学院」的口径矛盾。
+ */
+const { me } = useTeacherMe()
+const hasSchoolScope = computed(() => (me.value?.scopes ?? []).some((s) => s.scopeType === 1))
+const scopeOptions = computed(() =>
+  hasSchoolScope.value ? ['全校', '学院', '专业', '班级'] : ['学院', '专业', '班级'],
+)
 const SCOPE_TYPE: Record<string, number> = { 全校: 1, 学院: 2, 专业: 3, 班级: 4 }
+
+// me 为异步加载：首帧可能尚未拿到 scopes，拿到后若当前选项不合法则回落到「学院」。
+// immediate 必须开启：me 是模块级缓存，进入页面时已加载完成，watch 不会触达初值，
+// 否则 filters.scope 会一直停留在写死的「全校」并被 el-select 显示出来。
+watch(
+  hasSchoolScope,
+  (school) => {
+    if (!school && filters.scope === '全校') filters.scope = '学院'
+  },
+  { immediate: true },
+)
 
 /** 组织维度 → 学院/专业/班级下拉显隐（筛选栏） */
 const cascade = computed(() => scopeCascade(SCOPE_TYPE[filters.scope]))
@@ -129,9 +156,10 @@ const filteredTasks = computed(() => {
   if (filters.status === '已完成') list = list.filter((t) => t.status === 2)
   else if (filters.status === '失败') list = list.filter((t) => t.status === 3)
   else if (filters.status === '处理中') list = list.filter((t) => t.status !== 2 && t.status !== 3)
-  if (filters.dateRange?.length === 2 && filters.dateRange[0] && filters.dateRange[1]) {
-    const start = new Date(filters.dateRange[0]).getTime()
-    const end = new Date(filters.dateRange[1]).getTime() + 86_400_000
+  if (filters.dateRange?.[0] && filters.dateRange?.[1]) {
+    // 用本地零点解析：new Date('YYYY-MM-DD') 按 UTC 解析，东八区会整体偏移 8 小时
+    const start = new Date(`${filters.dateRange[0]}T00:00:00`).getTime()
+    const end = new Date(`${filters.dateRange[1]}T00:00:00`).getTime() + 86_400_000
     list = list.filter((t) => {
       if (!t.createdAt) return true
       const ts = new Date(t.createdAt).getTime()
@@ -160,6 +188,15 @@ const researchPolling = usePollingTask<ExportJobItem>({
   onFinish: (_id, ok) => {
     if (ok) ElMessage.success('导出完成，可下载')
     else ElMessage.error('导出失败')
+  },
+  onError: (id) => {
+    // 连续拉取进度失败：轮询已停止，把本地任务标记为失败，避免永久停在「处理中」
+    const task = exportTasks.value.find((t) => t.exportJobId === id)
+    if (task) {
+      task.status = TASK_STATUS_FAILED
+      task.statusLabel = '失败'
+    }
+    ElMessage.error('导出任务进度查询连续失败，请刷新页面后重试')
   },
 })
 
@@ -196,6 +233,11 @@ async function handleExport(fileType: 'pdf' | 'xlsx') {
     // 管理员走 /admin/exports/archives（支持学校级范围等教师端没有的参数），教师走 /teacher/exports。
     // fileType 是「文件格式」只能为 pdf/xlsx（后端校验），模板的 exportType（student_archive 等）是
     // 「模板内容类型」，必须放到 templateId，不能拿来当 fileType。
+    //
+    // 可选参数现状（文档 12.4.2）：页面目前只有「导出范围（scopeType/scopeId）」和「导出模板」两个
+    // 与导出直接相关的筛选项，sections / purpose / includeMetadata / grade 均无对应控件，
+    // 因此不传——按约定不写死默认值。后续补控件时在这里追加即可。
+    // TODO(archiveStatus): 12.4.2 为 1在读~4退学，5.11 为 0草稿~4已撤销，口径冲突，待后端统一后再接。
     const res = useAdminExport.value
       ? await submitAdminArchiveExport({
           scopeType,
@@ -255,9 +297,9 @@ function isExpired(expireAt: string | null | undefined): boolean {
   return !!expireAt && new Date(expireAt).getTime() < Date.now()
 }
 
-/** 导出内容展示：优先模板名，其次导出类型中文名，最后原样回显后端码 */
+/** 导出内容展示：优先模板名，其次导出类型中文名，未知类型不把后端码抛给用户 */
 function contentLabel(row: TeacherExportJob): string {
-  return row.templateName ?? EXPORT_TYPES[row.exportType] ?? row.exportType
+  return row.templateName ?? EXPORT_TYPES[row.exportType] ?? '其他类型'
 }
 
 /**
@@ -315,7 +357,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="canExportExecute" class="mc-filter-bar">
+    <div v-if="canExportExecute" class="mc-filter-bar archive-export__filters">
       <el-form inline @submit.prevent>
         <el-form-item label="导出范围">
           <el-select v-model="filters.scope" class="u-w-120">
@@ -348,11 +390,9 @@ onUnmounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="时间">
-          <el-date-picker
+          <DateRangePicker
             v-model="filters.dateRange"
             class="u-w-240"
-            type="daterange"
-            range-separator="至"
             start-placeholder="开始"
             end-placeholder="结束"
           />
@@ -413,7 +453,6 @@ onUnmounted(() => {
           stripe
           max-height="400"
         >
-          <el-table-column prop="exportJobId" label="任务ID" width="80" />
           <el-table-column label="导出内容" width="160">
             <template #default="{ row }">
               {{ contentLabel(row as TeacherExportJob) }}
@@ -512,6 +551,16 @@ onUnmounted(() => {
 }
 
 .archive-export {
+  /* 顶部筛选行：下拉、日期区间与标签统一垂直居中；
+     宽度由 u-w-* 工具类固定（见 controls.scss B2），空值不再塌陷。 */
+  &__filters {
+    :deep(.el-form-item) {
+      align-items: center;
+    }
+    :deep(.el-form-item__content) {
+      align-items: center;
+    }
+  }
   &__count {
     font-size: 13px;
     color: var(--el-text-color-secondary);

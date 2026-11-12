@@ -4,37 +4,24 @@ import type { RingItem } from './HeroRings.types'
 interface Props {
   rings: RingItem[]
   extinguishedRings: Set<number>
-  scrollY: number
   center?: number
+  /** 需要跳过入场错峰延迟、立即开始生长的圈（关闭详情后恢复年轮时使用） */
+  immediateRings?: Set<number>
 }
 
 const props = withDefaults(defineProps<Props>(), {
   center: 200,
+  immediateRings: () => new Set<number>(),
 })
 
 const CENTER = props.center
-
-function parallaxScale(index: number) {
-  return Math.min(1 + props.scrollY * 0.0004 * (index + 1), 1.3).toFixed(3)
-}
-
-function parallaxOpacity() {
-  return Math.max(0, 0.5 - props.scrollY * 0.001).toFixed(3)
-}
 </script>
 
 <template>
   <svg class="hero-rings__svg" :viewBox="`0 0 ${CENTER * 2} ${CENTER * 2}`">
-    <g
-      v-for="(ring, index) in rings"
-      :key="ring.r"
-      class="hero-rings__ring-wrap"
-      :style="{
-        // 每圈的视差缩放/透明度随滚动动态变化
-        transform: `scale(${parallaxScale(index)})`,
-        opacity: parallaxOpacity(),
-      }"
-    >
+    <!-- 滚动视差（缩放 + 透明度）统一由父层 .hero-rings__system 施加，
+         环与小球共享同一变换矩阵，避免两套缩放造成错位 -->
+    <g v-for="(ring, index) in rings" :key="ring.r" class="hero-rings__ring-wrap">
       <circle
         class="hero-rings__ring"
         :class="{ 'is-extinguished': extinguishedRings.has(index) }"
@@ -50,7 +37,7 @@ function parallaxOpacity() {
         :style="{
           // 动态 dasharray 用于 ringDrawIn / ringExtinguish 动画
           '--ring-dasharray': `${ring.dasharray}px`,
-          'animation-delay': `${ring.delay}s`,
+          'animation-delay': `${immediateRings.has(index) ? 0 : ring.delay}s`,
         }"
       />
     </g>
@@ -62,8 +49,10 @@ function parallaxOpacity() {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 700px;
-  height: 700px;
+  // 尺寸由 .hero-rings 的 --hero-svg-size 统一控制（窄屏会收紧），
+  // 小球用同一份 --hero-scale 定位，两者必须同步变化才能保持对齐。
+  width: var(--hero-svg-size, 700px);
+  height: var(--hero-svg-size, 700px);
   transform: translate(-50%, -50%);
   pointer-events: none;
 }

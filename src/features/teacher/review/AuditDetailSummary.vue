@@ -88,9 +88,7 @@ const progressText = computed(() =>
   <div class="audit-detail__summary">
     <div class="audit-detail__summary-head">
       <span class="audit-detail__type-tag">{{
-        translateEnum('archiveType', detail.archiveType || detail.type) ||
-        detail.archiveType ||
-        detail.type
+        translateEnum('archiveType', detail.archiveType || detail.type) || '其他类型'
       }}</span>
       <h3 class="audit-detail__title">{{ detail.title }}</h3>
     </div>

@@ -148,4 +148,19 @@ describe('useTableQuery', () => {
 
     expect(fetchFn).toHaveBeenCalledWith({ pageNum: 1, pageSize: 10, status: '2' })
   })
+
+  it('翻页与改每页条数都保留当前筛选条件', async () => {
+    const fetchFn = vi.fn().mockResolvedValue([])
+    const query = useTableQuery(fetchFn, { keyword: '' })
+
+    query.searchForm.keyword = '蓝桥'
+    await query.handleSearch()
+    fetchFn.mockClear()
+
+    query.pagination.value.onChange(3)
+    expect(fetchFn).toHaveBeenLastCalledWith({ pageNum: 3, pageSize: 10, keyword: '蓝桥' })
+
+    query.pagination.value.onPageSizeChange(20)
+    expect(fetchFn).toHaveBeenLastCalledWith({ pageNum: 1, pageSize: 20, keyword: '蓝桥' })
+  })
 })

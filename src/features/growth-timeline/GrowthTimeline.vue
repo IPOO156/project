@@ -16,6 +16,7 @@ import { useSemesterRings } from './composables/useSemesterRings'
 
 const {
   experiences,
+  summary,
   selectedExperience,
   selectedId,
   formVisible,
@@ -31,7 +32,6 @@ const {
 
 const BASE_RADIUS = 52
 const RING_STEP = 18
-const HERO_SCALE = 1.75
 const { findRing } = useSemesterRings()
 
 const orbitPaused = ref(false)
@@ -46,6 +46,7 @@ onBeforeUnmount(() => {
 const expandOrigin = ref<{ x: number; y: number } | null>(null)
 const showDetail = ref(false)
 const reverseTrigger = ref(0)
+const ringRestoreTrigger = ref(0)
 const selectedElectronPos = ref<{ x: number; y: number } | null>(null)
 const pendingDeleteId = ref<string | null>(null)
 
@@ -60,7 +61,12 @@ function setViewMode(mode: ViewMode) {
 }
 
 function getHeroScale() {
-  return window.innerWidth <= 768 ? 1.05 : HERO_SCALE
+  // 单一来源：直接读 HeroRings.vue 里定义的 --hero-scale（桌面 1.75 / 窄屏 0.9 / ≤340px 0.75），
+  // 年轮半径与小球定位共用同一个值，避免两处常量手工同步漏改。
+  const hero = document.getElementById('hero')
+  const raw = hero ? getComputedStyle(hero).getPropertyValue('--hero-scale') : ''
+  const scale = Number.parseFloat(raw)
+  return Number.isFinite(scale) && scale > 0 ? scale : 1.75
 }
 
 function getSystemCenter() {
@@ -120,6 +126,9 @@ function handleListViewSelect(id: string) {
 
 function handleCloseDetail() {
   showDetail.value = false
+  // 关闭详情时立即让年轮重新生长：不必等 ExperienceDetail 的 550ms 退场动画
+  // 播完（等 selectedId 变 null）才开始，否则关闭后会有近 0.8s 的静默。
+  ringRestoreTrigger.value++
 }
 
 function handleDeleteExperience(id: string) {
@@ -199,6 +208,7 @@ function handleScrollToGrowth() {
         :selected-id="selectedId"
         :paused="orbitPaused"
         :reverse-trigger="reverseTrigger"
+        :restore-trigger="ringRestoreTrigger"
         @select="handleElectronSelect"
         @reverse-complete="handleReverseComplete"
         @add="openForm"
@@ -258,7 +268,7 @@ function handleScrollToGrowth() {
       </section>
 
       <GrowthQuote />
-      <SummarySection :experiences="experiences" />
+      <SummarySection :experiences="experiences" :summary="summary" />
       <GrowthFooter />
     </template>
 

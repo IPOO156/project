@@ -778,6 +778,28 @@ html:not(.dark) #app .layout--admin {
   }
 }
 
+/* 管理员端夜间：上方 `#app .layout--admin` 的表格表头底色与文字为亮色写死值，
+   这里按教师端同一套夜间 token 覆盖，避免暗色下表头仍是浅灰底 + 深灰字。 */
+html.dark #app .layout--admin {
+  .el-table {
+    --el-table-header-bg-color: #1e293b;
+    --el-table-row-hover-bg-color: #1a2433;
+    --el-table-border-color: var(--el-border-color-lighter);
+
+    th.el-table__cell {
+      color: #cbd5e1;
+    }
+
+    .el-table__body {
+      color: var(--el-text-color-regular);
+    }
+
+    .el-table__row--striped td.el-table__cell {
+      background-color: #151d2b;
+    }
+  }
+}
+
 /* =============================================================================
  * 控件基线 —— 自 global.scss 收窄到教师 / 管理员壳
  * 学生端恢复 BASE：这些规则不再命中学生页面。
@@ -866,8 +888,13 @@ html:not(.dark) #app .layout--admin {
     }
 
     .col-primary {
+      display: inline-block;
+      max-width: 100%;
       font-weight: 600;
       color: var(--el-text-color-primary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .col-secondary {

@@ -1,17 +1,69 @@
 import type { GrowthExperience, GrowthExperienceInput } from '../timelineConstants'
 import { computed, ref } from 'vue'
-import { addTimelineEvent, deleteTimelineEvent } from '@/shared/api/archive'
+import { addTimelineEvent, deleteTimelineEvent, getTimelineEventDetail } from '@/shared/api/archive'
 import { getGrowthTimeline } from '@/shared/api/student'
 import { mapTimelineEventType } from '../timelineConstants'
 import { useGrowthDataSources } from './useGrowthDataSources'
+
+/** 后端成长时间轴 summary；字段缺失/非法时为 null，表示「无数据」而不是 0 */
+export interface GrowthSummary {
+  experiences: number | null
+  skills: number | null
+  averageGrowth: number | null
+  potential: string | null
+}
 
 function sortExperiencesByDate(list: GrowthExperience[]): GrowthExperience[] {
   return [...list].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 }
 
+/** 能力项映射：列表与详情共用（后端字段为 dimensionCode/dimensionName/score） */
+function mapAbilities(raw: unknown): GrowthExperience['skills'] {
+  const abilities = Array.isArray(raw) ? raw : []
+  return abilities.map((a: any) => ({
+    name: a.dimensionName ?? a.dimensionCode ?? '',
+    growth: a.score ?? 0,
+    dimensionCode: a.dimensionCode ?? undefined,
+  }))
+}
+
+/** 字符串数字（如 "63"、""）统一归一化为 number | null，避免 NaN 混入展示 */
+function toNumberOrNull(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  if (typeof value === 'string') {
+    const text = value.trim().replace(/%$/, '')
+    if (!text) return null
+    const parsed = Number(text)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}
+
+/**
+ * 归一化后端 summary：兼容空对象、字段为字符串数字、字段为 null。
+ * 四个字段全空时返回 null，交由前端本地计算/占位符兜底。
+ */
+function normalizeSummary(raw: unknown): GrowthSummary | null {
+  if (!raw || typeof raw !== 'object') return null
+  const source = raw as Record<string, unknown>
+  const potential =
+    typeof source.potential === 'string'
+      ? source.potential.trim() || null
+      : source.potential == null
+        ? null
+        : String(source.potential)
+  const summary: GrowthSummary = {
+    experiences: toNumberOrNull(source.experiences),
+    skills: toNumberOrNull(source.skills),
+    averageGrowth: toNumberOrNull(source.averageGrowth),
+    potential,
+  }
+  const hasValue = Object.values(summary).some((v) => v !== null)
+  return hasValue ? summary : null
+}
+
 /** 将后端成长时间轴事件映射为前端 GrowthExperience 结构（eventName→title、content→description、eventAt→date、sourceId→recordId） */
 function mapBackendEvent(e: Record<string, any>): GrowthExperience {
-  const abilities = Array.isArray(e.abilityData) ? e.abilityData : []
   return {
     id: `backend-${e.id}`,
     title: e.eventName ?? '',
@@ -23,11 +75,7 @@ function mapBackendEvent(e: Record<string, any>): GrowthExperience {
     tags: [
       ...new Set([mapTimelineEventType(e.eventType), ...(Array.isArray(e.tags) ? e.tags : [])]),
     ],
-    skills: abilities.map((a: any) => ({
-      name: a.dimensionName ?? a.dimensionCode ?? '',
-      growth: a.score ?? 0,
-      dimensionCode: a.dimensionCode ?? undefined,
-    })),
+    skills: mapAbilities(e.abilityData),
     recordId: e.sourceId != null ? String(e.sourceId) : undefined,
     statusLabel: e.statusLabel || undefined,
   }
@@ -43,6 +91,8 @@ export function useGrowthTimeline() {
   const localExperiences = ref<GrowthExperience[]>([])
   // 后端时间轴事件；后端不可用时为空，页面展示空态
   const backendExperiences = ref<GrowthExperience[]>([])
+  // 后端 summary（列表接口汇总）；为 null 时由前端本地计算兜底
+  const backendSummary = ref<GrowthSummary | null>(null)
   const backendLoaded = ref(false)
 
   const selectedExperience = computed(() => {
@@ -67,15 +117,51 @@ export function useGrowthTimeline() {
     experiences.value = sortExperiencesByDate([...base, ...localExperiences.value])
   }
 
+  /**
+   * 列表接口未下发 abilityData 时，按 4.2.2 详情接口补齐能力项。
+   * 详情也为空则说明该事件本身没有能力记录，保持空状态。
+   */
+  async function backfillMissingAbilities(rawTimeline: Record<string, any>[]) {
+    const targets = rawTimeline
+      .filter((raw) => !Array.isArray(raw.abilityData) || raw.abilityData.length === 0)
+      .slice(0, 20)
+    if (!targets.length) return
+
+    const results = await Promise.allSettled(
+      targets.map(async (raw) => ({
+        id: Number(raw.id),
+        skills: mapAbilities((await getTimelineEventDetail(raw.id))?.abilityData),
+      })),
+    )
+    const patched = new Map<number, GrowthExperience['skills']>()
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value.skills.length) {
+        patched.set(result.value.id, result.value.skills)
+      }
+    })
+    if (!patched.size) return
+
+    backendExperiences.value = backendExperiences.value.map((e) => {
+      const id = Number(e.id.replace('backend-', ''))
+      return patched.has(id) ? { ...e, skills: patched.get(id)! } : e
+    })
+    rebuildExperiences()
+  }
+
   /** 页面加载时拉取成长时间轴；失败时保留本地新增经历 */
   async function loadBackendTimeline() {
     try {
       const data = await getGrowthTimeline()
-      backendExperiences.value = (data.timeline ?? []).map(mapBackendEvent)
+      const rawTimeline = Array.isArray(data.timeline) ? data.timeline : []
+      backendSummary.value = normalizeSummary(data.summary)
+      backendExperiences.value = rawTimeline.map(mapBackendEvent)
       backendLoaded.value = true
+      rebuildExperiences()
+      await backfillMissingAbilities(rawTimeline)
     } catch {
       // 后端不可用：仅保留本地新增经历，展示空态而非编造记录
       backendLoaded.value = false
+      backendSummary.value = null
     } finally {
       rebuildExperiences()
     }
@@ -180,6 +266,7 @@ export function useGrowthTimeline() {
 
   return {
     experiences,
+    summary: backendSummary,
     selectedId,
     selectedExperience,
     formVisible,

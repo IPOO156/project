@@ -38,11 +38,12 @@ const staggerActive = useFirstLoadStagger(() => props.list.length)
     </div>
     <div class="mc-card__body">
       <el-table v-loading="loading" class="u-w-full" :data="list">
-        <el-table-column label="档案" min-width="220">
+        <el-table-column label="档案" min-width="320">
           <template #default="{ row }">
             <div class="archive-view__doc">
               <span class="archive-view__doc-type">{{ row.archiveTypeName ?? '-' }}</span>
-              <span class="archive-view__doc-title">{{ row.title }}</span>
+              <!-- 长档案名此前被压到 217px 且无 tooltip，鼠标悬停可看全称 -->
+              <span class="archive-view__doc-title" :title="row.title">{{ row.title }}</span>
             </div>
           </template>
         </el-table-column>
@@ -182,6 +183,9 @@ const staggerActive = useFirstLoadStagger(() => props.list.length)
     font-size: 14px;
     font-weight: 600;
     color: var(--el-text-color-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   &__student-no {
     font-size: 13px;
@@ -194,11 +198,15 @@ const staggerActive = useFirstLoadStagger(() => props.list.length)
   }
   &__org-node {
     display: inline-flex;
+    max-width: 100%;
     padding: 4px 8px;
     font-size: 12px;
     border-radius: $radius-base;
     background: var(--el-color-primary-light-9);
     color: var(--el-color-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     &.is-soft {
       background: var(--el-fill-color-light);
       color: var(--el-text-color-secondary);
