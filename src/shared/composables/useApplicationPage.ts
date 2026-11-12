@@ -236,10 +236,14 @@ export function useApplicationPage(
         acquisitionDate: extendedForm.acquisitionDate || undefined,
         validityPeriod: extendedForm.validityPeriod || undefined,
       }
-      await submitApplication({ type, typeLabel, ...submitData })
+      // 编辑已存在的后端记录时带上 recordId：submitApplication 内部改走 PUT 更新，
+      // 避免「编辑后提交」变成新增一条、旧记录残留。
+      const editing = editingId.value
+      const recordId = editing && /^\d+$/.test(editing) ? Number(editing) : undefined
+      await submitApplication({ type, typeLabel, recordId, ...submitData })
       const title = deriveRecordTitle(submitData) || `${typeLabel}申报`
-      if (editingId.value) {
-        updateRecord(editingId.value, { title, ...submitData, status: 'pending' })
+      if (editing) {
+        updateRecord(editing, { title, ...submitData, status: 'pending' })
         editingId.value = null
       } else {
         addRecord(title, { ...submitData, status: 'pending' })
@@ -252,8 +256,12 @@ export function useApplicationPage(
       resetForm()
       // 清空表单后再次清草稿：防深 watcher（800ms 防抖）在 clearDraft 与 resetForm 之间把旧内容重写回 localStorage
       await clearDraft()
-    } catch {
-      /* 拦截器已提示 */
+    } catch (err) {
+      // 响应拦截器已提示后端错误；此处只补前端自身抛出的错误（如契约缺失、主记录创建失败），
+      // 避免与拦截器重复弹窗，也避免「提交失败却提示成功」。
+      if (err instanceof Error && !('isAxiosError' in err) && err.message) {
+        ElMessage.error(err.message)
+      }
     } finally {
       submitting.value = false
     }

@@ -1,4 +1,5 @@
 import type { ApplicationType, SubmissionRecord } from '@/shared/types/types'
+import { updateActivity } from '../activities'
 import request from '../request'
 import {
   APPLICATION_CONTRACTS,
@@ -12,6 +13,7 @@ import {
   toDateString,
   toEvidenceFileIds,
 } from './payload'
+import { activityCategoryOf } from './record-utils'
 
 /** 8.3 科研之星：创建主记录（草稿）→ 添加子项目 → 确认提交 */
 async function submitResearchStarApplication(
@@ -58,8 +60,10 @@ async function submitResearchStarApplication(
 
 /**
  * 提交申报申请
- * 对接后端 7.x POST /applications/{type}、8.x POST /awards/{type}。提交失败直接抛错，
- * 交由调用方提示"提交失败"，禁止用伪造的本地记录伪装成功（否则刷新后数据丢失却提示已保存）。
+ * 对接后端 7.x POST /applications/{type}、8.x POST /awards/{type}；有已存在记录 id 时走
+ * 7.x/8.x PUT /activities/{type}/{id} 更新并正式提交（不再新建记录，避免旧草稿残留）。
+ * 提交失败直接抛错，交由调用方提示"提交失败"，禁止用伪造的本地记录伪装成功
+ * （否则刷新后数据丢失却提示已保存）。
  * 前端表单字段名与契约不一致的，在 buildContractPayload 中完成重命名与归一化。
  */
 export async function submitApplication(data: Record<string, any>): Promise<SubmissionRecord> {
@@ -73,7 +77,21 @@ export async function submitApplication(data: Record<string, any>): Promise<Subm
   if (!contract) throw new Error(`未配置申报类型契约：${type}`)
 
   const payload = await buildContractPayload(type, data)
-  const res: any = await request.post(contract.endpoint, payload)
+  let res: any
+  if (data.recordId != null && String(data.recordId) !== '') {
+    // 编辑草稿/被退回记录后重新提交：更新原记录并正式提交（isDraft=0）
+    const { archiveId, status } = await updateActivity(
+      Number(data.recordId),
+      activityCategoryOf(type),
+      {
+        ...payload,
+        isDraft: 0,
+      },
+    )
+    res = { archiveId, status }
+  } else {
+    res = await request.post(contract.endpoint, payload)
+  }
   return {
     id: String(res?.archiveId ?? res?.applicationId ?? Date.now()),
     type: type as ApplicationType,
