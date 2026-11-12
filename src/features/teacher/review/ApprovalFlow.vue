@@ -8,6 +8,7 @@ import type { ApprovalFlowDetail, ApprovalFlowItem } from '@/shared/types/teache
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, RefreshCw, Route } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
+import { ARCHIVE_TYPE_TO_KEY } from '@/shared/api/submission/archive-type'
 import {
   createApprovalFlow,
   deleteApprovalFlow,
@@ -15,8 +16,9 @@ import {
   listApprovalFlows,
   updateApprovalFlow,
 } from '@/shared/api/teacher-api'
-
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
+
+import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
 import ApprovalFlowMappingsDrawer from './ApprovalFlowMappingsDrawer.vue'
@@ -38,7 +40,38 @@ const applicableTypeOptions = [
 ]
 
 function typeLabel(type: string) {
-  return applicableTypeOptions.find((t) => t.value === type)?.label ?? type
+  return applicableTypeOptions.find((t) => t.value === type)?.label ?? '其他业务'
+}
+
+/** 审批步骤的范围/规则/子类型展示：后端存编码，界面统一出中文 */
+const STEP_SCOPE_TYPES = [
+  { value: 1, label: '学校' },
+  { value: 2, label: '学院' },
+  { value: 3, label: '专业' },
+  { value: 4, label: '班级' },
+  { value: 5, label: '课程' },
+  { value: 6, label: '年级' },
+]
+const STEP_SCOPE_RULES = [
+  { value: 'school', label: '本校' },
+  { value: 'student_college', label: '学生所在学院' },
+  { value: 'student_major', label: '学生所在专业' },
+  { value: 'student_class', label: '学生所在班级' },
+]
+
+function stepScopeLabel(scope: number) {
+  return STEP_SCOPE_TYPES.find((t) => t.value === scope)?.label ?? '其他范围'
+}
+
+function stepScopeRuleLabel(rule: string | null | undefined) {
+  if (!rule) return '-'
+  return STEP_SCOPE_RULES.find((r) => r.value === rule)?.label ?? '自定义规则'
+}
+
+function subTypeLabel(subType: string | null | undefined) {
+  if (!subType) return '通用'
+  if (/[\u4E00-\u9FA5]/.test(subType)) return subType
+  return APPLICATION_TYPE_MAP[ARCHIVE_TYPE_TO_KEY[subType] ?? subType] ?? '其他类型'
 }
 
 const loading = ref(false)
@@ -225,8 +258,10 @@ onMounted(() => void load())
           <el-table-column label="适用类型" width="130">
             <template #default="{ row }">{{ typeLabel(row.applicableType) }}</template>
           </el-table-column>
-          <el-table-column prop="applicableSubType" label="适用子类型" width="130">
-            <template #default="{ row }">{{ row.applicableSubType ?? '通用' }}</template>
+          <!-- 后端存业务编码（academic_competition 等），列内用 subTypeLabel 转中文，
+               避免原值过长在 130px 单元格里被拆成两行 -->
+          <el-table-column label="适用子类型" width="140">
+            <template #default="{ row }">{{ subTypeLabel(row.applicableSubType) }}</template>
           </el-table-column>
           <el-table-column prop="version" label="版本" width="70" align="center" />
           <!-- 标签「默认」约 38px + 单元格内边距 24px；70px 在窄屏下会被固定列遮住边缘 -->
@@ -367,7 +402,7 @@ onMounted(() => void load())
               typeLabel(detail.applicableType)
             }}</el-descriptions-item>
             <el-descriptions-item label="适用子类型">{{
-              detail.applicableSubType ?? '通用'
+              subTypeLabel(detail.applicableSubType)
             }}</el-descriptions-item>
             <el-descriptions-item label="版本">{{ detail.version }}</el-descriptions-item>
             <el-descriptions-item label="默认流程">
@@ -390,13 +425,12 @@ onMounted(() => void load())
               <el-table-column prop="stepNo" label="步骤" width="60" align="center" />
               <el-table-column prop="stepName" label="步骤名称" min-width="120" />
               <el-table-column prop="roleId" label="角色ID" width="80" align="center" />
-              <el-table-column prop="scopeType" label="范围类型" width="80" align="center" />
-              <el-table-column
-                prop="scopeRule"
-                label="范围规则"
-                min-width="120"
-                show-overflow-tooltip
-              />
+              <el-table-column label="范围类型" width="80" align="center">
+                <template #default="{ row }">{{ stepScopeLabel(row.scopeType) }}</template>
+              </el-table-column>
+              <el-table-column label="范围规则" min-width="120" show-overflow-tooltip>
+                <template #default="{ row }">{{ stepScopeRuleLabel(row.scopeRule) }}</template>
+              </el-table-column>
               <el-table-column label="自动分配" width="80" align="center">
                 <template #default="{ row }">{{ row.autoAssign === 1 ? '是' : '否' }}</template>
               </el-table-column>

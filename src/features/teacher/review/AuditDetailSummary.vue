@@ -73,7 +73,9 @@ function baseInfoEntries(): { label: string; value: string }[] {
 }
 
 function fieldLabel(key: string): string {
-  return AUDIT_DETAIL_LABELS[key] ?? key
+  // 后端可能直接给中文键名，原样展示；英文键走统一映射，未知键不把字段名抛给用户
+  if (/[\u4E00-\u9FA5]/.test(key)) return key
+  return AUDIT_DETAIL_LABELS[key] ?? '其他信息'
 }
 
 /**
@@ -125,7 +127,15 @@ function translateEnum(key: string, val: unknown): string | null {
 
 function displayValue(key: string, value: unknown): string {
   if (value == null || value === '') return '-'
-  if (typeof value === 'object') return JSON.stringify(value)
+  // 数组用顿号拼接、对象展开为「中文键：值」，不把 JSON 片段直接抛给用户
+  if (Array.isArray(value)) {
+    return value.length ? value.map((item) => displayValue(key, item)).join('、') : '-'
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+    if (!entries.length) return '-'
+    return entries.map(([k, v]) => `${fieldLabel(k)}：${displayValue(k, v)}`).join('；')
+  }
   // 枚举翻译优先于原始值
   const translated = translateEnum(key, value)
   if (translated) return translated
@@ -143,9 +153,7 @@ function semesterDisplay(): string {
   <div class="audit-detail__summary">
     <div class="audit-detail__summary-head">
       <span class="audit-detail__type-tag">{{
-        translateEnum('archiveType', detail.archiveType || detail.type) ||
-        detail.archiveType ||
-        detail.type
+        translateEnum('archiveType', detail.archiveType || detail.type) || '其他类型'
       }}</span>
       <h3 class="audit-detail__title">{{ detail.title }}</h3>
     </div>

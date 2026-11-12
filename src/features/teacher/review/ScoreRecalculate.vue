@@ -398,7 +398,6 @@ onMounted(() => {
       </div>
       <div class="mc-card__body">
         <el-table v-if="tasks.length" class="u-w-full" :data="tasks" stripe>
-          <el-table-column prop="taskId" label="任务ID" width="80" />
           <el-table-column prop="targetTypeLabel" label="重算范围" width="110" />
           <el-table-column label="状态" width="90">
             <template #default="{ row }">

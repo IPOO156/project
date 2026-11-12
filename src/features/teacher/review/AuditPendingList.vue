@@ -94,7 +94,7 @@ function onKeywordInput() {
 // ── 展示辅助 ──
 function businessLabel(row: AuditPendingItem): string {
   if (row.archiveTypeLabel) return row.archiveTypeLabel
-  return AUDIT_BUSINESS_TYPES[row.type] ?? row.type
+  return AUDIT_BUSINESS_TYPES[row.type] ?? '其他业务'
 }
 
 function statusTagType(status: number): 'success' | 'warning' | 'info' | 'danger' {

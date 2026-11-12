@@ -10,11 +10,13 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Trash2 } from 'lucide-vue-next'
 
 import { reactive, ref, watch } from 'vue'
+import { ARCHIVE_TYPE_TO_KEY } from '@/shared/api/submission/archive-type'
 import {
   deleteApprovalFlowMapping,
   listApprovalFlowMappings,
   upsertApprovalFlowMapping,
 } from '@/shared/api/teacher-api'
+import { APPLICATION_TYPE_MAP } from '@/shared/constants/dict'
 
 const props = defineProps<{
   visible: boolean
@@ -50,7 +52,15 @@ const SUB_TYPE_HINT =
   '后端按「学校 + 业务类型 + 子类型」命中本表，命中不到时回落到「默认流程」。'
 
 function typeLabel(type: string) {
-  return businessTypeOptions.find((t) => t.value === type)?.label ?? type
+  return businessTypeOptions.find((t) => t.value === type)?.label ?? '其他业务'
+}
+
+/** 子类型：空值即通用；后端存的是类型编码，转成中文，未知编码不裸奔 */
+function subTypeLabel(subType: string | null) {
+  if (!subType) return '通用'
+  if (/[\u4E00-\u9FA5]/.test(subType)) return subType
+  const key = ARCHIVE_TYPE_TO_KEY[subType] ?? subType
+  return APPLICATION_TYPE_MAP[key] ?? '其他类型'
 }
 
 const loading = ref(false)
@@ -233,7 +243,7 @@ function handleClosed() {
           <template #default="{ row }">{{ typeLabel(row.businessType) }}</template>
         </el-table-column>
         <el-table-column label="子类型" width="100">
-          <template #default="{ row }">{{ row.businessSubType ?? '通用' }}</template>
+          <template #default="{ row }">{{ subTypeLabel(row.businessSubType) }}</template>
         </el-table-column>
         <el-table-column prop="flowName" label="关联流程" min-width="150" show-overflow-tooltip />
         <el-table-column label="默认" width="70" align="center">
