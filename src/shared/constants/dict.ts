@@ -341,6 +341,7 @@ export const AUDIT_DETAIL_LABELS: Record<string, string> = {
   competitionType: '竞赛类型',
   competitionDate: '参赛时间',
   awardLevel: '获奖等级',
+  awardType: '奖项类型',
   awardDate: '获奖时间',
   awardName: '奖项名称',
   prizeName: '奖项名称',
@@ -355,6 +356,8 @@ export const AUDIT_DETAIL_LABELS: Record<string, string> = {
   registerDate: '注册时间',
   projectDate: '项目时间',
   // 奖学金 / 科研
+  scholarshipName: '奖学金名称',
+  scholarshipCategory: '奖学金类别',
   scholarshipLevel: '奖学金级别',
   scholarshipGrade: '获奖等级',
   journalName: '期刊名称',
@@ -366,6 +369,8 @@ export const AUDIT_DETAIL_LABELS: Record<string, string> = {
   approveDate: '获批时间',
   // 证书
   certType: '证书类型',
+  certificateType: '证书类型',
+  certificateName: '证书名称',
   certName: '证书名称',
   certDate: '获得时间',
   certNumber: '证书编号',
@@ -379,6 +384,7 @@ export const AUDIT_DETAIL_LABELS: Record<string, string> = {
   startDate: '开始时间',
   endDate: '结束时间',
   organizationLevel: '组织级别',
+  orgLevel: '组织级别',
   department: '部门',
   activityName: '活动名称',
   organization: '组织单位',

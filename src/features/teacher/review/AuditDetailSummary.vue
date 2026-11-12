@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { AuditPendingDetail } from '@/shared/types/teacher'
+import { computed } from 'vue'
 import {
   APPLICATION_TYPE_MAP,
   AUDIT_DETAIL_LABELS,
@@ -36,7 +37,15 @@ const DETAIL_ENUM_MAP: Record<string, readonly { label: string; value: string }[
   companyType: COMPANY_TYPE_DISPLAY_OPTIONS,
 }
 
-/** 填报内容/基础信息字段展开 */
+/**
+ * 填报内容字段展开。
+ *
+ * 后端 detail 会同时返回枚举码（competitionType）与其中文标签（competitionTypeLabel），
+ * 两者都渲染会出现「竞赛类型：学科类」重复两行，且 Label 字段的 key 不在字典表里时会
+ * 直接以 `competitionTypeLabel` 作为行标题（见 2026-11-12 审核详情截图）。
+ * 因此成对字段只保留一行：前端有字典能翻译枚举码时丢掉 Label 行；没有字典时丢掉原始码行、
+ * 保留后端返回的中文标签。
+ */
 function detailEntries(): { key: string; label: string; value: unknown }[] {
   const map = props.detail?.detail ?? {}
   const skip = new Set(['id', 'status', 'semesterId', 'submitTime', 'applicantId'])
@@ -44,8 +53,18 @@ function detailEntries(): { key: string; label: string; value: unknown }[] {
     .filter(([k, v]) => {
       if (skip.has(k)) return false
       if (isInBaseInfo(k)) return false
-      // 跳过后端返回的空 Label 字段（如 competitionTypeLabel=null），避免前端 fallback 到原始 key
-      if (k.endsWith('Label') && (v == null || v === '')) return false
+
+      if (k.endsWith('Label')) {
+        // 空标签没有展示价值，也避免前端 fallback 到原始 key
+        if (v == null || v === '') return false
+        const baseKey = k.slice(0, -'Label'.length)
+        // 原始字段已能由前端字典翻译时，Label 行是重复信息
+        return translateEnum(baseKey, map[baseKey]) == null
+      }
+
+      // 原始码前端无法翻译、但后端给了中文标签时，交由 *Label 行展示
+      const labelValue = map[`${k}Label`]
+      if (labelValue != null && labelValue !== '' && translateEnum(k, v) == null) return false
       return true
     })
     .map(([k, v]) => ({ key: k, label: fieldLabel(k), value: v }))
@@ -71,7 +90,12 @@ function baseInfoEntries(): { label: string; value: string }[] {
 }
 
 function fieldLabel(key: string): string {
-  return AUDIT_DETAIL_LABELS[key] ?? key
+  // 后端 *Label 字段的值已是中文，行标题按去掉 Label 后缀的基础字段名取中文
+  return (
+    AUDIT_DETAIL_LABELS[key] ??
+    (key.endsWith('Label') ? AUDIT_DETAIL_LABELS[key.slice(0, -'Label'.length)] : undefined) ??
+    key
+  )
 }
 
 /**
@@ -134,6 +158,22 @@ function displayValue(key: string, value: unknown): string {
 function semesterDisplay(): string {
   return props.detail?.baseInfo?.semesterName ?? ''
 }
+
+/**
+ * 审批进度。
+ *
+ * 详情接口只返回审批历史（已完成的节点），不返回当前节点号/名称，
+ * 因此不能用 history.length 冒充「当前环节」——否则多级流程走到第 3 级时，
+ * 页面上会显示「当前环节 2 步」，让人误以为 2 级通过就已审完（2026-11-12 反馈）。
+ * 这里改为只陈述事实：已通过几级、仍在等待后续审核。
+ */
+const approvedStepCount = computed(
+  () => props.detail?.approvalHistory?.filter((item) => item.action === 1).length ?? 0,
+)
+
+const progressText = computed(() =>
+  approvedStepCount.value > 0 ? `已通过 ${approvedStepCount.value} 级，待后续审核` : '待审批',
+)
 </script>
 
 <template>
@@ -163,8 +203,8 @@ function semesterDisplay(): string {
       <el-descriptions-item v-if="semesterDisplay()" label="学期">
         {{ semesterDisplay() }}
       </el-descriptions-item>
-      <el-descriptions-item label="当前环节">
-        {{ detail.approvalHistory?.length ? `${detail.approvalHistory.length} 步` : '待审批' }}
+      <el-descriptions-item label="审批进度">
+        {{ progressText }}
       </el-descriptions-item>
     </el-descriptions>
     <el-tag

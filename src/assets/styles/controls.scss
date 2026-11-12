@@ -29,19 +29,40 @@
 }
 
 #app :is(.layout--teacher, .layout--admin) .el-input__wrapper {
+  position: relative;
   padding: 1px var(--mc-ctl-px);
   transition:
     box-shadow var(--mc-ctl-duration) var(--mc-ctl-ease),
     background-color var(--mc-ctl-duration) var(--mc-ctl-ease);
 }
 
-/* 焦点：1px 面线 + 2px 实描边。:focus-within 保证鼠标点击也显示，
-   .is-focus 兜住 EP 自身的类名切换。 */
-#app :is(.layout--teacher, .layout--admin) .el-input__wrapper:focus-within,
-#app :is(.layout--teacher, .layout--admin) .el-input__wrapper.is-focus {
-  box-shadow: 0 0 0 1px var(--mc-ctl-line-focus) inset;
-  outline: 2px solid var(--mc-ctl-focus);
-  outline-offset: 2px;
+/* 焦点外环由伪元素承载：
+   - outline 不参与 transition，选中时外圈会瞬跳；
+   - 直接把外环写进 box-shadow 又会压掉 EP 的 hover / is-error / disabled 状态（ID 选择器权重更高）。
+   伪元素只画环，不参与 EP 的状态叠加，hover 与校验红边均保持原样。
+   1px 内边线仍由 EP 的 is-focus 走 --el-input-focus-border-color 过渡。 */
+#app :is(.layout--teacher, .layout--admin) .el-input__wrapper::after,
+#app :is(.layout--teacher, .layout--admin) .el-select__wrapper::after {
+  content: '';
+  position: absolute;
+  /* 外扩 4px：内侧 2px 留白（等价旧 outline-offset: 2px），外侧 2px 为环宽 */
+  inset: -4px;
+  border: 2px solid var(--mc-ctl-focus);
+  border-radius: calc(var(--mc-ctl-radius) + 4px);
+  opacity: 0;
+  transform: scale(0.97);
+  transition:
+    opacity var(--mc-ctl-duration) var(--mc-ctl-ease),
+    transform var(--mc-ctl-duration) var(--mc-ctl-ease);
+  pointer-events: none;
+}
+
+/* 焦点：外环淡入并轻微放大。:focus-within 保证鼠标点击也显示，.is-focus 兜住 EP 类名 */
+#app :is(.layout--teacher, .layout--admin) .el-input__wrapper:focus-within::after,
+#app :is(.layout--teacher, .layout--admin) .el-input__wrapper.is-focus::after,
+#app :is(.layout--teacher, .layout--admin) .el-select__wrapper.is-focused::after {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* 禁用：面 / 边 / 字三档独立，不用 EP 默认蓝灰 */
@@ -55,10 +76,14 @@
   -webkit-text-fill-color: var(--mc-ctl-disabled-text);
 }
 
-/* 文本域：EP 用独立元素 .el-textarea__inner，不吃 .el-input 的变量，必须单写。 */
+/* 文本域：EP 用独立元素 .el-textarea__inner，不吃 .el-input 的变量，必须单写。
+   textarea 是替换元素，Chrome 不渲染其 ::before/::after，外环只能用 box-shadow 双层实现；
+   显式 box-shadow 权重高于 EP 的 is-error 规则，因此红边状态需在此补回。 */
 #app :is(.layout--teacher, .layout--admin) .el-textarea__inner {
   border-radius: var(--mc-ctl-radius);
-  box-shadow: 0 0 0 1px var(--mc-ctl-line) inset;
+  box-shadow:
+    0 0 0 1px var(--mc-ctl-line) inset,
+    0 0 0 0 var(--mc-ctl-focus);
   background-color: var(--mc-ctl-surface);
   color: var(--mc-ctl-text);
   padding: 8px var(--mc-ctl-px);
@@ -66,13 +91,28 @@
 }
 
 #app :is(.layout--teacher, .layout--admin) .el-textarea__inner:hover {
-  box-shadow: 0 0 0 1px var(--mc-ctl-line-hover) inset;
+  box-shadow:
+    0 0 0 1px var(--mc-ctl-line-hover) inset,
+    0 0 0 0 var(--mc-ctl-focus);
 }
 
 #app :is(.layout--teacher, .layout--admin) .el-textarea__inner:focus {
-  box-shadow: 0 0 0 1px var(--mc-ctl-line-focus) inset;
-  outline: 2px solid var(--mc-ctl-focus);
-  outline-offset: 2px;
+  box-shadow:
+    0 0 0 1px var(--mc-ctl-line-focus) inset,
+    0 0 0 2px var(--mc-ctl-focus);
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-form-item.is-error .el-textarea__inner,
+#app :is(.layout--teacher, .layout--admin) .el-form-item.is-error .el-textarea__inner:hover {
+  box-shadow:
+    0 0 0 1px var(--el-color-danger) inset,
+    0 0 0 0 var(--el-color-danger);
+}
+
+#app :is(.layout--teacher, .layout--admin) .el-form-item.is-error .el-textarea__inner:focus {
+  box-shadow:
+    0 0 0 1px var(--el-color-danger) inset,
+    0 0 0 2px var(--el-color-danger);
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -91,6 +131,7 @@
 }
 
 #app :is(.layout--teacher, .layout--admin) .el-select__wrapper {
+  position: relative;
   min-height: var(--mc-ctl-h);
   padding: 0 var(--mc-ctl-px);
   background-color: var(--mc-ctl-surface);
@@ -107,8 +148,6 @@
 
 #app :is(.layout--teacher, .layout--admin) .el-select__wrapper.is-focused {
   box-shadow: 0 0 0 1px var(--mc-ctl-line-focus) inset;
-  outline: 2px solid var(--mc-ctl-focus);
-  outline-offset: 2px;
 }
 
 #app :is(.layout--teacher, .layout--admin) .el-select__wrapper.is-disabled {
