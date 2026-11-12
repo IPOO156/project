@@ -14,14 +14,14 @@ export const DETAIL_TO_FORM_MAP: Record<string, Record<string, string>> = {
     competitionName: 'competitionName',
     competitionType: 'competitionType',
     awardLevel: 'awardLevel',
-    obtainTime: 'awardDate',
+    obtainedTime: 'awardDate',
     participantRole: 'role',
   },
   scholarship: {
     scholarshipName: 'awardName',
     scholarshipCategory: 'scholarshipLevel',
     awardLevel: 'scholarshipGrade',
-    obtainTime: 'acquireDate',
+    obtainedTime: 'acquireDate',
   },
   certificate: {
     certificateType: 'certType',
@@ -29,7 +29,7 @@ export const DETAIL_TO_FORM_MAP: Record<string, Record<string, string>> = {
     certificateNo: 'certNumber',
     issuingUnit: 'issuingAuthority',
     validUntil: 'validityPeriod',
-    obtainTime: 'certDate',
+    obtainedTime: 'certDate',
   },
   innovation: {
     companyName: 'companyName',
@@ -147,12 +147,14 @@ export function mapDetailToForm(type: string, detail: any): Record<string, any> 
     : (DETAIL_TO_FORM_MAP[type] ?? {})
   const out: Record<string, any> = {}
   for (const [from, to] of Object.entries(map)) {
-    const v = nested[from]
+    // 兼容旧字段名：历史后端版本详情返回 obtainTime，接口文档统一为 obtainedTime
+    const v = nested[from] ?? (from === 'obtainedTime' ? nested.obtainTime : undefined)
     if (v != null && v !== '') out[to] = v
   }
-  // 通用取得时间 obtainTime → 扩展表单 acquisitionDate（重复校验 obtainTime 用）
-  if (nested.obtainTime != null && nested.obtainTime !== '') {
-    out.acquisitionDate = nested.obtainTime
+  // 通用取得时间 obtainedTime → 扩展表单 acquisitionDate；兼容旧字段名 obtainTime
+  const obtainedTime = nested.obtainedTime ?? nested.obtainTime
+  if (obtainedTime != null && obtainedTime !== '') {
+    out.acquisitionDate = obtainedTime
   }
   // 学期：ActivityDetailResponse 用 @JsonProperty("semester_name")，实际返回下划线字段
   if (detail?.semester_name ?? detail?.semesterName) {
