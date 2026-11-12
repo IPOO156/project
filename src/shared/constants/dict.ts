@@ -394,6 +394,11 @@ export const AUDIT_DETAIL_LABELS: Record<string, string> = {
   review: '心得体会',
   role: '本人角色',
   title: '标题',
+  // 佐证附件：教师端档案详情返回 proofFiles（JSON 字符串），学生端详情为 evidence_files
+  proofFiles: '证明材料',
+  proofMaterials: '证明材料',
+  evidenceFiles: '证明材料',
+  evidence_files: '证明材料',
 }
 
 // 学生状态选项（字典编码枚举值来自接口文档 4.1.5.1，禁止前端自行增改）
