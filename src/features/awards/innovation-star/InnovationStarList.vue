@@ -44,6 +44,7 @@ const page = reactive(
       { key: 'industryType', label: '行业类型' },
       { key: 'ranking', label: '申报人排名' },
       { key: 'registerDate', label: '注册时间' },
+      { key: 'proofMaterials', label: '证明材料' },
     ],
     { monthField: 'registerDate', monthFieldLabel: '注册时间' },
   ),
@@ -148,7 +149,7 @@ onMounted(() => {
             :disabled-date="page.disabledDate"
           />
         </el-form-item>
-        <el-form-item label="证明材料">
+        <el-form-item label="证明材料" required>
           <ProofUpload v-model:file-list="page.form.proofMaterials" :status="page.currentStatus" />
         </el-form-item>
       </el-form>
