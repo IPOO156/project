@@ -142,8 +142,8 @@ function handleClosed() {
   >
     <div v-loading="loading" class="perm-drawer">
       <div class="perm-drawer__hint">
-        勾选右侧权限后点击「保存分配」，将全量覆盖该角色的权限。 权限码（如
-        log:view）决定该角色登录后左侧引导栏能看到哪些模块，以及对应页面的可访问性。
+        勾选右侧权限后点击「保存分配」，将全量覆盖该角色的权限。
+        权限决定该角色登录后左侧引导栏能看到哪些模块，以及对应页面的可访问性。
       </div>
 
       <div class="perm-drawer__cols">
@@ -152,7 +152,6 @@ function handleClosed() {
           <ul v-if="checkedPermissions.length" class="perm-drawer__list">
             <li v-for="p in checkedPermissions" :key="p.permissionId" class="perm-drawer__item">
               <span>{{ p.permissionName }}</span>
-              <span class="perm-drawer__code">{{ p.permissionCode }}</span>
             </li>
           </ul>
           <el-empty v-else description="暂未分配权限" :image-size="56" />
@@ -177,7 +176,6 @@ function handleClosed() {
               class="perm-drawer__group-item"
             >
               <span>{{ p.permissionName }}</span>
-              <span class="perm-drawer__code">{{ p.permissionCode }}</span>
             </el-checkbox>
           </el-checkbox-group>
         </div>

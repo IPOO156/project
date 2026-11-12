@@ -296,22 +296,18 @@ onMounted(() => {
                 <el-button text type="primary" size="small" @click="openEdit(row as UserListItem)">
                   编辑
                 </el-button>
-                <el-button
-                  text
-                  type="warning"
-                  size="small"
-                  @click="openPasswordDialog(row as UserListItem)"
-                >
-                  重置密码
-                </el-button>
-                <el-button
-                  text
-                  :type="row.status === 1 ? 'danger' : 'success'"
-                  size="small"
-                  @click="handleToggleStatus(row as UserListItem)"
-                >
-                  {{ row.status === 1 ? '禁用账号' : '启用账号' }}
-                </el-button>
+                <!-- 低风险操作沉到「更多」：4 个文字按钮并排会超出操作列宽，
+                     在最右侧列被表格 overflow 裁掉，导致「禁用账号」不可点 -->
+                <template #more>
+                  <el-dropdown-item @click="openPasswordDialog(row as UserListItem)">
+                    重置密码
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleToggleStatus(row as UserListItem)">
+                    <span :class="row.status === 1 ? 'row-actions__danger' : ''">
+                      {{ row.status === 1 ? '禁用账号' : '启用账号' }}
+                    </span>
+                  </el-dropdown-item>
+                </template>
               </RowActions>
             </template>
           </el-table-column>
