@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { GrowthExperienceInput } from '../timelineConstants'
+import type { GrowthExperience, GrowthExperienceInput } from '../timelineConstants'
 import { ElMessage } from 'element-plus'
 import { Plus } from 'lucide-vue-next'
 import { computed, reactive, ref, watch } from 'vue'
@@ -9,6 +9,8 @@ import { activityCategoryOf } from '@/shared/api/submission'
 
 interface Props {
   visible: boolean
+  /** 传入时为编辑模式：表单回填该经历，提交走修改接口；不传为新增 */
+  editing?: GrowthExperience | null
 }
 
 const props = defineProps<Props>()
@@ -48,6 +50,7 @@ const form = reactive<FormState>({
 })
 
 const submitting = ref(false)
+const isEdit = computed(() => Boolean(props.editing))
 
 // ── 能力维度选项（GET /archive/dimensions）──
 const dimensions = ref<Array<{ dimensionCode: string; dimensionName: string }>>([])
@@ -92,6 +95,22 @@ function reset() {
   form.sourceKey = ''
 }
 
+/** 编辑模式回填：来源关联不在编辑时改动，故不回填 sourceKey */
+function prefill(experience: GrowthExperience) {
+  form.title = experience.title
+  form.date = experience.date
+  form.description = experience.description
+  form.tags = experience.tags.join(', ')
+  form.skills = experience.skills.length
+    ? experience.skills.map((s) => ({
+        dimensionCode: s.dimensionCode ?? '',
+        name: s.name,
+        growth: s.growth,
+      }))
+    : [{ dimensionCode: '', name: '', growth: 0 }]
+  form.sourceKey = ''
+}
+
 function addSkill() {
   form.skills.push({ dimensionCode: '', name: '', growth: 0 })
 }
@@ -119,7 +138,7 @@ function handleSubmit() {
   if (submitting.value) return
 
   const selected = sourceOptions.value.find((o) => o.key === form.sourceKey)
-  if (!selected) {
+  if (!isEdit.value && !selected) {
     ElMessage.warning('请选择关联来源记录：成长经历必须关联一条已提交的申报/报名记录')
     return
   }
@@ -152,10 +171,14 @@ function handleSubmit() {
 watch(
   () => props.visible,
   async (val) => {
-    reset()
     if (!val) return
+    if (props.editing) {
+      prefill(props.editing)
+    } else {
+      reset()
+    }
     void loadDimensions()
-    if (submissionStore.records.length === 0) {
+    if (!props.editing && submissionStore.records.length === 0) {
       // 打开弹窗时确保来源记录已加载（成长时间轴页本身不拉申报列表）
       await submissionStore.fetchRecords()
     }
@@ -166,7 +189,7 @@ watch(
 <template>
   <el-dialog
     :model-value="visible"
-    title="添加成长经历"
+    :title="isEdit ? '编辑成长经历' : '添加成长经历'"
     width="560px"
     :close-on-click-modal="false"
     @update:model-value="emit('update:visible', $event)"
@@ -185,7 +208,7 @@ watch(
         />
       </el-form-item>
 
-      <el-form-item label="关联来源" required>
+      <el-form-item v-if="!isEdit" label="关联来源" required>
         <el-select
           v-model="form.sourceKey"
           :placeholder="
@@ -263,7 +286,7 @@ watch(
       <el-button
         type="primary"
         :loading="submitting"
-        :disabled="sourceOptions.length === 0"
+        :disabled="!isEdit && sourceOptions.length === 0"
         @click="handleSubmit"
         >确定</el-button
       >

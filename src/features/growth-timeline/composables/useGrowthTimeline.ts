@@ -1,9 +1,13 @@
 import type { GrowthExperience, GrowthExperienceInput } from '../timelineConstants'
 import { computed, ref } from 'vue'
-import { addTimelineEvent, deleteTimelineEvent, getTimelineEventDetail } from '@/shared/api/archive'
+import {
+  addTimelineEvent,
+  deleteTimelineEvent,
+  getTimelineEventDetail,
+  updateTimelineEvent,
+} from '@/shared/api/archive'
 import { getGrowthTimeline } from '@/shared/api/student'
 import { mapTimelineEventType } from '../timelineConstants'
-import { useGrowthDataSources } from './useGrowthDataSources'
 
 /** 后端成长时间轴 summary；字段缺失/非法时为 null，表示「无数据」而不是 0 */
 export interface GrowthSummary {
@@ -85,9 +89,8 @@ export function useGrowthTimeline() {
   const experiences = ref<GrowthExperience[]>([])
   const selectedId = ref<string | null>(null)
   const formVisible = ref(false)
-  const { sync, autoSync, setAutoSync, isSyncing } = useGrowthDataSources()
 
-  // 本地新增（含从其他模块同步）的经历，与后端时间轴事件合并展示
+  // 本地新增的经历，与后端时间轴事件合并展示
   const localExperiences = ref<GrowthExperience[]>([])
   // 后端时间轴事件；后端不可用时为空，页面展示空态
   const backendExperiences = ref<GrowthExperience[]>([])
@@ -224,6 +227,46 @@ export function useGrowthTimeline() {
     }
   }
 
+  /**
+   * 修改已持久化的成长经历（4.2.3 PUT /profile/growth-timeline/{id}）。
+   * 只提交表单可编辑的字段；来源关联沿用原值，编辑时不改动，避免唯一校验冲突。
+   * 修改日期后后端会按新日期重新归集学期。
+   */
+  async function updateExperience(
+    id: string,
+    payload: GrowthExperienceInput,
+    done?: (ok: boolean) => void,
+  ) {
+    const backendId = /^backend-(\d+)$/.exec(id)?.[1]
+    // 未持久化的本地记录无法修改，避免把前端前缀当真实 id 发出
+    if (!backendId) {
+      done?.(false)
+      return
+    }
+    const abilityData = payload.skills
+      .filter((s) => s.dimensionCode)
+      .map((s) => ({ dimensionCode: s.dimensionCode as string, score: s.growth }))
+    try {
+      const updated = await updateTimelineEvent(backendId, {
+        eventName: payload.title,
+        content: payload.description,
+        eventAt: payload.date,
+        tags: payload.tags,
+        abilityData,
+      })
+      backendExperiences.value = backendExperiences.value.map((e) =>
+        e.id === id ? mapBackendEvent(updated as unknown as Record<string, any>) : e,
+      )
+      rebuildExperiences()
+      // 汇总（能力/标签统计）由列表接口返回，改动后重拉一次，避免右侧汇总与卡片不一致
+      void loadBackendTimeline()
+      done?.(true)
+    } catch {
+      // 修改失败：保留弹窗与已填内容，具体错误由 request 拦截器提示
+      done?.(false)
+    }
+  }
+
   async function deleteExperience(id: string) {
     // 仅对后端已持久化的事件（id 形如 backend-<真实id>）调用删除接口（4.2.4 DELETE）；
     // 本地未同步事件不请求后端，避免把前端前缀当真实 id 发出。
@@ -245,24 +288,8 @@ export function useGrowthTimeline() {
     rebuildExperiences()
   }
 
-  async function syncFromSources() {
-    try {
-      const { added, experiences: synced } = await sync(experiences.value)
-      if (added > 0) {
-        localExperiences.value = [...localExperiences.value, ...synced]
-        rebuildExperiences()
-      }
-      return added
-    } catch {
-      return 0
-    }
-  }
-
-  // 页面加载：先拉取后端成长时间轴，再按开关自动同步其他模块数据
+  // 页面加载：拉取后端成长时间轴
   loadBackendTimeline()
-  if (autoSync.value) {
-    syncFromSources()
-  }
 
   return {
     experiences,
@@ -270,14 +297,11 @@ export function useGrowthTimeline() {
     selectedId,
     selectedExperience,
     formVisible,
-    isSyncing,
-    autoSync,
     selectExperience,
     openForm,
     closeForm,
     addExperience,
+    updateExperience,
     deleteExperience,
-    syncFromSources,
-    setAutoSync,
   }
 }

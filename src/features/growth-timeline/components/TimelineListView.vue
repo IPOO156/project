@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { GrowthExperience } from '../timelineConstants'
-import { Plus, Trash2 } from 'lucide-vue-next'
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useSemesterRings } from '../composables/useSemesterRings'
 
@@ -16,6 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: 'select', id: string): void
   (e: 'add'): void
+  (e: 'edit', id: string): void
   (e: 'delete', id: string): void
 }>()
 
@@ -100,6 +101,11 @@ function handleAdd() {
 /** 撤回/删除经历：交由父级（GrowthTimeline）统一弹确认框并调 deleteExperience */
 function handleDelete(id: string) {
   emit('delete', id)
+}
+
+/** 编辑经历：交由父级打开带入原值的表单 */
+function handleEdit(id: string) {
+  emit('edit', id)
 }
 </script>
 
@@ -199,6 +205,15 @@ function handleDelete(id: string) {
           <span v-if="exp.semester" class="tlv-item-semester">{{
             semesterLabel(exp.semester)
           }}</span>
+        </button>
+        <button
+          type="button"
+          class="tlv-edit"
+          aria-label="编辑该经历"
+          title="编辑"
+          @click.stop="handleEdit(exp.id)"
+        >
+          <Pencil :size="14" />
         </button>
         <button
           type="button"
@@ -319,8 +334,9 @@ function handleDelete(id: string) {
   }
 }
 
-/* 撤回按钮：与年轮视图 GrowthCard 的 delete-btn 同风格（hover 才显示，触摸常显） */
-.tlv-delete {
+/* 撤回/编辑按钮：与年轮视图 GrowthCard 的操作按钮同风格（hover 才显示，触摸常显） */
+.tlv-delete,
+.tlv-edit {
   flex-shrink: 0;
   align-self: center;
   width: 32px;
@@ -342,7 +358,9 @@ function handleDelete(id: string) {
 }
 
 .tlv-row:hover .tlv-delete,
-.tlv-delete:focus-visible {
+.tlv-row:hover .tlv-edit,
+.tlv-delete:focus-visible,
+.tlv-edit:focus-visible {
   opacity: 1;
 }
 
@@ -352,17 +370,26 @@ function handleDelete(id: string) {
   transform: scale(1.1);
 }
 
-.tlv-delete:active {
+.tlv-edit:hover {
+  background: var(--gt-accent, #8b6340);
+  color: var(--gt-on-accent, #fff);
+  transform: scale(1.1);
+}
+
+.tlv-delete:active,
+.tlv-edit:active {
   transform: scale(0.96);
 }
 
 @media (hover: none) {
-  .tlv-delete {
+  .tlv-delete,
+  .tlv-edit {
     opacity: 1;
   }
 }
 
-[data-theme='dark'] .tlv-delete {
+[data-theme='dark'] .tlv-delete,
+[data-theme='dark'] .tlv-edit {
   background: rgba(var(--gt-card-rgb, 30 28 26), 0.85);
   border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.2);
   color: var(--ring-color, var(--bark-light, #d4a574));
@@ -371,6 +398,11 @@ function handleDelete(id: string) {
 [data-theme='dark'] .tlv-delete:hover {
   background: #b94e4e;
   color: #fff;
+}
+
+[data-theme='dark'] .tlv-edit:hover {
+  background: var(--gt-accent, #d4a574);
+  color: var(--gt-on-accent, #0f172a);
 }
 
 .tlv-item {
