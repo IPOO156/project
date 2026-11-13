@@ -18,6 +18,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'click', id: string): void
+  (e: 'edit', id: string): void
   (e: 'delete', id: string): void
 }>()
 
@@ -48,6 +49,7 @@ const { isVisible } = useScrollReveal(nodeRef, {
       :is-selected="isSelected"
       :ring-color="ringColor"
       @click="emit('click', $event)"
+      @edit="emit('edit', $event)"
       @delete="emit('delete', $event)"
     />
 

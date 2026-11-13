@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import type { GrowthExperience } from '../timelineConstants'
 import { ElMessageBox } from 'element-plus'
-import { FlaskConical, GraduationCap, HeartHandshake, Trash2, Trophy } from 'lucide-vue-next'
+import {
+  FlaskConical,
+  GraduationCap,
+  HeartHandshake,
+  Pencil,
+  Trash2,
+  Trophy,
+} from 'lucide-vue-next'
 import { GROWTH_TAG_COLORS } from '@/shared/constants/dict'
 import { useSemesterRings } from '../composables/useSemesterRings'
 
@@ -17,6 +24,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'click', id: string): void
+  (e: 'edit', id: string): void
   (e: 'delete', id: string): void
 }>()
 
@@ -34,6 +42,11 @@ async function handleDelete(event: MouseEvent) {
   } catch {
     // user cancelled
   }
+}
+
+function handleEdit(event: MouseEvent) {
+  event.stopPropagation()
+  emit('edit', props.experience.id)
 }
 
 function getTypeIcon(tag: string) {
@@ -61,6 +74,9 @@ function getTypeColor(tag: string): string {
   >
     <div class="card-right-edge">
       <div class="card-actions">
+        <button class="edit-btn" aria-label="编辑" title="编辑" @click.stop="handleEdit">
+          <Pencil :size="13" />
+        </button>
         <button class="delete-btn" aria-label="删除" title="删除" @click.stop="handleDelete">
           <Trash2 :size="14" />
         </button>
@@ -190,7 +206,8 @@ function getTypeColor(tag: string): string {
   font-variant-numeric: tabular-nums;
 }
 
-.delete-btn {
+.delete-btn,
+.edit-btn {
   position: relative;
   width: 20px;
   height: 20px;
@@ -211,7 +228,9 @@ function getTypeColor(tag: string): string {
 }
 
 .growth-card:hover .delete-btn,
-.delete-btn:focus-visible {
+.growth-card:hover .edit-btn,
+.delete-btn:focus-visible,
+.edit-btn:focus-visible {
   opacity: 1;
 }
 
@@ -221,7 +240,14 @@ function getTypeColor(tag: string): string {
   transform: scale(1.1);
 }
 
-.delete-btn:active {
+.edit-btn:hover {
+  background: var(--gt-accent, #8b6340);
+  color: var(--gt-on-accent, #fff);
+  transform: scale(1.1);
+}
+
+.delete-btn:active,
+.edit-btn:active {
   transform: scale(0.96);
 }
 
@@ -420,7 +446,8 @@ function getTypeColor(tag: string): string {
 }
 
 @media (hover: none) {
-  .delete-btn {
+  .delete-btn,
+  .edit-btn {
     opacity: 1;
     transform: scale(1);
   }
@@ -450,7 +477,8 @@ function getTypeColor(tag: string): string {
   .card-top {
     padding-right: 4.5rem;
   }
-  .delete-btn {
+  .delete-btn,
+  .edit-btn {
     width: 18px;
     height: 18px;
     opacity: 1;
@@ -502,7 +530,8 @@ function getTypeColor(tag: string): string {
   background: rgba(var(--gt-bark-rgb, 200 180 160), 0.12);
 }
 
-[data-theme='dark'] .delete-btn {
+[data-theme='dark'] .delete-btn,
+[data-theme='dark'] .edit-btn {
   background: rgba(var(--gt-card-rgb, 30 28 26), 0.85);
   color: var(--ring-color, var(--bark-light, #d4a574));
 }
@@ -510,6 +539,11 @@ function getTypeColor(tag: string): string {
 [data-theme='dark'] .delete-btn:hover {
   background: #b94e4e;
   color: #fff;
+}
+
+[data-theme='dark'] .edit-btn:hover {
+  background: var(--gt-accent, #d4a574);
+  color: var(--gt-on-accent, #0f172a);
 }
 
 [data-theme='dark'] .card-type-indicator {
