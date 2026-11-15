@@ -180,6 +180,8 @@ export function useGrowthTimeline() {
     const newExperience: GrowthExperience = {
       ...payload,
       id: localId,
+      // 能力成长由后端按 eventType 推断回传，新增时本地为空，保存成功后会重拉列表覆盖
+      skills: [],
       // 后端按 eventAt 归集学期并在响应中回传 semesterName，前端不本地推导
       semester: '',
       // 有关联来源时同步记录来源 ID，便于详情展示来源关联
@@ -191,11 +193,7 @@ export function useGrowthTimeline() {
 
     // 同步到后端（4.2.1 POST /profile/growth-timeline）。
     // 后端要求 sourceId + sourceType 必填（并校验来源存在且归属本人），表单已强制选择。
-    // 能力成长必须传 dimensionCode（后端 abilityData.dimensionCode 必填），
-    // 仅填写名称的自由文本无法落库；此处按已选维度映射为 abilityData。
-    const abilityData = payload.skills
-      .filter((s) => s.dimensionCode)
-      .map((s) => ({ dimensionCode: s.dimensionCode as string, score: s.growth }))
+    // 能力成长（abilityData）由后端按 eventType 推断能力维度并计算，前端不再提交。
     try {
       const created = await addTimelineEvent({
         // 奖项报名来源归类为奖项事件（eventType=1），其余默认能力提升（eventType=6）
@@ -204,7 +202,6 @@ export function useGrowthTimeline() {
         content: payload.description,
         eventAt: payload.date,
         tags: payload.tags,
-        ...(abilityData.length ? { abilityData } : {}),
         ...(payload.sourceId != null && payload.sourceType
           ? { sourceId: payload.sourceId, sourceType: payload.sourceType }
           : {}),
@@ -243,16 +240,12 @@ export function useGrowthTimeline() {
       done?.(false)
       return
     }
-    const abilityData = payload.skills
-      .filter((s) => s.dimensionCode)
-      .map((s) => ({ dimensionCode: s.dimensionCode as string, score: s.growth }))
     try {
       const updated = await updateTimelineEvent(backendId, {
         eventName: payload.title,
         content: payload.description,
         eventAt: payload.date,
         tags: payload.tags,
-        abilityData,
       })
       backendExperiences.value = backendExperiences.value.map((e) =>
         e.id === id ? mapBackendEvent(updated as unknown as Record<string, any>) : e,

@@ -154,6 +154,7 @@ onMounted(() => {
       }
     "
     @update:form="(field: string, val: string) => page.setChangedField(field, val)"
+    @remove-field="page.removeChangedField"
     @submit="page.submitCorrection"
   />
   <ScoreIndicatorDialog

@@ -5,7 +5,7 @@ export interface GrowthExperience {
   semester: string
   description: string
   tags: string[]
-  /** 能力成长项；dimensionCode 用于写接口 abilityData（后端要求维度编码，不能只传名称） */
+  /** 能力成长项：只读展示，由后端按 eventType 推断能力维度后回传，前端不再提交 */
   skills: { name: string; growth: number; dimensionCode?: string }[]
   /** 后端事件对应的档案记录 ID（sourceId），本地新增经历无此字段 */
   recordId?: string
@@ -19,7 +19,6 @@ export interface GrowthExperienceInput {
   date: string
   description: string
   tags: string[]
-  skills: { name: string; growth: number; dimensionCode?: string }[]
   /** 来源记录 ID（4.2.1 sourceId，从已提交的申报/报名记录中选择） */
   sourceId?: number
   /** 来源模型类型（4.2.1 sourceType：archives 申报 / award_applications 奖项报名） */

@@ -47,7 +47,7 @@ const page = reactive(
       { key: 'semester', label: '学期' },
       { key: 'proofMaterials', label: '佐证材料' },
     ],
-    { monthField: 'startDate', monthFieldLabel: '立项时间' },
+    { monthField: 'startDate', monthFieldLabel: '立项时间', endDateOnly: true },
   ),
 )
 
@@ -181,6 +181,7 @@ onMounted(() => {
       }
     "
     @update:form="(field: string, val: string) => page.setChangedField(field, val)"
+    @remove-field="page.removeChangedField"
     @submit="page.submitCorrection"
   />
   <ScoreIndicatorDialog

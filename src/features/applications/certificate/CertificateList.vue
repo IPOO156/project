@@ -3,7 +3,9 @@ import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
+import { CERTIFICATE_TYPES } from '@/shared/constants/dict'
 import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
@@ -12,6 +14,12 @@ import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
+
+/** 证书类型：后端字典 certificate_type 优先，常量兜底 */
+const { options: certTypeOptions, load: loadCertTypes } = useRemoteDict(
+  'certificate_type',
+  CERTIFICATE_TYPES,
+)
 
 function emptyForm() {
   return {
@@ -58,6 +66,7 @@ async function handleRemove(row: any) {
 onMounted(() => {
   page.init()
   loadSemesters()
+  void loadCertTypes()
 })
 </script>
 
@@ -84,9 +93,16 @@ onMounted(() => {
   >
     <template #form>
       <el-form :model="page.form" label-width="120px">
-        <el-form-item label="证书类型" required
-          ><el-input v-model="page.form.certType" placeholder="请输入证书类型"
-        /></el-form-item>
+        <el-form-item label="证书类型" required>
+          <el-select v-model="page.form.certType" placeholder="请选择" class="form-select">
+            <el-option
+              v-for="t in certTypeOptions"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="证书名称" required
           ><el-input v-model="page.form.certName" placeholder="请输入证书名称"
         /></el-form-item>
@@ -135,6 +151,7 @@ onMounted(() => {
       }
     "
     @update:form="(field: string, val: string) => page.setChangedField(field, val)"
+    @remove-field="page.removeChangedField"
     @submit="page.submitCorrection"
   />
   <ScoreIndicatorDialog

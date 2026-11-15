@@ -168,4 +168,46 @@ export async function buildContractPayload(
   return payload
 }
 
+/**
+ * 纠错提交：只携带变更字段，按契约映射成后端字段名。
+ *
+ * 后端 correction 接口读取的是**平铺字段**（title / semesterId / 扩展表字段名），
+ * 并不认识前端的 correctedData 结构，因此这里直接把变更后的新值平铺上去。
+ */
+export async function buildCorrectionPayload(
+  type: string,
+  changed: Record<string, any>,
+): Promise<Record<string, any>> {
+  const contract = APPLICATION_CONTRACTS[type]
+  if (!contract) throw new Error(`未配置申报类型契约：${type}`)
+
+  const payload: Record<string, any> = {}
+
+  if ('semester' in changed) {
+    const semesterId = await resolveSemesterId(changed.semester)
+    if (semesterId !== undefined) payload.semesterId = semesterId
+  }
+  if (changed.title) payload.title = String(changed.title)
+
+  for (const [backendKey, frontKey] of Object.entries(contract.mapping)) {
+    if (!(frontKey in changed)) continue
+    const raw = changed[frontKey]
+    if (raw === undefined || raw === null || raw === '') continue
+    if (contract.dateFields.includes(backendKey)) {
+      payload[backendKey] = toDateString(raw)
+      continue
+    }
+    if (contract.enumMap?.[backendKey]) {
+      payload[backendKey] = contract.enumMap[backendKey][String(raw)] ?? asciiOrEmpty(raw)
+    } else if (contract.asciiFields?.includes(backendKey)) {
+      payload[backendKey] = asciiOrEmpty(raw)
+    } else {
+      payload[backendKey] = raw
+    }
+  }
+
+  appendCommonFields(payload, changed)
+  return payload
+}
+
 export { normalizeRole, toAchievementEvidence, toDateString, toEvidenceFileIds }

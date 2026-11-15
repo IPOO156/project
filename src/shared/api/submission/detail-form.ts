@@ -35,14 +35,14 @@ export const DETAIL_TO_FORM_MAP: Record<string, Record<string, string>> = {
     companyName: 'companyName',
     industryType: 'industryType',
     projectType: 'companyType',
-    participantRole: 'teamRole',
+    participantRole: 'role',
     registeredAt: 'registerDate',
   },
   research: {
     projectName: 'projectName',
     projectLevel: 'projectLevel',
     projectType: 'researchType',
-    participantRole: 'teamRole',
+    participantRole: 'role',
     startDate: 'projectDate',
     endDate: 'endDate',
   },
@@ -150,9 +150,11 @@ export function mapDetailToForm(type: string, detail: any): Record<string, any> 
     const v = nested[from] ?? (from === 'obtainedTime' ? nested.obtainTime : undefined)
     if (v != null && v !== '') out[to] = v
   }
-  // 通用取得时间 obtainedTime → 扩展表单 acquisitionDate；兼容旧字段名 obtainTime
+  // 通用取得时间 obtainedTime → 扩展表单 acquisitionDate；兼容旧字段名 obtainTime。
+  // 该类型已把 obtainedTime 映射到业务字段时（如证书「获得时间」certDate）不再重复写入，
+  // 否则详情弹窗会把同一时间渲染成「取得时间」「获得时间」两行（2026-11-15 反馈）。
   const obtainedTime = nested.obtainedTime ?? nested.obtainTime
-  if (obtainedTime != null && obtainedTime !== '') {
+  if (!('obtainedTime' in map) && obtainedTime != null && obtainedTime !== '') {
     out.acquisitionDate = obtainedTime
   }
   // 学期：ActivityDetailResponse 用 @JsonProperty("semester_name")，实际返回下划线字段

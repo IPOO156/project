@@ -60,11 +60,7 @@ export function getApplicationVersions(archiveId: number): Promise<{
 /** 更正已通过申报（POST /applications/{archiveId}/correction） */
 export function correctApplication(
   archiveId: number,
-  payload: {
-    correctionReason: string
-    correctedData: Record<string, any>
-    evidenceFileIds?: number[]
-  },
+  payload: { correctionReason: string } & Record<string, any>,
 ): Promise<{
   archiveId: number
   newArchiveId: number
