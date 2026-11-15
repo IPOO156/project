@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { UploadFile } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
 import {
@@ -9,6 +10,7 @@ import {
   updateCareerGoal,
   updateCareerMilestone,
 } from '@/shared/api/career-plan'
+import { uploadFile } from '@/shared/api/common'
 
 const props = defineProps<{
   planId: number | null
@@ -37,7 +39,25 @@ const dialogTitle = computed(() => {
 const goalForm = reactive({ goalTitle: '', goalDesc: '', targetDate: '' })
 const actionForm = reactive({ actionTitle: '', actionDesc: '', startDate: '', endDate: '' })
 const milestoneForm = reactive({ milestoneTitle: '', milestoneDate: '' })
+/** 里程碑佐证：新选文件优先；已有凭证可移除（更新时传 proofFileId=0 解绑） */
+const proofFile = ref<File | null>(null)
+const proofFileName = ref('')
+const proofFileId = ref<number | null>(null)
+const removeProof = ref(false)
 const submitting = ref(false)
+
+function handleProofChange(file: UploadFile) {
+  proofFile.value = file.raw ?? null
+  proofFileName.value = file.name ?? ''
+  removeProof.value = false
+}
+
+function clearProofState() {
+  proofFile.value = null
+  proofFileName.value = ''
+  proofFileId.value = null
+  removeProof.value = false
+}
 
 type OpenPayload =
   | { mode: 'goal'; goal?: any }
@@ -46,6 +66,7 @@ type OpenPayload =
 
 /** 打开编辑弹窗：父组件通过 ref 调用（编辑/新增 目标、行动、里程碑） */
 function open(payload: OpenPayload) {
+  clearProofState()
   dialogMode.value = payload.mode
   if (payload.mode === 'goal') {
     editingId.value = payload.goal?.id ?? null
@@ -64,6 +85,8 @@ function open(payload: OpenPayload) {
     editingId.value = payload.milestone?.id ?? null
     milestoneForm.milestoneTitle = payload.milestone?.milestoneTitle ?? ''
     milestoneForm.milestoneDate = payload.milestone?.milestoneDate ?? ''
+    proofFileId.value = payload.milestone?.proofFileId ?? null
+    proofFileName.value = payload.milestone?.proofFileName ?? ''
   }
   dialogVisible.value = true
 }
@@ -110,13 +133,38 @@ async function handleSubmit() {
         ElMessage.warning('请填写里程碑标题')
         return
       }
-      const payload = {
-        milestoneTitle: milestoneForm.milestoneTitle.trim(),
-        milestoneDate: milestoneForm.milestoneDate,
+      const title = milestoneForm.milestoneTitle.trim()
+      const date = milestoneForm.milestoneDate
+      // 新选的佐证先上传拿 fileId；未选新文件时沿用原有绑定
+      let uploadedProofId: number | undefined
+      if (proofFile.value) {
+        const uploaded = await uploadFile({
+          file: proofFile.value,
+          type: 'evidence',
+          module: 'career_plan',
+        })
+        uploadedProofId = uploaded.fileId
       }
       if (editingId.value == null) {
-        await addCareerMilestone(props.planId, contextActionId!, payload)
+        const created = await addCareerMilestone(props.planId, contextActionId!, {
+          milestoneTitle: title,
+          milestoneDate: date,
+        })
+        // 新增接口不接收 proofFileId，创建成功后再绑定佐证
+        if (uploadedProofId != null) {
+          await updateCareerMilestone(props.planId, created.milestoneId, {
+            milestoneTitle: title,
+            milestoneDate: date,
+            proofFileId: uploadedProofId,
+          })
+        }
       } else {
+        const payload: { milestoneTitle: string; milestoneDate: string; proofFileId?: number } = {
+          milestoneTitle: title,
+          milestoneDate: date,
+        }
+        if (uploadedProofId != null) payload.proofFileId = uploadedProofId
+        else if (removeProof.value) payload.proofFileId = 0
         await updateCareerMilestone(props.planId, editingId.value, payload)
       }
       ElMessage.success(editingId.value == null ? '里程碑已添加' : '里程碑已更新')
@@ -214,6 +262,23 @@ defineExpose({ open })
             class="form-w"
           />
         </el-form-item>
+        <el-form-item label="佐证材料">
+          <div class="proof">
+            <span v-if="proofFile" class="proof__name">{{ proofFileName }}</span>
+            <template v-else-if="proofFileId && !removeProof">
+              <span class="proof__name">{{ proofFileName || '已绑定佐证' }}</span>
+              <el-button link type="danger" size="small" @click="removeProof = true"
+                >移除</el-button
+              >
+            </template>
+            <el-upload :auto-upload="false" :show-file-list="false" :on-change="handleProofChange">
+              <el-button size="small">{{
+                proofFileId || proofFile ? '更换文件' : '选择文件'
+              }}</el-button>
+            </el-upload>
+            <span v-if="removeProof" class="proof__hint">保存后将解绑原佐证</span>
+          </div>
+        </el-form-item>
       </template>
     </el-form>
 
@@ -227,5 +292,27 @@ defineExpose({ open })
 <style scoped lang="scss">
 .form-w {
   width: 100%;
+}
+
+.proof {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  &__name {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    color: var(--el-text-color-regular);
+  }
+
+  &__hint {
+    width: 100%;
+    font-size: 12px;
+    color: var(--el-color-warning);
+  }
 }
 </style>

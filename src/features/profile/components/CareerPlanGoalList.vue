@@ -13,7 +13,9 @@ import {
   updateCareerActionStatus,
   updateCareerMilestone,
 } from '@/shared/api/career-plan'
+import { previewFile } from '@/shared/api/common'
 import { CAREER_ACTION_STATUS_OPTIONS } from '@/shared/constants/dict'
+import { downloadBlobFile } from '@/shared/utils/download'
 
 const props = defineProps<{
   /** 目标列表（详情接口的 goals） */
@@ -34,6 +36,40 @@ const emit = defineEmits<{
 
 // ─── 目标 / 行动 / 里程碑行内删除 Loading（记录正在删除的行 id，防连点） ───
 const deletingId = ref<number | null>(null)
+// ─── 成果文件打开 Loading（预览接口需要携带 Authorization，不能直接用 fileUrl 直链） ───
+const fileOpeningId = ref<number | null>(null)
+
+interface PlanFile {
+  fileId?: number
+  fileName?: string
+}
+
+/**
+ * 打开行动成果 / 里程碑佐证：
+ * 先向后端换取带鉴权的预览地址（可预览时新窗口打开），不支持预览的文件走后端下载接口保存。
+ * 先同步打开空白窗口，await 后再导航，避免被浏览器拦截。
+ */
+async function openFile(file: PlanFile) {
+  if (file.fileId == null) return
+  const win = window.open('', '_blank')
+  if (win) win.opener = null
+  fileOpeningId.value = file.fileId
+  try {
+    const res = await previewFile(file.fileId)
+    if (res.canPreview) {
+      if (win) win.location.href = res.previewUrl || res.fileUrl
+      else ElMessage.warning('预览窗口被浏览器拦截，请允许本站弹出窗口后重试')
+      return
+    }
+    win?.close()
+    await downloadBlobFile(`/common/files/${file.fileId}/download`, file.fileName || '文件')
+  } catch {
+    win?.close()
+    // 接口失败已由请求拦截器统一提示
+  } finally {
+    fileOpeningId.value = null
+  }
+}
 
 function actionStatusType(status: number): TagProps['type'] {
   return status === 2 ? 'success' : status === 1 ? 'warning' : 'info'
@@ -201,15 +237,18 @@ async function changeActionStatus(action: any, status: number) {
           />
           <div v-if="action.files?.length" class="action__files">
             <span class="action__files-label">成果文件：</span>
-            <a
+            <el-button
               v-for="f in action.files"
               :key="f.fileId"
-              :href="f.fileUrl"
-              target="_blank"
-              rel="noopener"
-              class="action__file"
-              >{{ f.fileName }}</a
+              link
+              type="primary"
+              size="small"
+              :loading="fileOpeningId === f.fileId"
+              :disabled="fileOpeningId !== null"
+              @click="openFile(f)"
             >
+              {{ f.fileName }}
+            </el-button>
           </div>
 
           <!-- 里程碑列表 -->
@@ -229,7 +268,21 @@ async function changeActionStatus(action: any, status: number) {
               <span v-if="milestone.milestoneDate" class="milestone__date">{{
                 milestone.milestoneDate
               }}</span>
-              <span v-if="milestone.proofFileName" class="milestone__proof">{{
+              <el-button
+                v-if="milestone.proofFileId"
+                link
+                type="warning"
+                size="small"
+                class="milestone__proof"
+                :loading="fileOpeningId === milestone.proofFileId"
+                :disabled="fileOpeningId !== null"
+                @click="
+                  openFile({ fileId: milestone.proofFileId, fileName: milestone.proofFileName })
+                "
+              >
+                {{ milestone.proofFileName || '查看佐证' }}
+              </el-button>
+              <span v-else-if="milestone.proofFileName" class="milestone__proof">{{
                 milestone.proofFileName
               }}</span>
               <span v-if="editable" class="milestone__ops">

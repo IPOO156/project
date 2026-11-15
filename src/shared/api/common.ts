@@ -110,6 +110,10 @@ export interface SemesterOption {
   label: string
   name: string
   isCurrent: number
+  /** 学期开始日期（yyyy-MM-dd）：后端新增字段，用于日期与学期联动校验 */
+  startDate?: string
+  /** 学期结束日期（yyyy-MM-dd）：后端新增字段，日期不得晚于该日期 */
+  endDate?: string
 }
 
 /** 学期下拉选项（GET /common/semesters） */

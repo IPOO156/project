@@ -15,7 +15,9 @@ import {
   submitApplication,
 } from '@/shared/api/submission'
 import {
+  buildSemesterEndMonthDisabledDate,
   buildSemesterMonthDisabledDate,
+  isMonthAfterDate,
   isMonthInSemester,
   parseSemesterRange,
   sanitizeSemesterMonthPair,
@@ -25,6 +27,7 @@ import { useFormDraft } from './useFormDraft'
 import { useFormEdit } from './useFormEdit'
 import { DRAFT_LOCAL_ID, useFormRecords } from './useFormRecords'
 import { useScoreIndicator } from './useScoreIndicator'
+import { semesterEndDateOf } from './useSemesters'
 
 /**
  * 学期-日期联动配置：当表单存在「学期」+「月份日期」联动校验时启用。
@@ -35,6 +38,11 @@ export interface SemesterMonthConfig {
   monthField: string
   /** 日期字段中文名，用于错误提示，如「参赛时间」「注册时间」 */
   monthFieldLabel: string
+  /**
+   * 只校验上界：日期不得晚于学期 endDate（取自 GET /common/semesters 返回的 endDate）。
+   * 用于「立项时间」这类允许早于学期开始的日期；不传则仍按「必须落在学期区间内」校验。
+   */
+  endDateOnly?: boolean
 }
 
 export function useApplicationPage(
@@ -59,16 +67,25 @@ export function useApplicationPage(
   // 1. disabledDate：日期选择器禁用非该学期的月份
   // 2. watch 学期变化：若已选日期不在新学期内则清空
   // 3. handleSubmit：提交前校验日期与学期是否匹配
-  const disabledDate = computed(() =>
-    semesterMonthConfig ? buildSemesterMonthDisabledDate(form.semester) : () => false,
-  )
+  const disabledDate = computed(() => {
+    if (!semesterMonthConfig) return () => false
+    if (semesterMonthConfig.endDateOnly) {
+      return buildSemesterEndMonthDisabledDate(semesterEndDateOf(form.semester))
+    }
+    return buildSemesterMonthDisabledDate(form.semester)
+  })
 
   if (semesterMonthConfig) {
-    const { monthField } = semesterMonthConfig
+    const { monthField, endDateOnly } = semesterMonthConfig
     watch(
       () => form.semester,
       () => {
-        sanitizeSemesterMonthPair(form, monthField, 'semester')
+        sanitizeSemesterMonthPair(
+          form,
+          monthField,
+          'semester',
+          endDateOnly ? semesterEndDateOf(form.semester) : undefined,
+        )
       },
     )
   }
@@ -216,10 +233,12 @@ export function useApplicationPage(
     originalSnapshot,
     correctionForm,
     openCorrection,
+    enrichCorrectionSnapshot,
     closeCorrection,
     setChangedField,
+    removeChangedField,
     submitCorrectionRequest,
-  } = useCorrection()
+  } = useCorrection(type)
   const {
     indicators,
     indicatorVisible,
@@ -293,14 +312,24 @@ export function useApplicationPage(
     // 提交时若直接清空，用户会看到“日期自己消失”，且输入内容丢失（2026-11-12 反馈）。
     // 学期名称无法解析时跳过校验（不做误判），避免管理员自定义学期名导致永远无法提交。
     if (semesterMonthConfig) {
-      const { monthField, monthFieldLabel } = semesterMonthConfig
-      const range = parseSemesterRange(form.semester)
-      if (
-        range &&
-        !isMonthInSemester((form as Record<string, unknown>)[monthField], form.semester)
-      ) {
-        ElMessage.error(`${monthFieldLabel}与学期不匹配，请重新选择`)
-        return
+      const { monthField, monthFieldLabel, endDateOnly } = semesterMonthConfig
+      if (endDateOnly) {
+        // 只设上界：日期不得晚于学期结束日期（endDate 仅取自后端 /common/semesters 新字段）。
+        // 后端未返回 endDate 时无法判断，跳过校验而不是按学期名推算。
+        const endDate = semesterEndDateOf(form.semester)
+        if (endDate && isMonthAfterDate((form as Record<string, unknown>)[monthField], endDate)) {
+          ElMessage.error(`${monthFieldLabel}不能晚于所选学期的结束日期（${endDate}）`)
+          return
+        }
+      } else {
+        const range = parseSemesterRange(form.semester)
+        if (
+          range &&
+          !isMonthInSemester((form as Record<string, unknown>)[monthField], form.semester)
+        ) {
+          ElMessage.error(`${monthFieldLabel}与学期不匹配，请重新选择`)
+          return
+        }
       }
     }
     const ok = await checkDuplicateBeforeSubmit({
@@ -415,8 +444,18 @@ export function useApplicationPage(
   function handleViewScore(row: any) {
     openIndicator(type, row.title || '')
   }
-  function handleCorrection(row: any) {
+  async function handleCorrection(row: any) {
     openCorrection(row)
+    // 列表接口只返回摘要，纠错的「变更字段」需要完整字段：先拉详情补全快照
+    const isBackendRecord =
+      row.id && row.id !== DRAFT_LOCAL_ID && !String(row.id).startsWith('rec-')
+    if (!isBackendRecord) return
+    try {
+      const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))
+      if (detail) enrichCorrectionSnapshot(mapDetailToForm(type, detail))
+    } catch {
+      /* 详情拉取失败：仅可修改列表摘要里已有的字段 */
+    }
   }
   async function viewRecord(row: any) {
     rejectionReason.value = row.rejectedReason || ''
@@ -463,6 +502,7 @@ export function useApplicationPage(
     correctionForm,
     closeCorrection,
     setChangedField,
+    removeChangedField,
     submitCorrection: submitCorrectionRequest,
     indicators,
     indicatorVisible,

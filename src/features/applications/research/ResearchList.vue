@@ -30,7 +30,6 @@ function emptyForm() {
     projectName: '',
     projectLevel: '',
     researchType: '',
-    teamRole: '',
     projectDate: '',
     endDate: '',
     semester: '',
@@ -43,7 +42,6 @@ const page = reactive(
     { key: 'projectName', label: '项目名称' },
     { key: 'projectLevel', label: '项目级别' },
     { key: 'researchType', label: '研究类型' },
-    { key: 'teamRole', label: '团队角色' },
     { key: 'projectDate', label: '开始时间' },
     { key: 'endDate', label: '结束时间' },
     { key: 'semester', label: '学期' },
@@ -55,7 +53,6 @@ function handleEditClick(row: any) {
   page.form.projectName = row.projectName || ''
   page.form.projectLevel = row.projectLevel || ''
   page.form.researchType = row.researchType || ''
-  page.form.teamRole = row.teamRole || ''
   page.form.projectDate = row.projectDate || ''
   page.form.endDate = row.endDate || ''
   page.form.semester = row.semester || ''
@@ -130,11 +127,8 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="团队角色" required
-          ><el-input v-model="page.form.teamRole" placeholder="请输入团队角色"
-        /></el-form-item>
         <el-form-item label="开始时间" required
-          ><el-date-picker v-model="page.form.projectDate" type="month" placeholder="选择年月"
+          ><el-date-picker v-model="page.form.projectDate" type="date" placeholder="选择日期"
         /></el-form-item>
         <el-form-item label="结束时间" required
           ><el-date-picker v-model="page.form.endDate" type="date" placeholder="选择日期"
@@ -181,6 +175,7 @@ onMounted(() => {
       }
     "
     @update:form="(field: string, val: string) => page.setChangedField(field, val)"
+    @remove-field="page.removeChangedField"
     @submit="page.submitCorrection"
   />
   <ScoreIndicatorDialog

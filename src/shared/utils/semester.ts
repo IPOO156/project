@@ -89,10 +89,37 @@ export function buildSemesterMonthDisabledDate(semester: unknown) {
     !isMonthInSemester(date, `${range.startYear}-${range.endYear}-${range.term}`)
 }
 
+/** 规范化 yyyy-MM-dd 为 yyyy-MM（仅保留到月份，供月份粒度比较使用） */
+function monthOfDateText(value: unknown): string {
+  return typeof value === 'string' ? value.trim().slice(0, 7) : ''
+}
+
+/**
+ * 月份值是否晚于给定日期所在月份。
+ * 用于「立项时间不能晚于学期结束日期」这类只设上界的校验：endDate 缺失时恒为 false（不拦截）。
+ */
+export function isMonthAfterDate(value: unknown, endDate: unknown): boolean {
+  const month = normalizeMonthValue(value)
+  const endMonth = monthOfDateText(endDate)
+  if (!month || !/^\d{4}-\d{2}$/.test(endMonth)) return false
+  return month > endMonth
+}
+
+/**
+ * 只限制上界的日期选择器禁用逻辑：晚于 endDate 所在月份不可选。
+ * endDate 缺失时全部可选，避免老后端未返回该字段时把日期选择器整片禁用。
+ */
+export function buildSemesterEndMonthDisabledDate(endDate: unknown) {
+  const endMonth = monthOfDateText(endDate)
+  if (!/^\d{4}-\d{2}$/.test(endMonth)) return () => false
+  return (date: Date) => normalizeMonthValue(date) > endMonth
+}
+
 export function sanitizeSemesterMonthPair<T extends Record<string, unknown>>(
   form: T,
   monthField: keyof T,
   semesterField: keyof T,
+  endDate?: string,
 ) {
   const monthValue = form[monthField]
   const semesterValue = form[semesterField]
@@ -104,6 +131,15 @@ export function sanitizeSemesterMonthPair<T extends Record<string, unknown>>(
   }
 
   if (!normalizedMonth || !hasSemester) return
+
+  // 只设上界的模式（传了学期 endDate）：仅清空晚于学期结束的月份，
+  // 允许早于学期开始的日期（如学期开始前就已立项的科研项目）。
+  if (endDate) {
+    if (isMonthAfterDate(normalizedMonth, endDate)) {
+      form[monthField] = '' as T[keyof T]
+    }
+    return
+  }
 
   // 只在学期**可解析**时清空日期：无法识别学期名称时（管理员自填格式）不做判断，
   // 否则会把用户已填的日期无条件抹掉，且提交永远失败。

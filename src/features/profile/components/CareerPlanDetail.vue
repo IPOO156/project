@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import { computed, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { updateActivity } from '@/shared/api/activities'
 import {
   downloadCareerPlanFile,
   getCareerPlanDetail,
   getCareerPlanPreviewBlob,
+  getSemesterIdByName,
 } from '@/shared/api/career-plan'
 import { useDict } from '@/shared/composables/composables'
+import { useSemesters } from '@/shared/composables/useSemesters'
 import { APPLICATION_STATUS, APPLICATION_STATUS_CODE_MAP } from '@/shared/constants/dict'
 import CareerPlanActionUpload from './CareerPlanActionUpload.vue'
 import CareerPlanDetailHead from './CareerPlanDetailHead.vue'
@@ -111,8 +114,13 @@ async function handleDownload() {
   if (props.planId == null) return
   fileLoading.value = true
   try {
+    // 学生端导出按接口文档默认走 external（无水印，用于对外投递）；
     // 后端 302 到 OSS 签名 URL，downloadCareerPlanFile 已按 blob 接收并触发本地保存
-    await downloadCareerPlanFile(props.planId, 'internal')
+    await downloadCareerPlanFile(
+      props.planId,
+      'external',
+      `${detail.value?.title || '职业规划'}.pdf`,
+    )
   } catch {
     // 接口失败已由请求拦截器统一提示
   } finally {
@@ -128,7 +136,7 @@ async function handlePreview() {
   if (previewWindow) previewWindow.opener = null
   fileLoading.value = true
   try {
-    const blob = await getCareerPlanPreviewBlob(props.planId, 'internal')
+    const blob = await getCareerPlanPreviewBlob(props.planId, 'external')
     if (!previewWindow) {
       ElMessage.warning('预览窗口被浏览器拦截，请允许本站弹出窗口后重试')
       return
@@ -145,6 +153,53 @@ async function handlePreview() {
     // 接口失败已由请求拦截器统一提示
   } finally {
     fileLoading.value = false
+  }
+}
+
+/* ===================== 编辑规划正文 ===================== */
+
+const { semesterOptions, load: loadSemesters } = useSemesters()
+const bodyEditVisible = ref(false)
+const bodySaving = ref(false)
+const bodyForm = reactive({ semester: '', title: '', content: '', requirement: '' })
+
+function openBodyEditor() {
+  if (!detail.value) return
+  bodyForm.semester = detail.value.semesterName || ''
+  bodyForm.title = detail.value.title || ''
+  bodyForm.content = detail.value.content || ''
+  bodyForm.requirement = detail.value.requirement || ''
+  bodyEditVisible.value = true
+  void loadSemesters()
+}
+
+/**
+ * 规划正文更新走统一活动编辑接口（后端无 PUT /profile/career-plans/{id}）。
+ * 注意：该接口保存后会置为待审批并升版本，语义是「修改后重新提交」。
+ */
+async function submitBodyEdit() {
+  if (props.planId == null) return
+  if (!bodyForm.title.trim()) {
+    ElMessage.warning('请填写规划标题')
+    return
+  }
+  bodySaving.value = true
+  try {
+    const semesterId = bodyForm.semester ? await getSemesterIdByName(bodyForm.semester) : undefined
+    await updateActivity(props.planId, 'career_plan', {
+      title: bodyForm.title.trim(),
+      semesterId,
+      content: bodyForm.content,
+      requirement: bodyForm.requirement,
+    })
+    ElMessage.success('规划已保存并重新提交审核')
+    bodyEditVisible.value = false
+    await reload()
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : ''
+    if (msg.includes('未找到学期')) ElMessage.warning(msg)
+  } finally {
+    bodySaving.value = false
   }
 }
 
@@ -170,8 +225,10 @@ function handleClose() {
           :status-type="statusType"
           :status-label="statusLabel"
           :file-loading="fileLoading"
+          :editable="isEditable"
           @download="handleDownload"
           @preview="handlePreview"
+          @edit="openBodyEditor"
         />
 
         <!-- 目标 / 行动 / 里程碑 -->
@@ -208,6 +265,52 @@ function handleClose() {
     @close="uploadDialogVisible = false"
     @success="handleUploadSuccess"
   />
+
+  <el-dialog
+    v-model="bodyEditVisible"
+    title="编辑规划正文"
+    width="520px"
+    :close-on-click-modal="false"
+    destroy-on-close
+    append-to-body
+  >
+    <el-form label-width="84px">
+      <el-form-item label="学期" required>
+        <el-select v-model="bodyForm.semester" placeholder="请选择学期" class="body-w">
+          <el-option
+            v-for="s in semesterOptions"
+            :key="s.value"
+            :label="s.label"
+            :value="s.value"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="标题" required>
+        <el-input v-model="bodyForm.title" maxlength="255" placeholder="请输入规划标题" />
+      </el-form-item>
+      <el-form-item label="规划总述">
+        <el-input
+          v-model="bodyForm.content"
+          type="textarea"
+          :rows="4"
+          placeholder="请描述你的规划目标与具体措施..."
+        />
+      </el-form-item>
+      <el-form-item label="要求/目标">
+        <el-input
+          v-model="bodyForm.requirement"
+          type="textarea"
+          :rows="3"
+          placeholder="如：GPA达到3.5以上，参与至少一项科研项目"
+        />
+      </el-form-item>
+    </el-form>
+    <p class="body-edit__tip">保存后会重新提交审核，规划版本号将加一。</p>
+    <template #footer>
+      <el-button @click="bodyEditVisible = false">取消</el-button>
+      <el-button type="primary" :loading="bodySaving" @click="submitBodyEdit">保存并提交</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped lang="scss">
@@ -220,5 +323,15 @@ function handleClose() {
   text-align: center;
   color: var(--el-text-color-secondary);
   font-size: 14px;
+}
+
+.body-w {
+  width: 100%;
+}
+
+.body-edit__tip {
+  margin: 0;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 </style>

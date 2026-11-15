@@ -7,6 +7,7 @@
 import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
 import { correctApplication } from '@/shared/api/applications'
+import { buildCorrectionPayload } from '@/shared/api/submission/payload'
 
 /** 纠错表单 */
 export interface CorrectionForm {
@@ -14,7 +15,18 @@ export interface CorrectionForm {
   changedFields: Record<string, { old: any; new: any }>
 }
 
-export function useCorrection() {
+/** 不进入「变更字段」候选的展示型字段 */
+const READONLY_FIELDS = new Set([
+  'title',
+  'typeLabel',
+  'submitDate',
+  'submitTime',
+  'status',
+  'rejectedReason',
+  'proofMaterials',
+])
+
+export function useCorrection(type: string) {
   const correctionVisible = ref(false)
   const correctionSubmitting = ref(false)
   const correctionRecord = ref<any>(null)
@@ -25,6 +37,18 @@ export function useCorrection() {
     changedFields: {},
   })
 
+  /** 可修改字段（含中文标签），用于弹窗里的字段选择 */
+  function editableFields() {
+    const snapshot = originalSnapshot.value || {}
+    return Object.entries(snapshot)
+      .filter(([key, value]) => {
+        if (READONLY_FIELDS.has(key)) return false
+        // 只保留基础类型字段（字符串/数字），跳过对象/数组等结构化字段
+        return typeof value === 'string' || typeof value === 'number'
+      })
+      .map(([key, value]) => ({ key, value: String(value ?? '') }))
+  }
+
   /** 打开纠错弹窗 */
   function openCorrection(record: any) {
     correctionRecord.value = record
@@ -32,6 +56,12 @@ export function useCorrection() {
     correctionForm.reason = ''
     correctionForm.changedFields = {}
     correctionVisible.value = true
+  }
+
+  /** 详情接口返回后补全快照（保留已填写的修改原因与变更项） */
+  function enrichCorrectionSnapshot(record: any) {
+    if (!correctionVisible.value || !record) return
+    originalSnapshot.value = { ...originalSnapshot.value, ...record }
   }
 
   /** 关闭纠错弹窗 */
@@ -43,13 +73,25 @@ export function useCorrection() {
     correctionForm.changedFields = {}
   }
 
-  /** 设置变更字段 */
+  /**
+   * 设置字段：`reason` 是修改原因输入框的受控值，其余字段记为变更项。
+   * （此前 reason 也走变更字段，导致输入框永远空、原因跑到「变更字段」里。）
+   */
   function setChangedField(field: string, value: any) {
+    if (field === 'reason') {
+      correctionForm.reason = value ?? ''
+      return
+    }
     if (!originalSnapshot.value) return
     correctionForm.changedFields[field] = {
       old: originalSnapshot.value[field],
       new: value,
     }
+  }
+
+  /** 移除某个变更项 */
+  function removeChangedField(field: string) {
+    delete correctionForm.changedFields[field]
   }
 
   /** 提交纠错申请 */
@@ -65,9 +107,18 @@ export function useCorrection() {
 
     correctionSubmitting.value = true
     try {
+      const changed: Record<string, any> = {}
+      for (const [field, item] of Object.entries(correctionForm.changedFields)) {
+        changed[field] = item.new
+      }
+      const payload = await buildCorrectionPayload(type, changed)
+      if (Object.keys(payload).length === 0) {
+        ElMessage.warning('请填写修改后的内容')
+        return
+      }
       await correctApplication(Number(correctionRecord.value?.id), {
         correctionReason: correctionForm.reason,
-        correctedData: correctionForm.changedFields,
+        ...payload,
       })
       ElMessage.success('修改申请已提交')
       closeCorrection()
@@ -84,9 +135,12 @@ export function useCorrection() {
     correctionRecord,
     originalSnapshot,
     correctionForm,
+    editableFields,
     openCorrection,
+    enrichCorrectionSnapshot,
     closeCorrection,
     setChangedField,
+    removeChangedField,
     submitCorrectionRequest,
   }
 }

@@ -58,13 +58,32 @@ function fetchCareerPlanPage(page: number): Promise<{ list: any[]; total: number
 function mapCareerPlan(p: any): CareerPlanRecord {
   return {
     id: String(p.id),
+    semesterId: typeof p.semesterId === 'number' ? p.semesterId : undefined,
     semester: p.semesterName || '',
     title: p.title,
     submitDate: (p.submittedAt || '').slice(0, 10),
     status: CAREER_PLAN_STATUS_MAP[p.status] ?? 'draft',
     progressRate: p.progressRate,
     statusLabel: p.statusLabel,
+    auditedAt: p.auditedAt || undefined,
+    currentVersion: p.currentVersion,
+    submitCount: p.submitCount,
+    rejectedReason: p.rejectedReason || undefined,
+    auditorName: p.auditorName || undefined,
+    teacherFeedback: p.teacherFeedback || undefined,
+    reflection: p.reflection || undefined,
   }
+}
+
+/** 学期 name（如 "2024-2025-1"）→ 后端数字 semesterId；未找到时抛出可读错误供页面就地提示 */
+export function getSemesterIdByName(name: string): Promise<number> {
+  return getSemesters().then((semesters) => {
+    const matched = semesters.find((s) => s.name === name)
+    if (!matched) {
+      throw new Error(`未找到学期「${name}」，无法提交`)
+    }
+    return matched.value
+  })
 }
 
 /** 提交职业规划的载荷（字段与 POST /profile/career-plans 一致，以表单数据为准） */
@@ -95,39 +114,46 @@ export function submitCareerPlan(data: SubmitCareerPlanPayload): Promise<CareerP
     statusLabel: res?.statusLabel ?? '待审批',
   })
 
-  return getSemesters()
-    .then((semesters) => {
-      const matched = semesters.find((s) => s.name === data.semester)
-      if (!matched) {
-        throw new Error(`未找到学期「${data.semester}」，无法提交`)
-      }
-      return matched.value
-    })
-    .then((semesterId) =>
-      request
-        .post('/profile/career-plans', {
-          semesterId,
-          title: data.title,
-          content: data.content,
-          requirement: data.requirement,
-          goals: data.goals,
-          evidenceFileIds: data.evidenceFileIds,
-          isDraft: 0,
-        })
-        .then((res: any) => buildRecord(String(res.planId ?? nextId()), res)),
-    )
+  return getSemesterIdByName(data.semester).then((semesterId) =>
+    request
+      .post('/profile/career-plans', {
+        semesterId,
+        title: data.title,
+        content: data.content,
+        requirement: data.requirement,
+        goals: data.goals,
+        evidenceFileIds: data.evidenceFileIds,
+        isDraft: 0,
+      })
+      .then((res: any) => buildRecord(String(res.planId ?? nextId()), res)),
+  )
 }
 
-/** 保存职业规划草稿（对接 POST /profile/career-plans，isDraft=1） */
-export function saveCareerPlanDraft(payload: {
-  semesterId?: number
+/** 保存职业规划草稿的载荷（semester 为业务 name，提交前映射为数字 semesterId） */
+export interface SaveCareerPlanDraftPayload {
+  semester: string
   title: string
   content?: string
   requirement?: string
   goals?: any[]
   evidenceFileIds?: number[]
-}): Promise<{ planId: number; status: number; currentVersion: number; submitCount: number }> {
-  return request.post('/profile/career-plans', { ...payload, isDraft: 1 })
+}
+
+/** 保存职业规划草稿（对接 POST /profile/career-plans，isDraft=1；后端仍要求学期与标题） */
+export function saveCareerPlanDraft(
+  data: SaveCareerPlanDraftPayload,
+): Promise<{ planId: number; status: number; currentVersion: number; submitCount: number }> {
+  return getSemesterIdByName(data.semester).then((semesterId) =>
+    request.post('/profile/career-plans', {
+      semesterId,
+      title: data.title,
+      content: data.content,
+      requirement: data.requirement,
+      goals: data.goals,
+      evidenceFileIds: data.evidenceFileIds,
+      isDraft: 1,
+    }),
+  )
 }
 
 /** 获取职业规划详情（GET /profile/career-plans/{planId}） */
@@ -143,10 +169,12 @@ export function getCareerPlanDetail(planId: number): Promise<any> {
 export function downloadCareerPlanFile(
   planId: number,
   purpose: 'internal' | 'external' = 'external',
+  /** 建议传规划标题，后端/OSS 未回 Content-Disposition 时作为兜底文件名 */
+  fallbackFileName?: string,
 ): Promise<void> {
   return downloadBlobFile(
     `/profile/career-plans/${planId}/download`,
-    `职业规划-${planId}.pdf`,
+    fallbackFileName || `职业规划-${planId}.pdf`,
     undefined,
     { params: { purpose }, timeout: 60_000 },
   )
