@@ -1,9 +1,9 @@
-import type { SubmitCareerPlanPayload } from '@/shared/api/career-plan'
+import type { SaveCareerPlanDraftPayload, SubmitCareerPlanPayload } from '@/shared/api/career-plan'
 import type { CareerAnalysis, CareerPlanRecord } from '@/shared/types/types'
 import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getCareerPlans, submitCareerPlan } from '@/shared/api/career-plan'
+import { getCareerPlans, saveCareerPlanDraft, submitCareerPlan } from '@/shared/api/career-plan'
 
 /**
  * 职业规划 Store
@@ -56,6 +56,13 @@ export const useCareerPlanStore = defineStore('career-plan', () => {
     ElMessage.success('规划材料提交成功')
   }
 
+  /** 保存后端草稿（isDraft=1）：草稿不出现在「待审批」，会随列表刷新回到规划记录中 */
+  async function saveDraftPlan(data: SaveCareerPlanDraftPayload): Promise<void> {
+    await saveCareerPlanDraft(data)
+    await fetchPlans(true)
+    ElMessage.success('草稿已保存')
+  }
+
   /** AI 助手写入短板分析结果（触发 CareerPlan.vue 短板区域更新） */
   function setAIAnalysis(analysis: CareerAnalysis): void {
     aiAnalysis.value = analysis
@@ -86,6 +93,7 @@ export const useCareerPlanStore = defineStore('career-plan', () => {
     aiAnalysis,
     fetchPlans,
     submitPlan,
+    saveDraftPlan,
     setAIAnalysis,
     clearAIAnalysis,
     reset,
