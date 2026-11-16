@@ -4,10 +4,10 @@ import type { ApplicationType } from '@/shared/types/types'
  * 契约要求的 archiveType（/activities 列表 archiveType 字段，下划线风格）与前端 type key 的别名映射。
  * 实测确认（2026-08-22）：competition→academic_competition、certificate→honor_certificate、
  * innovation→innovation_entrepreneurship、research→academic_research、training→training_project、
- * socialPractice→social_practice；scholarship/internship/organization 与列表字段同名无需别名。
- * bookReport 的后端 archiveType 未能在真实接口确认（该类型 POST 契约异常，见 docs/api-reconciliation-student.md）。
+ * socialPractice→social_practice、bookReport→book_review；scholarship/internship/organization 与列表字段同名无需别名。
  */
 export const ARCHIVE_TYPE_ALIASES: Record<string, string[]> = {
+  bookReport: ['book_review'],
   competition: ['academic_competition'],
   innovation: ['innovation_entrepreneurship'],
   research: ['academic_research'],

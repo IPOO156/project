@@ -1,5 +1,6 @@
 import type { CareerPlanRecord } from '@/shared/types/types'
 import { downloadBlobFile } from '@/shared/utils/download'
+import { updateActivity } from './activities'
 import { getSemesters } from './common'
 import request from './request'
 
@@ -156,6 +157,17 @@ export function saveCareerPlanDraft(
   )
 }
 
+/**
+ * 提交已保存的草稿 / 已退回规划。
+ * 后端无独立的「草稿提交」接口，走统一活动编辑 PUT /activities/career_plan/{id}：
+ * 不带 isDraft 即重新提交（置待审批、升版本、生成教师端待审核任务）。
+ */
+export function submitCareerPlanRecord(
+  planId: number,
+): Promise<{ status: number; statusLabel: string }> {
+  return updateActivity(planId, 'career_plan', {})
+}
+
 /** 获取职业规划详情（GET /profile/career-plans/{planId}） */
 export function getCareerPlanDetail(planId: number): Promise<any> {
   return request.get(`/profile/career-plans/${planId}`)
@@ -266,6 +278,8 @@ export function addCareerMilestone(
   payload: {
     milestoneTitle: string
     milestoneDate?: string
+    /** 成果证明材料（file_uploads.id）；后端若支持则新增时直接绑定 */
+    proofFileId?: number
   },
 ): Promise<{ milestoneId: number }> {
   return request.post(`/profile/career-plans/${planId}/actions/${actionId}/milestones`, payload)
