@@ -16,6 +16,26 @@ import {
 } from '@/shared/constants/dict'
 
 /**
+ * 双创「项目类型」：后端与 companyType 共用字段，存的是 practice/plan/registered 等枚举码，
+ * 与 company_type 字典（limited_liability…）不同源，这里仅做展示映射。
+ */
+const INNOVATION_PROJECT_TYPE_LEGACY = [
+  { label: '创业实践', value: 'practice' },
+  { label: '创业计划', value: 'plan' },
+  { label: '实体注册', value: 'registered' },
+  { label: '其他', value: 'other' },
+] as const
+
+/** 角色字段：组织/实习的 position 存 leader/member/solo（solo 仅出现在旧数据，字典下拉不提供） */
+const ROLE_DISPLAY_OPTIONS = [...ROLE_OPTIONS, { label: '独立完成', value: 'solo' }] as const
+
+/** 项目类型：科研用 basic/applied/development，双创用 practice/plan/registered，共用 projectType 字段 */
+const PROJECT_TYPE_DISPLAY_OPTIONS = [
+  ...RESEARCH_TYPE_DISPLAY_OPTIONS,
+  ...INNOVATION_PROJECT_TYPE_LEGACY,
+] as const
+
+/**
  * 申报详情字段 → 枚举字典。
  *
  * 后端活动详情（教师端档案详情 detail.details、教师端审核详情 detail.detail）同时返回
@@ -31,15 +51,20 @@ export const ARCHIVE_DETAIL_ENUM_OPTIONS: Record<
   competitionLevel: COMPETITION_LEVELS,
   awardLevel: AWARD_LEVELS,
   projectLevel: PROJECT_LEVELS,
-  participantRole: ROLE_OPTIONS,
+  participantRole: ROLE_DISPLAY_OPTIONS,
   scholarshipGrade: SCHOLARSHIP_GRADES,
   scholarshipLevel: SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS,
   researchType: RESEARCH_TYPE_DISPLAY_OPTIONS,
-  projectType: RESEARCH_TYPE_DISPLAY_OPTIONS,
+  projectType: PROJECT_TYPE_DISPLAY_OPTIONS,
   certType: CERTIFICATE_TYPES,
   organizationLevel: ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
+  orgLevel: ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
   industryType: INDUSTRY_TYPE_DISPLAY_OPTIONS,
-  companyType: COMPANY_TYPE_DISPLAY_OPTIONS,
+  // 公司类型：legal body 字典 + 双创项目类型旧码，两套值都要能翻成中文
+  companyType: [...COMPANY_TYPE_DISPLAY_OPTIONS, ...INNOVATION_PROJECT_TYPE_LEGACY],
+  // 角色类字段：组织/实习的 position 存 leader/member/solo
+  position: ROLE_DISPLAY_OPTIONS,
+  positionTitle: ROLE_DISPLAY_OPTIONS,
 }
 
 /** 申报类型复合 key → APPLICATION_TYPE_MAP 的 key（如 academic_competition → 学科竞赛） */

@@ -26,6 +26,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'remove', id: string): void
   (e: 'withdraw', id: string): void
+  (e: 'submit', id: string): void
   (e: 'refresh'): void
 }>()
 
@@ -94,6 +95,11 @@ function canWithdraw(status: string): boolean {
 /** 删除口径与后端一致：仅草稿 / 已退回 / 已撤销可删（待审批请先撤回） */
 function canDelete(status: string): boolean {
   return status === 'draft' || status === 'rejected' || status === 'withdrawn'
+}
+
+/** 提交口径与后端一致：草稿/已退回可提交（活动编辑接口只放行 0/3） */
+function canSubmit(status: string): boolean {
+  return status === 'draft' || status === 'rejected'
 }
 
 function versionLabel(row: CareerPlanRecord): string {
@@ -172,9 +178,17 @@ function auditTime(row: CareerPlanRecord): string {
           <span v-else class="feedback-empty">-</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150" align="center" fixed="right">
+      <el-table-column label="操作" width="200" align="center" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="openDetail(row)">详情</el-button>
+          <el-button
+            v-if="canSubmit(row.status)"
+            link
+            type="success"
+            size="small"
+            @click="emit('submit', row.id)"
+            >{{ row.status === 'rejected' ? '重新提交' : '提交' }}</el-button
+          >
           <el-button
             v-if="canWithdraw(row.status)"
             link
