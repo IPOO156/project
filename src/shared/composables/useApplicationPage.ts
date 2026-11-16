@@ -269,7 +269,12 @@ export function useApplicationPage(
     } catch (err) {
       // 响应拦截器已提示后端错误；此处只补前端自身抛出的错误（如契约缺失、主记录创建失败），
       // 避免与拦截器重复弹窗，也避免「提交失败却提示成功」。
-      if (err instanceof Error && !('isAxiosError' in err) && err.message) {
+      if (
+        err instanceof Error &&
+        !('isAxiosError' in err) &&
+        !(err as Error & { __handled?: boolean }).__handled &&
+        err.message
+      ) {
         ElMessage.error(err.message)
       }
     } finally {

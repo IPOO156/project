@@ -36,7 +36,8 @@ export const DETAIL_TO_FORM_MAP: Record<string, Record<string, string>> = {
     industryType: 'industryType',
     projectType: 'companyType',
     participantRole: 'teamRole',
-    registeredAt: 'registerDate',
+    // 契约字段为 registeredTime；registeredAt 为历史后端详情字段名，保留兼容
+    registeredTime: 'registerDate',
   },
   research: {
     projectName: 'projectName',
@@ -147,8 +148,15 @@ export function mapDetailToForm(type: string, detail: any): Record<string, any> 
     : (DETAIL_TO_FORM_MAP[type] ?? {})
   const out: Record<string, any> = {}
   for (const [from, to] of Object.entries(map)) {
-    // 兼容旧字段名：历史后端版本详情返回 obtainTime，接口文档统一为 obtainedTime
-    const v = nested[from] ?? (from === 'obtainedTime' ? nested.obtainTime : undefined)
+    // 兼容旧字段名：历史后端版本详情返回 obtainTime，接口文档统一为 obtainedTime；
+    // 创新类注册时间历史字段为 registeredAt，契约字段为 registeredTime
+    const legacyKey =
+      from === 'obtainedTime'
+        ? 'obtainTime'
+        : from === 'registeredTime'
+          ? 'registeredAt'
+          : undefined
+    const v = nested[from] ?? (legacyKey ? nested[legacyKey] : undefined)
     if (v != null && v !== '') out[to] = v
   }
   // 通用取得时间 obtainedTime → 扩展表单 acquisitionDate；兼容旧字段名 obtainTime
