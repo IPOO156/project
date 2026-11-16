@@ -5,11 +5,14 @@
  * - 本地短板分析：来自 useCareerPlanStore.aiAnalysis（AI 助手回流）
  */
 import type { AISuggestion } from '@/features/ai-chat/ai-chat.types'
+import { ElMessage } from 'element-plus'
 import { AlertTriangle, Sparkles } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useCareerPlanStore } from '@/app/stores/stores'
 import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import { getAISuggestions } from '@/shared/api/ai-chat'
+import { aiAddCareerPlan, getSemesterIdByName } from '@/shared/api/career-plan'
+import { useSemesters } from '@/shared/composables/useSemesters'
 
 const props = defineProps<{
   /** 最新一条规划的 id（后端建议以它为 sourceId）；无记录时为 null */
@@ -68,6 +71,52 @@ function openAIDrawer() {
   aiDrawerKey.value++
   aiDrawerVisible.value = true
 }
+
+/* ===================== AI 建议一键采纳（4.15） ===================== */
+
+const { semesterOptions, load: loadSemesters } = useSemesters()
+const adoptVisible = ref(false)
+const adoptTarget = ref<{ key: number; content: string } | null>(null)
+const adoptSemester = ref('')
+const adoptTitle = ref('')
+const adopting = ref(false)
+
+function openAdoptDialog(s: { key: number; content: string }) {
+  adoptTarget.value = s
+  // 默认选最近学期（useSemesters 按学期名升序排列）
+  adoptSemester.value = semesterOptions.value[semesterOptions.value.length - 1]?.value ?? ''
+  adoptTitle.value = ''
+  adoptVisible.value = true
+  void loadSemesters()
+}
+
+/** 采纳为草稿（requireConfirm=1）：后端按建议内容生成目标与行动，学生可在规划记录中继续完善 */
+async function confirmAdopt() {
+  if (!adoptTarget.value) return
+  if (!adoptSemester.value) {
+    ElMessage.warning('请选择目标学期')
+    return
+  }
+  adopting.value = true
+  try {
+    const semesterId = await getSemesterIdByName(adoptSemester.value)
+    await aiAddCareerPlan({
+      aiSuggestionId: adoptTarget.value.key,
+      semesterId,
+      title: adoptTitle.value.trim() || undefined,
+      requireConfirm: 1,
+    })
+    ElMessage.success('已生成规划草稿，可在规划记录中查看')
+    adoptVisible.value = false
+    await careerPlanStore.fetchPlans(true)
+  } catch (e) {
+    // 「未找到学期」为本地映射错误；其余接口错误拦截器已提示
+    const msg = e instanceof Error ? e.message : ''
+    if (msg.includes('未找到学期')) ElMessage.warning(msg)
+  } finally {
+    adopting.value = false
+  }
+}
 </script>
 
 <template>
@@ -93,6 +142,15 @@ function openAIDrawer() {
           <span v-if="s.sources" class="ai-suggestion__chip">依据：{{ s.sources }}</span>
           <span v-if="s.warning" class="ai-suggestion__warn">{{ s.warning }}</span>
           <span v-if="s.status" class="ai-suggestion__status">{{ s.status }}</span>
+          <el-button
+            type="primary"
+            plain
+            size="small"
+            class="ai-suggestion__adopt"
+            @click="openAdoptDialog(s)"
+          >
+            采纳为计划
+          </el-button>
         </div>
       </div>
     </div>
@@ -128,9 +186,6 @@ function openAIDrawer() {
           <p class="ai-item__suggest"><strong>建议：</strong>{{ item.suggestion }}</p>
         </div>
       </div>
-      <!-- TODO(待后端契约字段)：当前 AI 分析由前端本地生成，未携带 aiSuggestionId，
-           无法调用 /profile/career-plans/ai-add 一键加入计划。待后端补充 aiSuggestionId 后，
-           在此新增「采纳为计划」按钮并二次确认后提交。 -->
     </div>
     <div v-else-if="!displaySuggestions.length" class="ai-empty">
       <Sparkles :size="28" class="ai-empty__icon" />
@@ -144,6 +199,29 @@ function openAIDrawer() {
     :initial-question="aiInitialQuestion"
     @close="aiDrawerVisible = false"
   />
+
+  <el-dialog v-model="adoptVisible" title="采纳为计划" width="440px" append-to-body>
+    <el-form label-width="80px">
+      <el-form-item label="目标学期" required>
+        <el-select v-model="adoptSemester" placeholder="请选择学期" class="adopt-w">
+          <el-option
+            v-for="s in semesterOptions"
+            :key="s.value"
+            :label="s.label"
+            :value="s.value"
+          />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="规划标题">
+        <el-input v-model="adoptTitle" maxlength="255" placeholder="不填则自动生成" />
+      </el-form-item>
+    </el-form>
+    <p class="adopt-tip">采纳后将按建议内容自动生成目标与行动，并保存为草稿（不直接提交审核）。</p>
+    <template #footer>
+      <el-button @click="adoptVisible = false">取消</el-button>
+      <el-button type="primary" :loading="adopting" @click="confirmAdopt">确定采纳</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped lang="scss">
@@ -340,6 +418,21 @@ function openAIDrawer() {
     background: #eff6ff;
     border: 1px solid #bfdbfe;
   }
+
+  &__adopt {
+    margin-left: auto;
+  }
+}
+
+.adopt-w {
+  width: 100%;
+}
+
+.adopt-tip {
+  margin: 0;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.6;
 }
 
 // ─── 夜间模式适配 ───

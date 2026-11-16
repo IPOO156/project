@@ -5,6 +5,7 @@ import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useSemesters } from '@/shared/composables/useSemesters'
+import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -16,7 +17,6 @@ const { semesterOptions, load: loadSemesters } = useSemesters()
 function emptyForm() {
   return {
     softName: '',
-    issuer: '',
     ranking: '',
     approveDate: '',
     semester: '',
@@ -32,7 +32,6 @@ const page = reactive(
     'software-copyright',
     [
       { key: 'softName', label: '软著名称' },
-      { key: 'issuer', label: '颁发单位' },
       { key: 'ranking', label: '排名/总人数' },
       { key: 'approveDate', label: '获批时间' },
       { key: 'semester', label: '学期' },
@@ -46,7 +45,6 @@ const staggerActive = useFirstLoadStagger(() => page.records.length)
 
 function handleEditClick(row: any) {
   page.form.softName = row.softName || ''
-  page.form.issuer = row.issuer || ''
   page.form.ranking = row.ranking || ''
   page.form.approveDate = row.approveDate || ''
   page.form.semester = row.semester || ''
@@ -87,13 +85,6 @@ onMounted(() => {
     :status="page.currentStatus"
     :rejection-reason="page.rejectionReason"
     :enrollment-info="page.enrollmentInfo"
-    :show-extended-fields="true"
-    :extended-form="page.extendedForm"
-    @update:extended-form="
-      (field: string, val: string) => {
-        ;(page.extendedForm as Record<string, string>)[field] = val
-      }
-    "
     @save-draft="page.handleSaveDraft"
     @submit="page.handleSubmit"
     @view="(row: FormRecord) => page.viewRecord(row)"
@@ -108,9 +99,6 @@ onMounted(() => {
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="软著名称" required
           ><el-input v-model="page.form.softName"
-        /></el-form-item>
-        <el-form-item label="颁发单位" required
-          ><el-input v-model="page.form.issuer"
         /></el-form-item>
         <el-form-item label="排名/总人数" required>
           <el-input v-model="page.form.ranking" placeholder="如：1/4" class="form-input" />
@@ -134,6 +122,15 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
+        <ApplicationExtendedFields
+          :form="page.extendedForm"
+          :hidden="['acquisitionDate']"
+          @update="
+            (field: string, val: string) => {
+              ;(page.extendedForm as Record<string, string>)[field] = val
+            }
+          "
+        />
         <el-form-item label="证明材料" required>
           <ProofUpload v-model:file-list="page.form.proofMaterials" :status="page.currentStatus" />
         </el-form-item>
@@ -157,6 +154,7 @@ onMounted(() => {
       }
     "
     @update:form="(field: string, val: string) => page.setChangedField(field, val)"
+    @remove-field="page.removeChangedField"
     @submit="page.submitCorrection"
   />
   <ScoreIndicatorDialog

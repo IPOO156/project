@@ -7,6 +7,10 @@ import { getSemesters } from '@/shared/api/common'
 export interface SemesterSelectOption {
   value: string
   label: string
+  /** 学期开始日期（yyyy-MM-dd），后端接口新增字段；缺失时为 undefined */
+  startDate?: string
+  /** 学期结束日期（yyyy-MM-dd），后端接口新增字段；缺失时为 undefined */
+  endDate?: string
 }
 
 export interface UseSemestersReturn {
@@ -44,10 +48,17 @@ let noticeHandler: { close: () => void } | null = null
 /** 常驻提示在一个会话内只弹一次，重试时不再重复弹出 */
 let emptyNoticeShown = false
 
-function applyRemote(list: { name: string; label?: string }[]): void {
+function applyRemote(
+  list: { name: string; label?: string; startDate?: string; endDate?: string }[],
+): void {
   semesterOptions.value = list
     .filter((s) => Boolean(s.name))
-    .map((s) => ({ value: s.name, label: s.label || s.name }))
+    .map((s) => ({
+      value: s.name,
+      label: s.label || s.name,
+      startDate: s.startDate,
+      endDate: s.endDate,
+    }))
     .sort((a, b) => a.value.localeCompare(b.value))
   error.value = null
 }
@@ -169,4 +180,17 @@ export function useSemesters(): UseSemestersReturn {
 function forceRequest(): Promise<void> {
   settled = false
   return request(true)
+}
+
+/**
+ * 取学期结束日期（yyyy-MM-dd）。
+ *
+ * 只使用后端 `GET /common/semesters` 返回的 `endDate` 字段，不再按学期名推算
+ * （管理员可自定义学期名称，推算出的日期与后端真实区间不一致会导致误拦截）。
+ * 后端未返回该字段（老版本）时返回空串，调用方跳过相关校验。
+ */
+export function semesterEndDateOf(semester: unknown): string {
+  const name = typeof semester === 'string' ? semester.trim() : ''
+  if (!name) return ''
+  return semesterOptions.value.find((s) => s.value === name)?.endDate ?? ''
 }

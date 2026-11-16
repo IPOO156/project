@@ -30,9 +30,8 @@ async function submitResearchStarApplication(
   const role = normalizeRole(data.role)
   if (role) masterPayload.participantRole = role
   if (data.certNumber) masterPayload.certificateNo = String(data.certNumber)
-  // 颁发单位：软著表单用 issuer，公共扩展字段用 issuingAuthority，二者都落到主记录 issuing_unit
-  const issuingUnit = data.issuingAuthority ?? data.issuer
-  if (issuingUnit) masterPayload.issuingUnit = String(issuingUnit)
+  // 发证单位走公共扩展字段 issuingAuthority；软著专属 issuer 字段已由 main #48 移除
+  if (data.issuingAuthority) masterPayload.issuingUnit = String(data.issuingAuthority)
   if (data.validityPeriod) masterPayload.validUntil = toDateString(data.validityPeriod)
   const master: any = await request.post('/awards/research-star', masterPayload)
   const researchStarId = master?.researchStarId

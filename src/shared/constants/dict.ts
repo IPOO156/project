@@ -448,13 +448,11 @@ export const CAREER_ACTION_STATUS_OPTIONS = [
 ] as const
 
 // 教师端成长时间轴事件类型筛选（eventType 码，'' 为全部）
+// 学生端只能关联「活动申报」或「奖项报名」：前者恒为 6（能力提升），后者恒为 1（奖项），
+// 2~5 不会产生，故不提供对应筛选项，避免筛出必然为空的结果。
 export const TEACHER_EVENT_TYPE_OPTIONS = [
   { value: '', label: '全部' },
   { value: 1, label: '奖项' },
-  { value: 2, label: '成绩' },
-  { value: 3, label: '实践' },
-  { value: 4, label: '职业规划' },
-  { value: 5, label: '短板改进' },
   { value: 6, label: '能力提升' },
 ] as const
 

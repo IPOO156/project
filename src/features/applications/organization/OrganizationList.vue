@@ -6,6 +6,7 @@ import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { ORGANIZATION_LEVELS } from '@/shared/constants/dict'
+import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -86,13 +87,6 @@ onMounted(() => {
     :status="page.currentStatus"
     :rejection-reason="page.rejectionReason"
     :enrollment-info="page.enrollmentInfo"
-    :show-extended-fields="true"
-    :extended-form="page.extendedForm"
-    @update:extended-form="
-      (field: string, val: string) => {
-        ;(page.extendedForm as Record<string, string>)[field] = val
-      }
-    "
     @save-draft="page.handleSaveDraft"
     @submit="page.handleSubmit"
     @view="(row: FormRecord) => page.viewRecord(row)"
@@ -141,6 +135,15 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
+        <ApplicationExtendedFields
+          :form="page.extendedForm"
+          :hidden="['role', 'certNumber', 'issuingAuthority', 'acquisitionDate', 'validityPeriod']"
+          @update="
+            (field: string, val: string) => {
+              ;(page.extendedForm as Record<string, string>)[field] = val
+            }
+          "
+        />
         <el-form-item label="佐证材料" required>
           <ProofUpload v-model:file-list="page.form.proofMaterials" :status="page.currentStatus" />
         </el-form-item>
@@ -164,6 +167,7 @@ onMounted(() => {
       }
     "
     @update:form="(field: string, val: string) => page.setChangedField(field, val)"
+    @remove-field="page.removeChangedField"
     @submit="page.submitCorrection"
   />
   <ScoreIndicatorDialog

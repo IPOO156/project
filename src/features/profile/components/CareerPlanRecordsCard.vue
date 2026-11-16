@@ -25,6 +25,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'remove', id: string): void
+  (e: 'withdraw', id: string): void
   (e: 'refresh'): void
 }>()
 
@@ -84,6 +85,24 @@ const getStatusType = computed(
     (status: string): TagProps['type'] =>
       (getColor(status) as TagProps['type']) ?? 'info',
 )
+
+/** 仅待审批可撤回；后端 ActivityService.checkWithdrawable 也只允许 status=1 */
+function canWithdraw(status: string): boolean {
+  return status === 'pending'
+}
+
+/** 删除口径与后端一致：仅草稿 / 已退回 / 已撤销可删（待审批请先撤回） */
+function canDelete(status: string): boolean {
+  return status === 'draft' || status === 'rejected' || status === 'withdrawn'
+}
+
+function versionLabel(row: CareerPlanRecord): string {
+  return row.currentVersion ? `V${row.currentVersion}` : '-'
+}
+
+function auditTime(row: CareerPlanRecord): string {
+  return row.auditedAt ? row.auditedAt.slice(0, 16).replace('T', ' ') : '-'
+}
 </script>
 
 <template>
@@ -133,12 +152,43 @@ const getStatusType = computed(
           }}</el-tag></template
         >
       </el-table-column>
-      <!-- TODO(待后端契约字段)：教师反馈(teacherFeedback)、学生反思(reflection) 尚未在
-           CareerPlanRecord 契约中定义，待后端补充后在此新增两列展示 -->
-      <el-table-column label="操作" width="130" align="center" fixed="right">
+      <el-table-column label="版本" width="70">
+        <template #default="{ row }">{{ versionLabel(row as CareerPlanRecord) }}</template>
+      </el-table-column>
+      <el-table-column label="提交次数" width="88">
+        <template #default="{ row }">{{ row.submitCount ?? '-' }}</template>
+      </el-table-column>
+      <el-table-column label="审核时间" width="140">
+        <template #default="{ row }">{{ auditTime(row as CareerPlanRecord) }}</template>
+      </el-table-column>
+      <el-table-column label="最新反馈" min-width="160">
+        <template #default="{ row }">
+          <span v-if="row.teacherFeedback" class="feedback-text" :title="row.teacherFeedback">
+            {{ row.teacherFeedback }}
+          </span>
+          <span v-else-if="row.reflection" class="feedback-text" :title="row.reflection">
+            我的反思：{{ row.reflection }}
+          </span>
+          <span v-else class="feedback-empty">-</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="150" align="center" fixed="right">
         <template #default="{ row }">
           <el-button link type="primary" size="small" @click="openDetail(row)">详情</el-button>
-          <el-button type="danger" link size="small" @click="emit('remove', row.id)"
+          <el-button
+            v-if="canWithdraw(row.status)"
+            link
+            type="warning"
+            size="small"
+            @click="emit('withdraw', row.id)"
+            >撤回</el-button
+          >
+          <el-button
+            v-if="canDelete(row.status)"
+            link
+            type="danger"
+            size="small"
+            @click="emit('remove', row.id)"
             >删除</el-button
           >
         </template>
@@ -191,6 +241,19 @@ const getStatusType = computed(
 
 .semester-filter {
   width: 180px;
+}
+
+.feedback-text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.feedback-empty {
+  color: var(--el-text-color-placeholder);
 }
 
 // ─── 夜间模式适配 ───

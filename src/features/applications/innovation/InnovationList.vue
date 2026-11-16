@@ -5,7 +5,8 @@ import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
-import { INNOVATION_COMPANY_TYPES } from '@/shared/constants/dict'
+import { INDUSTRY_TYPES, INNOVATION_COMPANY_TYPES } from '@/shared/constants/dict'
+import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -20,12 +21,17 @@ const { options: companyTypeOptions, load: loadCompanyTypes } = useRemoteDict(
   INNOVATION_COMPANY_TYPES,
 )
 
+/** 行业类型：后端字典优先，常量兜底 */
+const { options: industryTypeOptions, load: loadIndustryTypes } = useRemoteDict(
+  'industry_type',
+  INDUSTRY_TYPES,
+)
+
 function emptyForm() {
   return {
     companyName: '',
     industryType: '',
     companyType: '',
-    teamRole: '',
     registerDate: '',
     semester: '',
     proofMaterials: [] as string[],
@@ -37,7 +43,6 @@ const page = reactive(
     { key: 'companyName', label: '公司名称' },
     { key: 'industryType', label: '行业类型' },
     { key: 'companyType', label: '公司类型' },
-    { key: 'teamRole', label: '团队角色' },
     { key: 'registerDate', label: '注册时间' },
     { key: 'semester', label: '学期' },
     { key: 'proofMaterials', label: '佐证材料' },
@@ -48,7 +53,6 @@ function handleEditClick(row: any) {
   page.form.companyName = row.companyName || ''
   page.form.industryType = row.industryType || ''
   page.form.companyType = row.companyType || ''
-  page.form.teamRole = row.teamRole || ''
   page.form.registerDate = row.registerDate || ''
   page.form.semester = row.semester || ''
   page.handleEditClick(row)
@@ -72,6 +76,7 @@ onMounted(() => {
   page.init()
   loadSemesters()
   void loadCompanyTypes()
+  void loadIndustryTypes()
 })
 </script>
 
@@ -86,13 +91,6 @@ onMounted(() => {
     :status="page.currentStatus"
     :rejection-reason="page.rejectionReason"
     :enrollment-info="page.enrollmentInfo"
-    :show-extended-fields="true"
-    :extended-form="page.extendedForm"
-    @update:extended-form="
-      (field: string, val: string) => {
-        ;(page.extendedForm as Record<string, string>)[field] = val
-      }
-    "
     @save-draft="page.handleSaveDraft"
     @submit="page.handleSubmit"
     @view="(row: FormRecord) => page.viewRecord(row)"
@@ -108,9 +106,16 @@ onMounted(() => {
         <el-form-item label="公司名称" required
           ><el-input v-model="page.form.companyName" placeholder="请输入公司名称"
         /></el-form-item>
-        <el-form-item label="行业类型" required
-          ><el-input v-model="page.form.industryType" placeholder="请输入行业类型"
-        /></el-form-item>
+        <el-form-item label="行业类型" required>
+          <el-select v-model="page.form.industryType" placeholder="请选择" class="form-select">
+            <el-option
+              v-for="t in industryTypeOptions"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="公司类型" required>
           <el-select v-model="page.form.companyType" placeholder="请选择" class="form-select">
             <el-option
@@ -121,9 +126,6 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="团队角色" required
-          ><el-input v-model="page.form.teamRole" placeholder="请输入团队角色"
-        /></el-form-item>
         <el-form-item label="注册时间" required
           ><el-date-picker v-model="page.form.registerDate" type="date" placeholder="选择日期"
         /></el-form-item>
@@ -137,6 +139,15 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
+        <ApplicationExtendedFields
+          :form="page.extendedForm"
+          :hidden="['certNumber', 'issuingAuthority', 'acquisitionDate', 'validityPeriod']"
+          @update="
+            (field: string, val: string) => {
+              ;(page.extendedForm as Record<string, string>)[field] = val
+            }
+          "
+        />
         <el-form-item label="佐证材料" required>
           <ProofUpload
             v-model:file-list="page.form.proofMaterials"
@@ -164,6 +175,7 @@ onMounted(() => {
       }
     "
     @update:form="(field: string, val: string) => page.setChangedField(field, val)"
+    @remove-field="page.removeChangedField"
     @submit="page.submitCorrection"
   />
   <ScoreIndicatorDialog

@@ -6,6 +6,7 @@ import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { PROJECT_LEVELS, RESEARCH_TYPES } from '@/shared/constants/dict'
+import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -29,7 +30,6 @@ function emptyForm() {
     projectName: '',
     projectLevel: '',
     researchType: '',
-    teamRole: '',
     projectDate: '',
     endDate: '',
     semester: '',
@@ -42,7 +42,6 @@ const page = reactive(
     { key: 'projectName', label: '项目名称' },
     { key: 'projectLevel', label: '项目级别' },
     { key: 'researchType', label: '研究类型' },
-    { key: 'teamRole', label: '团队角色' },
     { key: 'projectDate', label: '开始时间' },
     { key: 'endDate', label: '结束时间' },
     { key: 'semester', label: '学期' },
@@ -54,7 +53,6 @@ function handleEditClick(row: any) {
   page.form.projectName = row.projectName || ''
   page.form.projectLevel = row.projectLevel || ''
   page.form.researchType = row.researchType || ''
-  page.form.teamRole = row.teamRole || ''
   page.form.projectDate = row.projectDate || ''
   page.form.endDate = row.endDate || ''
   page.form.semester = row.semester || ''
@@ -94,13 +92,6 @@ onMounted(() => {
     :status="page.currentStatus"
     :rejection-reason="page.rejectionReason"
     :enrollment-info="page.enrollmentInfo"
-    :show-extended-fields="true"
-    :extended-form="page.extendedForm"
-    @update:extended-form="
-      (field: string, val: string) => {
-        ;(page.extendedForm as Record<string, string>)[field] = val
-      }
-    "
     @save-draft="page.handleSaveDraft"
     @submit="page.handleSubmit"
     @view="(row: FormRecord) => page.viewRecord(row)"
@@ -136,11 +127,8 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="团队角色" required
-          ><el-input v-model="page.form.teamRole" placeholder="请输入团队角色"
-        /></el-form-item>
         <el-form-item label="开始时间" required
-          ><el-date-picker v-model="page.form.projectDate" type="month" placeholder="选择年月"
+          ><el-date-picker v-model="page.form.projectDate" type="date" placeholder="选择日期"
         /></el-form-item>
         <el-form-item label="结束时间" required
           ><el-date-picker v-model="page.form.endDate" type="date" placeholder="选择日期"
@@ -155,6 +143,15 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
+        <ApplicationExtendedFields
+          :form="page.extendedForm"
+          :hidden="['certNumber', 'issuingAuthority', 'acquisitionDate', 'validityPeriod']"
+          @update="
+            (field: string, val: string) => {
+              ;(page.extendedForm as Record<string, string>)[field] = val
+            }
+          "
+        />
         <el-form-item label="佐证材料" required>
           <ProofUpload v-model:file-list="page.form.proofMaterials" :status="page.currentStatus" />
         </el-form-item>
@@ -178,6 +175,7 @@ onMounted(() => {
       }
     "
     @update:form="(field: string, val: string) => page.setChangedField(field, val)"
+    @remove-field="page.removeChangedField"
     @submit="page.submitCorrection"
   />
   <ScoreIndicatorDialog

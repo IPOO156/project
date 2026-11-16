@@ -104,6 +104,10 @@ export interface TimelineNode {
   description: string
   date: string
   recordId?: string
+  /** 后端审核状态（0 草稿 / 1 待审批 / 2 通过 / 3 退回） */
+  status?: number
+  /** 后端审核状态文案；缺失时不展示状态标签 */
+  statusLabel?: string
 }
 
 // 职业规划记录（实际使用 CareerPlanRecord，见下文）
@@ -341,6 +345,8 @@ export interface SubmissionRecord {
 // 职业规划记录
 export interface CareerPlanRecord {
   id: string
+  /** 学期 ID（后端 semesterId，用于草稿/编辑映射） */
+  semesterId?: number
   semester: string
   title: string
   submitDate: string
@@ -349,6 +355,20 @@ export interface CareerPlanRecord {
   progressRate?: number
   /** 后端返回的状态文案（statusLabel） */
   statusLabel?: string
+  /** 审核时间（后端 auditedAt） */
+  auditedAt?: string
+  /** 当前版本号（后端 currentVersion） */
+  currentVersion?: number
+  /** 提交次数（后端 submitCount） */
+  submitCount?: number
+  /** 退回原因（后端 rejectedReason） */
+  rejectedReason?: string
+  /** 审核教师姓名（后端 auditorName） */
+  auditorName?: string
+  /** 最新一条教师反馈（后端 teacherFeedback） */
+  teacherFeedback?: string
+  /** 最新一条学生反思（后端 reflection） */
+  reflection?: string
 }
 
 // AI 职业规划短板分析结果（AI 助手生成 → 写入 store → 职业规划页渲染）

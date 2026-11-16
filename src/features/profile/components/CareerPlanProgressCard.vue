@@ -1,14 +1,16 @@
 <script setup lang="ts">
 /**
- * 计划完成进度卡片（纯展示）：进度仅基于本地已有数据（已填学期数）计算，由父级传入。
+ * 计划完成进度卡片（纯展示）。
+ * 进度条统一使用后端 progressRate（行动/里程碑完成度）的平均值，
+ * 与规划记录列表的「进度」列口径一致；学期覆盖度仅作为辅助信息展示。
  */
 defineProps<{
   /** 已制定规划的学期数 */
   filledSemesterCount: number
   /** 总学期数（useSemesters 选项数，与学期下拉同源） */
   totalSemesterCount: number
-  /** 完成百分比（0-100） */
-  planProgressPercent: number
+  /** 后端 progressRate 平均值（0-100） */
+  averageProgress: number
   /** 已提交规划份数 */
   planCount: number
 }>()
@@ -22,9 +24,10 @@ defineProps<{
         <span class="plan-progress__num">{{ filledSemesterCount }}</span>
         <span class="plan-progress__total">/ {{ totalSemesterCount }} 个学期已制定规划</span>
       </div>
-      <el-progress :percentage="planProgressPercent" :stroke-width="10" />
+      <el-progress :percentage="averageProgress" :stroke-width="10" />
       <p class="plan-progress__hint">
-        已提交规划 {{ planCount }} 份，覆盖 {{ filledSemesterCount }} 个学期。
+        已提交规划 {{ planCount }} 份，覆盖 {{ filledSemesterCount }} 个学期，平均完成
+        {{ averageProgress }}%。
       </p>
     </div>
   </el-card>

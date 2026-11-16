@@ -60,7 +60,7 @@ export const RESEARCH_TYPES = [
   { label: '其他', value: 'other' },
 ] as const
 
-/** 证书类型：后端无 certificate_type 字典，学生端为自由文本，本常量仅供教师端展示映射 */
+/** 证书类型（后端 dictType: certificate_type；接口无数据时用本常量兜底） */
 export const CERTIFICATE_TYPES = [
   { label: '技能证书', value: 'skill' },
   { label: '语言证书', value: 'language' },

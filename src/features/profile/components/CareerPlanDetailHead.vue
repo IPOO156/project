@@ -3,6 +3,7 @@
  * 职业规划详情头部：标题、状态、下载/预览操作、学期来源、完成进度与审核信息。
  */
 import type { TagProps } from 'element-plus'
+import { formatDateTime } from '@/shared/utils/time'
 
 defineProps<{
   /** /profile/career-plans/{id} 返回的详情对象 */
@@ -13,11 +14,14 @@ defineProps<{
   statusLabel: string
   /** 文件下载/预览请求中 */
   fileLoading: boolean
+  /** 仅草稿/已退回可编辑规划正文 */
+  editable: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'download'): void
   (e: 'preview'): void
+  (e: 'edit'): void
 }>()
 </script>
 
@@ -32,13 +36,28 @@ const emit = defineEmits<{
       <el-button size="small" type="primary" plain :loading="fileLoading" @click="emit('preview')">
         预览
       </el-button>
+      <el-button v-if="editable" size="small" @click="emit('edit')">编辑正文</el-button>
     </div>
     <div class="head-meta">
       <span class="meta-item">{{ detail.semesterName || '-' }}</span>
       <span v-if="detail.sourceLabel" class="meta-item">来源：{{ detail.sourceLabel }}</span>
+      <span v-if="detail.submittedAt" class="meta-item"
+        >提交：{{ formatDateTime(detail.submittedAt) }}</span
+      >
+      <span v-if="detail.auditedAt" class="meta-item"
+        >审核：{{ formatDateTime(detail.auditedAt) }}</span
+      >
     </div>
     <el-progress :percentage="detail.progressRate ?? 0" :stroke-width="8" class="head-progress" />
     <div v-if="detail.auditorName" class="head-audit">审核人：{{ detail.auditorName }}</div>
+    <div v-if="detail.content" class="head-section">
+      <h4 class="head-section__title">规划总述</h4>
+      <p class="head-section__text">{{ detail.content }}</p>
+    </div>
+    <div v-if="detail.requirement" class="head-section">
+      <h4 class="head-section__title">要求 / 目标</h4>
+      <p class="head-section__text">{{ detail.requirement }}</p>
+    </div>
     <div v-if="detail.rejectedReason" class="head-reject">
       退回原因：{{ detail.rejectedReason }}
     </div>
@@ -92,6 +111,24 @@ const emit = defineEmits<{
 .head-audit {
   font-size: 13px;
   color: var(--el-text-color-secondary);
+}
+
+.head-section {
+  &__title {
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+  }
+
+  &__text {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--el-text-color-regular);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
 }
 
 .head-reject {

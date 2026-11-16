@@ -5,7 +5,8 @@ import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
-import { SCHOLARSHIP_GRADES } from '@/shared/constants/dict'
+import { SCHOLARSHIP_GRADES, SCHOLARSHIP_LEVELS } from '@/shared/constants/dict'
+import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -18,6 +19,12 @@ const { semesterOptions, load: loadSemesters } = useSemesters()
 const { options: scholarshipGradeOptions, load: loadScholarshipGrades } = useRemoteDict(
   'scholarship_award_level',
   SCHOLARSHIP_GRADES,
+)
+
+/** 奖学金级别：后端字典优先，常量兜底 */
+const { options: scholarshipLevelOptions, load: loadScholarshipLevels } = useRemoteDict(
+  'scholarship_level',
+  SCHOLARSHIP_LEVELS,
 )
 
 function emptyForm() {
@@ -69,6 +76,7 @@ onMounted(() => {
   page.init()
   loadSemesters()
   void loadScholarshipGrades()
+  void loadScholarshipLevels()
 })
 </script>
 
@@ -83,13 +91,6 @@ onMounted(() => {
     :status="page.currentStatus"
     :rejection-reason="page.rejectionReason"
     :enrollment-info="page.enrollmentInfo"
-    :show-extended-fields="true"
-    :extended-form="page.extendedForm"
-    @update:extended-form="
-      (field: string, val: string) => {
-        ;(page.extendedForm as Record<string, string>)[field] = val
-      }
-    "
     @save-draft="page.handleSaveDraft"
     @submit="page.handleSubmit"
     @view="(row: FormRecord) => page.viewRecord(row)"
@@ -105,9 +106,16 @@ onMounted(() => {
         <el-form-item label="奖项名称" required
           ><el-input v-model="page.form.awardName" placeholder="请输入奖项名称"
         /></el-form-item>
-        <el-form-item label="奖学金级别" required
-          ><el-input v-model="page.form.scholarshipLevel" placeholder="请输入奖学金级别"
-        /></el-form-item>
+        <el-form-item label="奖学金级别" required>
+          <el-select v-model="page.form.scholarshipLevel" placeholder="请选择" class="form-select">
+            <el-option
+              v-for="t in scholarshipLevelOptions"
+              :key="t.value"
+              :label="t.label"
+              :value="t.value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="获奖等级" required>
           <el-select v-model="page.form.scholarshipGrade" placeholder="请选择" class="form-select">
             <el-option
@@ -131,6 +139,15 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
+        <ApplicationExtendedFields
+          :form="page.extendedForm"
+          :hidden="['role', 'certNumber', 'issuingAuthority', 'acquisitionDate', 'validityPeriod']"
+          @update="
+            (field: string, val: string) => {
+              ;(page.extendedForm as Record<string, string>)[field] = val
+            }
+          "
+        />
         <el-form-item label="佐证材料" required>
           <ProofUpload v-model:file-list="page.form.proofMaterials" :status="page.currentStatus" />
         </el-form-item>
@@ -154,6 +171,7 @@ onMounted(() => {
       }
     "
     @update:form="(field: string, val: string) => page.setChangedField(field, val)"
+    @remove-field="page.removeChangedField"
     @submit="page.submitCorrection"
   />
   <ScoreIndicatorDialog

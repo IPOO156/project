@@ -2,6 +2,7 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
+import { withdrawActivity } from '@/shared/api/activities'
 import { deleteCareerPlan } from '@/shared/api/career-plan'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import CareerPlanAICard from './components/CareerPlanAICard.vue'
@@ -33,23 +34,24 @@ const planEmptyText = computed(() =>
   careerPlanStore.loadError ? '规划记录加载失败，请稍后重试' : '暂无规划记录',
 )
 
-// TODO(待后端契约字段)：计划详情「教师反馈(teacherFeedback)、学生反思(reflection)」
-// 及「完成进度(目标/行动完成数)」尚未在 CareerPlanRecord 契约中定义，暂不展示；
-// 进度仅基于本地已有数据（已填学期数）计算。
+// 「已完成进度」统一使用后端 progressRate（由行动/里程碑完成度重算），
+// 不再用「已填学期数 ÷ 总学期数」另造一套口径；后者仅作为学期覆盖度展示。
 const filledSemesterCount = computed(() => availableSemesters.value.length)
 // 学期下拉与「总学期数」共用同一数据源（useSemesters，仅后端真实学期），
 // 避免下拉可选而分母不含、或反之的口径不一致。
 const { semesterOptions, load: loadSemesters } = useSemesters()
 const totalSemesterCount = computed(() => semesterOptions.value.length)
-const planProgressPercent = computed(() =>
-  totalSemesterCount.value === 0
-    ? 0
-    : Math.round((filledSemesterCount.value / totalSemesterCount.value) * 100),
-)
+const averageProgress = computed(() => {
+  const rates = planRecords.value
+    .map((p) => p.progressRate)
+    .filter((rate): rate is number => typeof rate === 'number')
+  if (rates.length === 0) return 0
+  return Math.round(rates.reduce((sum, rate) => sum + rate, 0) / rates.length)
+})
 
 const activeTab = ref<'plan' | 'growth'>('plan')
 
-/** 删除整份规划：调用后端 DELETE /profile/career-plans/{planId}，成功后刷新列表 */
+/** 删除整份规划：调用后端 DELETE /profile/career-plans/{planId}，成功后强制刷新列表 */
 async function handleRemove(id: string) {
   try {
     await ElMessageBox.confirm('确定删除该职业规划吗？删除后不可恢复。', '删除确认', {
@@ -62,8 +64,28 @@ async function handleRemove(id: string) {
   }
   try {
     await deleteCareerPlan(Number(id))
-    await careerPlanStore.fetchPlans()
+    await careerPlanStore.fetchPlans(true)
     ElMessage.success('已删除')
+  } catch {
+    /* 失败提示由请求拦截器统一给出，列表保持不变 */
+  }
+}
+
+/** 撤回待审批规划：走统一活动接口，后端置 status=4（已撤销）并关闭审核任务 */
+async function handleWithdraw(id: string) {
+  try {
+    await ElMessageBox.confirm('撤回后该规划将不再处于待审批状态，确定撤回吗？', '撤回确认', {
+      confirmButtonText: '确定撤回',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await withdrawActivity(Number(id), 'career_plan')
+    await careerPlanStore.fetchPlans(true)
+    ElMessage.success('已撤回')
   } catch {
     /* 失败提示由请求拦截器统一给出，列表保持不变 */
   }
@@ -93,11 +115,11 @@ onMounted(() => {
           <CareerPlanAICard :plan-id="latestPlan?.id ?? null" />
         </div>
 
-        <!-- 计划完成进度（仅基于本地已有数据：已填学期数） -->
+        <!-- 计划完成进度（后端 progressRate 口径） -->
         <CareerPlanProgressCard
           :filled-semester-count="filledSemesterCount"
           :total-semester-count="totalSemesterCount"
-          :plan-progress-percent="planProgressPercent"
+          :average-progress="averageProgress"
           :plan-count="planRecords.length"
         />
 
@@ -108,7 +130,8 @@ onMounted(() => {
           :loading="careerPlanStore.loading"
           :empty-text="planEmptyText"
           @remove="handleRemove"
-          @refresh="careerPlanStore.fetchPlans()"
+          @withdraw="handleWithdraw"
+          @refresh="careerPlanStore.fetchPlans(true)"
         />
       </el-tab-pane>
 

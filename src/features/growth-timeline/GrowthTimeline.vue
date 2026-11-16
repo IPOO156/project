@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import type { GrowthExperience, GrowthExperienceInput } from './timelineConstants'
 import { ElMessageBox } from 'element-plus'
-import { RefreshCw } from 'lucide-vue-next'
 import { onBeforeUnmount, ref } from 'vue'
 import ExperienceDetail from './components/ExperienceDetail.vue'
 import ExperienceForm from './components/ExperienceForm.vue'
@@ -20,14 +20,11 @@ const {
   selectedExperience,
   selectedId,
   formVisible,
-  isSyncing,
-  autoSync,
   selectExperience,
   openForm,
   addExperience,
+  updateExperience,
   deleteExperience,
-  syncFromSources,
-  setAutoSync,
 } = useGrowthTimeline()
 
 const BASE_RADIUS = 52
@@ -131,6 +128,29 @@ function handleCloseDetail() {
   ringRestoreTrigger.value++
 }
 
+/** 编辑中的经历；为空表示新增 */
+const editingExperience = ref<GrowthExperience | null>(null)
+
+function handleAddExperience() {
+  editingExperience.value = null
+  openForm()
+}
+
+function handleEditExperience(id: string) {
+  const target = experiences.value.find((e) => e.id === id)
+  if (!target) return
+  editingExperience.value = target
+  formVisible.value = true
+}
+
+function handleFormSubmit(payload: GrowthExperienceInput, done: (ok: boolean) => void) {
+  if (editingExperience.value) {
+    void updateExperience(editingExperience.value.id, payload, done)
+    return
+  }
+  void addExperience(payload, done)
+}
+
 function handleDeleteExperience(id: string) {
   if (showDetail.value && selectedId.value === id) {
     pendingDeleteId.value = id
@@ -211,7 +231,7 @@ function handleScrollToGrowth() {
         :restore-trigger="ringRestoreTrigger"
         @select="handleElectronSelect"
         @reverse-complete="handleReverseComplete"
-        @add="openForm"
+        @add="handleAddExperience"
         @scroll-to-growth="handleScrollToGrowth"
       />
 
@@ -233,25 +253,6 @@ function handleScrollToGrowth() {
 
           <div class="timeline-intro">
             <p>每一圈年轮，都有一段故事</p>
-            <div class="timeline-sync">
-              <button
-                type="button"
-                class="sync-btn"
-                :disabled="isSyncing"
-                @click.stop="syncFromSources"
-              >
-                <RefreshCw :size="14" :class="{ spinning: isSyncing }" />
-                <span>{{ isSyncing ? '同步中…' : '同步其他模块经历' }}</span>
-              </button>
-              <label class="sync-auto">
-                <input
-                  type="checkbox"
-                  :checked="autoSync"
-                  @change="setAutoSync(($event.target as HTMLInputElement).checked)"
-                />
-                <span>自动同步</span>
-              </label>
-            </div>
           </div>
 
           <TimelineNode
@@ -262,6 +263,7 @@ function handleScrollToGrowth() {
             :is-odd="index % 2 === 0"
             :is-selected="selectedId === exp.id"
             @click="handleNodeClick"
+            @edit="handleEditExperience"
             @delete="handleDeleteExperience"
           />
         </div>
@@ -277,12 +279,17 @@ function handleScrollToGrowth() {
         :experiences="experiences"
         :selected-id="selectedId"
         @select="handleListViewSelect"
-        @add="openForm"
+        @add="handleAddExperience"
+        @edit="handleEditExperience"
         @delete="handleDeleteExperience"
       />
     </template>
 
-    <ExperienceForm v-model:visible="formVisible" @submit="addExperience" />
+    <ExperienceForm
+      v-model:visible="formVisible"
+      :editing="editingExperience"
+      @submit="handleFormSubmit"
+    />
     <ExperienceDetail
       v-if="selectedExperience"
       :visible="showDetail"
@@ -440,91 +447,6 @@ function handleScrollToGrowth() {
   margin: 0;
   font-weight: 400;
   letter-spacing: 1.5px;
-}
-
-.timeline-sync {
-  margin-top: 1.5rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.sync-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 100px;
-  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.12);
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--text-mid, #6b5443);
-  font-family: var(--gt-font-ui);
-  font-size: 0.78rem;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-}
-
-.sync-btn:hover:not(:disabled) {
-  background: #fff;
-  border-color: var(--ring-color, var(--bark-light, #8b6340));
-  color: var(--ring-color, var(--bark-light, #8b6340));
-}
-
-.sync-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.sync-btn .spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.sync-auto {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--gt-font-ui);
-  font-size: 0.75rem;
-  letter-spacing: 0.5px;
-  color: var(--text-light, #9a8474);
-  cursor: pointer;
-}
-
-.sync-auto input {
-  accent-color: var(--gt-accent, #8b6340);
-  cursor: pointer;
-}
-
-/* 夜间模式下的同步按钮与自动同步标签 */
-[data-theme='dark'] .sync-btn {
-  background: rgba(var(--gt-card-rgb, 30 28 26), 0.85);
-  border-color: rgba(var(--gt-bark-rgb, 200 180 160), 0.2);
-  color: var(--text-mid, #d4c4b0);
-}
-
-[data-theme='dark'] .sync-btn:hover:not(:disabled) {
-  background: rgba(var(--gt-card-rgb, 30 28 26), 0.95);
-  border-color: var(--gt-accent, #d4a574);
-  color: var(--gt-accent, #d4a574);
-}
-
-[data-theme='dark'] .sync-auto {
-  color: var(--text-light, #a89a8a);
 }
 
 @keyframes fadeSlideUp {
