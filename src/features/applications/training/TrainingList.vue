@@ -88,23 +88,27 @@ onMounted(() => {
     <template #form>
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="项目名称" required
-          ><el-input v-model="page.form.projectName" placeholder="请输入项目名称"
+          ><el-input v-model="page.form.projectName" placeholder="例：企业级 Java 开发实训"
         /></el-form-item>
         <el-form-item label="项目内容" required
           ><el-input
             v-model="page.form.projectContent"
             type="textarea"
             :rows="3"
-            placeholder="请输入项目内容"
+            placeholder="例：负责订单模块接口开发，完成 12 个接口联调与压力测试"
         /></el-form-item>
         <el-form-item label="开始时间" required
-          ><el-date-picker v-model="page.form.startDate" type="date" placeholder="选择日期"
+          ><el-date-picker v-model="page.form.startDate" type="date" placeholder="例：2025-03-03"
         /></el-form-item>
         <el-form-item label="结束时间" required
-          ><el-date-picker v-model="page.form.endDate" type="date" placeholder="选择日期"
+          ><el-date-picker v-model="page.form.endDate" type="date" placeholder="例：2025-06-20"
         /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.semester"
+            placeholder="选择学期（如 2025-2026-1）"
+            class="form-select"
+          >
             <el-option
               v-for="s in semesterOptions"
               :key="s.value"

@@ -127,8 +127,9 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
       endDate: 'endDate',
     },
     dateFields: ['startDate', 'endDate'],
-    // 实测：projectType 为必填枚举，仅接受 ASCII 码（basic/applied/development…），表单已改下拉
-    enumMap: { projectType: { 基础研究: 'basic', 应用研究: 'applied', 试验发展: 'development' } },
+    // 后端 research_type 已用 experimental 取代旧码 development（见 businessDict RESEARCH_TYPES）
+    // 表单为 ASCII 下拉；enumMap 仅兼容中文标签输入
+    enumMap: { projectType: { 基础研究: 'basic', 应用研究: 'applied', 试验发展: 'experimental' } },
   },
   internship: {
     endpoint: '/applications/internship',

@@ -184,7 +184,11 @@ request.interceptors.response.use(
     const res = response.data
     if (res.code !== 0 && res.code !== 200) {
       ElMessage.error(res.message || '请求失败')
-      return Promise.reject(new Error(res.message || '请求失败'))
+      // 标记「拦截器已提示」：调用方 catch 到业务错误时不再二次弹窗
+      // （HTTP 错误走下方 error 分支，axios 错误自带 isAxiosError，无需该标记）
+      return Promise.reject(
+        Object.assign(new Error(res.message || '请求失败'), { __handled: true }),
+      )
     }
     return res.data
   },

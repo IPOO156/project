@@ -9,6 +9,8 @@ defineProps<{
   gradeSummary: Array<{ semester: string; courses: number; gpa: number; totalScore: number }>
   /** 平均绩点文案（后端 overallGpa；加载失败时为 '--'） */
   avgGpa: string
+  /** 是否存在逐课明细；false 时展示「仅学期汇总」说明 */
+  hasDetail?: boolean
 }>()
 </script>
 
@@ -39,6 +41,7 @@ defineProps<{
         </div>
       </div>
     </div>
+    <p v-if="hasDetail === false" class="grade-note">后端未提供逐课明细，以上按学期汇总展示</p>
   </el-card>
 </template>
 
@@ -78,6 +81,11 @@ defineProps<{
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.grade-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #94a3b8;
 }
 .grade-item {
   padding: 10px 12px;

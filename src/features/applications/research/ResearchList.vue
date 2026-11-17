@@ -105,10 +105,16 @@ onMounted(() => {
     <template #form>
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="项目名称" required
-          ><el-input v-model="page.form.projectName" placeholder="请输入项目名称"
+          ><el-input
+            v-model="page.form.projectName"
+            placeholder="例：基于多模态大模型的学习行为分析"
         /></el-form-item>
         <el-form-item label="项目级别" required
-          ><el-select v-model="page.form.projectLevel" placeholder="请选择" class="form-select">
+          ><el-select
+            v-model="page.form.projectLevel"
+            placeholder="选择项目级别（如 国家级）"
+            class="form-select"
+          >
             <el-option
               v-for="l in projectLevelOptions"
               :key="l.value"
@@ -118,7 +124,11 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="研究类型" required
-          ><el-select v-model="page.form.researchType" placeholder="请选择" class="form-select">
+          ><el-select
+            v-model="page.form.researchType"
+            placeholder="选择研究类型（如 应用研究）"
+            class="form-select"
+          >
             <el-option
               v-for="t in researchTypeOptions"
               :key="t.value"
@@ -128,13 +138,17 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="开始时间" required
-          ><el-date-picker v-model="page.form.projectDate" type="date" placeholder="选择日期"
+          ><el-date-picker v-model="page.form.projectDate" type="date" placeholder="例：2025-03-01"
         /></el-form-item>
         <el-form-item label="结束时间" required
-          ><el-date-picker v-model="page.form.endDate" type="date" placeholder="选择日期"
+          ><el-date-picker v-model="page.form.endDate" type="date" placeholder="例：2026-03-01"
         /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.semester"
+            placeholder="选择学期（如 2025-2026-1）"
+            class="form-select"
+          >
             <el-option
               v-for="s in semesterOptions"
               :key="s.value"

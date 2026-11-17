@@ -42,7 +42,7 @@ onMounted(() => void loadParticipantRoles())
   <el-form-item v-if="visible('role')" label="本人角色">
     <el-select
       :model-value="form.role"
-      placeholder="请选择"
+      placeholder="选择你在团队中的角色（如 队长）"
       @update:model-value="emit('update', 'role', $event)"
     >
       <el-option
@@ -56,14 +56,14 @@ onMounted(() => void loadParticipantRoles())
   <el-form-item v-if="visible('certNumber')" label="证书编号">
     <el-input
       :model-value="form.certNumber"
-      placeholder="请输入证书编号"
+      placeholder="例：2025-NCMCM-001234"
       @update:model-value="emit('update', 'certNumber', $event)"
     />
   </el-form-item>
   <el-form-item v-if="visible('issuingAuthority')" label="发证单位">
     <el-input
       :model-value="form.issuingAuthority"
-      placeholder="请输入发证单位"
+      placeholder="例：中国工业与应用数学学会"
       @update:model-value="emit('update', 'issuingAuthority', $event)"
     />
   </el-form-item>
@@ -71,7 +71,7 @@ onMounted(() => void loadParticipantRoles())
     <el-date-picker
       :model-value="form.acquisitionDate"
       type="month"
-      placeholder="选择年月"
+      placeholder="例：2025-11（与证书落款一致）"
       value-format="YYYY-MM"
       @update:model-value="emit('update', 'acquisitionDate', $event)"
     />
@@ -80,7 +80,7 @@ onMounted(() => void loadParticipantRoles())
     <el-date-picker
       :model-value="form.validityPeriod"
       type="month"
-      placeholder="选择年月"
+      placeholder="例：2028-06（长期有效可不填）"
       value-format="YYYY-MM"
       @update:model-value="emit('update', 'validityPeriod', $event)"
     />

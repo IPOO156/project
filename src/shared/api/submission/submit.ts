@@ -30,6 +30,7 @@ async function submitResearchStarApplication(
   const role = normalizeRole(data.role)
   if (role) masterPayload.participantRole = role
   if (data.certNumber) masterPayload.certificateNo = String(data.certNumber)
+  // 发证单位走公共扩展字段 issuingAuthority；软著专属 issuer 字段已由 main #48 移除
   if (data.issuingAuthority) masterPayload.issuingUnit = String(data.issuingAuthority)
   if (data.validityPeriod) masterPayload.validUntil = toDateString(data.validityPeriod)
   const master: any = await request.post('/awards/research-star', masterPayload)

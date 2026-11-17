@@ -110,10 +110,16 @@ onMounted(() => {
     <template #form>
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="项目名称" required
-          ><el-input v-model="page.form.projectName"
+          ><el-input
+            v-model="page.form.projectName"
+            placeholder="例：基于多模态大模型的学习行为分析"
         /></el-form-item>
         <el-form-item label="项目级别" required>
-          <el-select v-model="page.form.projectLevel" class="form-select">
+          <el-select
+            v-model="page.form.projectLevel"
+            placeholder="选择项目级别（如 国家级）"
+            class="form-select"
+          >
             <el-option
               v-for="t in projectLevelOptions"
               :key="t.value"
@@ -123,7 +129,7 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="排名/总人数" required
-          ><el-input v-model="page.form.ranking" placeholder="如：2/5"
+          ><el-input v-model="page.form.ranking" placeholder="例：2/5（本人排第 2）"
         /></el-form-item>
         <el-form-item label="立项时间" required>
           <el-date-picker
@@ -131,11 +137,16 @@ onMounted(() => {
             type="month"
             format="YYYY-MM"
             value-format="YYYY-MM"
+            placeholder="例：2025-03"
             :disabled-date="page.disabledDate"
           />
         </el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" class="form-select">
+          <el-select
+            v-model="page.form.semester"
+            placeholder="选择学期（如 2025-2026-1）"
+            class="form-select"
+          >
             <el-option
               v-for="s in semesterOptions"
               :key="s.value"

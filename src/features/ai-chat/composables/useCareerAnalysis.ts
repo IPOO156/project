@@ -21,8 +21,60 @@ import type {
   WeaknessItem,
 } from '@/shared/types/types'
 
-/** 高级别奖项 level 标识（用于"竞赛实践"短板描述） */
-const HIGH_LEVELS = ['national', 'provincial']
+/** 高级别奖项 level 标识（后端 maxLevel 可能是英文码或中文标签） */
+const HIGH_LEVELS = ['national', 'provincial', '国家级', '省级', '省部级', '国家', '省']
+
+/** 奖项数量：类别汇总用 count，逐条奖项按 1 计 */
+function awardTotal(awards: Award[]): number {
+  return awards.reduce((sum, a) => sum + (a.count ?? 1), 0)
+}
+
+interface GradeStats {
+  average: number
+  totalCourseCount: number
+  /** true 表示 grades 是真实逐课行；false 表示只有学期汇总 */
+  hasCourseRows: boolean
+  lowCount: number
+  lowLabels: string[]
+}
+
+/**
+ * 统一成绩口径：有逐课行就按课程算；只有学期汇总就按学分加权算学期均分，
+ * 不再把「学期汇总」当成「一门课程」。
+ */
+function summarizeGrades(grades: Grade[]): GradeStats | null {
+  if (grades.length === 0) return null
+  const courseRows = grades.filter((g) => !g.isAggregate)
+  if (courseRows.length > 0) {
+    const totalCredits = courseRows.reduce((s, g) => s + (g.credits || 0), 0)
+    const average =
+      totalCredits > 0
+        ? Math.round(courseRows.reduce((s, g) => s + g.score * (g.credits || 0), 0) / totalCredits)
+        : Math.round(courseRows.reduce((s, g) => s + g.score, 0) / courseRows.length)
+    const low = courseRows.filter((g) => g.score < 80)
+    return {
+      average,
+      totalCourseCount: courseRows.length,
+      hasCourseRows: true,
+      lowCount: low.length,
+      lowLabels: low.map((g) => g.courseName),
+    }
+  }
+
+  const totalCredits = grades.reduce((s, g) => s + (g.credits || 0), 0)
+  const average =
+    totalCredits > 0
+      ? Math.round(grades.reduce((s, g) => s + g.score * (g.credits || 0), 0) / totalCredits)
+      : Math.round(grades.reduce((s, g) => s + g.score, 0) / grades.length)
+  const low = grades.filter((g) => g.score < 80)
+  return {
+    average,
+    totalCourseCount: grades.reduce((s, g) => s + (g.courseCount ?? 0), 0),
+    hasCourseRows: false,
+    lowCount: low.length,
+    lowLabels: low.map((g) => g.semester),
+  }
+}
 
 /**
  * 基于真实档案数据生成职业规划短板分析
@@ -68,8 +120,17 @@ export function analyzeCareer(
   // 本次分析实际引用的档案材料（供界面以"依据材料"chips 展示）
   const materials: string[] = []
   if (dimensions.length > 0) materials.push(`多维度画像（${dimensions.length} 项）`)
-  if (grades.length > 0) materials.push(`课程成绩（${grades.length} 门）`)
-  if (awards.length > 0) materials.push(`获奖记录（${awards.length} 项）`)
+  const gradeStats = summarizeGrades(grades)
+  if (gradeStats) {
+    materials.push(
+      gradeStats.hasCourseRows
+        ? `课程成绩（${gradeStats.totalCourseCount} 门）`
+        : gradeStats.totalCourseCount > 0
+          ? `课程成绩（${gradeStats.totalCourseCount} 门 / ${grades.length} 个学期汇总）`
+          : `课程成绩（${grades.length} 个学期汇总）`,
+    )
+  }
+  if (awards.length > 0) materials.push(`获奖记录（${awardTotal(awards)} 项）`)
   if (plans.length > 0) materials.push(`职业规划（${plans.length} 份）`)
 
   return {
@@ -92,27 +153,38 @@ function describeWeakness(
   const base = `${d.current} 分（目标 ${d.target}，差 ${gap} 分）`
   const facts: string[] = []
 
-  if (grades.length > 0) {
-    const avg = Math.round(grades.reduce((s, g) => s + g.score, 0) / grades.length)
-    facts.push(`平均成绩 ${avg} 分`)
-    const low = grades.filter((g) => g.score < 80)
-    if (low.length > 0) {
-      facts.push(`${low.length} 门课程低于 80 分（${low.map((g) => g.courseName).join('、')}）`)
+  const gradeStats = summarizeGrades(grades)
+  if (gradeStats) {
+    if (gradeStats.hasCourseRows) {
+      facts.push(`平均成绩 ${gradeStats.average} 分`)
+      if (gradeStats.lowCount > 0) {
+        facts.push(`${gradeStats.lowCount} 门课程低于 80 分（${gradeStats.lowLabels.join('、')}）`)
+      }
+    } else {
+      facts.push(`学期加权平均 ${gradeStats.average} 分`)
+      if (gradeStats.lowCount > 0) {
+        facts.push(
+          `${gradeStats.lowCount} 个学期均分低于 80 分（${gradeStats.lowLabels.join('、')}）`,
+        )
+      }
     }
   }
 
   const competitions = awards.filter((a) => a.type === 'competition')
-  if (competitions.length === 0) {
+  const competitionCount = awardTotal(competitions)
+  if (competitionCount === 0) {
     facts.push('暂无竞赛奖项记录')
   } else {
-    const high = competitions.filter((a) => HIGH_LEVELS.includes(a.level))
+    const highCount = awardTotal(competitions.filter((a) => HIGH_LEVELS.includes(a.level)))
     facts.push(
-      `共 ${competitions.length} 个竞赛奖项${high.length ? `（其中国家/省级 ${high.length} 个）` : ''}`,
+      `共 ${competitionCount} 个竞赛奖项${highCount ? `（其中国家/省级 ${highCount} 个）` : ''}`,
     )
   }
 
-  const research = awards.filter((a) => a.type === 'research' || a.type === 'innovation')
-  facts.push(research.length > 0 ? `科研类成果 ${research.length} 项` : '暂无科研类成果')
+  const researchCount = awardTotal(
+    awards.filter((a) => a.type === 'research' || a.type === 'innovation'),
+  )
+  facts.push(researchCount > 0 ? `科研类成果 ${researchCount} 项` : '暂无科研类成果')
 
   return facts.length > 0 ? `${base}，${facts.join('，')}` : base
 }
@@ -122,16 +194,20 @@ function describeWeakness(
 function suggestImprovement(awards: Award[], grades: Grade[]): string {
   const tips: string[] = []
 
-  const low = grades.filter((g) => g.score < 80)
-  if (low.length > 0) {
-    tips.push(`重点复习「${low.map((g) => g.courseName).join('、')}」等薄弱课程，稳步缩小差距`)
+  const gradeStats = summarizeGrades(grades)
+  if (gradeStats && gradeStats.lowCount > 0) {
+    if (gradeStats.hasCourseRows) {
+      tips.push(`重点复习「${gradeStats.lowLabels.join('、')}」等薄弱课程，稳步缩小差距`)
+    } else {
+      tips.push(`重点提升「${gradeStats.lowLabels.join('、')}」等学期的整体成绩，稳步缩小差距`)
+    }
   }
 
-  if (awards.filter((a) => a.type === 'competition').length === 0) {
+  if (awardTotal(awards.filter((a) => a.type === 'competition')) === 0) {
     tips.push('从校级竞赛起步积累实践经验，逐步挑战更高级别赛事')
   }
 
-  if (awards.filter((a) => a.type === 'research' || a.type === 'innovation').length === 0) {
+  if (awardTotal(awards.filter((a) => a.type === 'research' || a.type === 'innovation')) === 0) {
     tips.push('主动联系导师参与课题研究，尝试撰写论文积累科研产出')
   }
 

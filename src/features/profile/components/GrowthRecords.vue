@@ -18,6 +18,9 @@ const typeLabels: Record<string, string> = {
   grade: '成绩',
   competition: '竞赛',
   internship: '实习',
+  career: '职业规划',
+  improvement: '短板改进',
+  ability: '能力提升',
   other: '其他',
 }
 
@@ -27,6 +30,9 @@ const typeColors: Record<string, string> = {
   grade: '#2d5a87',
   competition: '#8b5cf6',
   internship: '#f59e0b',
+  career: '#0ea5e9',
+  improvement: '#ef4444',
+  ability: '#22c55e',
   other: '#94a3b8',
 }
 
@@ -84,9 +90,15 @@ onBeforeUnmount(() => {
       <div class="growth-item__dot" :style="{ background: typeColors[evt.type] || '#94a3b8' }" />
       <div class="growth-item__body">
         <div class="growth-item__header">
-          <!-- TODO(待后端)：成长记录审核状态字段未定义，待后端补充 status 后在此渲染 <StatusTag :status="evt.status" /> -->
           <span class="growth-item__type" :style="{ color: typeColors[evt.type] || '#94a3b8' }">
             {{ typeLabels[evt.type] || evt.type }}
+          </span>
+          <span
+            v-if="evt.statusLabel"
+            class="growth-item__status"
+            :class="`growth-item__status--${evt.status ?? 1}`"
+          >
+            {{ evt.statusLabel }}
           </span>
           <span class="growth-item__semester">{{ evt.semester }}</span>
           <span class="growth-item__date">{{ evt.date }}</span>
@@ -155,6 +167,31 @@ onBeforeUnmount(() => {
   &__type {
     font-weight: 600;
     font-size: 12px;
+  }
+
+  &__status {
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 6px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    color: #b45309;
+    font-size: 11px;
+    line-height: 1;
+    white-space: nowrap;
+
+    &--0 {
+      color: #64748b;
+    }
+
+    &--2 {
+      color: #047857;
+    }
+
+    &--3 {
+      color: #b91c1c;
+    }
   }
 
   &__semester,

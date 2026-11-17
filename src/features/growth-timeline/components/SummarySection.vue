@@ -140,17 +140,11 @@ watch(stats, () => {
   margin-bottom: 3rem;
 }
 
-/* 四组数据收敛为一块统一浅底统计面板，颜色只由品牌 token 决定 */
+/* 四组数据拆为四张独立卡片，颜色只由品牌 token 决定 */
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.14);
-  border-radius: $radius-2xl;
-  background: var(--gt-card);
-  box-shadow:
-    0 2px 8px rgba(var(--gt-shadow-rgb, 26 18 10), 0.05),
-    0 12px 32px rgba(var(--gt-shadow-rgb, 26 18 10), 0.06);
-  overflow: hidden;
+  gap: 1.25rem;
   opacity: 0;
   transform: translateY(24px);
   transition:
@@ -166,14 +160,19 @@ watch(stats, () => {
 .summary-card {
   position: relative;
   padding: 2rem 1.25rem;
-  border-left: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
-  background: transparent;
+  border: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.14);
+  border-radius: $radius-2xl;
+  background: var(--gt-card);
+  box-shadow:
+    0 2px 8px rgba(var(--gt-shadow-rgb, 26 18 10), 0.05),
+    0 12px 32px rgba(var(--gt-shadow-rgb, 26 18 10), 0.06);
   opacity: 0;
   transform: translateY(16px);
   transition:
     opacity 0.6s $ease-emphasized,
     transform 0.6s $ease-emphasized,
-    background-color 0.3s $ease-standard;
+    background-color 0.3s $ease-standard,
+    box-shadow 0.3s $ease-standard;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -181,11 +180,7 @@ watch(stats, () => {
   min-height: 150px;
 }
 
-.summary-card:first-child {
-  border-left: none;
-}
-
-/* 顶部金色短线：整块面板唯一的强调色，替代原来的四块高饱和大色块 */
+/* 顶部金色短线：单张卡片唯一的强调色 */
 .summary-card::before {
   content: '';
   position: absolute;
@@ -217,8 +212,13 @@ watch(stats, () => {
   transition-delay: 0.46s;
 }
 
-.summary-card:hover {
+.summary-card.is-revealed:hover {
   background: rgba(var(--gt-bark-rgb, 61 43 31), 0.03);
+  transform: translateY(-4px);
+  box-shadow:
+    0 4px 12px rgba(var(--gt-shadow-rgb, 26 18 10), 0.08),
+    0 18px 40px rgba(var(--gt-shadow-rgb, 26 18 10), 0.1);
+  transition-delay: 0s;
 }
 
 .summary-value {
@@ -262,21 +262,7 @@ watch(stats, () => {
 @media (max-width: 768px) {
   .summary-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  /* 2×2 布局补上横向分隔线，避免只有奇数项有左边线 */
-  .summary-card:nth-child(3) {
-    border-left: none;
-    border-top: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
-  }
-
-  .summary-card:nth-child(4) {
-    border-top: 1px solid rgba(var(--gt-bark-rgb, 61 43 31), 0.1);
-  }
-
-  [data-theme='dark'] .summary-card:nth-child(3),
-  [data-theme='dark'] .summary-card:nth-child(4) {
-    border-top-color: rgba(var(--gt-bark-rgb, 96 165 250), 0.16);
+    gap: 1rem;
   }
 
   .summary-card {
@@ -294,20 +280,19 @@ watch(stats, () => {
   }
 }
 
-/* 夜间模式：面板沿用全站蓝灰卡面，不再单独使用四套晚霞色 */
-[data-theme='dark'] .summary-grid {
+/* 夜间模式：卡片沿用全站蓝灰卡面，不再单独使用四套晚霞色 */
+[data-theme='dark'] .summary-card {
   border-color: rgba(var(--gt-bark-rgb, 96 165 250), 0.2);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.18),
     0 12px 32px rgba(0, 0, 0, 0.24);
 }
 
-[data-theme='dark'] .summary-card {
-  border-left-color: rgba(var(--gt-bark-rgb, 96 165 250), 0.16);
-}
-
-[data-theme='dark'] .summary-card:hover {
+[data-theme='dark'] .summary-card.is-revealed:hover {
   background: rgba(var(--gt-bark-rgb, 96 165 250), 0.06);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.24),
+    0 18px 40px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme='dark'] .summary-value {

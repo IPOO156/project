@@ -101,13 +101,19 @@ onMounted(() => {
     <template #form>
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="期刊名称" required
-          ><el-input v-model="page.form.journalName"
+          ><el-input v-model="page.form.journalName" placeholder="例：计算机学报"
         /></el-form-item>
         <el-form-item label="论文名称" required
-          ><el-input v-model="page.form.paperName"
+          ><el-input
+            v-model="page.form.paperName"
+            placeholder="例：基于图神经网络的校园行为预测方法"
         /></el-form-item>
         <el-form-item label="排名/总人数" required>
-          <el-input v-model="page.form.ranking" placeholder="如：2/3" class="form-input" />
+          <el-input
+            v-model="page.form.ranking"
+            placeholder="例：2/5（本人排第 2）"
+            class="form-input"
+          />
         </el-form-item>
         <el-form-item label="发表时间" required>
           <el-date-picker
@@ -115,11 +121,16 @@ onMounted(() => {
             type="month"
             format="YYYY-MM"
             value-format="YYYY-MM"
+            placeholder="例：2025-06"
             :disabled-date="page.disabledDate"
           />
         </el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.semester"
+            placeholder="选择学期（如 2025-2026-1）"
+            class="form-select"
+          >
             <el-option
               v-for="s in semesterOptions"
               :key="s.value"

@@ -205,16 +205,20 @@ export function getScoreCalculationDetails(calculationId: number): Promise<{
   return request.get(`/profile/scores/${calculationId}/details`)
 }
 
+/** 数据完整度单个维度（GET /profile/data-completeness） */
+export interface CompletenessDimension {
+  dimensionCode: string
+  dimensionName: string
+  rate: number
+  /** 该维度尚未填写的项名（后端返回，前端只展示，不在前端重算） */
+  missingItems: string[]
+}
+
 /** 获取数据完整度（GET /profile/data-completeness，4.1.4） */
 export function getDataCompleteness(semesterId?: number): Promise<{
   semesterId: number
   overallRate: number
-  dimensions: Array<{
-    dimensionCode: string
-    dimensionName: string
-    rate: number
-    missingItems: string[]
-  }>
+  dimensions: CompletenessDimension[]
   updatedAt: string
 }> {
   return request.get('/profile/data-completeness', {
@@ -260,6 +264,23 @@ export function updateStudentStatus(studentStatus: string): Promise<{
   studentStatusLabel: string
 }> {
   return request.put('/profile/student-status', { studentStatus })
+}
+
+/**
+ * 更新学籍补充信息（约定接口 PUT /profile/academic-info）。
+ *
+ * ⚠️ 后端当前**未实现**：2026-11-17 实测 7 条候选路径全部 404，
+ * 因此保存失败时页面必须明确提示并保留用户输入，不得静默失败或提示成功。
+ * 契约（请求体/响应/错误码）见 outputs/后端需求-出生日期与学历层次写入接口-20261117.md。
+ *
+ * 约定：字段省略 = 不修改；传空字符串 = 清空。
+ */
+export function updateAcademicInfo(payload: { birthDate?: string; degreeType?: string }): Promise<{
+  birthDate: string | null
+  degreeType: string | null
+  degreeTypeLabel: string | null
+}> {
+  return request.put('/profile/academic-info', payload)
 }
 
 /** 更新自我评价（PUT /profile/self-evaluation） */
