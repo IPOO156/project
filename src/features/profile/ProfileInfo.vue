@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { CompletenessDimension } from '@/shared/api/student'
 import { Download } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import {
@@ -29,12 +30,16 @@ const submissionStore = useSubmissionStore()
 
 // ── 数据完整度（GET /profile/data-completeness，字段 overallRate，见 docs/api.md 4.1.4）──
 const completenessRate = ref<number | null>(null)
+/** 各维度明细（dimensionName / rate / missingItems），仅用于「查看详情」展示，不在前端重算 */
+const completenessDimensions = ref<CompletenessDimension[]>([])
 async function loadCompleteness() {
   try {
     const data = await getDataCompleteness()
     completenessRate.value = data.overallRate
+    completenessDimensions.value = data.dimensions ?? []
   } catch {
     completenessRate.value = null
+    completenessDimensions.value = []
   }
 }
 
@@ -111,7 +116,7 @@ const gradeSummary = computed(() => {
   >()
   for (const g of archiveStore.grades) {
     const entry = map.get(g.semester) ?? { courses: 0, gpaSum: 0, scoreSum: 0, creditSum: 0 }
-    entry.courses++
+    entry.courses += g.courseCount ?? 1
     entry.gpaSum += g.gpa * g.credits
     entry.scoreSum += g.score * g.credits
     entry.creditSum += g.credits
@@ -126,6 +131,8 @@ const gradeSummary = computed(() => {
       totalScore: e.creditSum > 0 ? +(e.scoreSum / e.creditSum).toFixed(1) : 0,
     }))
 })
+
+const hasGradeDetail = computed(() => archiveStore.grades.some((g) => !g.isAggregate))
 
 const DIMENSION_COLORS_LIGHT = ['#4a7fb5', '#10b981', '#d4a574', '#8b5cf6', '#f59e0b']
 const DIMENSION_COLORS_DARK = ['#60a5fa', '#34d399', '#f0b87b', '#a78bfa', '#fbbf24']
@@ -165,10 +172,17 @@ const avgGpa = computed(() => {
   return typeof gpa === 'number' ? gpa.toFixed(2) : '--'
 })
 
-/** 课程总数；加载失败时同上，显示占位符而非 0 */
-const totalCourses = computed<number | string>(() =>
-  archiveStore.loadFailed ? '--' : gradeSummary.value.reduce((s, g) => s + g.courses, 0),
-)
+/**
+ * 课程总数 = Σ semesterGrades[].courseCount（按学期分组后求和）。
+ * 不是读顶层的 data.courseCount —— /profile/info 没有这个字段。
+ * 没有成绩行或所有学期 courseCount 都为 0 时显示 '--'：
+ * 与「确实修了 0 门课」区分开，避免学生把「暂无成绩数据」读成「课程数为 0」。
+ */
+const totalCourses = computed<number | string>(() => {
+  if (archiveStore.loadFailed) return '--'
+  const total = gradeSummary.value.reduce((s, g) => s + g.courses, 0)
+  return total > 0 ? total : '--'
+})
 
 /** 加载失败后重试：带 force 绕过 store 的 60s 缓存，否则会直接返回而不会重新请求 */
 function handleRetryArchive() {
@@ -247,7 +261,11 @@ async function handleExportResume() {
       </div>
     </div>
 
-    <CompletenessBar v-if="completenessRate !== null" :rate="completenessRate" />
+    <CompletenessBar
+      v-if="completenessRate !== null"
+      :rate="completenessRate"
+      :dimensions="completenessDimensions"
+    />
 
     <ProfileStatCards
       :avg-gpa="avgGpa"
@@ -266,7 +284,11 @@ async function handleExportResume() {
     </div>
 
     <div class="row-2col">
-      <GradeSummaryCard :grade-summary="gradeSummary" :avg-gpa="avgGpa" />
+      <GradeSummaryCard
+        :grade-summary="gradeSummary"
+        :avg-gpa="avgGpa"
+        :has-detail="hasGradeDetail"
+      />
       <AwardsPanel :awards="personalAwards" />
     </div>
 
@@ -315,6 +337,23 @@ async function handleExportResume() {
 .page-head__actions {
   display: flex;
   gap: 12px;
+}
+
+/* 375 宽度下标题与两个导出按钮挤在一行，标题被压成两行；
+   移动端改为上下两段，按钮等宽铺满 */
+@media (max-width: 640px) {
+  .page-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .page-head__actions {
+    width: 100%;
+  }
+  .page-head__actions :deep(.el-button) {
+    flex: 1;
+    margin-left: 0;
+  }
 }
 
 // 两列布局

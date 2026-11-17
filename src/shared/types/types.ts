@@ -5,19 +5,23 @@ export interface ApiResponse<T = any> {
   data: T
 }
 
-// 分页请求参数
+// 分页请求参数（与后端统一口径一致）
 export interface PaginationParams {
-  pageNum: number
-  pageSize: number
+  page: number
+  per_page: number
   [key: string]: any
 }
 
-// 分页响应结构
+// 分页响应结构（兼容后端 pagination 对象与平铺 total）
 export interface PaginatedData<T = any> {
   list: T[]
-  total: number
-  pageNum: number
-  pageSize: number
+  total?: number
+  pagination?: {
+    page: number
+    per_page: number
+    total: number
+    total_pages: number
+  }
 }
 
 // 字典选项
@@ -81,6 +85,10 @@ export interface Grade {
   score: number
   gpa: number
   credits: number
+  /** 后端返回的学期课程数；无逐课明细时用于展示课程数 */
+  courseCount?: number
+  /** true 表示该行是学期汇总，不是真实课程 */
+  isAggregate?: boolean
 }
 
 // 奖项
@@ -93,13 +101,28 @@ export interface Award {
   prize?: string
   description?: string
   proof?: string
+  /** 后端 personalAwards 的原始类别名（如「学科竞赛」） */
+  category?: string
+  /** 类别汇总内的奖项数量；逐条奖项为 1 */
+  count?: number
+  /** true 表示该行是类别汇总，不是具体某一条奖项 */
+  isAggregate?: boolean
 }
 
 // 成长时间轴节点
 export interface TimelineNode {
   id: string
   semester: Semester
-  type: 'award' | 'practice' | 'grade' | 'competition' | 'internship' | 'other'
+  type:
+    | 'award'
+    | 'practice'
+    | 'grade'
+    | 'competition'
+    | 'internship'
+    | 'career'
+    | 'improvement'
+    | 'ability'
+    | 'other'
   title: string
   description: string
   date: string

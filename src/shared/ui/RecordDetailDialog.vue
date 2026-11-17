@@ -4,12 +4,12 @@ import {
   APPLICATION_STATUS,
   AWARD_LEVELS,
   CERTIFICATE_TYPES,
-  COMPANY_TYPE_DISPLAY_OPTIONS,
   COMPETITION_LEVELS,
   COMPETITION_TYPE_DISPLAY_OPTIONS,
   INDUSTRY_TYPE_DISPLAY_OPTIONS,
   ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
   PROJECT_LEVELS,
+  PROJECT_TYPE_DISPLAY_OPTIONS,
   RESEARCH_TYPE_DISPLAY_OPTIONS,
   ROLE_OPTIONS,
   SCHOLARSHIP_GRADES,
@@ -59,7 +59,7 @@ const ENUM_OPTIONS: Record<string, readonly { label: string; value: string }[]> 
   researchType: RESEARCH_TYPE_DISPLAY_OPTIONS,
   organizationLevel: ORGANIZATION_LEVEL_DISPLAY_OPTIONS,
   industryType: INDUSTRY_TYPE_DISPLAY_OPTIONS,
-  companyType: COMPANY_TYPE_DISPLAY_OPTIONS,
+  companyType: PROJECT_TYPE_DISPLAY_OPTIONS,
   scholarshipLevel: SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS,
   scholarshipGrade: SCHOLARSHIP_GRADES,
   certType: CERTIFICATE_TYPES,
@@ -146,6 +146,14 @@ const displayItems = computed(() => {
     width="560px"
     @update:model-value="handleClose"
   >
+    <el-alert
+      v-if="record?.__detailUnavailable"
+      title="后端未提供详情接口，以下仅为列表摘要，部分字段可能缺失"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="detail-fallback-alert"
+    />
     <template v-if="displayItems.length || loading">
       <el-descriptions v-loading="loading" :column="1" border>
         <el-descriptions-item v-for="item in displayItems" :key="item.key" :label="item.label">
@@ -157,3 +165,9 @@ const displayItems = computed(() => {
     <template #footer><el-button @click="handleClose">关闭</el-button></template>
   </el-dialog>
 </template>
+
+<style scoped>
+.detail-fallback-alert {
+  margin-bottom: 12px;
+}
+</style>

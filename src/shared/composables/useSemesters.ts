@@ -2,6 +2,7 @@ import type { Ref, VNode } from 'vue'
 import { ElMessage } from 'element-plus'
 import { h, ref } from 'vue'
 import { getSemesters } from '@/shared/api/common'
+import { parseSemesterRange } from '@/shared/utils/semester'
 
 /** 学期下拉选项：value 取后端 semester.name（字符串，如 '2024-2025-1'），与表单绑定/提交映射一致 */
 export interface SemesterSelectOption {
@@ -185,12 +186,17 @@ function forceRequest(): Promise<void> {
 /**
  * 取学期结束日期（yyyy-MM-dd）。
  *
- * 只使用后端 `GET /common/semesters` 返回的 `endDate` 字段，不再按学期名推算
- * （管理员可自定义学期名称，推算出的日期与后端真实区间不一致会导致误拦截）。
- * 后端未返回该字段（老版本）时返回空串，调用方跳过相关校验。
+ * 优先使用后端 `GET /common/semesters` 返回的 `endDate`；后端未返回该字段（老版本）时，
+ * 回退到按学期名解析出的标准区间（第1学期 1 月 31 日 / 第2学期 7 月 31 日），
+ * 保证立项时间校验不会因字段缺失而静默放过越界日期。
+ * 学期名无法解析时返回空串，由调用方提示「无法校验」而不是直接放行。
  */
 export function semesterEndDateOf(semester: unknown): string {
   const name = typeof semester === 'string' ? semester.trim() : ''
   if (!name) return ''
-  return semesterOptions.value.find((s) => s.value === name)?.endDate ?? ''
+  const remote = semesterOptions.value.find((s) => s.value === name)?.endDate
+  if (remote) return remote
+  const range = parseSemesterRange(name)
+  if (!range) return ''
+  return range.term === 1 ? `${range.endYear}-01-31` : `${range.endYear}-07-31`
 }

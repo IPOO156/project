@@ -34,8 +34,8 @@ export function usePagination<T>(
     loading.value = true
     try {
       const res = await fetchFn({
-        pageNum: pageNum.value,
-        pageSize: pageSize.value,
+        page: pageNum.value,
+        per_page: pageSize.value,
         ...extraParams,
       })
       if (Array.isArray(res)) {
@@ -43,7 +43,7 @@ export function usePagination<T>(
         total.value = res.length
       } else {
         list.value = res.list ?? []
-        total.value = res.total ?? 0
+        total.value = res.pagination?.total ?? res.total ?? 0
       }
       return res
     } finally {

@@ -253,6 +253,8 @@ export function useApplicationPage(
   const rejectionReason = ref('')
   // 查看详情弹窗加载态：真实后端记录需拉取详情接口补全表单字段，加载期间弹窗显示 loading
   const detailLoading = ref(false)
+  /** 详情接口不可用：编辑/查看按列表摘要降级，提示用户缺失字段 */
+  const detailUnavailable = ref(false)
 
   async function doSubmit(data: Record<string, any>) {
     submitting.value = true
@@ -319,10 +321,13 @@ export function useApplicationPage(
     if (semesterMonthConfig) {
       const { monthField, monthFieldLabel, endDateOnly } = semesterMonthConfig
       if (endDateOnly) {
-        // 只设上界：日期不得晚于学期结束日期（endDate 仅取自后端 /common/semesters 新字段）。
-        // 后端未返回 endDate 时无法判断，跳过校验而不是按学期名推算。
+        // 只设上界：日期不得晚于学期结束日期。
+        // 优先用后端 endDate；缺失时 semesterEndDateOf 会按学期名回退标准区间。
         const endDate = semesterEndDateOf(form.semester)
-        if (endDate && isMonthAfterDate((form as Record<string, unknown>)[monthField], endDate)) {
+        if (!endDate) {
+          // 学期名无法解析（管理员自定义命名）且后端未给 endDate：明确提示无法校验，不静默放行
+          ElMessage.warning(`${monthFieldLabel}暂时无法校验学期结束日期，请确认日期无误`)
+        } else if (isMonthAfterDate((form as Record<string, unknown>)[monthField], endDate)) {
           ElMessage.error(`${monthFieldLabel}不能晚于所选学期的结束日期（${endDate}）`)
           return
         }
@@ -388,8 +393,11 @@ export function useApplicationPage(
           // 退回原因（detail 顶层字段）：被退回记录编辑时回填提示，列表摘要不携带
           if (detail.rejectedReason) row.rejectedReason = detail.rejectedReason
         }
+        detailUnavailable.value = false
       } catch {
-        /* 详情拉取失败时沿用 row 摘要字段 */
+        // 详情接口不可用：保留列表摘要字段，明确告知用户缺失项不会被提交
+        detailUnavailable.value = true
+        ElMessage.warning('后端未提供详情接口，本次仅按列表已有字段回填；缺失字段不会提交')
       }
     }
     Object.keys(emptyForm()).forEach((key) => {
@@ -444,6 +452,7 @@ export function useApplicationPage(
     resetExtendedForm()
     currentStatus.value = ''
     rejectionReason.value = ''
+    detailUnavailable.value = false
     setRecordId(null)
   }
   function handleViewScore(row: any) {
@@ -459,7 +468,8 @@ export function useApplicationPage(
       const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))
       if (detail) enrichCorrectionSnapshot(mapDetailToForm(type, detail))
     } catch {
-      /* 详情拉取失败：仅可修改列表摘要里已有的字段 */
+      // 详情拉取失败：仅可修改列表摘要里已有的字段，明确提示而不是静默降级
+      ElMessage.warning('后端未提供详情接口，纠错仅能修改列表已有字段')
     }
   }
   async function viewRecord(row: any) {
@@ -477,7 +487,8 @@ export function useApplicationPage(
       // mapDetailToForm 仅映射业务字段（不含 status），避免覆盖行上的前端状态/退回原因
       if (detail) _viewRecord({ ...row, ...mapDetailToForm(type, detail) })
     } catch {
-      /* 详情拉取失败：沿用列表摘要字段 */
+      // 详情接口不可用：弹窗顶部明确标注「仅列表摘要」，不伪装成完整详情
+      _viewRecord({ ...row, __detailUnavailable: true })
     } finally {
       detailLoading.value = false
     }
@@ -495,6 +506,7 @@ export function useApplicationPage(
     editingId,
     detailVisible,
     detailRecord,
+    detailUnavailable,
     currentStatus,
     rejectionReason,
     detailLoading,

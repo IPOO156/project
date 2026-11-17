@@ -108,7 +108,10 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       <div class="ap-panel" role="dialog" aria-modal="true" aria-labelledby="ap-title">
         <header class="ap-head">
           <div>
-            <h2 id="ap-title" class="ap-head__title">从成果墙选择</h2>
+            <h2 id="ap-title" class="ap-head__title">
+              从成果墙选择
+              <span class="ap-badge">开发中</span>
+            </h2>
             <p class="ap-head__desc">
               选中的证书按当前版本冻结快照，提交后成果再有改动也不影响本次申报。
             </p>
@@ -126,7 +129,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <div class="ap-body">
           <p v-if="loading" class="ap-hint">正在读取成果墙…</p>
           <p v-else-if="error" class="ap-hint ap-hint--error">
-            读取失败，<button type="button" class="ap-link" @click="load">重试</button>
+            成果墙正在开发中，暂时无法选择已有证书，请先上传本地文件。
           </p>
           <p v-else-if="visibleItems.length === 0" class="ap-hint">
             没有可选的成果，请先在成果墙归档证书。
@@ -210,10 +213,28 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 }
 
 .ap-head__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: var(--el-text-color-primary);
+}
+
+/* 角标样式对齐成果墙页 .wall-badge：11px / 描边 / 4px 圆角 */
+.ap-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .ap-head__desc {

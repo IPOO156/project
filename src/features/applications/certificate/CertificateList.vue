@@ -94,7 +94,11 @@ onMounted(() => {
     <template #form>
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="证书类型" required>
-          <el-select v-model="page.form.certType" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.certType"
+            placeholder="选择证书类型（如 技能证书）"
+            class="form-select"
+          >
             <el-option
               v-for="t in certTypeOptions"
               :key="t.value"
@@ -104,13 +108,17 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="证书名称" required
-          ><el-input v-model="page.form.certName" placeholder="请输入证书名称"
+          ><el-input v-model="page.form.certName" placeholder="例：全国计算机等级考试二级（Java）"
         /></el-form-item>
         <el-form-item label="获得时间" required
-          ><el-date-picker v-model="page.form.certDate" type="month" placeholder="选择年月"
+          ><el-date-picker v-model="page.form.certDate" type="month" placeholder="例：2025-06"
         /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.semester"
+            placeholder="选择学期（如 2025-2026-1）"
+            class="form-select"
+          >
             <el-option
               v-for="s in semesterOptions"
               :key="s.value"

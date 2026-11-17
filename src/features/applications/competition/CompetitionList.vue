@@ -109,10 +109,16 @@ onMounted(() => {
     <template #form>
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="竞赛名称" required
-          ><el-input v-model="page.form.competitionName" placeholder="请输入竞赛名称"
+          ><el-input
+            v-model="page.form.competitionName"
+            placeholder="例：2025 年全国大学生数学建模竞赛"
         /></el-form-item>
         <el-form-item label="竞赛类型" required>
-          <el-select v-model="page.form.competitionType" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.competitionType"
+            placeholder="选择竞赛类型（如 学科类）"
+            class="form-select"
+          >
             <el-option
               v-for="t in competitionTypeOptions"
               :key="t.value"
@@ -122,7 +128,11 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="获奖等级" required>
-          <el-select v-model="page.form.awardLevel" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.awardLevel"
+            placeholder="选择获奖等级（如 一等奖）"
+            class="form-select"
+          >
             <el-option
               v-for="t in awardLevelOptions"
               :key="t.value"
@@ -132,10 +142,14 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="获奖时间" required
-          ><el-date-picker v-model="page.form.awardDate" type="month" placeholder="选择年月"
+          ><el-date-picker v-model="page.form.awardDate" type="month" placeholder="例：2025-09"
         /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.semester"
+            placeholder="选择学期（如 2025-2026-1）"
+            class="form-select"
+          >
             <el-option
               v-for="s in semesterOptions"
               :key="s.value"
