@@ -16,12 +16,15 @@ defineProps<{
   fileLoading: boolean
   /** 仅草稿/已退回可编辑规划正文 */
   editable: boolean
+  /** 草稿/已退回可直接提交审核 */
+  canSubmit: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'download'): void
   (e: 'preview'): void
   (e: 'edit'): void
+  (e: 'submit'): void
 }>()
 </script>
 
@@ -37,6 +40,9 @@ const emit = defineEmits<{
         预览
       </el-button>
       <el-button v-if="editable" size="small" @click="emit('edit')">编辑正文</el-button>
+      <el-button v-if="canSubmit" size="small" type="success" @click="emit('submit')">
+        提交审核
+      </el-button>
     </div>
     <div class="head-meta">
       <span class="meta-item">{{ detail.semesterName || '-' }}</span>

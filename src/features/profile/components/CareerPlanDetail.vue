@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 import { updateActivity } from '@/shared/api/activities'
 import {
@@ -8,6 +8,7 @@ import {
   getCareerPlanDetail,
   getCareerPlanPreviewBlob,
   getSemesterIdByName,
+  submitCareerPlanRecord,
 } from '@/shared/api/career-plan'
 import { useDict } from '@/shared/composables/composables'
 import { useSemesters } from '@/shared/composables/useSemesters'
@@ -41,8 +42,19 @@ const detail = ref<any>(null)
 const statusKey = computed(() => STATUS_KEY_MAP[detail.value?.status] ?? 'draft')
 const statusType = computed(() => (getColor(statusKey.value) as TagProps['type']) ?? 'info')
 const statusLabel = computed(() => detail.value?.statusLabel || getLabel(statusKey.value))
-/** 仅草稿(0)或已退回(3)可编辑，已通过等状态只读 */
+/**
+ * 分级编辑（与接口文档 4.3–4.20 一致）：
+ * - 全量编辑：草稿(0) / 已退回(3)，可改正文、目标、行动、里程碑
+ * - 仅进度跟踪：已通过(2)，可改行动状态、里程碑达成与成果证明、上传行动成果、写反思
+ * - 其余（待审批 1 / 已撤销 4）只读
+ */
 const isEditable = computed(() => {
+  const s = detail.value?.status
+  return s === 0 || s === 3
+})
+const isProgressTrackable = computed(() => detail.value?.status === 2)
+/** 正文编辑与提交走统一活动接口，后端仅放行草稿/已退回（已撤销不可重新提交） */
+const canEditBody = computed(() => {
   const s = detail.value?.status
   return s === 0 || s === 3
 })
@@ -89,6 +101,11 @@ function openActionDialog(goal: any, action?: any) {
 
 function openMilestoneDialog(action: any, milestone?: any) {
   editDialogRef.value?.open({ mode: 'milestone', action, milestone })
+}
+
+/** 已通过规划：仅维护里程碑成果证明（不改标题/日期） */
+function openMilestoneProofDialog(action: any, milestone: any) {
+  editDialogRef.value?.open({ mode: 'milestone', action, milestone, proofOnly: true })
 }
 
 /* ===================== 行动成果上传 ===================== */
@@ -206,6 +223,28 @@ async function submitBodyEdit() {
 function handleClose() {
   emit('close')
 }
+
+/** 草稿/已退回直接提交审核：不改字段，仅置待审批、升版本 */
+async function handleSubmitPlan() {
+  if (props.planId == null) return
+  try {
+    await ElMessageBox.confirm('提交后将进入待审批，审批前不可修改。确定提交吗？', '提交确认', {
+      confirmButtonText: '确定提交',
+      cancelButtonText: '取消',
+      type: 'info',
+    })
+  } catch {
+    return
+  }
+  try {
+    await submitCareerPlanRecord(props.planId)
+    ElMessage.success('已提交，等待教师审批')
+    await reload()
+    emit('refresh')
+  } catch {
+    // 接口失败已由请求拦截器统一提示
+  }
+}
 </script>
 
 <template>
@@ -225,10 +264,26 @@ function handleClose() {
           :status-type="statusType"
           :status-label="statusLabel"
           :file-loading="fileLoading"
-          :editable="isEditable"
+          :editable="canEditBody"
+          :can-submit="canEditBody"
           @download="handleDownload"
           @preview="handlePreview"
           @edit="openBodyEditor"
+          @submit="handleSubmitPlan"
+        />
+
+        <!-- 可编辑范围提示：不同状态能改的内容不一样 -->
+        <el-alert
+          v-if="!isEditable"
+          class="plan-detail__notice"
+          :closable="false"
+          show-icon
+          :type="isProgressTrackable ? 'info' : 'warning'"
+          :title="
+            isProgressTrackable
+              ? '已通过规划仅可维护进度：行动状态、里程碑达成与成果证明、行动成果文件、阶段反思；目标/行动/里程碑的名称与日期不可修改，正文与整份删除已锁定。'
+              : '当前状态不可编辑，如需修改请先撤回或等待审批结果。'
+          "
         />
 
         <!-- 目标 / 行动 / 里程碑 -->
@@ -236,18 +291,21 @@ function handleClose() {
           :goals="detail.goals"
           :plan-id="planId"
           :editable="isEditable"
+          :track-progress="isProgressTrackable"
           @edit-goal="openGoalDialog"
           @edit-action="openActionDialog"
           @edit-milestone="openMilestoneDialog"
+          @edit-milestone-proof="openMilestoneProofDialog"
           @upload-action="openUploadDialog"
           @refresh="reload"
         />
 
         <!-- 阶段反思 / 教师反馈 / 版本历史 -->
+        <!-- 已通过规划仍可写阶段反思（接口文档 4.14） -->
         <CareerPlanInsights
           :plan="detail"
           :plan-id="planId"
-          :editable="isEditable"
+          :editable="isEditable || isProgressTrackable"
           @refresh="reload"
         />
       </template>
@@ -323,6 +381,10 @@ function handleClose() {
   text-align: center;
   color: var(--el-text-color-secondary);
   font-size: 14px;
+}
+
+.plan-detail__notice {
+  margin-top: 12px;
 }
 
 .body-w {

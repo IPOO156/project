@@ -112,7 +112,7 @@ export const INNOVATION_COMPANY_TYPES = [
 export const INNOVATION_PROJECT_TYPES = [
   { label: '创业实践', value: 'practice' },
   { label: '创业计划', value: 'plan' },
-  { label: '已注册实体', value: 'registered' },
+  { label: '实体注册', value: 'registered' },
   { label: '其他', value: 'other' },
 ] as const
 

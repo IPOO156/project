@@ -3,7 +3,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onMounted, ref } from 'vue'
 import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
 import { withdrawActivity } from '@/shared/api/activities'
-import { deleteCareerPlan } from '@/shared/api/career-plan'
+import { deleteCareerPlan, submitCareerPlanRecord } from '@/shared/api/career-plan'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import CareerPlanAICard from './components/CareerPlanAICard.vue'
 import CareerPlanFormCard from './components/CareerPlanFormCard.vue'
@@ -71,6 +71,26 @@ async function handleRemove(id: string) {
   }
 }
 
+/** 提交草稿/已退回规划：后端置待审批、升版本并生成教师端待审核任务 */
+async function handleSubmit(id: string) {
+  try {
+    await ElMessageBox.confirm('提交后将进入待审批，审批前不可修改。确定提交吗？', '提交确认', {
+      confirmButtonText: '确定提交',
+      cancelButtonText: '取消',
+      type: 'info',
+    })
+  } catch {
+    return
+  }
+  try {
+    await submitCareerPlanRecord(Number(id))
+    await careerPlanStore.fetchPlans(true)
+    ElMessage.success('已提交，等待教师审批')
+  } catch {
+    /* 失败提示由请求拦截器统一给出，列表保持不变 */
+  }
+}
+
 /** 撤回待审批规划：走统一活动接口，后端置 status=4（已撤销）并关闭审核任务 */
 async function handleWithdraw(id: string) {
   try {
@@ -131,6 +151,7 @@ onMounted(() => {
           :empty-text="planEmptyText"
           @remove="handleRemove"
           @withdraw="handleWithdraw"
+          @submit="handleSubmit"
           @refresh="careerPlanStore.fetchPlans(true)"
         />
       </el-tab-pane>

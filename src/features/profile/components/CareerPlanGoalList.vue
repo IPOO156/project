@@ -22,14 +22,17 @@ const props = defineProps<{
   goals?: any[]
   /** 当前规划 id（写操作寻址） */
   planId: number | null
-  /** 仅草稿(0)或已退回(3)可编辑，其余状态只读 */
+  /** 全量编辑：草稿 / 已退回（可增删改目标、行动、里程碑） */
   editable: boolean
+  /** 仅进度跟踪：已通过（可改行动状态、里程碑达成与成果证明，不可改结构字段） */
+  trackProgress: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'editGoal', goal?: any): void
   (e: 'editAction', goal: any, action?: any): void
   (e: 'editMilestone', action: any, milestone?: any): void
+  (e: 'editMilestoneProof', action: any, milestone: any): void
   (e: 'uploadAction', action: any): void
   (e: 'refresh'): void
 }>()
@@ -129,13 +132,22 @@ function handleDeleteMilestone(milestone: any) {
 async function toggleMilestone(milestone: any, checked: string | number | boolean) {
   if (props.planId == null) return
   const achieved = Boolean(checked)
+  const payload: {
+    milestoneTitle: string
+    milestoneDate?: string
+    isAchieved?: 0 | 1
+    proofFileId?: number
+  } = {
+    milestoneTitle: milestone.milestoneTitle,
+    isAchieved: achieved ? 1 : 0,
+  }
+  // 已通过规划仅允许进度跟踪：后端禁止改标题/日期，故只在全量编辑时带上结构与佐证字段
+  if (props.editable) {
+    payload.milestoneDate = milestone.milestoneDate ?? undefined
+    if (milestone.proofFileId != null) payload.proofFileId = milestone.proofFileId
+  }
   try {
-    await updateCareerMilestone(props.planId, milestone.id, {
-      milestoneTitle: milestone.milestoneTitle,
-      milestoneDate: milestone.milestoneDate ?? undefined,
-      isAchieved: achieved ? 1 : 0,
-      proofFileId: milestone.proofFileId ?? undefined,
-    })
+    await updateCareerMilestone(props.planId, milestone.id, payload)
     ElMessage.success(achieved ? '里程碑已标记完成' : '里程碑已标记未完成')
     reload()
   } catch {
@@ -188,9 +200,12 @@ async function changeActionStatus(action: any, status: number) {
           <div class="action__head">
             <div class="action__title-line">
               <span class="action__title">{{ action.actionTitle }}</span>
-              <el-tag v-if="!editable" :type="actionStatusType(action.status)" size="small">{{
-                action.statusLabel
-              }}</el-tag>
+              <el-tag
+                v-if="!editable && !trackProgress"
+                :type="actionStatusType(action.status)"
+                size="small"
+                >{{ action.statusLabel }}</el-tag
+              >
               <el-select
                 v-else
                 :model-value="action.status"
@@ -206,14 +221,21 @@ async function changeActionStatus(action: any, status: number) {
                 />
               </el-select>
             </div>
-            <div v-if="editable" class="action__ops">
-              <el-button link type="primary" size="small" @click="emit('editAction', goal, action)"
+            <div v-if="editable || trackProgress" class="action__ops">
+              <el-button
+                v-if="editable"
+                link
+                type="primary"
+                size="small"
+                @click="emit('editAction', goal, action)"
                 >编辑</el-button
               >
+              <!-- 已通过也可上传行动成果（接口文档 4.13） -->
               <el-button link type="success" size="small" @click="emit('uploadAction', action)"
                 >上传成果</el-button
               >
               <el-button
+                v-if="editable"
                 link
                 type="danger"
                 size="small"
@@ -256,7 +278,7 @@ async function changeActionStatus(action: any, status: number) {
             <div v-for="milestone in action.milestones" :key="milestone.id" class="milestone">
               <el-switch
                 :model-value="milestone.isAchieved === 1"
-                :disabled="!editable"
+                :disabled="!editable && !trackProgress"
                 size="small"
                 @change="(v) => toggleMilestone(milestone, v)"
               />
@@ -303,6 +325,16 @@ async function changeActionStatus(action: any, status: number) {
                 >
                   删除
                 </el-button>
+              </span>
+              <!-- 已通过：结构不可改，仅允许上传/更换成果证明 -->
+              <span v-else-if="trackProgress" class="milestone__ops">
+                <el-button
+                  link
+                  type="primary"
+                  size="small"
+                  @click="emit('editMilestoneProof', action, milestone)"
+                  >{{ milestone.proofFileId ? '更换证明' : '上传证明' }}</el-button
+                >
               </span>
             </div>
           </div>
