@@ -112,7 +112,7 @@ export function useLoginFlow(options: LoginFlowOptions) {
 
   /**
    * 验证码续期参数。
-   * 后端 /auth/captcha 目前只返回 key/image，未返回 expiresIn（已提需求待补，见 CaptchaResponse）。
+   * 后端 /auth/captcha 已返回 expiresIn（实测 180s），优先按后端有效期续期；
    * 兜底值取保守下限：偏小只会导致提前换一张（无害），偏大则续期无意义。
    */
   const CAPTCHA_TTL_FALLBACK_SEC = 60

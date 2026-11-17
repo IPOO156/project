@@ -60,6 +60,11 @@ function fetchMessagePage(
   }))
 }
 
+/** 后端 isRead/isArchived 可能返回 0/1 或 boolean，统一归一为 0/1 供 UI 判断 */
+function toBinaryFlag(value: unknown): 0 | 1 {
+  return value === true || value === 1 || value === '1' ? 1 : 0
+}
+
 function mapMessage(m: any): Notification {
   return {
     id: String(m.id),
@@ -71,10 +76,10 @@ function mapMessage(m: any): Notification {
     senderType: m.senderType,
     senderTypeLabel: m.senderTypeLabel,
     senderName: m.senderName ?? null,
-    isRead: m.isRead ?? 0,
+    isRead: toBinaryFlag(m.isRead),
     readAt: m.readAt ?? null,
-    isImportant: m.isImportant ?? 0,
-    isArchived: m.isArchived ?? 0,
+    isImportant: toBinaryFlag(m.isImportant),
+    isArchived: toBinaryFlag(m.isArchived),
     archivedAt: m.archivedAt ?? null,
     deadline: m.deadline ?? null,
     jumpUrl: m.jumpUrl ?? null,
@@ -82,7 +87,7 @@ function mapMessage(m: any): Notification {
     relatedType: m.relatedType ?? null,
     relatedId: m.relatedId ?? null,
     createdAt: m.createdAt,
-    isReadFlag: (m.isRead ?? 0) === 1,
+    isReadFlag: toBinaryFlag(m.isRead) === 1,
   }
 }
 

@@ -91,22 +91,26 @@ onMounted(() => {
     <template #form>
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="实习公司" required
-          ><el-input v-model="page.form.company" placeholder="请输入实习公司"
+          ><el-input v-model="page.form.company" placeholder="例：杭州海康威视数字技术股份有限公司"
         /></el-form-item>
         <el-form-item label="实习地点" required
-          ><el-input v-model="page.form.location" placeholder="请输入实习地点"
+          ><el-input v-model="page.form.location" placeholder="例：杭州市滨江区物联网街 518 号"
         /></el-form-item>
         <el-form-item label="实习岗位" required
-          ><el-input v-model="page.form.position" placeholder="请输入实习岗位"
+          ><el-input v-model="page.form.position" placeholder="例：后端开发实习生"
         /></el-form-item>
         <el-form-item label="开始时间" required
-          ><el-date-picker v-model="page.form.startDate" type="date" placeholder="选择日期"
+          ><el-date-picker v-model="page.form.startDate" type="date" placeholder="例：2025-07-01"
         /></el-form-item>
         <el-form-item label="结束时间" required
-          ><el-date-picker v-model="page.form.endDate" type="date" placeholder="选择日期"
+          ><el-date-picker v-model="page.form.endDate" type="date" placeholder="例：2025-08-31"
         /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.semester"
+            placeholder="选择学期（如 2025-2026-1）"
+            class="form-select"
+          >
             <el-option
               v-for="s in semesterOptions"
               :key="s.value"

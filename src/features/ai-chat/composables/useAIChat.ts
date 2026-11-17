@@ -152,7 +152,10 @@ export function useAIChat() {
     const res: AISendMessageResult = await sendAIMessage(cid, text)
     offlineMode.value = false
     lastAssistantMessageId = res.messageId
-    const richContent = parseMarkdownToRichContent(res.content)
+    // 后端返回结构化富文本时优先按块渲染；未返回或 blocks 为空再退回本地 markdown 解析
+    const richContent = res.richContent?.blocks?.length
+      ? res.richContent
+      : parseMarkdownToRichContent(res.content)
     return {
       id: String(res.messageId),
       role: 'ai',
@@ -188,7 +191,9 @@ export function useAIChat() {
       const res: AIRegenerateResult = await regenerateAIMessage(cid, messageId)
       offlineMode.value = false
       lastAssistantMessageId = res.messageId
-      const richContent = parseMarkdownToRichContent(res.content)
+      const richContent = res.richContent?.blocks?.length
+        ? res.richContent
+        : parseMarkdownToRichContent(res.content)
       messages.value.push({
         id: String(res.messageId),
         role: 'ai',
@@ -294,7 +299,11 @@ export function useAIChat() {
       lastAssistantMessageId = lastAssistant ? lastAssistant.id : null
       messages.value = list.map((m) => {
         const isAi = m.role === 'assistant'
-        const richContent = isAi ? parseMarkdownToRichContent(m.content) : undefined
+        const richContent = isAi
+          ? m.richContent?.blocks?.length
+            ? m.richContent
+            : parseMarkdownToRichContent(m.content)
+          : undefined
         return {
           id: String(m.id),
           role: isAi ? ('ai' as const) : ('user' as const),
@@ -310,14 +319,15 @@ export function useAIChat() {
     }
   }
 
-  /** 删除指定历史对话（DELETE /ai/conversations/{id}） */
-  async function deleteConversation(id: number) {
+  /** 删除指定历史对话（DELETE /ai/conversations/{id}），返回是否真的删除成功 */
+  async function deleteConversation(id: number): Promise<boolean> {
     const idx = conversations.value.findIndex((c) => c.id === id)
-    if (idx === -1) return
+    if (idx === -1) return true
     try {
       await deleteAIConversation(id)
     } catch {
-      // API 失败不影响本地删除
+      // 服务端删除失败时保留本地会话，由调用方提示，避免伪删除
+      return false
     }
     conversations.value.splice(idx, 1)
     if (currentConversationId.value === id) {
@@ -325,6 +335,7 @@ export function useAIChat() {
       lastAssistantMessageId = null
       messages.value = createWelcomeMessages()
     }
+    return true
   }
 
   /**

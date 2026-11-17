@@ -102,7 +102,7 @@ onMounted(() => {
         <el-form-item label="组织级别" required
           ><el-select
             v-model="page.form.organizationLevel"
-            placeholder="请选择"
+            placeholder="选择组织级别（如 校级）"
             class="form-select"
           >
             <el-option
@@ -114,19 +114,23 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="部门" required
-          ><el-input v-model="page.form.department" placeholder="请输入部门"
+          ><el-input v-model="page.form.department" placeholder="例：计算机科学与技术学院学生会"
         /></el-form-item>
         <el-form-item label="职务" required
-          ><el-input v-model="page.form.position" placeholder="请输入职务"
+          ><el-input v-model="page.form.position" placeholder="例：宣传部部长"
         /></el-form-item>
         <el-form-item label="开始时间" required
-          ><el-date-picker v-model="page.form.startDate" type="date" placeholder="选择日期"
+          ><el-date-picker v-model="page.form.startDate" type="date" placeholder="例：2024-09-01"
         /></el-form-item>
         <el-form-item label="结束时间" required
-          ><el-date-picker v-model="page.form.endDate" type="date" placeholder="选择日期"
+          ><el-date-picker v-model="page.form.endDate" type="date" placeholder="例：2025-06-30"
         /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.semester"
+            placeholder="选择学期（如 2025-2026-1）"
+            class="form-select"
+          >
             <el-option
               v-for="s in semesterOptions"
               :key="s.value"

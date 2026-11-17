@@ -45,7 +45,7 @@ describe('mapInterests', () => {
 })
 
 describe('mapGrades', () => {
-  it('按课程数展开成绩，学分按均分计算', () => {
+  it('按学期聚合成一行，不再按 courseCount 造课程', () => {
     const result = mapGrades({
       semesterGrades: [
         {
@@ -59,23 +59,31 @@ describe('mapGrades', () => {
       ],
     })
 
-    expect(result).toHaveLength(2)
+    expect(result).toHaveLength(1)
     expect(result?.[0]).toMatchObject({
-      id: '1-0',
+      id: 'semester-1',
       semester: '2026-2027-1',
-      courseName: '2026-2027-1 课程1',
+      courseName: '2026-2027-1 学期汇总',
       score: 88,
       gpa: 3.7,
-      credits: 4,
+      credits: 8,
+      courseCount: 2,
+      isAggregate: true,
     })
   })
 
-  it('courseCount 缺失时不产生记录，且不会除以 0', () => {
+  it('courseCount 缺失时仍保留学期汇总行，不丢成绩', () => {
     const result = mapGrades({
       semesterGrades: [{ semesterId: 2, semester: '2025-2026-2', totalCredit: 6 }],
     })
 
-    expect(result).toEqual([])
+    expect(result).toHaveLength(1)
+    expect(result?.[0]).toMatchObject({
+      id: 'semester-2',
+      courseName: '2025-2026-2 学期汇总',
+      credits: 6,
+      isAggregate: true,
+    })
   })
 
   it('非数组时返回 null', () => {
@@ -84,18 +92,42 @@ describe('mapGrades', () => {
 })
 
 describe('mapAwards', () => {
-  it('按类别汇总映射，id 使用索引避免重复', () => {
+  it('按类别汇总映射，保留类别与数量并归类', () => {
     const result = mapAwards({
       personalAwards: [
-        { category: '学科竞赛', maxLevel: '国家级', latestTime: '2026-05-01' },
-        { category: '奖学金', maxLevel: '校级', latestTime: '2026-06-01' },
+        { category: '学科竞赛', totalCount: 3, maxLevel: '国家级', latestTime: '2026-05-01' },
+        { category: '奖学金', totalCount: 1, maxLevel: '校级', latestTime: '2026-06-01' },
       ],
     })
 
     expect(result).toEqual([
-      { id: 'award-0', name: '学科竞赛', level: '国家级', type: 'other', date: '2026-05-01' },
-      { id: 'award-1', name: '奖学金', level: '校级', type: 'other', date: '2026-06-01' },
+      {
+        id: 'award-0',
+        name: '学科竞赛',
+        level: '国家级',
+        type: 'competition',
+        date: '2026-05-01',
+        category: '学科竞赛',
+        count: 3,
+        isAggregate: true,
+      },
+      {
+        id: 'award-1',
+        name: '奖学金',
+        level: '校级',
+        type: 'other',
+        date: '2026-06-01',
+        category: '奖学金',
+        count: 1,
+        isAggregate: true,
+      },
     ])
+  })
+
+  it('类别名缺失时仍可展示，数量至少为 1', () => {
+    const result = mapAwards({ personalAwards: [{}] })
+
+    expect(result?.[0]).toMatchObject({ name: '', type: 'other', count: 1, isAggregate: true })
   })
 
   it('非数组时返回 null', () => {

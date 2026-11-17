@@ -266,11 +266,14 @@ async function handlePreview(file: UploadFile) {
 <template>
   <div class="proof-upload">
     <div class="proof-upload__bar">
-      <span class="proof-upload__bar-tip">可直接选成果墙里已有的证书，也可继续另传其他文件</span>
-      <button type="button" class="proof-upload__pick" @click="pickerVisible = true">
-        <FolderOpen :size="14" />
-        从成果墙选择
-      </button>
+      <span class="proof-upload__bar-tip">可直接上传证书文件；从成果墙选择功能开发中</span>
+      <span class="proof-upload__pick-wrap">
+        <button type="button" class="proof-upload__pick" @click="pickerVisible = true">
+          <FolderOpen :size="14" />
+          从成果墙选择
+        </button>
+        <span class="proof-upload__pick-badge">开发中</span>
+      </span>
     </div>
 
     <el-upload
@@ -350,6 +353,27 @@ async function handlePreview(file: UploadFile) {
 .proof-upload__bar-tip {
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+.proof-upload__pick-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 角标样式对齐成果墙页 .wall-badge：11px / 描边 / 4px 圆角 */
+.proof-upload__pick-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 4px;
+  color: var(--el-text-color-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .proof-upload__pick {

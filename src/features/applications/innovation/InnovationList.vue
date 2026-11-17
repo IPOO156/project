@@ -5,7 +5,7 @@ import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
-import { INDUSTRY_TYPES, INNOVATION_COMPANY_TYPES } from '@/shared/constants/dict'
+import { INDUSTRY_TYPES, INNOVATION_PROJECT_TYPES } from '@/shared/constants/dict'
 import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
@@ -15,11 +15,9 @@ import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
 
-/** 公司类型：后端字典优先，常量兜底 */
-const { options: companyTypeOptions, load: loadCompanyTypes } = useRemoteDict(
-  'company_type',
-  INNOVATION_COMPANY_TYPES,
-)
+/** 项目类型：使用后端 project_type 契约码值，不再拉取 company_type 字典 */
+/** 项目类型：使用后端 project_type 契约码值，不再拉取 company_type 字典 */
+const companyTypeOptions = INNOVATION_PROJECT_TYPES
 
 /** 行业类型：后端字典优先，常量兜底 */
 const { options: industryTypeOptions, load: loadIndustryTypes } = useRemoteDict(
@@ -42,7 +40,7 @@ const page = reactive(
   useApplicationPage('innovation', '创新创业', emptyForm, undefined, [
     { key: 'companyName', label: '公司名称' },
     { key: 'industryType', label: '行业类型' },
-    { key: 'companyType', label: '公司类型' },
+    { key: 'companyType', label: '项目类型' },
     { key: 'registerDate', label: '注册时间' },
     { key: 'semester', label: '学期' },
     { key: 'proofMaterials', label: '佐证材料' },
@@ -75,7 +73,6 @@ async function handleRemove(row: any) {
 onMounted(() => {
   page.init()
   loadSemesters()
-  void loadCompanyTypes()
   void loadIndustryTypes()
 })
 </script>
@@ -104,10 +101,14 @@ onMounted(() => {
     <template #form>
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="公司名称" required
-          ><el-input v-model="page.form.companyName" placeholder="请输入公司名称"
+          ><el-input v-model="page.form.companyName" placeholder="例：杭州青禾智能科技有限公司"
         /></el-form-item>
         <el-form-item label="行业类型" required>
-          <el-select v-model="page.form.industryType" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.industryType"
+            placeholder="选择行业类型（如 互联网/信息技术）"
+            class="form-select"
+          >
             <el-option
               v-for="t in industryTypeOptions"
               :key="t.value"
@@ -116,8 +117,12 @@ onMounted(() => {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="公司类型" required>
-          <el-select v-model="page.form.companyType" placeholder="请选择" class="form-select">
+        <el-form-item label="项目类型" required>
+          <el-select
+            v-model="page.form.companyType"
+            placeholder="选择项目类型（如 创业实践）"
+            class="form-select"
+          >
             <el-option
               v-for="t in companyTypeOptions"
               :key="t.value"
@@ -127,10 +132,17 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="注册时间" required
-          ><el-date-picker v-model="page.form.registerDate" type="date" placeholder="选择日期"
+          ><el-date-picker
+            v-model="page.form.registerDate"
+            type="date"
+            placeholder="例：2025-04-18"
         /></el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.semester"
+            placeholder="选择学期（如 2025-2026-1）"
+            class="form-select"
+          >
             <el-option
               v-for="s in semesterOptions"
               :key="s.value"

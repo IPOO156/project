@@ -35,7 +35,7 @@ const gradeSummary = computed(() => {
   >()
   for (const g of props.data.grades) {
     const entry = map.get(g.semester) ?? { courses: 0, gpaSum: 0, scoreSum: 0, creditSum: 0 }
-    entry.courses++
+    entry.courses += g.courseCount ?? 1
     entry.gpaSum += g.gpa * g.credits
     entry.scoreSum += g.score * g.credits
     entry.creditSum += g.credits

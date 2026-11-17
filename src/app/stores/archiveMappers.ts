@@ -31,19 +31,34 @@ export function mapInterests(profile: any): Interest[] | null {
   }))
 }
 
-/** 学期成绩 → Grade */
+/** 学期成绩 → Grade（后端暂无逐课字段，按学期聚合展示，不编造课程行） */
 export function mapGrades(profile: any): Grade[] | null {
   if (!Array.isArray(profile?.semesterGrades)) return null
-  return profile.semesterGrades.flatMap((s: any) =>
-    Array.from({ length: s.courseCount ?? 0 }, (_, i) => ({
-      id: `${s.semesterId}-${i}`,
-      semester: s.semesterName || s.semester,
-      courseName: `${s.semesterName || '学期'} 课程${i + 1}`,
-      score: s.averageScore,
-      gpa: s.gpa,
-      credits: s.totalCredit / Math.max(s.courseCount ?? 1, 1),
-    })),
-  )
+  return profile.semesterGrades.map((s: any, i: number) => {
+    const semesterName = s.semesterName || s.semester || '学期'
+    return {
+      id: `semester-${s.semesterId ?? i}`,
+      semester: semesterName,
+      courseName: `${semesterName} 学期汇总`,
+      score: s.averageScore ?? 0,
+      gpa: s.gpa ?? 0,
+      credits: s.totalCredit ?? 0,
+      courseCount: s.courseCount,
+      isAggregate: true,
+    }
+  })
+}
+
+/**
+ * 按类别名归类奖项。
+ * 后端 personalAwards 只给中文类别名，没有稳定类型码；这里仅做展示层归类，
+ * 新增/改名类别时不会自动识别，最终应由后端补 categoryCode（见后端配合说明）。
+ */
+export function classifyAwardCategory(category: string): Award['type'] {
+  if (/竞赛|比赛|赛事/.test(category)) return 'competition'
+  if (/创新|创业|双创/.test(category)) return 'innovation'
+  if (/科研|学术|论文|专利|软著|著作/.test(category)) return 'research'
+  return 'other'
 }
 
 /**
@@ -52,13 +67,19 @@ export function mapGrades(profile: any): Grade[] | null {
  */
 export function mapAwards(profile: any): Award[] | null {
   if (!Array.isArray(profile?.personalAwards)) return null
-  return profile.personalAwards.map((a: any, i: number) => ({
-    id: `award-${i}`,
-    name: a.category,
-    level: a.maxLevel,
-    type: 'other',
-    date: a.latestTime,
-  }))
+  return profile.personalAwards.map((a: any, i: number) => {
+    const category = String(a.category ?? '')
+    return {
+      id: `award-${i}`,
+      name: category,
+      level: a.maxLevel,
+      type: classifyAwardCategory(category),
+      date: a.latestTime,
+      category,
+      count: Number(a.totalCount) || 1,
+      isAggregate: true,
+    }
+  })
 }
 
 /**

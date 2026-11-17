@@ -27,7 +27,7 @@ export const FIELD_LABELS: Record<string, string> = {
   /* 创新创业 / 双创之星 */
   companyName: '公司名称',
   industryType: '行业类型',
-  companyType: '公司类型',
+  companyType: '项目类型',
   teamRole: '团队角色',
   registerDate: '注册时间',
   /* 实训 / 科研项目 / 学术研究 / 科研之星-科研项目 */

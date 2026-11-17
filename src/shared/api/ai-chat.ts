@@ -9,7 +9,7 @@
  * /ai/conversations/{id}/messages/{mid}/regenerate、/ai/suggestions、/ai/messages/{mid}/feedback、
  * DELETE /ai/conversations/{id}。
  */
-import type { AISuggestion } from '@/features/ai-chat/ai-chat.types'
+import type { AISuggestion, RichContent } from '@/features/ai-chat/ai-chat.types'
 import request from './request'
 
 export interface ConversationSummary {
@@ -73,6 +73,8 @@ export function getAIConversationMessages(conversationId: number): Promise<{
     tokenUsage?: number
     generationTimeMs?: number
     createdAt: string
+    /** 后端结构化富文本（11.2 契约）；存在时前端优先按块渲染 */
+    richContent?: RichContent
     /** 当前用户对该消息的反馈（待后端 MessageItem 补字段后返回；未返回/未反馈为 null） */
     feedback?: 'useful' | 'useless' | null
   }>
@@ -92,6 +94,8 @@ export function sendAIMessage(
   tokenUsage?: number
   generationTimeMs?: number
   createdAt: string
+  /** 后端结构化富文本（11.2 契约）；存在时前端优先按块渲染 */
+  richContent?: RichContent
   suggestedActions?: Array<{ label: string; jumpUrl: string; actionType: string }>
 }> {
   // 同步等待大模型生成：后端 DeepSeek 超时 60s（DeepSeekProperties.timeoutMs），
@@ -118,6 +122,8 @@ export function regenerateAIMessage(
   callStatus: number
   isRetry: boolean
   createdAt: string
+  /** 后端结构化富文本（11.2 契约）；存在时前端优先按块渲染 */
+  richContent?: RichContent
 }> {
   // 同 sendAIMessage：重新生成同样同步等待模型返回，沿用 65s 超时
   return request.post(
@@ -137,10 +143,9 @@ export function getAISuggestions(params: {
 
 /** 删除对话会话（DELETE /ai/conversations/{conversationId}） */
 export function deleteAIConversation(conversationId: number): Promise<void> {
-  return request
-    .delete(`/ai/conversations/${conversationId}`)
-    .then(() => undefined)
-    .catch(() => undefined)
+  // 删除必须让失败冒泡：调用方只有拿到成功结果后才能移除本地会话，
+  // 否则会出现「本地删了、服务端还在、刷新复活」的伪删除。
+  return request.delete(`/ai/conversations/${conversationId}`).then(() => undefined)
 }
 
 /**

@@ -85,21 +85,25 @@ onMounted(() => {
     <template #form>
       <el-form :model="page.form" label-width="120px">
         <el-form-item label="图书名称" required
-          ><el-input v-model="page.form.bookName" placeholder="请输入图书名称"
+          ><el-input v-model="page.form.bookName" placeholder="例：《乡土中国》"
         /></el-form-item>
         <el-form-item label="阅读时间" required
-          ><el-date-picker v-model="page.form.bookDate" type="month" placeholder="选择年月"
+          ><el-date-picker v-model="page.form.bookDate" type="month" placeholder="例：2025-05"
         /></el-form-item>
         <el-form-item label="心得体会" required>
           <el-input
             v-model="page.form.review"
             type="textarea"
             :rows="4"
-            placeholder="请输入心得体会"
+            placeholder="例：从「差序格局」理解熟人社会的运行逻辑，约 300 字"
           />
         </el-form-item>
         <el-form-item label="学期" required>
-          <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+          <el-select
+            v-model="page.form.semester"
+            placeholder="选择学期（如 2025-2026-1）"
+            class="form-select"
+          >
             <el-option
               v-for="s in semesterOptions"
               :key="s.value"

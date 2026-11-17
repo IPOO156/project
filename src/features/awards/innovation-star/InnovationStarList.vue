@@ -112,10 +112,14 @@ onMounted(() => {
       <template #form>
         <el-form :model="page.form" label-width="120px">
           <el-form-item label="公司名称" required
-            ><el-input v-model="page.form.companyName"
+            ><el-input v-model="page.form.companyName" placeholder="例：杭州青禾智能科技有限公司"
           /></el-form-item>
           <el-form-item label="学期" required>
-            <el-select v-model="page.form.semester" placeholder="请选择" class="form-select">
+            <el-select
+              v-model="page.form.semester"
+              placeholder="选择学期（如 2025-2026-1）"
+              class="form-select"
+            >
               <el-option
                 v-for="s in semesterOptions"
                 :key="s.value"
@@ -125,7 +129,11 @@ onMounted(() => {
             </el-select>
           </el-form-item>
           <el-form-item label="行业类型" required>
-            <el-select v-model="page.form.industryType" placeholder="请选择" class="form-select">
+            <el-select
+              v-model="page.form.industryType"
+              placeholder="选择行业类型（如 信息技术）"
+              class="form-select"
+            >
               <el-option
                 v-for="t in industryTypeOptions"
                 :key="t.value"
@@ -135,7 +143,11 @@ onMounted(() => {
             </el-select>
           </el-form-item>
           <el-form-item label="申报人排名" required>
-            <el-input v-model="page.form.ranking" placeholder="如：1/3" class="form-input" />
+            <el-input
+              v-model="page.form.ranking"
+              placeholder="例：1/3（本人排第 1）"
+              class="form-input"
+            />
           </el-form-item>
           <el-form-item label="注册时间" required>
             <el-date-picker
@@ -143,6 +155,7 @@ onMounted(() => {
               type="month"
               format="YYYY-MM"
               value-format="YYYY-MM"
+              placeholder="例：2025-04"
               :disabled-date="page.disabledDate"
             />
           </el-form-item>

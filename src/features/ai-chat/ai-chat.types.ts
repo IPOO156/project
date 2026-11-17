@@ -131,6 +131,8 @@ export interface AIConversationMessage {
   tokenUsage?: number
   generationTimeMs?: number
   createdAt: string
+  /** 后端结构化富文本（11.2 契约）；存在时优先按块渲染 */
+  richContent?: RichContent
   /**
    * 当前用户对该消息的反馈（可选，待后端消息列表 DTO 补 feedback 字段后回显）
    * 未反馈或后端未返回时为 undefined → 映射为 null，图标不激活
@@ -154,6 +156,8 @@ export interface AISendMessageResult {
   tokenUsage?: number
   generationTimeMs?: number
   createdAt: string
+  /** 后端结构化富文本（11.2 契约）；存在时优先按块渲染 */
+  richContent?: RichContent
   suggestedActions?: AISuggestedAction[]
 }
 
@@ -169,6 +173,8 @@ export interface AIRegenerateResult {
   callStatus: number
   isRetry: boolean
   createdAt: string
+  /** 后端结构化富文本（11.2 契约）；存在时优先按块渲染 */
+  richContent?: RichContent
 }
 
 /** AI 辅助建议（GET /ai/suggestions 列表项，数据来源：improvement_suggestions 表） */

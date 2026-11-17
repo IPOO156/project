@@ -62,13 +62,19 @@ function startResendCountdown() {
 onBeforeUnmount(stopResendCountdown)
 
 /**
- * 后端用 404 + code=30001 表示「该邮箱未注册」（响应拦截器对 404 静默、不弹全局错误）。
- * 前端一律按中性文案处理，不向前端用户暴露账号是否存在。
+ * 后端用 404 + code=30001 + message「该邮箱未注册」表示该邮箱不存在
+ * （2026-11-17 实测原文：{"code":30001,"message":"该邮箱未注册"} / HTTP 404）。
+ * 这里必须同时校验 code 与 message：30001 也是全局「接口不存在」，
+ * 只按 404/30001 判断会把路由错误误当成「未注册」，把用户带进收验证码的死路。
+ * 前端一律按中性文案处理，不向用户暴露账号是否存在。
  */
 function isUnregisteredEmailError(error: unknown): boolean {
-  const resp = (error as { response?: { status?: number; data?: { code?: number } } } | undefined)
-    ?.response
-  return resp?.data?.code === 30001 || resp?.status === 404
+  const resp = (
+    error as
+      { response?: { status?: number; data?: { code?: number; message?: string } } } | undefined
+  )?.response
+  if (resp?.data?.code !== 30001) return false
+  return String(resp?.data?.message ?? '').includes('邮箱')
 }
 
 /** 每次打开都回到第一步并清空输入（与原先 openForgotDialog 的行为一致） */
@@ -108,6 +114,9 @@ async function handleSendResetEmail() {
       forgotStep.value = 2
       ElMessage.info('如果该邮箱已注册，验证码将发送至邮箱，请查收')
       startResendCountdown()
+    } else if ((error as { response?: { status?: number } })?.response?.status === 404) {
+      // 其余 404（路由不存在/网关）不能被吞成“验证码已发送”，否则用户会卡在收验证码
+      ElMessage.error('发送失败，请稍后重试')
     }
     /* 其余错误由拦截器提示 */
   } finally {

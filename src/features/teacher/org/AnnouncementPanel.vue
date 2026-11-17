@@ -26,6 +26,7 @@ import {
   listClasses,
   listColleges,
   listMajors,
+  listSchools,
   updateAnnouncement,
 } from '@/shared/api/teacher-api'
 
@@ -119,9 +120,27 @@ function resetAnnTarget() {
   annClasses.value = []
 }
 
+/**
+ * 学院下拉必须先有 schoolId：后端 GET /admin/colleges 对 schoolId 做非空校验，
+ * 不传直接 400。公告面板没有学校选择器，这里取当前账号可见的第一所学校。
+ */
+const annSchoolId = ref<number | undefined>()
+
+async function resolveAnnSchoolId(): Promise<number | undefined> {
+  if (annSchoolId.value != null) return annSchoolId.value
+  try {
+    const schools = await listSchools()
+    annSchoolId.value = schools[0]?.schoolId
+  } catch {
+    annSchoolId.value = undefined
+  }
+  return annSchoolId.value
+}
+
 async function loadAnnColleges() {
   try {
-    annColleges.value = await listColleges()
+    const schoolId = await resolveAnnSchoolId()
+    annColleges.value = schoolId ? ((await listColleges({ schoolId })) ?? []) : []
   } catch {
     annColleges.value = []
   }

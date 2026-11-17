@@ -102,7 +102,11 @@ async function confirmClear() {
   const id = currentConversationId.value
   showClearModal.value = false
   if (id != null) {
-    await deleteConversation(id)
+    const deleted = await deleteConversation(id)
+    if (!deleted) {
+      ElMessage.error('清空失败，当前对话已保留，请稍后重试')
+      return
+    }
   }
   // 会话不在本地列表（列表加载失败）时 deleteConversation 不会重置视图，这里兜底
   if (currentConversationId.value === id) {
@@ -135,7 +139,10 @@ async function handleDelete(id: number) {
     // 用户取消
     return
   }
-  void deleteConversation(id)
+  const deleted = await deleteConversation(id)
+  if (!deleted) {
+    ElMessage.error('删除失败，对话已保留，请稍后重试')
+  }
 }
 
 /** 重命名历史对话 */

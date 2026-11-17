@@ -169,10 +169,10 @@ export async function buildContractPayload(
 }
 
 /**
- * 纠错提交：只携带变更字段，按契约映射成后端字段名。
+ * 纠错载荷：把完整表单（详情快照 + 变更项）按契约映射成后端字段名。
  *
- * 后端 correction 接口读取的是**平铺字段**（title / semesterId / 扩展表字段名），
- * 并不认识前端的 correctedData 结构，因此这里直接把变更后的新值平铺上去。
+ * 文档要求 correctedData 为「修正后的完整申报数据」；调用方会同时平铺一份，
+ * 兼容只读平铺字段的历史后端实现。
  */
 export async function buildCorrectionPayload(
   type: string,

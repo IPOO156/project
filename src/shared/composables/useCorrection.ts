@@ -111,13 +111,18 @@ export function useCorrection(type: string) {
       for (const [field, item] of Object.entries(correctionForm.changedFields)) {
         changed[field] = item.new
       }
-      const payload = await buildCorrectionPayload(type, changed)
+      // 文档要求 correctedData 为「修正后的完整申报数据」：以详情快照为底，叠加本次变更。
+      // 详情接口不可用时快照只有列表摘要字段，缺失字段不会凭空补值。
+      const merged = { ...(originalSnapshot.value || {}), ...changed }
+      const payload = await buildCorrectionPayload(type, merged)
       if (Object.keys(payload).length === 0) {
         ElMessage.warning('请填写修改后的内容')
         return
       }
+      // 同时平铺一份：后端历史实现读平铺字段，新实现读 correctedData，两种都能兼容。
       await correctApplication(Number(correctionRecord.value?.id), {
         correctionReason: correctionForm.reason,
+        correctedData: payload,
         ...payload,
       })
       ElMessage.success('修改申请已提交')

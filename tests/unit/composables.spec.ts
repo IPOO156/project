@@ -79,7 +79,7 @@ describe('usePagination', () => {
     expect(page.list.value).toHaveLength(2)
     expect(page.total.value).toBe(2)
     expect(page.loading.value).toBe(false)
-    expect(fetchFn).toHaveBeenCalledWith({ pageNum: 1, pageSize: 10 })
+    expect(fetchFn).toHaveBeenCalledWith({ page: 1, per_page: 10 })
   })
 
   it('分页响应读取 list / total，缺失时回落空值', async () => {
@@ -100,13 +100,13 @@ describe('usePagination', () => {
     page.pagination.value.onChange(3)
     expect(page.pageNum.value).toBe(3)
     await Promise.resolve()
-    expect(fetchFn).toHaveBeenLastCalledWith({ pageNum: 3, pageSize: 10 })
+    expect(fetchFn).toHaveBeenLastCalledWith({ page: 3, per_page: 10 })
 
     page.pagination.value.onPageSizeChange(50)
     expect(page.pageNum.value).toBe(1)
     expect(page.pageSize.value).toBe(50)
     await Promise.resolve()
-    expect(fetchFn).toHaveBeenLastCalledWith({ pageNum: 1, pageSize: 50 })
+    expect(fetchFn).toHaveBeenLastCalledWith({ page: 1, per_page: 50 })
   })
 
   it('请求异常时仍复位 loading', async () => {
@@ -125,7 +125,7 @@ describe('useTableQuery', () => {
     await query.handleSearch()
 
     expect(query.pagination.value.currentPage).toBe(1)
-    expect(fetchFn).toHaveBeenCalledWith({ pageNum: 1, pageSize: 10, keyword: '蓝桥' })
+    expect(fetchFn).toHaveBeenCalledWith({ page: 1, per_page: 10, keyword: '蓝桥' })
   })
 
   it('重置会恢复默认表单后重新查询', async () => {
@@ -137,7 +137,7 @@ describe('useTableQuery', () => {
     await query.handleReset()
 
     expect(query.searchForm).toEqual({ keyword: '', status: '1' })
-    expect(fetchFn).toHaveBeenLastCalledWith({ pageNum: 1, pageSize: 10, keyword: '', status: '1' })
+    expect(fetchFn).toHaveBeenLastCalledWith({ page: 1, per_page: 10, keyword: '', status: '1' })
   })
 
   it('外部传入的额外条件覆盖表单同名字段', async () => {
@@ -146,7 +146,7 @@ describe('useTableQuery', () => {
 
     await query.fetchData({ status: '2' })
 
-    expect(fetchFn).toHaveBeenCalledWith({ pageNum: 1, pageSize: 10, status: '2' })
+    expect(fetchFn).toHaveBeenCalledWith({ page: 1, per_page: 10, status: '2' })
   })
 
   it('翻页与改每页条数都保留当前筛选条件', async () => {
@@ -158,9 +158,9 @@ describe('useTableQuery', () => {
     fetchFn.mockClear()
 
     query.pagination.value.onChange(3)
-    expect(fetchFn).toHaveBeenLastCalledWith({ pageNum: 3, pageSize: 10, keyword: '蓝桥' })
+    expect(fetchFn).toHaveBeenLastCalledWith({ page: 3, per_page: 10, keyword: '蓝桥' })
 
     query.pagination.value.onPageSizeChange(20)
-    expect(fetchFn).toHaveBeenLastCalledWith({ pageNum: 1, pageSize: 20, keyword: '蓝桥' })
+    expect(fetchFn).toHaveBeenLastCalledWith({ page: 1, per_page: 20, keyword: '蓝桥' })
   })
 })

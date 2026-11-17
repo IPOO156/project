@@ -153,9 +153,9 @@ function mapBackendEventType(type: number | undefined): TimelineNode['type'] {
     1: 'award',
     2: 'grade',
     3: 'practice',
-    4: 'other',
-    5: 'other',
-    6: 'other',
+    4: 'career',
+    5: 'improvement',
+    6: 'ability',
   }
   return map[type ?? 0] || 'other'
 }
@@ -176,5 +176,7 @@ export async function getTimelineEvents(): Promise<TimelineNode[]> {
     description: e.content || '',
     date: e.eventAt,
     recordId: e.sourceId != null ? String(e.sourceId) : undefined,
+    status: e.status,
+    statusLabel: e.statusLabel || undefined,
   }))
 }

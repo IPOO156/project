@@ -99,12 +99,20 @@ export const SCHOLARSHIP_GRADES = [
   { label: '三等奖', value: 'third' },
 ] as const
 
-/** 创新创业企业类型（后端 dictType: company_type） */
+/** 创新创业企业类型（后端 dictType: company_type，旧数据展示用，不再作为提交选项） */
 export const INNOVATION_COMPANY_TYPES = [
   { label: '有限责任公司', value: 'limited_liability' },
   { label: '股份有限公司', value: 'joint_stock' },
   { label: '合伙企业', value: 'partnership' },
   { label: '个体工商户', value: 'sole_proprietorship' },
+  { label: '其他', value: 'other' },
+] as const
+
+/** 创新创业项目类型（后端 project_type 契约码值，提交以此为准） */
+export const INNOVATION_PROJECT_TYPES = [
+  { label: '创业实践', value: 'practice' },
+  { label: '创业计划', value: 'plan' },
+  { label: '实体注册', value: 'registered' },
   { label: '其他', value: 'other' },
 ] as const
 
@@ -201,5 +209,11 @@ export const SCHOLARSHIP_LEVEL_DISPLAY_OPTIONS = mergeDisplayOptions(
 
 export const COMPANY_TYPE_DISPLAY_OPTIONS = mergeDisplayOptions(
   INNOVATION_COMPANY_TYPES,
+  LEGACY_COMPANY_TYPES,
+)
+
+/** 项目类型展示：新契约码 + 旧法人类型码，兼容历史记录展示 */
+export const PROJECT_TYPE_DISPLAY_OPTIONS = mergeDisplayOptions(
+  INNOVATION_PROJECT_TYPES,
   LEGACY_COMPANY_TYPES,
 )
