@@ -9,6 +9,12 @@ import {
 import { getGrowthTimeline } from '@/shared/api/student'
 import { mapTimelineEventType } from '../timelineConstants'
 
+/** 来源类型 → 事件类型（接口文档 4.2.1：eventType 仅用于分类筛选，不参与计分） */
+const EVENT_TYPE_BY_SOURCE: Record<string, number> = {
+  award_applications: 1, // 奖项
+  career_plans: 4, // 职业规划
+}
+
 /** 后端成长时间轴 summary；字段缺失/非法时为 null，表示「无数据」而不是 0 */
 export interface GrowthSummary {
   experiences: number | null
@@ -193,11 +199,12 @@ export function useGrowthTimeline() {
 
     // 同步到后端（4.2.1 POST /profile/growth-timeline）。
     // 后端要求 sourceId + sourceType 必填（并校验来源存在且归属本人），表单已强制选择。
-    // 能力成长（abilityData）由后端按 eventType 推断能力维度并计算，前端不再提交。
+    // 能力成长（abilityData）由后端按来源类型套用管理端计分规则生成，前端不再提交。
     try {
       const created = await addTimelineEvent({
-        // 奖项报名来源归类为奖项事件（eventType=1），其余默认能力提升（eventType=6）
-        eventType: payload.sourceType === 'award_applications' ? 1 : 6,
+        // 事件类型按来源归类（接口文档 4.2.1：eventType 仅用于分类筛选，不参与计分）：
+        // 奖项报名=1 奖项，职业规划=4 职业规划，其余申报记录=6 能力提升
+        eventType: EVENT_TYPE_BY_SOURCE[payload.sourceType ?? ''] ?? 6,
         eventName: payload.title,
         content: payload.description,
         eventAt: payload.date,
@@ -207,12 +214,24 @@ export function useGrowthTimeline() {
           : {}),
       })
       if (created?.id != null) {
-        localExperiences.value = localExperiences.value.map((e) =>
-          e.id === localId
-            ? { ...e, id: `backend-${created.id}`, semester: created.semesterName ?? e.semester }
-            : e,
-        )
+        // 用后端返回的完整详情替换本地乐观记录：新增接口已回传学期、状态、
+        // 事件类型标签由后端 abilityData 规则生成的能力项，若只改本地 id，
+        // 卡片会停留在「缺学期/缺状态/无能力项」的过渡态，刷新后内容才补齐。
+        const mapped = mapBackendEvent(created as unknown as Record<string, any>)
+        localExperiences.value = localExperiences.value.filter((e) => e.id !== localId)
+        backendExperiences.value = [
+          ...backendExperiences.value.filter((e) => e.id !== mapped.id),
+          mapped,
+        ]
+        // POST 成功说明后端可用：即使页面首次加载失败（backendLoaded=false），
+        // 也要把新记录并入展示，否则本地乐观记录被移除后卡片会直接消失
+        backendLoaded.value = true
         rebuildExperiences()
+        done?.(true)
+        // 新增响应不保证带后端推导的学期/状态/能力项，且右侧汇总（经历数/能力项数/平均成长）
+        // 由列表接口计算：重拉一次，使新增后立即展示的内容与刷新后完全一致
+        await loadBackendTimeline()
+        return
       }
       done?.(true)
     } catch {

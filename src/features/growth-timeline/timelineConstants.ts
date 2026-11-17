@@ -5,7 +5,7 @@ export interface GrowthExperience {
   semester: string
   description: string
   tags: string[]
-  /** 能力成长项：只读展示，由后端按 eventType 推断能力维度后回传，前端不再提交 */
+  /** 能力成长项：只读展示，由后端按来源类型套用计分规则生成后回传，前端不再提交 */
   skills: { name: string; growth: number; dimensionCode?: string }[]
   /** 后端事件对应的档案记录 ID（sourceId），本地新增经历无此字段 */
   recordId?: string
