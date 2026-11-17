@@ -4,7 +4,8 @@
  * 基于「真实档案数据」生成个性化短板分析与改进建议：
  *  - 读 archiveStore 的 dimensions（多维度画像分数）+ awards（奖项）+ grades（成绩）
  *  - 读 careerPlanStore 的 plans（已提交规划数）
- *  - 按维度差距（target - current）降序取短板，结合真实数据生成弱点描述与建议
+ *  - 按维度差距（优先后端 gap，缺失时才用 target - current）降序取短板，
+ *    结合真实数据生成弱点描述与建议
  *
  * 数据流：useAIChat 命中职业规划关键词 → 调 analyzeCareer → 写入 careerPlanStore.aiAnalysis
  *        → CareerPlan.vue 读 store.aiAnalysis 渲染短板区域（AI 回复回流页面）
@@ -77,6 +78,16 @@ function summarizeGrades(grades: Grade[]): GradeStats | null {
 }
 
 /**
+ * 距目标分：优先用后端 gap（/home/dashboard indicators[].gap，DECIMAL(5,2)），
+ * 缺失时才用 target - current 兜底，并收敛两位小数——浮点相减会带出
+ * 3.3999999999999986 这类长尾，直接拼进「差 X 分」文案会显示给用户。
+ */
+function resolveGap(d: ProfileDimension): number {
+  const raw = Number(d.gap ?? d.target - d.current) // 兼容后端 BigDecimal 序列化为字符串
+  return Number.isFinite(raw) ? Math.round(raw * 100) / 100 : 0
+}
+
+/**
  * 基于真实档案数据生成职业规划短板分析
  *
  * @param dimensions 多维度画像（current/target/previous）
@@ -95,7 +106,7 @@ export function analyzeCareer(
 
   // 按差距降序排列，取差距 > 10 的维度作为短板（不足则取差距最大的 2 个）
   const sorted = [...dimensions]
-    .map((d) => ({ d, gap: d.target - d.current }))
+    .map((d) => ({ d, gap: resolveGap(d) }))
     .sort((a, b) => b.gap - a.gap)
 
   const weakGaps = sorted.filter((x) => x.gap > 10)

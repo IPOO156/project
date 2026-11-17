@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { QuickEntry } from './composables/useQuickEntries'
+import type { HomeDashboard } from '@/shared/api/student'
 import { ElMessage } from 'element-plus'
 import { Award, Clock, FileText, TrendingUp } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
@@ -139,15 +140,23 @@ const statsCards = computed(() => {
 
 // 多维度画像：优先使用 /home/dashboard radarChart，缺失时回退 archiveStore
 const profileDimensions = computed(() => {
-  const home = homeStore.data
+  const home: HomeDashboard | null = homeStore.data
   if (home?.radarChart?.dimensions && home.radarChart.dimensions.length > 0) {
     const { dimensions, current, target, previous } = home.radarChart
-    return dimensions.map((d: any, i: number) => ({
-      label: d.name,
-      current: current[i] ?? 0,
-      target: target[i] ?? 0,
-      previous: previous[i] ?? 0,
-    }))
+    return dimensions.map((d: any, i: number) => {
+      // 距目标分取后端 indicators[].gap（已按 DECIMAL(5,2) 取整），
+      // 不在前端用 target - current 重算，避免浮点误差带出 3.3999999999999986 这类尾数
+      const indicator = (home.indicators ?? []).find(
+        (ind) => ind.dimensionCode === d.code || ind.dimensionName === d.name,
+      )
+      return {
+        label: d.name,
+        current: current[i] ?? 0,
+        target: target[i] ?? indicator?.targetScore ?? 0,
+        previous: previous[i] ?? 0,
+        gap: indicator?.gap,
+      }
+    })
   }
   return archiveStore.dimensions
 })

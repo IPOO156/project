@@ -275,9 +275,15 @@ request.interceptors.response.use(
         case 500:
           ElMessage.error('服务器异常，请稍后重试')
           break
-        case 404:
-          // 接口未实现/路径不存在：静默降级，由调用方 catch 处理（展示空态），不弹全局错误
+        case 404: {
+          // GET 多为可选数据接口，缺失时由调用方降级为空态，保持静默；
+          // 写操作是用户主动提交，静默会让用户以为「点确定没反应」，必须给出反馈
+          const method = String(error.config?.method ?? 'get').toLowerCase()
+          if (method !== 'get') {
+            ElMessage.error('操作未生效，请稍后重试；如持续失败请联系管理员')
+          }
           break
+        }
         default:
           ElMessage.error(error.response.data?.message || '网络错误')
       }

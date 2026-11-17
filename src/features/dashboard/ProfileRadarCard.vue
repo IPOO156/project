@@ -40,6 +40,18 @@ const hasProfileDimensions = computed(() => props.dimensions.length > 0)
  * 该开关为 boolean 时即为**权威判据**（父页面以 hasPreviousFromApi 传入）；
  * 对比学期 Map 退为「取对比学期名做文案」的用途，不再单独决定有无基线。
  */
+/**
+ * 距目标分：优先使用后端 gap（DECIMAL(5,2)，如 3.40），
+ * 后端未下发时才用 target - current 兜底，并收敛到两位小数
+ * （浮点相减会出现 3.3999999999999986，直接渲染会带出一长串尾数）。
+ */
+function resolveGap(item: ProfileDimension): number {
+  const raw = item.gap ?? item.target - item.current
+  // 兼容后端 BigDecimal 序列化为字符串（"3.40"）的情况
+  const num = Number(raw)
+  return Number.isFinite(num) ? Math.round(num * 100) / 100 : 0
+}
+
 const profileSummary = computed(() => {
   const comparedMap = props.comparedSemesterMap
   const apiHasPrevious = props.hasPreviousFromApi
@@ -58,7 +70,7 @@ const profileSummary = computed(() => {
       deltaFromPrevious,
       // 开关为 true 但某维度没给对比学期名时退回通用文案，避免拼出「较undefined学期」
       deltaLabel: hasBaseline ? `较${comparedSemesterName ?? '上阶段'}学期` : '',
-      gapToTarget: item.target - item.current,
+      gapToTarget: resolveGap(item),
       // 持平时既非上升也非下降，不再套用 is-up 的绿色（此前 +0 会被渲染成上升态）
       deltaClass: deltaFromPrevious > 0 ? 'is-up' : deltaFromPrevious < 0 ? 'is-down' : 'is-flat',
       deltaSign: deltaFromPrevious > 0 ? '+' : '',
