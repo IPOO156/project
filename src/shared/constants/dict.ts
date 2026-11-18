@@ -418,11 +418,20 @@ export const AUDIT_DETAIL_LABELS: Record<string, string> = {
   evidence_files: '证明材料',
 }
 
-// 学生状态选项（字典编码枚举值来自接口文档 4.1.5.1，禁止前端自行增改）
+// 学生状态选项（对应后端 StudentStatusEnum；学生只读，管理员在账号管理中维护）
 export const STUDENT_STATUS_OPTIONS = [
   { value: 'current', label: '在校生' },
   { value: 'fresh_graduate', label: '应届毕业生' },
   { value: 'graduated', label: '已毕业' },
+] as const
+
+// 学历层次选项（对应后端 DegreeTypeEnum；学生只读，管理员在账号管理中维护）
+export const DEGREE_TYPE_OPTIONS = [
+  { value: 'associate', label: '专科' },
+  { value: 'undergraduate', label: '本科' },
+  { value: 'master', label: '研究生/硕士' },
+  { value: 'doctor', label: '博士' },
+  { value: 'postdoctor', label: '博士后' },
 ] as const
 
 // 成长经历标签 → 主题色（成长时间轴卡片类型指示色，按标签包含关系匹配）

@@ -8,9 +8,7 @@ import { ElMessage } from 'element-plus'
 import { Edit2, Info } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useArchiveStore, useUserStore } from '@/app/stores/stores'
-import { updatePoliticalStatus, updateStudentStatus } from '@/shared/api/student'
-import { useRemoteDict } from '@/shared/composables/useRemoteDict'
-import { POLITICAL_STATUS_OPTIONS, STUDENT_STATUS_OPTIONS } from '@/shared/constants/dict'
+import { updateBirthDate } from '@/shared/api/student'
 import { isValidEmail } from '@/shared/utils/validateEmail'
 import AvatarUploader from './components/AvatarUploader.vue'
 
@@ -18,9 +16,9 @@ const archiveStore = useArchiveStore()
 const userStore = useUserStore()
 
 // ── 基本资料编辑 ──
-// 学籍字段（学号/年级/专业/班级/姓名）属学术身份信息，仅只读展示，不进入编辑表单；
-// 编辑表单保留可更新的联系方式（邮箱/手机号 PUT /profile/contact）与
-// 政治面貌/学生状态（PUT /profile/political-status、/profile/student-status，见接口文档 4.1.5）。
+// 学籍字段（学号/年级/专业/班级/姓名/学历层次/政治面貌/学生状态）属学术身份信息，
+// 仅只读展示，由管理员在账号管理中维护；学生本人只能更新联系方式
+// （邮箱/手机号等 PUT /profile/contact）与出生日期（PUT /profile/birth-date）。
 const isEditing = ref(false)
 /** 基本资料「保存」提交中（最多串行 3 次 PUT，防连点重复提交） */
 const savingEdit = ref(false)
@@ -37,16 +35,10 @@ interface ProfileEditForm {
   emergencyName: string
   emergencyRelation: string
   emergencyPhone: string
-  politicalStatus?: string
-  studentStatus?: string
+  birthDate: string
 }
 const formData = ref<Partial<ProfileEditForm>>({})
-/** 政治面貌：后端字典优先，常量兜底（GET /common/dict?dictType=political_status） */
-const { options: politicalOptions, load: loadPoliticalOptions } = useRemoteDict(
-  'political_status',
-  POLITICAL_STATUS_OPTIONS,
-)
-/** /profile/info 中的学籍信息（政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
+/** /profile/info 中的学籍信息（学历层次/政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
 const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})
 
 /**
@@ -74,11 +66,16 @@ function startEdit() {
     emergencyName: c?.emergencyName ?? '',
     emergencyRelation: c?.emergencyRelation ?? '',
     emergencyPhone: '',
-    politicalStatus: a.politicalStatus ?? '',
-    studentStatus: a.studentStatus ?? '',
+    birthDate: a.birthDate ?? '',
   }
   isEditing.value = true
-  loadPoliticalOptions()
+}
+
+/** 出生日期不得晚于今天（与后端 PUT /profile/birth-date 校验一致） */
+function isFutureDate(date: Date): boolean {
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+  return date.getTime() > endOfToday.getTime()
 }
 async function saveEdit() {
   const a = academicInfo.value
@@ -99,7 +96,7 @@ async function saveEdit() {
     ElMessage.warning('请输入正确的邮箱地址')
     return
   }
-  // 三类保存（联系方式 PUT /profile/contact、政治面貌、学生状态）任一失败即终止流程，
+  // 两类保存（联系方式 PUT /profile/contact、出生日期 PUT /profile/birth-date）任一失败即终止流程，
   // 不继续执行后续「已保存」，避免成败提示并存；失败提示由请求拦截器统一给出
   savingEdit.value = true
   try {
@@ -111,11 +108,10 @@ async function saveEdit() {
       emergencyRelation: String(formData.value.emergencyRelation ?? '').trim(),
       emergencyPhone: String(formData.value.emergencyPhone ?? '').trim(),
     })
-    if (formData.value.politicalStatus && formData.value.politicalStatus !== a.politicalStatus) {
-      await updatePoliticalStatus(formData.value.politicalStatus)
-    }
-    if (formData.value.studentStatus && formData.value.studentStatus !== a.studentStatus) {
-      await updateStudentStatus(formData.value.studentStatus)
+    // 出生日期允许学生本人修改或清空；未变化时不发请求（空串=清空）
+    const nextBirthDate = String(formData.value.birthDate ?? '')
+    if (nextBirthDate !== (a.birthDate ?? '')) {
+      await updateBirthDate(nextBirthDate)
     }
   } catch {
     return
@@ -123,8 +119,8 @@ async function saveEdit() {
     savingEdit.value = false
   }
   isEditing.value = false
-  // 重新拉取 /profile/info，保证展示标签与后端一致
-  await archiveStore.fetchArchive()
+  // force 跳过 60s 缓存，保证展示值与刚保存的结果一致
+  await archiveStore.fetchArchive(true)
   ElMessage.success('已保存')
 }
 function cancelEdit() {
@@ -205,6 +201,12 @@ async function handleAvatarUpload(base64: string) {
       <el-descriptions-item label="学生状态">{{
         academicInfo.studentStatusLabel || '-'
       }}</el-descriptions-item>
+      <el-descriptions-item label="学历层次">{{
+        academicInfo.degreeTypeLabel || '-'
+      }}</el-descriptions-item>
+      <el-descriptions-item label="出生日期">{{
+        academicInfo.birthDate || '-'
+      }}</el-descriptions-item>
       <el-descriptions-item label="联系邮箱">{{ contactEmail || '-' }}</el-descriptions-item>
       <el-descriptions-item label="手机号">{{ contactPhone || '-' }}</el-descriptions-item>
       <el-descriptions-item label="通讯地址">{{ contactAddress || '-' }}</el-descriptions-item>
@@ -264,23 +266,23 @@ async function handleAvatarUpload(base64: string) {
               placeholder="请输入紧急联系人电话" /></el-form-item
         ></el-col>
         <el-col :span="12"
-          ><el-form-item label="政治面貌"
-            ><el-select v-model="formData.politicalStatus" size="small" class="form-w">
-              <el-option
-                v-for="o in politicalOptions"
-                :key="o.value"
-                :label="o.label"
-                :value="o.value" /></el-select></el-form-item
+          ><el-form-item label="出生日期"
+            ><el-date-picker
+              v-model="formData.birthDate"
+              size="small"
+              type="date"
+              format="YYYY-MM-DD"
+              value-format="YYYY-MM-DD"
+              :disabled-date="isFutureDate"
+              placeholder="请选择出生日期"
+              class="form-w" /></el-form-item
         ></el-col>
         <el-col :span="12"
-          ><el-form-item label="学生状态"
-            ><el-select v-model="formData.studentStatus" size="small" class="form-w">
-              <el-option
-                v-for="o in STUDENT_STATUS_OPTIONS"
-                :key="o.value"
-                :label="o.label"
-                :value="o.value" /></el-select></el-form-item
-        ></el-col>
+          ><el-form-item label="学历层次"
+            ><span class="form-readonly">{{ academicInfo.degreeTypeLabel || '-' }}</span>
+            <span class="form-readonly-hint">（由管理员维护）</span></el-form-item
+          ></el-col
+        >
       </el-row>
     </el-form>
   </el-card>
@@ -356,6 +358,15 @@ async function handleAvatarUpload(base64: string) {
 }
 .form-w {
   width: 100%;
+}
+.form-readonly {
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+.form-readonly-hint {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 // ─── 夜间模式适配 ───

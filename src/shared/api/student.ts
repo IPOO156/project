@@ -246,20 +246,12 @@ export function updateProfileContact(payload: {
   return request.put('/profile/contact', payload)
 }
 
-/** 更新政治面貌（PUT /profile/political-status） */
-export function updatePoliticalStatus(politicalStatus: string): Promise<{
-  politicalStatus: string
-  politicalStatusLabel: string
-}> {
-  return request.put('/profile/political-status', { politicalStatus })
-}
-
-/** 更新学生状态（PUT /profile/student-status） */
-export function updateStudentStatus(studentStatus: string): Promise<{
-  studentStatus: string
-  studentStatusLabel: string
-}> {
-  return request.put('/profile/student-status', { studentStatus })
+/**
+ * 更新出生日期（PUT /profile/birth-date）
+ * 传空字符串表示清空；学历层次、政治面貌、学生状态由管理员维护，学生端不提供写接口。
+ */
+export function updateBirthDate(birthDate: string): Promise<{ birthDate: string | null }> {
+  return request.put('/profile/birth-date', { birthDate })
 }
 
 /** 更新自我评价（PUT /profile/self-evaluation） */
