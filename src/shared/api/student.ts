@@ -267,18 +267,14 @@ export function updateStudentStatus(studentStatus: string): Promise<{
 }
 
 /**
- * 更新学籍补充信息（约定接口 PUT /profile/academic-info）。
+ * 更新学籍补充信息（PUT /profile/academic-info）。
  *
- * ⚠️ 后端当前**未实现**：2026-11-17 实测 7 条候选路径全部 404，
- * 因此保存失败时页面必须明确提示并保留用户输入，不得静默失败或提示成功。
- * 契约（请求体/响应/错误码）见 outputs/后端需求-出生日期与学历层次写入接口-20261117.md。
- *
+ * 学生仅可修改出生日期；学历层次由学校统一维护，不提供写入，页面也不提交该字段。
+ * 出生日期格式为 YYYY-MM-DD，页面侧校验真实日期、不晚于今天、不早于 1900 年。
  * 约定：字段省略 = 不修改；传空字符串 = 清空。
  */
-export function updateAcademicInfo(payload: { birthDate?: string; degreeType?: string }): Promise<{
+export function updateAcademicInfo(payload: { birthDate?: string }): Promise<{
   birthDate: string | null
-  degreeType: string | null
-  degreeTypeLabel: string | null
 }> {
   return request.put('/profile/academic-info', payload)
 }
