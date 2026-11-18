@@ -250,37 +250,12 @@ export function updateProfileContact(payload: {
   return request.put('/profile/contact', payload)
 }
 
-/** 更新政治面貌（PUT /profile/political-status） */
-export function updatePoliticalStatus(politicalStatus: string): Promise<{
-  politicalStatus: string
-  politicalStatusLabel: string
-}> {
-  return request.put('/profile/political-status', { politicalStatus })
-}
-
-/** 更新学生状态（PUT /profile/student-status） */
-export function updateStudentStatus(studentStatus: string): Promise<{
-  studentStatus: string
-  studentStatusLabel: string
-}> {
-  return request.put('/profile/student-status', { studentStatus })
-}
-
 /**
- * 更新学籍补充信息（约定接口 PUT /profile/academic-info）。
- *
- * ⚠️ 后端当前**未实现**：2026-11-17 实测 7 条候选路径全部 404，
- * 因此保存失败时页面必须明确提示并保留用户输入，不得静默失败或提示成功。
- * 契约（请求体/响应/错误码）见 outputs/后端需求-出生日期与学历层次写入接口-20261117.md。
- *
- * 约定：字段省略 = 不修改；传空字符串 = 清空。
+ * 更新出生日期（PUT /profile/birth-date）
+ * 传空字符串表示清空；学历层次、政治面貌、学生状态由管理员维护，学生端不提供写接口。
  */
-export function updateAcademicInfo(payload: { birthDate?: string; degreeType?: string }): Promise<{
-  birthDate: string | null
-  degreeType: string | null
-  degreeTypeLabel: string | null
-}> {
-  return request.put('/profile/academic-info', payload)
+export function updateBirthDate(birthDate: string): Promise<{ birthDate: string | null }> {
+  return request.put('/profile/birth-date', { birthDate })
 }
 
 /** 更新自我评价（PUT /profile/self-evaluation） */
