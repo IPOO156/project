@@ -6,7 +6,7 @@
  * 重置密码对接 PUT /admin/users/{id}/password/reset，
  * 启停账号对接 PUT /admin/users/{id}/status。
  */
-import type { UserDetail, UserListItem } from '@/shared/types/teacher'
+import type { UpdateUserPayload, UserDetail, UserListItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { RefreshCw, Search } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
@@ -142,17 +142,50 @@ async function openDetail(row: UserListItem) {
 }
 
 // ── 编辑 ──
+// 出生日期管理员可对任意用户（学生/教师）纠错；学历层次、政治面貌、学生状态仅学生有档案，教师端不展示。
 const editDialogVisible = ref(false)
-const editForm = reactive({ name: '', email: '', phone: '' })
+const editForm = reactive({ name: '', email: '', phone: '', birthDate: '' as string | null })
 const editUser = ref<UserListItem | null>(null)
 const savingEdit = ref(false)
+/** 详情加载中：未拿到原值时禁止提交出生日期，避免空串覆盖已有值 */
+const editLoading = ref(false)
+const editOriginalBirthDate = ref('')
 
-function openEdit(row: UserListItem) {
+/** 出生日期不得晚于今天（与后端校验一致） */
+function isFutureDate(date: Date): boolean {
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+  return date.getTime() > endOfToday.getTime()
+}
+
+async function openEdit(row: UserListItem) {
   editUser.value = row
-  editForm.name = row.name
-  editForm.email = row.email ?? ''
-  editForm.phone = row.phone ?? ''
+  editOriginalBirthDate.value = ''
+  Object.assign(editForm, {
+    name: row.name,
+    email: row.email ?? '',
+    phone: row.phone ?? '',
+    birthDate: '',
+  })
   editDialogVisible.value = true
+
+  editLoading.value = true
+  try {
+    const detailData = await getUserDetail(row.userId)
+    if (editUser.value?.userId !== row.userId) return
+    editOriginalBirthDate.value = detailData.birthDate ?? ''
+    editForm.birthDate = editOriginalBirthDate.value
+  } catch {
+    /* 拦截器已提示；未拿到原值时保存只提交基础字段 */
+  } finally {
+    if (editUser.value?.userId === row.userId) editLoading.value = false
+  }
+}
+
+function resetEditState() {
+  editUser.value = null
+  editOriginalBirthDate.value = ''
+  editLoading.value = false
 }
 
 async function handleSaveEdit() {
@@ -160,14 +193,18 @@ async function handleSaveEdit() {
     ElMessage.warning('请填写姓名')
     return
   }
-  if (!editUser.value) return
+  if (!editUser.value || editLoading.value) return
+  const payload: UpdateUserPayload = {
+    name: editForm.name.trim(),
+    email: editForm.email || undefined,
+    phone: editForm.phone || undefined,
+  }
+  // 只提交发生变化的出生日期：空串=清空
+  const nextBirthDate = editForm.birthDate ?? ''
+  if (nextBirthDate !== editOriginalBirthDate.value) payload.birthDate = nextBirthDate
   savingEdit.value = true
   try {
-    await updateUser(editUser.value.userId, {
-      name: editForm.name.trim(),
-      email: editForm.email || undefined,
-      phone: editForm.phone || undefined,
-    })
+    await updateUser(editUser.value.userId, payload)
     ElMessage.success('已保存')
     editDialogVisible.value = false
     void load()
@@ -347,6 +384,7 @@ onMounted(() => void load())
         <el-descriptions-item label="工号">{{ detail.userNo }}</el-descriptions-item>
         <el-descriptions-item label="姓名">{{ detail.name }}</el-descriptions-item>
         <el-descriptions-item label="性别">{{ detail.genderLabel ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="出生日期">{{ detail.birthDate ?? '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="detail.status === 1 ? 'success' : 'danger'" size="small">
             {{ detail.statusLabel }}
@@ -375,8 +413,8 @@ onMounted(() => void load())
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editDialogVisible" title="编辑账号" width="440px" @close="editUser = null">
-      <el-form label-width="80px">
+    <el-dialog v-model="editDialogVisible" title="编辑账号" width="480px" @close="resetEditState">
+      <el-form v-loading="editLoading" label-width="80px">
         <el-form-item label="工号">
           <span>{{ editUser?.userNo }}</span>
         </el-form-item>
@@ -389,13 +427,24 @@ onMounted(() => void load())
         <el-form-item label="手机">
           <el-input v-model="editForm.phone" maxlength="11" placeholder="手机" />
         </el-form-item>
+        <el-form-item label="出生日期">
+          <el-date-picker
+            v-model="editForm.birthDate"
+            type="date"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            :disabled-date="isFutureDate"
+            placeholder="请选择出生日期"
+            class="u-w-full"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editDialogVisible = false">取消</el-button>
         <el-button
           type="primary"
           :loading="savingEdit"
-          :disabled="savingEdit"
+          :disabled="savingEdit || editLoading"
           @click="handleSaveEdit"
           >保存</el-button
         >

@@ -75,6 +75,11 @@ export interface ProfileDimension {
   current: number
   target: number
   previous: number
+  /**
+   * 距目标分（后端 /home/dashboard indicators[].gap，DECIMAL(5,2)）。
+   * 有值时直接展示，禁止前端用 target - current 重算（浮点相减会出现 3.3999999999999986）。
+   */
+  gap?: number
 }
 
 // 成绩与绩点
@@ -402,7 +407,7 @@ export interface WeaknessItem {
   score: number
   /** 目标分数 */
   target: number
-  /** 差距 = target - current */
+  /** 距目标差距：优先后端 gap（已按 DECIMAL(5,2) 取整），缺失时才用 target - current 并收敛两位 */
   gap: number
   /** 短板描述（基于真实数据生成，如"60 分，差 22 分，0 项科研类成果"） */
   weakness: string

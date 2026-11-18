@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FormInstance, FormRules } from 'element-plus'
 import type { GrowthExperience, GrowthExperienceInput } from '../timelineConstants'
 import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
@@ -40,20 +41,49 @@ const form = reactive<FormState>({
 
 const submitting = ref(false)
 const isEdit = computed(() => Boolean(props.editing))
+const formRef = ref<FormInstance>()
 
-/** 可关联来源：已提交（待审核/已通过）的申报/报名记录，按 activityCategoryOf 归类为 4.2.1 的 archives / award_applications */
+/**
+ * 表单项校验：关联来源必须有已通过记录可选。
+ * 之前只靠 ElMessage 提示，3 秒后消失，用户会觉得「点确定没反应」。
+ */
+const rules: FormRules<FormState> = {
+  title: [{ required: true, whitespace: true, message: '请填写经历标题', trigger: 'blur' }],
+  date: [{ required: true, message: '请选择发生日期', trigger: 'change' }],
+  sourceKey: [{ required: true, message: '请选择关联来源记录', trigger: 'change' }],
+}
+
+/**
+ * 活动分类 → 后端 4.2.1 支持的来源模型类型（sourceType）。
+ * 职业规划来自 career_plans 表，必须用 career_plans：此前一并归到 archives，
+ * 后端按 archives 查不到该 sourceId，创建失败（页面表现为点「确定」没反应）。
+ */
+const SOURCE_TYPE_BY_CATEGORY: Record<string, string> = {
+  archive: 'archives',
+  award: 'award_applications',
+  career_plan: 'career_plans',
+}
+
+/**
+ * 可关联来源：只允许「已通过」的申报/奖项/职业规划记录。
+ * 后端 4.2.1 明确带审批态的来源仅 status=2(已通过) 可加入成长轴，
+ * 待审批/已退回/已撤销会返回 40002，因此这里不能把待审核记录列成可选项。
+ */
 const sourceOptions = computed(() =>
-  submissionStore.records
-    .filter((r) => r.status === 'approved' || r.status === 'pending')
-    .map((r) => {
-      const sourceType = activityCategoryOf(r.type) === 'award' ? 'award_applications' : 'archives'
-      return {
+  submissionStore.records.flatMap((r) => {
+    if (r.status !== 'approved') return []
+    const sourceType = SOURCE_TYPE_BY_CATEGORY[activityCategoryOf(r.type)]
+    // 兜底：后端未声明支持的来源类型不列入选项，避免带错 sourceId 提交
+    if (!sourceType) return []
+    return [
+      {
         key: `${sourceType}:${r.id}`,
         id: Number(r.id),
         sourceType,
-        label: `${r.title}（${r.typeLabel} · ${r.status === 'approved' ? '已通过' : '待审核'}）`,
-      }
-    }),
+        label: `${r.title}（${r.typeLabel} · 已通过）`,
+      },
+    ]
+  }),
 )
 
 function reset() {
@@ -62,6 +92,7 @@ function reset() {
   form.description = ''
   form.tags = ''
   form.sourceKey = ''
+  formRef.value?.clearValidate()
 }
 
 /** 编辑模式回填：来源关联不在编辑时改动，故不回填 sourceKey */
@@ -73,18 +104,17 @@ function prefill(experience: GrowthExperience) {
   form.sourceKey = ''
 }
 
-function handleSubmit() {
-  if (!form.title.trim() || !form.date) {
-    ElMessage.warning('请填写经历标题和发生日期')
-    return
-  }
+async function handleSubmit() {
   if (submitting.value) return
 
-  const selected = sourceOptions.value.find((o) => o.key === form.sourceKey)
-  if (!isEdit.value && !selected) {
-    ElMessage.warning('请选择关联来源记录：成长经历必须关联一条已提交的申报/报名记录')
+  if (!isEdit.value && sourceOptions.value.length === 0) {
+    ElMessage.warning('暂无可关联的来源记录：仅审批通过的申报/奖项/职业规划记录可加入成长轴')
     return
   }
+  const valid = await formRef.value?.validate().catch(() => false)
+  if (!valid) return
+
+  const selected = sourceOptions.value.find((o) => o.key === form.sourceKey)
   submitting.value = true
   emit(
     'submit',
@@ -135,12 +165,12 @@ watch(
     :close-on-click-modal="false"
     @update:model-value="emit('update:visible', $event)"
   >
-    <el-form :model="form" label-width="90px">
-      <el-form-item label="经历标题" required>
+    <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
+      <el-form-item label="经历标题" prop="title">
         <el-input v-model="form.title" placeholder="例如：第一次竞赛获奖" />
       </el-form-item>
 
-      <el-form-item label="发生日期" required>
+      <el-form-item label="发生日期" prop="date">
         <el-date-picker
           v-model="form.date"
           type="date"
@@ -149,11 +179,13 @@ watch(
         />
       </el-form-item>
 
-      <el-form-item v-if="!isEdit" label="关联来源" required>
+      <el-form-item v-if="!isEdit" label="关联来源" prop="sourceKey">
         <el-select
           v-model="form.sourceKey"
           :placeholder="
-            sourceOptions.length ? '选择已提交的申报/报名记录' : '暂无可关联的申报/报名记录'
+            sourceOptions.length
+              ? '选择已审批通过的申报/奖项/职业规划记录'
+              : '暂无可关联的已通过记录'
           "
           :disabled="sourceOptions.length === 0"
           clearable
@@ -167,7 +199,7 @@ watch(
           />
         </el-select>
         <div class="source-hint">
-          每条成长经历必须关联一条已有的申报/报名记录，选择后便于在详情中追溯。
+          仅「已审批通过」的申报/奖项/职业规划记录可关联，选择后便于在详情中追溯。
         </div>
       </el-form-item>
 
@@ -187,13 +219,7 @@ watch(
 
     <template #footer>
       <el-button @click="emit('update:visible', false)">取消</el-button>
-      <el-button
-        type="primary"
-        :loading="submitting"
-        :disabled="!isEdit && sourceOptions.length === 0"
-        @click="handleSubmit"
-        >确定</el-button
-      >
+      <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
     </template>
   </el-dialog>
 </template>

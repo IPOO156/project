@@ -8,7 +8,7 @@ import { ElMessage } from 'element-plus'
 import { Edit2, Info } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useArchiveStore, useUserStore } from '@/app/stores/stores'
-import { updateAcademicInfo } from '@/shared/api/student'
+import { updateBirthDate } from '@/shared/api/student'
 import { isValidEmail } from '@/shared/utils/validateEmail'
 import AvatarUploader from './components/AvatarUploader.vue'
 
@@ -16,9 +16,9 @@ const archiveStore = useArchiveStore()
 const userStore = useUserStore()
 
 // ── 基本资料编辑 ──
-// 学籍字段（学号/年级/专业/班级/姓名）属学术身份信息，仅只读展示，不进入编辑表单；
-// 编辑表单保留可更新的联系方式（邮箱/手机号 PUT /profile/contact）与
-// 政治面貌/学生状态（PUT /profile/political-status、/profile/student-status，见接口文档 4.1.5）。
+// 学籍字段（学号/年级/专业/班级/姓名/学历层次/政治面貌/学生状态）属学术身份信息，
+// 仅只读展示，由管理员在账号管理中维护；学生本人只能更新联系方式
+// （邮箱/手机号等 PUT /profile/contact）与出生日期（PUT /profile/birth-date）。
 const isEditing = ref(false)
 /** 基本资料「保存」提交中（最多串行 3 次 PUT，防连点重复提交） */
 const savingEdit = ref(false)
@@ -36,15 +36,15 @@ interface ProfileEditForm {
   emergencyRelation: string
   emergencyPhone: string
   /**
-   * 出生日期（YYYY-MM-DD）。随「学籍补充信息」单独提交（PUT /profile/academic-info），
+   * 出生日期（YYYY-MM-DD）。单独提交（PUT /profile/birth-date），
    * 不混入 PUT /profile/contact 的六项联系方式。
    */
-  birthDate?: string
+  birthDate: string
 }
 // 政治面貌、学生状态、学历层次由学校统一维护，仅在表单中只读展示，
 // 不进入编辑字段、不随保存提交。
 const formData = ref<Partial<ProfileEditForm>>({})
-/** /profile/info 中的学籍信息（政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
+/** /profile/info 中的学籍信息（学历层次/政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
 const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})
 /** 学历层次只读展示文本：后端标签优先，缺标签时回退原始值 */
 const degreeTypeText = computed(
@@ -83,7 +83,7 @@ function startEdit() {
     emergencyName: c?.emergencyName ?? '',
     emergencyRelation: c?.emergencyRelation ?? '',
     emergencyPhone: '',
-    // 出生日期单独提交（PUT /profile/academic-info）；
+    // 出生日期单独提交（PUT /profile/birth-date）；
     // 政治面貌、学生状态、学历层次只读展示，不进入表单
     birthDate: a.birthDate ? String(a.birthDate).slice(0, 10) : '',
   }
@@ -139,7 +139,7 @@ function academicSaveErrorMessage(error: unknown): string {
   const status = err.response.status
   const serverMessage = String(err.response.data?.message ?? '').trim()
   if (status === 404 || status === 405) {
-    return '联系方式已保存；出生日期写接口尚未开放（PUT /profile/academic-info），填写内容已保留'
+    return '联系方式已保存；出生日期写接口不可用（PUT /profile/birth-date），填写内容已保留'
   }
   const fieldUnsupported =
     status === 422 ||
@@ -181,7 +181,7 @@ async function saveEdit() {
     ElMessage.warning(birthDateError)
     return
   }
-  // 联系方式（PUT /profile/contact）保存失败即终止流程，
+  // 两类保存（联系方式 PUT /profile/contact、出生日期 PUT /profile/birth-date）任一失败即终止流程，
   // 不继续执行后续「已保存」，避免成败提示并存；失败提示由请求拦截器统一给出
   savingEdit.value = true
   try {
@@ -200,11 +200,11 @@ async function saveEdit() {
 
   // 学籍补充信息单独提交：不混入 /profile/contact，失败也不回滚上面已保存的联系方式。
   // 政治面貌、学生状态、学历层次只读展示，不提交到任何更新接口；
-  // 只有出生日期变化时才调用写接口。
+  // 只有出生日期变化时才调用写接口（空串 = 清空）。
   const originalBirthDate = a.birthDate ? String(a.birthDate).slice(0, 10) : ''
   if (birthDate !== originalBirthDate) {
     try {
-      await updateAcademicInfo({ birthDate })
+      await updateBirthDate(birthDate)
     } catch (error) {
       savingEdit.value = false
       // 写接口不可用时按真实原因提示，且保持编辑态与用户输入，不提示「已保存」
@@ -375,17 +375,18 @@ async function handleAvatarUpload(base64: string) {
           ><el-form-item label="出生日期"
             ><el-date-picker
               v-model="formData.birthDate"
-              type="date"
               size="small"
-              value-format="YYYY-MM-DD"
+              type="date"
               format="YYYY-MM-DD"
+              value-format="YYYY-MM-DD"
               :disabled-date="disableBirthDate"
               placeholder="请选择出生日期"
               class="form-w" /></el-form-item
         ></el-col>
         <el-col :span="12"
           ><el-form-item label="学历层次"
-            ><span class="readonly-value">{{ degreeTypeText }}</span></el-form-item
+            ><span class="readonly-value">{{ degreeTypeText }}</span>
+            <span class="form-readonly-hint">（由管理员维护）</span></el-form-item
           ></el-col
         >
       </el-row>
@@ -471,6 +472,11 @@ async function handleAvatarUpload(base64: string) {
   min-height: 24px;
   font-size: 13px;
   color: #334155;
+}
+.form-readonly-hint {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 // ─── 夜间模式适配 ───
