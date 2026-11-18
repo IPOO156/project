@@ -7,7 +7,7 @@
  * 启停账号对接 PUT /admin/users/{id}/status。
  * 年级下拉取自 GET /admin/classes 的 grade 去重（后端 grade 过滤即按班级年级匹配）。
  */
-import type { UserDetail, UserListItem } from '@/shared/types/teacher'
+import type { UpdateUserPayload, UserDetail, UserListItem } from '@/shared/types/teacher'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { RefreshCw, Search } from 'lucide-vue-next'
 import { onMounted, reactive, ref } from 'vue'
@@ -21,6 +21,12 @@ import {
 } from '@/shared/api/teacher-api'
 
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
+import {
+  DEGREE_TYPE_OPTIONS,
+  POLITICAL_STATUS_OPTIONS,
+  STUDENT_STATUS_OPTIONS,
+} from '@/shared/constants/dict'
 import EmptyState from '@/shared/ui/EmptyState.vue'
 import RowActions from '@/shared/ui/RowActions.vue'
 import { formatDateTime } from '@/shared/utils/time'
@@ -160,17 +166,79 @@ async function openDetail(row: UserListItem) {
 }
 
 // ── 编辑 ──
+// 学籍字段（出生日期/学历层次/政治面貌/学生状态）仅管理员可写；
+// 保存时只提交发生变化的字段：未提交=不修改，空串=清空（后端 PUT /admin/users/{id}）。
 const editDialogVisible = ref(false)
-const editForm = reactive({ name: '', email: '', phone: '' })
+const editForm = reactive({
+  name: '',
+  email: '',
+  phone: '',
+  birthDate: '' as string | null,
+  degreeType: '' as string | null,
+  politicalStatus: '' as string | null,
+  studentStatus: '' as string | null,
+})
 const editUser = ref<UserListItem | null>(null)
 const savingEdit = ref(false)
+/** 详情加载中：未拿到原值时禁止提交学籍字段，避免空串覆盖已有值 */
+const editLoading = ref(false)
+type AcademicSnapshot = Pick<
+  UserDetail,
+  'birthDate' | 'degreeType' | 'politicalStatus' | 'studentStatus'
+>
+const editOriginal = ref<AcademicSnapshot | null>(null)
 
-function openEdit(row: UserListItem) {
+/** 政治面貌：后端字典优先，常量兜底（GET /common/dict?dictType=political_status） */
+const { options: politicalOptions, load: loadPoliticalOptions } = useRemoteDict(
+  'political_status',
+  POLITICAL_STATUS_OPTIONS,
+)
+
+/** 出生日期不得晚于今天（与后端校验一致） */
+function isFutureDate(date: Date): boolean {
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+  return date.getTime() > endOfToday.getTime()
+}
+
+async function openEdit(row: UserListItem) {
   editUser.value = row
-  editForm.name = row.name
-  editForm.email = row.email ?? ''
-  editForm.phone = row.phone ?? ''
+  editOriginal.value = null
+  Object.assign(editForm, {
+    name: row.name,
+    email: row.email ?? '',
+    phone: row.phone ?? '',
+    birthDate: '',
+    degreeType: '',
+    politicalStatus: '',
+    studentStatus: '',
+  })
   editDialogVisible.value = true
+  void loadPoliticalOptions()
+
+  editLoading.value = true
+  try {
+    const detailData = await getUserDetail(row.userId)
+    if (editUser.value?.userId !== row.userId) return
+    const original: AcademicSnapshot = {
+      birthDate: detailData.birthDate ?? '',
+      degreeType: detailData.degreeType ?? '',
+      politicalStatus: detailData.politicalStatus ?? '',
+      studentStatus: detailData.studentStatus ?? '',
+    }
+    editOriginal.value = original
+    Object.assign(editForm, original)
+  } catch {
+    /* 拦截器已提示；editOriginal 保持 null，保存时只提交基础字段 */
+  } finally {
+    if (editUser.value?.userId === row.userId) editLoading.value = false
+  }
+}
+
+function resetEditState() {
+  editUser.value = null
+  editOriginal.value = null
+  editLoading.value = false
 }
 
 async function handleSaveEdit() {
@@ -178,14 +246,29 @@ async function handleSaveEdit() {
     ElMessage.warning('请填写姓名')
     return
   }
-  if (!editUser.value) return
+  if (!editUser.value || editLoading.value) return
+  const payload: UpdateUserPayload = {
+    name: editForm.name.trim(),
+    email: editForm.email || undefined,
+    phone: editForm.phone || undefined,
+  }
+  // 只提交 dirty 字段：历史脏数据（如中文学历值）不会因为改姓名而触发校验失败
+  const original = editOriginal.value
+  if (original) {
+    const nextBirthDate = editForm.birthDate ?? ''
+    if (nextBirthDate !== original.birthDate) payload.birthDate = nextBirthDate
+    const nextDegreeType = editForm.degreeType ?? ''
+    if (nextDegreeType !== original.degreeType) payload.degreeType = nextDegreeType
+    const nextPoliticalStatus = editForm.politicalStatus ?? ''
+    if (nextPoliticalStatus !== original.politicalStatus) {
+      payload.politicalStatus = nextPoliticalStatus
+    }
+    const nextStudentStatus = editForm.studentStatus ?? ''
+    if (nextStudentStatus !== original.studentStatus) payload.studentStatus = nextStudentStatus
+  }
   savingEdit.value = true
   try {
-    await updateUser(editUser.value.userId, {
-      name: editForm.name.trim(),
-      email: editForm.email || undefined,
-      phone: editForm.phone || undefined,
-    })
+    await updateUser(editUser.value.userId, payload)
     ElMessage.success('已保存')
     editDialogVisible.value = false
     void load()
@@ -368,6 +451,16 @@ onMounted(() => {
         <el-descriptions-item label="学号">{{ detail.userNo }}</el-descriptions-item>
         <el-descriptions-item label="姓名">{{ detail.name }}</el-descriptions-item>
         <el-descriptions-item label="性别">{{ detail.genderLabel ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="出生日期">{{ detail.birthDate ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="学历层次">
+          {{ detail.degreeTypeLabel ?? '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="政治面貌">
+          {{ detail.politicalStatusLabel ?? '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="学生状态">
+          {{ detail.studentStatusLabel ?? '-' }}
+        </el-descriptions-item>
         <el-descriptions-item label="状态">
           <el-tag :type="detail.status === 1 ? 'success' : 'danger'" size="small">
             {{ detail.statusLabel }}
@@ -388,8 +481,8 @@ onMounted(() => {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="editDialogVisible" title="编辑账号" width="440px" @close="editUser = null">
-      <el-form label-width="80px">
+    <el-dialog v-model="editDialogVisible" title="编辑账号" width="560px" @close="resetEditState">
+      <el-form v-loading="editLoading" label-width="80px">
         <el-form-item label="学号">
           <span>{{ editUser?.userNo }}</span>
         </el-form-item>
@@ -402,13 +495,64 @@ onMounted(() => {
         <el-form-item label="手机">
           <el-input v-model="editForm.phone" maxlength="11" placeholder="手机" />
         </el-form-item>
+        <el-form-item label="出生日期">
+          <el-date-picker
+            v-model="editForm.birthDate"
+            type="date"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            :disabled-date="isFutureDate"
+            placeholder="请选择出生日期"
+            class="u-w-full"
+          />
+        </el-form-item>
+        <el-form-item label="学历层次">
+          <el-select v-model="editForm.degreeType" clearable placeholder="请选择" class="u-w-full">
+            <el-option
+              v-for="o in DEGREE_TYPE_OPTIONS"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="政治面貌">
+          <el-select
+            v-model="editForm.politicalStatus"
+            clearable
+            placeholder="请选择"
+            class="u-w-full"
+          >
+            <el-option
+              v-for="o in politicalOptions"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="学生状态">
+          <el-select
+            v-model="editForm.studentStatus"
+            clearable
+            placeholder="请选择"
+            class="u-w-full"
+          >
+            <el-option
+              v-for="o in STUDENT_STATUS_OPTIONS"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
+          </el-select>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editDialogVisible = false">取消</el-button>
         <el-button
           type="primary"
           :loading="savingEdit"
-          :disabled="savingEdit"
+          :disabled="savingEdit || editLoading"
           @click="handleSaveEdit"
           >保存</el-button
         >

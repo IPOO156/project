@@ -212,6 +212,9 @@ onMounted(() => void loadAll())
               <el-descriptions-item label="学籍状态">{{
                 profile.academicInfo?.studentStatusLabel ?? '-'
               }}</el-descriptions-item>
+              <el-descriptions-item label="学历层次">{{
+                profile.academicInfo?.degreeTypeLabel ?? '-'
+              }}</el-descriptions-item>
               <el-descriptions-item label="政治面貌">{{
                 profile.academicInfo?.politicalStatusLabel ?? '-'
               }}</el-descriptions-item>

@@ -8,13 +8,7 @@ import { ElMessage } from 'element-plus'
 import { Edit2, Info } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useArchiveStore, useUserStore } from '@/app/stores/stores'
-import {
-  updateAcademicInfo,
-  updatePoliticalStatus,
-  updateStudentStatus,
-} from '@/shared/api/student'
-import { useRemoteDict } from '@/shared/composables/useRemoteDict'
-import { POLITICAL_STATUS_OPTIONS, STUDENT_STATUS_OPTIONS } from '@/shared/constants/dict'
+import { updateBirthDate } from '@/shared/api/student'
 import { isValidEmail } from '@/shared/utils/validateEmail'
 import AvatarUploader from './components/AvatarUploader.vue'
 
@@ -22,9 +16,9 @@ const archiveStore = useArchiveStore()
 const userStore = useUserStore()
 
 // ── 基本资料编辑 ──
-// 学籍字段（学号/年级/专业/班级/姓名）属学术身份信息，仅只读展示，不进入编辑表单；
-// 编辑表单保留可更新的联系方式（邮箱/手机号 PUT /profile/contact）与
-// 政治面貌/学生状态（PUT /profile/political-status、/profile/student-status，见接口文档 4.1.5）。
+// 学籍字段（学号/年级/专业/班级/姓名/学历层次/政治面貌/学生状态）属学术身份信息，
+// 仅只读展示，由管理员在账号管理中维护；学生本人只能更新联系方式
+// （邮箱/手机号等 PUT /profile/contact）与出生日期（PUT /profile/birth-date）。
 const isEditing = ref(false)
 /** 基本资料「保存」提交中（最多串行 3 次 PUT，防连点重复提交） */
 const savingEdit = ref(false)
@@ -41,23 +35,10 @@ interface ProfileEditForm {
   emergencyName: string
   emergencyRelation: string
   emergencyPhone: string
-  politicalStatus?: string
-  studentStatus?: string
-  /**
-   * 出生日期（YYYY-MM-DD）。随「学籍补充信息」单独提交（PUT /profile/academic-info），
-   * 不混入 PUT /profile/contact 的六项联系方式。
-   */
-  birthDate?: string
-  /** 学历层次（自由输入，回显优先 degreeTypeLabel）。同上单独提交 */
-  degreeType?: string
+  birthDate: string
 }
 const formData = ref<Partial<ProfileEditForm>>({})
-/** 政治面貌：后端字典优先，常量兜底（GET /common/dict?dictType=political_status） */
-const { options: politicalOptions, load: loadPoliticalOptions } = useRemoteDict(
-  'political_status',
-  POLITICAL_STATUS_OPTIONS,
-)
-/** /profile/info 中的学籍信息（政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
+/** /profile/info 中的学籍信息（学历层次/政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
 const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})
 
 /**
@@ -85,14 +66,16 @@ function startEdit() {
     emergencyName: c?.emergencyName ?? '',
     emergencyRelation: c?.emergencyRelation ?? '',
     emergencyPhone: '',
-    politicalStatus: a.politicalStatus ?? '',
-    studentStatus: a.studentStatus ?? '',
-    // 以下两项单独提交（PUT /profile/academic-info），见 ProfileEditForm 注释
     birthDate: a.birthDate ?? '',
-    degreeType: a.degreeTypeLabel ?? a.degreeType ?? '',
   }
   isEditing.value = true
-  loadPoliticalOptions()
+}
+
+/** 出生日期不得晚于今天（与后端 PUT /profile/birth-date 校验一致） */
+function isFutureDate(date: Date): boolean {
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+  return date.getTime() > endOfToday.getTime()
 }
 async function saveEdit() {
   const a = academicInfo.value
@@ -113,7 +96,7 @@ async function saveEdit() {
     ElMessage.warning('请输入正确的邮箱地址')
     return
   }
-  // 三类保存（联系方式 PUT /profile/contact、政治面貌、学生状态）任一失败即终止流程，
+  // 两类保存（联系方式 PUT /profile/contact、出生日期 PUT /profile/birth-date）任一失败即终止流程，
   // 不继续执行后续「已保存」，避免成败提示并存；失败提示由请求拦截器统一给出
   savingEdit.value = true
   try {
@@ -125,50 +108,19 @@ async function saveEdit() {
       emergencyRelation: String(formData.value.emergencyRelation ?? '').trim(),
       emergencyPhone: String(formData.value.emergencyPhone ?? '').trim(),
     })
-    if (formData.value.politicalStatus && formData.value.politicalStatus !== a.politicalStatus) {
-      await updatePoliticalStatus(formData.value.politicalStatus)
-    }
-    if (formData.value.studentStatus && formData.value.studentStatus !== a.studentStatus) {
-      await updateStudentStatus(formData.value.studentStatus)
+    // 出生日期允许学生本人修改或清空；未变化时不发请求（空串=清空）
+    const nextBirthDate = String(formData.value.birthDate ?? '')
+    if (nextBirthDate !== (a.birthDate ?? '')) {
+      await updateBirthDate(nextBirthDate)
     }
   } catch {
-    savingEdit.value = false
     return
+  } finally {
+    savingEdit.value = false
   }
-
-  // 学籍补充信息单独提交：不混入 /profile/contact，失败也不回滚上面已保存的联系方式
-  const originalAcademic = {
-    birthDate: a.birthDate ?? '',
-    degreeType: a.degreeTypeLabel ?? a.degreeType ?? '',
-  }
-  const academicPayload = {
-    birthDate: formData.value.birthDate ?? '',
-    degreeType: formData.value.degreeType ?? '',
-  }
-  const academicChanged =
-    academicPayload.birthDate !== originalAcademic.birthDate ||
-    academicPayload.degreeType !== originalAcademic.degreeType
-  if (academicChanged) {
-    try {
-      await updateAcademicInfo(academicPayload)
-    } catch (error) {
-      savingEdit.value = false
-      // 后端写接口尚未实现（实测 404）：明确告知，且保持编辑态与用户输入，不提示「已保存」
-      const status = (error as { response?: { status?: number } } | null)?.response?.status
-      ElMessage.warning(
-        status === 404
-          ? '联系方式已保存；出生日期、学历层次暂不支持保存，填写内容已保留'
-          : '联系方式已保存；出生日期、学历层次保存失败，填写内容已保留',
-      )
-      await archiveStore.fetchArchive()
-      return
-    }
-  }
-
-  savingEdit.value = false
   isEditing.value = false
-  // 重新拉取 /profile/info，保证展示标签与后端一致
-  await archiveStore.fetchArchive()
+  // force 跳过 60s 缓存，保证展示值与刚保存的结果一致
+  await archiveStore.fetchArchive(true)
   ElMessage.success('已保存')
 }
 function cancelEdit() {
@@ -249,11 +201,11 @@ async function handleAvatarUpload(base64: string) {
       <el-descriptions-item label="学生状态">{{
         academicInfo.studentStatusLabel || '-'
       }}</el-descriptions-item>
-      <el-descriptions-item label="出生日期">{{
-        academicInfo.birthDate ?? '-'
-      }}</el-descriptions-item>
       <el-descriptions-item label="学历层次">{{
-        academicInfo.degreeTypeLabel ?? academicInfo.degreeType ?? '-'
+        academicInfo.degreeTypeLabel || '-'
+      }}</el-descriptions-item>
+      <el-descriptions-item label="出生日期">{{
+        academicInfo.birthDate || '-'
       }}</el-descriptions-item>
       <el-descriptions-item label="联系邮箱">{{ contactEmail || '-' }}</el-descriptions-item>
       <el-descriptions-item label="手机号">{{ contactPhone || '-' }}</el-descriptions-item>
@@ -266,9 +218,6 @@ async function handleAvatarUpload(base64: string) {
       <p class="contact-hint">
         联系邮箱、手机号、紧急联系人电话在展示时已脱敏；保存前请重新填写这三项。
         联系邮箱同时是「忘记密码」的验证码接收地址，请填写本人常用邮箱。
-      </p>
-      <p class="contact-hint">
-        出生日期、学历层次会单独提交保存；当前后端接口尚未开放，保存失败时会明确提示并保留填写内容。
       </p>
       <el-row :gutter="12">
         <el-col :span="12"
@@ -317,43 +266,23 @@ async function handleAvatarUpload(base64: string) {
               placeholder="请输入紧急联系人电话" /></el-form-item
         ></el-col>
         <el-col :span="12"
-          ><el-form-item label="政治面貌"
-            ><el-select v-model="formData.politicalStatus" size="small" class="form-w">
-              <el-option
-                v-for="o in politicalOptions"
-                :key="o.value"
-                :label="o.label"
-                :value="o.value" /></el-select></el-form-item
-        ></el-col>
-        <el-col :span="12"
-          ><el-form-item label="学生状态"
-            ><el-select v-model="formData.studentStatus" size="small" class="form-w">
-              <el-option
-                v-for="o in STUDENT_STATUS_OPTIONS"
-                :key="o.value"
-                :label="o.label"
-                :value="o.value" /></el-select></el-form-item
-        ></el-col>
-        <el-col :span="12"
           ><el-form-item label="出生日期"
             ><el-date-picker
               v-model="formData.birthDate"
-              type="date"
               size="small"
-              value-format="YYYY-MM-DD"
+              type="date"
               format="YYYY-MM-DD"
+              value-format="YYYY-MM-DD"
+              :disabled-date="isFutureDate"
               placeholder="请选择出生日期"
               class="form-w" /></el-form-item
         ></el-col>
         <el-col :span="12"
           ><el-form-item label="学历层次"
-            ><el-input
-              v-model="formData.degreeType"
-              size="small"
-              maxlength="20"
-              show-word-limit
-              placeholder="请输入学历层次" /></el-form-item
-        ></el-col>
+            ><span class="form-readonly">{{ academicInfo.degreeTypeLabel || '-' }}</span>
+            <span class="form-readonly-hint">（由管理员维护）</span></el-form-item
+          ></el-col
+        >
       </el-row>
     </el-form>
   </el-card>
@@ -429,6 +358,15 @@ async function handleAvatarUpload(base64: string) {
 }
 .form-w {
   width: 100%;
+}
+.form-readonly {
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+.form-readonly-hint {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 // ─── 夜间模式适配 ───
