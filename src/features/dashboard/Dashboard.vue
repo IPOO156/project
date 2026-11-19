@@ -144,7 +144,7 @@ const profileDimensions = computed(() => {
   if (home?.radarChart?.dimensions && home.radarChart.dimensions.length > 0) {
     const { dimensions, current, target, previous } = home.radarChart
     return dimensions.map((d: any, i: number) => {
-      // 距目标分取后端 indicators[].gap（已按 DECIMAL(5,2) 取整），
+      // 距满分差值取后端 indicators[].gap（已按 DECIMAL(5,2) 取整），
       // 不在前端用 target - current 重算，避免浮点误差带出 3.3999999999999986 这类尾数
       const indicator = (home.indicators ?? []).find(
         (ind) => ind.dimensionCode === d.code || ind.dimensionName === d.name,

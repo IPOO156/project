@@ -41,7 +41,7 @@ const hasProfileDimensions = computed(() => props.dimensions.length > 0)
  * 对比学期 Map 退为「取对比学期名做文案」的用途，不再单独决定有无基线。
  */
 /**
- * 距目标分：优先使用后端 gap（DECIMAL(5,2)，如 3.40），
+ * 距满分差值：优先使用后端 gap（DECIMAL(5,2)，如 3.40），
  * 后端未下发时才用 target - current 兜底，并收敛到两位小数
  * （浮点相减会出现 3.3999999999999986，直接渲染会带出一长串尾数）。
  */
@@ -67,16 +67,32 @@ const profileSummary = computed(() => {
       target: item.target,
       previous: item.previous,
       hasBaseline,
+      axisMax: resolveAxisMax(item, hasBaseline),
       deltaFromPrevious,
       // 开关为 true 但某维度没给对比学期名时退回通用文案，避免拼出「较undefined学期」
       deltaLabel: hasBaseline ? `较${comparedSemesterName ?? '上阶段'}学期` : '',
-      gapToTarget: resolveGap(item),
+      gapToFullScore: resolveGap(item),
       // 持平时既非上升也非下降，不再套用 is-up 的绿色（此前 +0 会被渲染成上升态）
       deltaClass: deltaFromPrevious > 0 ? 'is-up' : deltaFromPrevious < 0 ? 'is-down' : 'is-flat',
       deltaSign: deltaFromPrevious > 0 ? '+' : '',
     }
   })
 })
+
+/**
+ * 雷达图单轴刻度上限。
+ *
+ * 五个维度的满分（target）由指标权重决定且各不相同（如学业 40 分、社会实践 20 分，
+ * 五维合计 100）。若统一按 max: 100 绘制，满分为 8 分的维度拿满也只画到半径 8%，
+ * 当前画像会被整体压在圆心附近。改为每条轴按自身峰值自适应：
+ * 峰值取「当前值 / 满分 / 有基线时的上阶段值」的最大值再 × 1.1，
+ * 留出约 9% 余量，保证维度满分虚线稳定落在最外圈内侧、任一序列都不越界。
+ */
+function resolveAxisMax(item: ProfileDimension, hasBaseline: boolean): number {
+  const peak = Math.max(item.current, item.target, hasBaseline ? item.previous : 0)
+  // 峰值缺失/为 0 时退回 100，避免 ECharts 轴上限为 0 无法绘制
+  return peak > 0 ? Math.round(peak * 1.1 * 100) / 100 : 100
+}
 
 /**
  * 是否存在任一维度的环比基线。
@@ -88,7 +104,7 @@ const hasAnyComparison = computed(() => profileSummary.value.some((item) => item
 const radarLegendItems = computed(() => {
   const items = [
     { label: '当前画像', color: '#2d5a87' },
-    { label: '目标值', color: '#94a3b8' },
+    { label: '维度满分', color: '#94a3b8' },
   ]
   if (hasAnyComparison.value) items.push({ label: '上一阶段', color: '#a855f7' })
   return items
@@ -148,9 +164,9 @@ const radarOption = computed(() => {
           color: radarAxisColor.value,
         },
       },
-      indicator: props.dimensions.map((item) => ({
+      indicator: profileSummary.value.map((item) => ({
         name: item.label,
-        max: 100,
+        max: item.axisMax,
       })),
     },
     series: [
@@ -160,7 +176,7 @@ const radarOption = computed(() => {
         symbolSize: 7,
         data: [
           {
-            value: props.dimensions.map((item) => item.current),
+            value: profileSummary.value.map((item) => item.current),
             name: '当前画像',
             areaStyle: {
               color: 'rgba(45, 90, 135, 0.20)',
@@ -174,8 +190,8 @@ const radarOption = computed(() => {
             },
           },
           {
-            value: props.dimensions.map((item) => item.target),
-            name: '目标值',
+            value: profileSummary.value.map((item) => item.target),
+            name: '维度满分',
             lineStyle: {
               color: '#94a3b8',
               width: 2,
@@ -192,7 +208,7 @@ const radarOption = computed(() => {
           ...(hasAnyComparison.value
             ? [
                 {
-                  value: props.dimensions.map((item) => item.previous),
+                  value: profileSummary.value.map((item) => item.previous),
                   name: '上一阶段',
                   lineStyle: {
                     color: '#a855f7',
@@ -283,7 +299,7 @@ const radarOption = computed(() => {
             <span class="dim__fill" :style="{ width: `${clampScore(item.current)}%` }" />
             <span class="dim__target" :style="{ left: `${clampScore(item.target)}%` }" />
           </div>
-          <div class="dim__gap">距目标 {{ item.gapToTarget }}分</div>
+          <div class="dim__gap">距满分 {{ item.gapToFullScore }}分</div>
         </div>
       </div>
     </div>
