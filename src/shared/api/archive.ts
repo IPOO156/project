@@ -18,8 +18,11 @@ export interface TimelineAbility {
 export interface TimelineEventPayload {
   /** 学期 ID（growth_timelines.semester_id），需为有效学期 */
   semesterId?: number
-  /** 事件类型：1=奖项 2=成绩 3=实践 4=职业规划 5=短板改进 6=能力提升 */
-  eventType: number
+  /**
+   * 事件类型：1=奖项 2=成绩 3=实践 4=职业规划 5=短板改进 6=能力提升。
+   * 改为由后端按来源记录推导，前端新增/修改时不再提交；暂为可选以兼容后端过渡期。
+   */
+  eventType?: number
   /** 事件名称，最长 255 字符 */
   eventName: string
   /** 事件详细描述/富文本 */

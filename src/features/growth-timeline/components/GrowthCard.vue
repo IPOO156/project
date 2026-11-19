@@ -2,15 +2,17 @@
 import type { GrowthExperience } from '../timelineConstants'
 import { ElMessageBox } from 'element-plus'
 import {
-  FlaskConical,
+  Briefcase,
   GraduationCap,
   HeartHandshake,
   Pencil,
+  Sparkles,
   Trash2,
+  TrendingUp,
   Trophy,
 } from 'lucide-vue-next'
-import { GROWTH_TAG_COLORS } from '@/shared/constants/dict'
 import { useSemesterRings } from '../composables/useSemesterRings'
+import { TIMELINE_EVENT_TYPE_COLORS } from '../timelineConstants'
 
 interface Props {
   experience: GrowthExperience
@@ -49,19 +51,28 @@ function handleEdit(event: MouseEvent) {
   emit('edit', props.experience.id)
 }
 
-function getTypeIcon(tag: string) {
-  if (tag?.includes('竞赛')) return Trophy
-  if (tag?.includes('科研')) return FlaskConical
-  if (tag?.includes('实践')) return HeartHandshake
-  if (tag?.includes('学业')) return GraduationCap
-  return Trophy
+/** 事件类型图标：按后端 eventType（1-6）取，不再根据标签文字猜测 */
+function getTypeIcon(type?: number) {
+  switch (type) {
+    case 1:
+      return Trophy
+    case 2:
+      return GraduationCap
+    case 3:
+      return HeartHandshake
+    case 4:
+      return Briefcase
+    case 5:
+      return TrendingUp
+    case 6:
+      return Sparkles
+    default:
+      return Sparkles
+  }
 }
 
-function getTypeColor(tag: string): string {
-  for (const [key, color] of Object.entries(GROWTH_TAG_COLORS)) {
-    if (tag?.includes(key)) return color
-  }
-  return '#8b6340'
+function getTypeColor(type?: number): string {
+  return (type != null ? TIMELINE_EVENT_TYPE_COLORS[type] : undefined) ?? '#8b6340'
 }
 </script>
 
@@ -84,13 +95,14 @@ function getTypeColor(tag: string): string {
       <span class="card-index" aria-hidden="true">{{ String(index + 1).padStart(2, '0') }}</span>
     </div>
     <div class="card-top">
-      <div
-        v-if="experience.tags.length"
-        class="card-type-indicator"
-        :style="{ '--type-color': getTypeColor(experience.tags[0]) }"
+      <span
+        v-if="experience.eventTypeLabel"
+        class="card-type-badge"
+        :style="{ '--type-color': getTypeColor(experience.eventType) }"
       >
-        <component :is="getTypeIcon(experience.tags[0])" :size="12" />
-      </div>
+        <component :is="getTypeIcon(experience.eventType)" :size="12" />
+        <span>{{ experience.eventTypeLabel }}</span>
+      </span>
       <span v-if="experience.semester" class="card-season-badge">{{
         semesterLabel(experience.semester)
       }}</span>
@@ -163,8 +175,9 @@ function getTypeColor(tag: string): string {
 
 .card-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.5rem 0.8rem;
   margin-bottom: 1rem;
   padding-right: 6.25rem;
 }
@@ -251,16 +264,21 @@ function getTypeColor(tag: string): string {
   transform: scale(0.96);
 }
 
-.card-type-indicator {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+/* 事件类型：后端只读字段，独立于用户标签展示 */
+.card-type-badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: rgba(var(--gt-bark-rgb, 61 43 31), 0.06);
+  gap: 0.35rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 100px;
+  border: 1px solid color-mix(in srgb, var(--type-color, #8b6340) 35%, transparent);
+  background: color-mix(in srgb, var(--type-color, #8b6340) 8%, transparent);
   color: var(--type-color, var(--gt-accent, #8b6340));
+  font-family: var(--gt-font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .card-season-badge {
@@ -546,8 +564,9 @@ function getTypeColor(tag: string): string {
   color: var(--gt-on-accent, #0f172a);
 }
 
-[data-theme='dark'] .card-type-indicator {
-  background: rgba(var(--gt-bark-rgb, 200 180 160), 0.1);
+[data-theme='dark'] .card-type-badge {
+  background: color-mix(in srgb, var(--type-color, #d4a574) 16%, transparent);
+  border-color: color-mix(in srgb, var(--type-color, #d4a574) 45%, transparent);
 }
 
 [data-theme='dark'] .card-season-badge {

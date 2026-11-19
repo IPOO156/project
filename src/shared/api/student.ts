@@ -126,6 +126,15 @@ export interface ProfileInfo {
     averageScore: number
     rankInClass: number
     rankInMajor: number
+    /** 本学期逐课期末成绩（gpa_records，按 courseCode 升序）；无课程记录时为 [] 或省略 */
+    courses?: Array<{
+      courseCode: string
+      courseName: string
+      courseType: string
+      credit: number
+      gpa: number
+      score: number
+    }>
   }>
   /**
    * 累计学分加权绩点（各学期 gpa 按 total_credit 加权 / 累计总学分）。

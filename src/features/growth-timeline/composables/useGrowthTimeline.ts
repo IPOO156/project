@@ -9,12 +9,6 @@ import {
 import { getGrowthTimeline } from '@/shared/api/student'
 import { mapTimelineEventType } from '../timelineConstants'
 
-/** 来源类型 → 事件类型（接口文档 4.2.1：eventType 仅用于分类筛选，不参与计分） */
-const EVENT_TYPE_BY_SOURCE: Record<string, number> = {
-  award_applications: 1, // 奖项
-  career_plans: 4, // 职业规划
-}
-
 /** 后端成长时间轴 summary；字段缺失/非法时为 null，表示「无数据」而不是 0 */
 export interface GrowthSummary {
   experiences: number | null
@@ -74,6 +68,7 @@ function normalizeSummary(raw: unknown): GrowthSummary | null {
 
 /** 将后端成长时间轴事件映射为前端 GrowthExperience 结构（eventName→title、content→description、eventAt→date、sourceId→recordId） */
 function mapBackendEvent(e: Record<string, any>): GrowthExperience {
+  const eventType = typeof e.eventType === 'number' ? e.eventType : undefined
   return {
     id: `backend-${e.id}`,
     title: e.eventName ?? '',
@@ -81,10 +76,11 @@ function mapBackendEvent(e: Record<string, any>): GrowthExperience {
     date: e.eventAt ?? '',
     // 学期只认后端返回值（后端按 eventAt 归集 semester_id 后回传 semesterName），前端不推导
     semester: e.semesterName ?? '',
-    // 事件类型标签与后端 tags 可能重复（如「实践」既是类型又被后端回传），去重避免卡片出现重复标签
-    tags: [
-      ...new Set([mapTimelineEventType(e.eventType), ...(Array.isArray(e.tags) ? e.tags : [])]),
-    ],
+    // tags 只保留用户自填标签：事件类型是独立只读字段，不能混进标签里展示
+    tags: [...new Set(Array.isArray(e.tags) ? e.tags : [])],
+    eventType,
+    eventTypeLabel:
+      e.eventTypeLabel || (eventType != null ? mapTimelineEventType(eventType) : undefined),
     skills: mapAbilities(e.abilityData),
     recordId: e.sourceId != null ? String(e.sourceId) : undefined,
     statusLabel: e.statusLabel || undefined,
@@ -186,7 +182,7 @@ export function useGrowthTimeline() {
     const newExperience: GrowthExperience = {
       ...payload,
       id: localId,
-      // 能力成长由后端按 eventType 推断回传，新增时本地为空，保存成功后会重拉列表覆盖
+      // 能力成长与事件类型都由后端推导后回传，新增时本地为空，保存成功后会用后端详情替换
       skills: [],
       // 后端按 eventAt 归集学期并在响应中回传 semesterName，前端不本地推导
       semester: '',
@@ -202,9 +198,8 @@ export function useGrowthTimeline() {
     // 能力成长（abilityData）由后端按来源类型套用管理端计分规则生成，前端不再提交。
     try {
       const created = await addTimelineEvent({
-        // 事件类型按来源归类（接口文档 4.2.1：eventType 仅用于分类筛选，不参与计分）：
-        // 奖项报名=1 奖项，职业规划=4 职业规划，其余申报记录=6 能力提升
-        eventType: EVENT_TYPE_BY_SOURCE[payload.sourceType ?? ''] ?? 6,
+        // 事件类型（eventType）由后端按来源记录推导，前端不再提交：
+        // 前端按 sourceType 硬编码 1/4/6 既不准确（如成绩类来源），又会让类型混进展示层
         eventName: payload.title,
         content: payload.description,
         eventAt: payload.date,
