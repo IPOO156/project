@@ -31,7 +31,11 @@ export function mapInterests(profile: any): Interest[] | null {
   }))
 }
 
-/** 学期成绩 → Grade（后端暂无逐课字段，按学期聚合展示，不编造课程行） */
+/**
+ * 学期成绩 → Grade（仅学期汇总行）。
+ * 逐课明细（semesterGrades[].courses）不在这里展开，避免影响 AI 分析/简历等按学期聚合的消费方；
+ * 档案页成绩卡直接读 profileData.semesterGrades[].courses 逐科展示。
+ */
 export function mapGrades(profile: any): Grade[] | null {
   if (!Array.isArray(profile?.semesterGrades)) return null
   return profile.semesterGrades.map((s: any, i: number) => {

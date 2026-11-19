@@ -109,6 +109,38 @@ const totalAwardCount = computed<number | string>(() =>
       ),
 )
 
+interface CourseGradeRow {
+  courseCode: string
+  courseName: string
+  courseType: string
+  credit: number
+  gpa: number
+  score: number
+}
+
+/**
+ * 逐课成绩明细：/profile/info 的 semesterGrades[].courses（来自 gpa_records），
+ * 按学期名归组。后端未返回 courses 时为空对象，卡片退化为仅学期汇总。
+ */
+const gradeCourseMap = computed<Record<string, CourseGradeRow[]>>(() => {
+  const result: Record<string, CourseGradeRow[]> = {}
+  const semesters = archiveStore.profileData?.semesterGrades
+  if (!Array.isArray(semesters)) return result
+  for (const s of semesters) {
+    const key = s.semesterName || s.semester || '学期'
+    if (!Array.isArray(s.courses) || s.courses.length === 0) continue
+    result[key] = s.courses.map((c: any) => ({
+      courseCode: String(c.courseCode ?? ''),
+      courseName: String(c.courseName ?? '未命名课程'),
+      courseType: String(c.courseType ?? ''),
+      credit: Number(c.credit ?? 0),
+      gpa: Number(c.gpa ?? 0),
+      score: Number(c.score ?? 0),
+    }))
+  }
+  return result
+})
+
 const gradeSummary = computed(() => {
   const map = new Map<
     string,
@@ -129,10 +161,14 @@ const gradeSummary = computed(() => {
       courses: e.courses,
       gpa: e.creditSum > 0 ? +(e.gpaSum / e.creditSum).toFixed(2) : 0,
       totalScore: e.creditSum > 0 ? +(e.scoreSum / e.creditSum).toFixed(1) : 0,
+      courseList: gradeCourseMap.value[s] ?? [],
     }))
 })
 
-const hasGradeDetail = computed(() => archiveStore.grades.some((g) => !g.isAggregate))
+const hasGradeDetail = computed(
+  () =>
+    archiveStore.grades.some((g) => !g.isAggregate) || Object.keys(gradeCourseMap.value).length > 0,
+)
 
 const DIMENSION_COLORS_LIGHT = ['#4a7fb5', '#10b981', '#d4a574', '#8b5cf6', '#f59e0b']
 const DIMENSION_COLORS_DARK = ['#60a5fa', '#34d399', '#f0b87b', '#a78bfa', '#fbbf24']

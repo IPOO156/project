@@ -1,12 +1,26 @@
 <script setup lang="ts">
 /**
- * 期末成绩卡片（纯展示）：按学期汇总的绩点/均分/课程数由父级 ProfileInfo 计算后传入。
+ * 期末成绩卡片：按学期展示汇总（绩点/均分/课程数），
+ * 若后端回传了 semesterGrades[].courses，则逐科列出每门课的期末成绩。
  */
 import { GraduationCap } from 'lucide-vue-next'
 
 defineProps<{
-  /** 各学期成绩汇总（已按学期升序） */
-  gradeSummary: Array<{ semester: string; courses: number; gpa: number; totalScore: number }>
+  /** 各学期成绩汇总（已按学期升序），courseList 为该学期逐课明细 */
+  gradeSummary: Array<{
+    semester: string
+    courses: number
+    gpa: number
+    totalScore: number
+    courseList?: Array<{
+      courseCode: string
+      courseName: string
+      courseType: string
+      credit: number
+      gpa: number
+      score: number
+    }>
+  }>
   /** 平均绩点文案（后端 overallGpa；加载失败时为 '--'） */
   avgGpa: string
   /** 是否存在逐课明细；false 时展示「仅学期汇总」说明 */
@@ -39,9 +53,27 @@ defineProps<{
             ><span class="grade-item__lbl">课程</span>
           </div>
         </div>
+
+        <div v-if="g.courseList?.length" class="course-list">
+          <div
+            v-for="(c, i) in g.courseList"
+            :key="c.courseCode || `${c.courseName}-${i}`"
+            class="course-row"
+          >
+            <span class="course-row__name">{{ c.courseName }}</span>
+            <span class="course-row__meta">
+              {{
+                [c.courseType, c.credit ? `${c.credit} 学分` : '', c.gpa ? `绩点 ${c.gpa}` : '']
+                  .filter(Boolean)
+                  .join(' · ')
+              }}
+            </span>
+            <span class="course-row__score">{{ c.score }}</span>
+          </div>
+        </div>
       </div>
     </div>
-    <p v-if="hasDetail === false" class="grade-note">后端未提供逐课明细，以上按学期汇总展示</p>
+    <p v-if="hasDetail === false" class="grade-note">暂无课程明细，当前按学期汇总展示</p>
   </el-card>
 </template>
 
@@ -117,6 +149,42 @@ defineProps<{
   color: #cbd5e1;
 }
 
+// 逐课成绩
+.course-list {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.course-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+}
+.course-row__name {
+  flex: 1;
+  min-width: 0;
+  color: #334155;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.course-row__meta {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+.course-row__score {
+  min-width: 40px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
 // ─── 夜间模式适配 ───
 html.dark {
   .section-card {
@@ -139,6 +207,18 @@ html.dark {
   }
   .grade-item__lbl {
     color: #64748b;
+  }
+  .course-list {
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  .course-row__name {
+    color: #cbd5e1;
+  }
+  .course-row__meta {
+    color: #64748b;
+  }
+  .course-row__score {
+    color: #f1f5f9;
   }
 }
 </style>
