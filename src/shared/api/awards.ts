@@ -1,3 +1,5 @@
+import type { RawGuideResponse } from './applications'
+import { normalizeGuideResponse } from './applications'
 import request from './request'
 
 /** 奖项报名通用字段（award_applications 表，字段与后端一致） */
@@ -77,7 +79,7 @@ export function awardDuplicateCheck(payload: {
 }
 
 /** 获取奖项评选说明（GET /awards/{type}/guide） */
-export function getAwardGuide(type: string): Promise<{
+export async function getAwardGuide(type: string): Promise<{
   type: string
   typeLabel: string
   title: string
@@ -86,7 +88,10 @@ export function getAwardGuide(type: string): Promise<{
   notes: string[]
   updatedAt: string
 }> {
-  return request.get(`/awards/${type}/guide`)
+  // 文档 8.1.3 约定归一化字段，但档案侧同源接口实测返回 evaluate* 原始字段；
+  // 奖项侧复用同一归一化逻辑，两种响应形状都能渲染。
+  const raw = (await request.get(`/awards/${type}/guide`)) as RawGuideResponse | null
+  return normalizeGuideResponse(raw, type)
 }
 
 /** 获取奖项版本历史（GET /awards/{applicationId}/versions） */
@@ -134,7 +139,7 @@ export function addResearchProject(
   payload: {
     projectName: string
     projectLevel: string
-    rankTotal: string
+    rankTotal?: string
     establishedTime: string
     evidenceFileIds?: number[]
   },
@@ -147,7 +152,7 @@ export function addResearchSoftware(
   researchStarId: number,
   payload: {
     softwareName: string
-    rankTotal: string
+    rankTotal?: string
     approvedTime: string
     evidenceFileIds?: number[]
   },
@@ -161,7 +166,7 @@ export function addResearchPaper(
   payload: {
     journalName: string
     paperTitle: string
-    rankTotal: string
+    rankTotal?: string
     publishedTime: string
     evidenceFileIds?: number[]
   },

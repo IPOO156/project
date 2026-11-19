@@ -22,7 +22,8 @@ export interface HomeDashboard {
     dimensionCode: string
     dimensionName: string
     score: number
-    trend: string
+    /** 维度趋势，与 change 同源；无对比学期时为 null */
+    trend: string | null
     targetScore: number
     gap: number
     unit: string
@@ -82,7 +83,8 @@ export interface ProfileInfo {
     politicalStatusLabel: string
     studentStatus: string
     studentStatusLabel: string
-    birthDate: string
+    /** 出生日期由教务系统同步，未同步/未填写时后端返回 null */
+    birthDate: string | null
   }
   contactInfo: {
     /** 本人邮箱；后端 @Sensitive 脱敏返回（如 138****1234），不可直接回填提交 */
@@ -163,9 +165,9 @@ export function getProfileScores(semesterId?: number): Promise<{
   calculatedAt: string
   ruleVersion: number
   calculationId: number
-  /** 综合评分 = Σ各维度得分（0-100）；无评分记录时为 null */
+  /** 综合评分（加权总分）= Σ(各维度 score × weight)；无评分记录时为 null */
   totalScore: number | null
-  /** 综合评分满分 = Σ各维度目标分；无评分记录时为 null */
+  /** 综合评分满分，恒为 100（= Σweight × 100）；无评分记录时为 null */
   maxTotalScore: number | null
   list: Array<{
     dimensionCode: string
@@ -175,7 +177,8 @@ export function getProfileScores(semesterId?: number): Promise<{
     /** 维度权重（0-1）= 该维度下指标权重之和 = targetScore / 100。后端权威值，优先于前端推算 */
     weight: number | null
     gap: number
-    change?: string
+    /** 与对比学期的变化，恒带符号（+7/-3/+0）；无对比学期时为 null */
+    change?: string | null
     comparedSemesterId?: number
     comparedSemesterName?: string
     unit: string
@@ -248,14 +251,6 @@ export function updateProfileContact(payload: {
   emergencyPhone: string | null
 }> {
   return request.put('/profile/contact', payload)
-}
-
-/**
- * 更新出生日期（PUT /profile/birth-date）
- * 传空字符串表示清空；学历层次、政治面貌、学生状态由管理员维护，学生端不提供写接口。
- */
-export function updateBirthDate(birthDate: string): Promise<{ birthDate: string | null }> {
-  return request.put('/profile/birth-date', { birthDate })
 }
 
 /** 更新自我评价（PUT /profile/self-evaluation） */

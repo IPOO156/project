@@ -130,14 +130,14 @@ export const registeredModules: AppModule[] = [
   },
   {
     id: 'applications',
-    label: '个人档案信息申报',
+    label: '申报中心',
     icon: FilePen,
     order: 30,
     routePrefix: '/applications',
     description: '个人档案申报情况总览与档案完整度',
     // 入口直接落到「申报看板」：/applications 是无 tab 参数的申报表单 hub，
-    // 会静默回落到首个分类（学科竞赛），点「个人档案信息申报」却进了竞赛填报页。
-    menuItems: [{ label: '个人档案信息申报', icon: FilePen, path: '/approval/pending' }],
+    // 会静默回落到首个分类（学科竞赛），点「申报中心」却进了竞赛填报页。
+    menuItems: [{ label: '申报中心', icon: FilePen, path: '/approval/pending' }],
   },
   {
     id: 'awards',
