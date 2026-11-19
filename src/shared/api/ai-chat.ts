@@ -155,6 +155,6 @@ export function deleteAIConversation(conversationId: number): Promise<void> {
 export function renameAIConversation(
   conversationId: number,
   title: string,
-): Promise<{ id: number; title: string }> {
+): Promise<{ conversationId: number; title: string; updatedAt: string }> {
   return request.put(`/ai/conversations/${conversationId}`, { title })
 }

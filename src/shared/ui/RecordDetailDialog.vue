@@ -116,6 +116,8 @@ function formatValue(key: string, val: unknown): string {
   if (key === 'status') {
     return APPLICATION_STATUS[val as keyof typeof APPLICATION_STATUS]?.label ?? String(val)
   }
+  // 获奖时间只精确到月份：后端存的是当月 1 日，详情展示不应出现“具体到日”的假精度
+  if (key === 'awardDate') return String(val).slice(0, 7)
   if (key === 'proofMaterials') return formatProofMaterials(val)
   if (Array.isArray(val))
     return val.map((i) => (typeof i === 'object' ? JSON.stringify(i) : String(i))).join('、')
@@ -132,10 +134,13 @@ function formatValue(key: string, val: unknown): string {
 const displayItems = computed(() => {
   if (!props.record) return []
   const order = Object.fromEntries(Object.keys(FIELD_LABELS).map((k, i) => [k, i]))
-  return Object.entries(props.record)
-    .filter(([key, val]) => FIELD_LABELS[key] && !isEmpty(val))
-    .sort(([a], [b]) => order[a] - order[b])
-    .map(([key, val]) => ({ key, label: FIELD_LABELS[key], value: formatValue(key, val) }))
+  return (
+    Object.entries(props.record)
+      // title 是后端派生的展示标题，和业务名称（竞赛名称/项目名称等）重复，详情里不再渲染
+      .filter(([key, val]) => key !== 'title' && FIELD_LABELS[key] && !isEmpty(val))
+      .sort(([a], [b]) => order[a] - order[b])
+      .map(([key, val]) => ({ key, label: FIELD_LABELS[key], value: formatValue(key, val) }))
+  )
 })
 </script>
 

@@ -52,7 +52,8 @@ function fetchCareerPlanPage(page: number): Promise<{ list: any[]; total: number
     .get('/profile/career-plans', { params: { page, per_page: CAREER_PLAN_PAGE_SIZE } })
     .then((res: any) => ({
       list: Array.isArray(res?.list) ? res.list : [],
-      total: Number(res?.total) || 0,
+      // 文档 4.3 的 total 位于 pagination 内，无顶层 total；兼容部分接口额外返回顶层 total
+      total: Number(res?.pagination?.total ?? res?.total) || 0,
     }))
 }
 

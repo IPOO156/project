@@ -5,11 +5,13 @@
  * - 本地短板分析：来自 useCareerPlanStore.aiAnalysis（AI 助手回流）
  */
 import type { AISuggestion } from '@/features/ai-chat/ai-chat.types'
+import type { CareerAnalysis } from '@/shared/types/types'
 import { ElMessage } from 'element-plus'
 import { AlertTriangle, Sparkles } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
-import { useCareerPlanStore } from '@/app/stores/stores'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { useArchiveStore, useCareerPlanStore } from '@/app/stores/stores'
 import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
+import { analyzeCareer } from '@/features/ai-chat/composables/useCareerAnalysis'
 import { getAISuggestions } from '@/shared/api/ai-chat'
 import { aiAddCareerPlan, getSemesterIdByName } from '@/shared/api/career-plan'
 import { useSemesters } from '@/shared/composables/useSemesters'
@@ -20,10 +22,18 @@ const props = defineProps<{
 }>()
 
 const careerPlanStore = useCareerPlanStore()
+const archiveStore = useArchiveStore()
 const aiAnalysis = computed(() => careerPlanStore.aiAnalysis)
+/** 卡片内展示的分析：逐字流式填充；store 里保留完整结果供其他页面使用 */
+const displayAnalysis = ref<CareerAnalysis | null>(careerPlanStore.aiAnalysis)
+const streaming = ref(false)
+let streamTimer: ReturnType<typeof setInterval> | null = null
+let streamVersion = 0
 
 const backendSuggestions = ref<AISuggestion[]>([])
 const suggestionsLoading = ref(false)
+/** 卡片内联分析加载态（不再跳转 AI 抽屉） */
+const analyzing = ref(false)
 /** 后端建议展示形状：模板只读加工后字段，避免复杂表达式 */
 const displaySuggestions = computed(() =>
   backendSuggestions.value.map((s) => ({
@@ -35,7 +45,11 @@ const displaySuggestions = computed(() =>
   })),
 )
 const emptyText = computed(() =>
-  suggestionsLoading.value ? '正在加载 AI 建议…' : '点击「开始分析」获取个性化改进建议',
+  analyzing.value
+    ? '正在分析你的档案数据…'
+    : suggestionsLoading.value
+      ? '正在加载 AI 建议…'
+      : '点击「开始分析」获取个性化改进建议',
 )
 
 /** 拉取最新规划的后端 AI 建议；后端不可用时清空，回退现有本地分析 */
@@ -70,6 +84,188 @@ const aiInitialQuestion = '请分析我的职业规划短板并给出改进建�
 function openAIDrawer() {
   aiDrawerKey.value++
   aiDrawerVisible.value = true
+}
+
+function stopStream() {
+  streamVersion++
+  if (streamTimer) {
+    clearInterval(streamTimer)
+    streamTimer = null
+  }
+  streaming.value = false
+}
+
+/**
+ * 模拟流式输出：摘要逐字出现，每条短板的“问题/建议”也逐字输出，
+ * 短板之间留出停顿，最后补依据材料。
+ * 后端 AI 接口目前没有 SSE/流式端点，这里用前端渐进渲染实现“边分析边输出”的观感。
+ */
+function streamAnalysis(analysis: CareerAnalysis): Promise<void> {
+  stopStream()
+  const version = ++streamVersion
+  const summary = analysis.summary ?? ''
+  const weaknesses = analysis.weaknesses ?? []
+  displayAnalysis.value = { ...analysis, summary: '', weaknesses: [], materials: [] }
+  streaming.value = true
+  type Phase = 'summary' | 'weakness' | 'suggestion' | 'pause' | 'done'
+  type WeaknessItem = NonNullable<CareerAnalysis['weaknesses']>[number]
+  let phase: Phase = 'summary'
+  let summaryIndex = 0
+  let weaknessIndex = 0
+  let charIndex = 0
+  let pause = 0
+
+  function addWeakness(item: WeaknessItem) {
+    displayAnalysis.value = {
+      ...analysis,
+      summary,
+      weaknesses: [
+        ...(displayAnalysis.value?.weaknesses ?? []),
+        { ...item, weakness: '', suggestion: '' },
+      ],
+      materials: [],
+    }
+  }
+
+  function updateWeakness(index: number, patch: Partial<WeaknessItem>) {
+    const current = displayAnalysis.value
+    if (!current) return
+    displayAnalysis.value = {
+      ...current,
+      weaknesses: (current.weaknesses ?? []).map((item, i) =>
+        i === index ? { ...item, ...patch } : item,
+      ),
+    }
+  }
+
+  return new Promise((resolve) => {
+    function finish() {
+      displayAnalysis.value = { ...analysis }
+      streaming.value = false
+      phase = 'done'
+      if (streamTimer) {
+        clearInterval(streamTimer)
+        streamTimer = null
+      }
+      resolve()
+    }
+
+    streamTimer = setInterval(() => {
+      if (version !== streamVersion) {
+        if (streamTimer) {
+          clearInterval(streamTimer)
+          streamTimer = null
+        }
+        resolve()
+        return
+      }
+      if (phase === 'done') return
+
+      if (phase === 'summary') {
+        if (summaryIndex < summary.length) {
+          summaryIndex++
+          displayAnalysis.value = {
+            ...analysis,
+            summary: summary.slice(0, summaryIndex),
+            weaknesses: [],
+            materials: [],
+          }
+          return
+        }
+        if (weaknesses.length) {
+          weaknessIndex = 0
+          addWeakness(weaknesses[0])
+          charIndex = 0
+          phase = 'weakness'
+        } else {
+          finish()
+        }
+        return
+      }
+
+      if (phase === 'weakness') {
+        const item = weaknesses[weaknessIndex]
+        if (!item) {
+          finish()
+          return
+        }
+        if (charIndex < item.weakness.length) {
+          charIndex++
+          updateWeakness(weaknessIndex, { weakness: item.weakness.slice(0, charIndex) })
+          return
+        }
+        charIndex = 0
+        phase = 'suggestion'
+        return
+      }
+
+      if (phase === 'suggestion') {
+        const item = weaknesses[weaknessIndex]
+        if (!item) {
+          finish()
+          return
+        }
+        if (charIndex < item.suggestion.length) {
+          charIndex++
+          updateWeakness(weaknessIndex, { suggestion: item.suggestion.slice(0, charIndex) })
+          return
+        }
+        phase = 'pause'
+        pause = 8
+        return
+      }
+
+      if (phase === 'pause') {
+        if (pause > 0) {
+          pause--
+          return
+        }
+        weaknessIndex++
+        if (weaknessIndex < weaknesses.length) {
+          addWeakness(weaknesses[weaknessIndex])
+          charIndex = 0
+          phase = 'weakness'
+        } else {
+          finish()
+        }
+      }
+    }, 20)
+  })
+}
+
+onBeforeUnmount(stopStream)
+
+/**
+ * 开始分析：直接在卡片内生成结构化短板分析并写入 store。
+ * 此前面板按钮只打开 AI 抽屉，分析结果留在对话里，卡片区域一直是空的。
+ */
+async function startAnalysis() {
+  if (analyzing.value) return
+  analyzing.value = true
+  stopStream()
+  displayAnalysis.value = null
+  try {
+    if (archiveStore.dimensions.length === 0) {
+      await archiveStore.fetchArchive()
+    }
+    const analysis = analyzeCareer(
+      archiveStore.dimensions,
+      archiveStore.awards,
+      archiveStore.grades,
+      careerPlanStore.plans,
+    )
+    if (!analysis) {
+      ElMessage.warning('档案数据尚未加载完成，请稍后再试')
+      return
+    }
+    careerPlanStore.setAIAnalysis(analysis)
+    void loadAISuggestions()
+    await streamAnalysis(analysis)
+  } catch {
+    ElMessage.error('分析失败，请稍后重试')
+  } finally {
+    analyzing.value = false
+  }
 }
 
 /* ===================== AI 建议一键采纳（4.15） ===================== */
@@ -124,9 +320,17 @@ async function confirmAdopt() {
     <template #header>
       <div class="card-space">
         <span class="card-title">AI 深度分析</span>
-        <el-button size="small" type="primary" :icon="Sparkles" @click="openAIDrawer"
-          >开始分析</el-button
-        >
+        <div class="card-actions">
+          <el-button
+            size="small"
+            type="primary"
+            :icon="Sparkles"
+            :loading="analyzing"
+            @click="startAnalysis"
+            >{{ aiAnalysis ? '重新分析' : '开始分析' }}</el-button
+          >
+          <el-button size="small" link @click="openAIDrawer">和 AI 深入聊</el-button>
+        </div>
       </div>
     </template>
     <!-- 后端 AI 辅助建议（GET /ai/suggestions，sourceType=career_plan） -->
@@ -154,24 +358,29 @@ async function confirmAdopt() {
         </div>
       </div>
     </div>
-    <div v-if="aiAnalysis" class="ai-result">
+    <div v-if="displayAnalysis" class="ai-result">
       <div class="ai-result__head">
         <Sparkles :size="16" class="ai-result__icon" />
         <h4 class="ai-result__title">个人化短板分析</h4>
-        <span class="ai-result__time">{{ aiAnalysis.generatedAt }}</span>
+        <span v-if="streaming" class="ai-result__time ai-result__time--live">正在生成…</span>
+        <span v-else class="ai-result__time">{{ displayAnalysis.generatedAt }}</span>
       </div>
-      <p v-if="aiAnalysis.summary" class="ai-result__summary">
-        {{ aiAnalysis.summary }}
+      <p
+        v-if="displayAnalysis.summary"
+        class="ai-result__summary"
+        :class="{ 'is-streaming': streaming }"
+      >
+        {{ displayAnalysis.summary }}
       </p>
-      <div v-if="aiAnalysis.materials?.length" class="ai-result__materials">
+      <div v-if="displayAnalysis.materials?.length" class="ai-result__materials">
         <span class="ai-result__materials-label">依据材料：</span>
-        <span v-for="(m, i) in aiAnalysis.materials" :key="i" class="ai-result__chip">
+        <span v-for="(m, i) in displayAnalysis.materials" :key="i" class="ai-result__chip">
           {{ m }}
         </span>
       </div>
-      <div v-if="aiAnalysis.weaknesses?.length" class="ai-result__list">
+      <div v-if="displayAnalysis.weaknesses?.length" class="ai-result__list">
         <div
-          v-for="(item, i) in aiAnalysis.weaknesses"
+          v-for="(item, i) in displayAnalysis.weaknesses"
           :key="`${item.dimension}-${i}`"
           class="ai-item"
         >
@@ -231,7 +440,7 @@ async function confirmAdopt() {
   }
 
   &--ai {
-    background: #f8fafc;
+    background: #fff;
     border-color: #e2e8f0;
   }
 }
@@ -246,6 +455,12 @@ async function confirmAdopt() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .ai-empty {
@@ -292,14 +507,28 @@ async function confirmAdopt() {
   color: #94a3b8;
 }
 
+.ai-result__time--live {
+  color: #b8864f;
+  font-weight: 600;
+  animation: ai-pulse 1.4s ease-in-out infinite;
+}
+
 .ai-result__summary {
   margin: 0;
   padding: 10px 14px;
-  background: #f1f5f9;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 14px;
   color: #475569;
   line-height: 1.6;
+
+  &.is-streaming::after {
+    content: '▍';
+    margin-left: 2px;
+    color: #d4a574;
+    animation: ai-blink 0.9s steps(2, start) infinite;
+  }
 }
 
 .ai-result__materials {
@@ -318,9 +547,9 @@ async function confirmAdopt() {
   padding: 2px 8px;
   border-radius: 6px;
   font-size: 12px;
-  color: #c2410c;
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
+  color: #7c5a2e;
+  background: #fdf6ec;
+  border: 1px solid #f0dcc0;
 }
 
 .ai-result__list {
@@ -332,21 +561,23 @@ async function confirmAdopt() {
 .ai-item {
   padding: 12px 14px;
   border-radius: 8px;
-  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 60%);
-  border: 1px solid #fed7aa;
-  border-left: 3px solid #f97316;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #d4a574;
+  animation: ai-fade-in 0.24s ease both;
 
   &__head {
     display: flex;
     align-items: center;
     gap: 6px;
     margin-bottom: 6px;
-    color: #c2410c;
+    color: #64748b;
   }
 
   &__dim {
     font-size: 15px;
     font-weight: 600;
+    color: #1e293b;
   }
 
   &__score {
@@ -371,13 +602,37 @@ async function confirmAdopt() {
   }
 }
 
-// 后端 AI 辅助建议块（绿色系，与本地短板分析橙色区分）
+@keyframes ai-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes ai-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes ai-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// 后端 AI 辅助建议块（绿色描边，与本地分析的金色描边区分，但保持同一套白底样式）
 .ai-suggestion {
   padding: 12px 14px;
   border-radius: 8px;
-  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 60%);
-  border: 1px solid #bbf7d0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
   border-left: 3px solid #22c55e;
+  animation: ai-fade-in 0.24s ease both;
 
   &__content {
     margin: 0 0 8px;

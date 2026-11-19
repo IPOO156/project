@@ -51,8 +51,10 @@ export const useCareerPlanStore = defineStore('career-plan', () => {
   }
 
   async function submitPlan(data: SubmitCareerPlanPayload): Promise<void> {
-    const item = await submitCareerPlan(data)
-    plans.value.unshift(item)
+    await submitCareerPlan(data)
+    // POST 响应只有 planId/status/currentVersion/submitCount（文档 4.4），
+    // 不含 submittedAt/progressRate；提交后回查列表，用 GET 4.3 的权威数据刷新记录。
+    await fetchPlans(true)
     ElMessage.success('规划材料提交成功')
   }
 

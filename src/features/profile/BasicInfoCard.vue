@@ -9,6 +9,7 @@ import { Edit2, Info } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useArchiveStore, useUserStore } from '@/app/stores/stores'
 import { updateBirthDate } from '@/shared/api/student'
+import AddressPicker from '@/shared/ui/AddressPicker.vue'
 import { isValidEmail } from '@/shared/utils/validateEmail'
 import AvatarUploader from './components/AvatarUploader.vue'
 
@@ -20,7 +21,7 @@ const userStore = useUserStore()
 // 仅只读展示，由管理员在账号管理中维护；学生本人只能更新联系方式
 // （邮箱/手机号等 PUT /profile/contact）与出生日期（PUT /profile/birth-date）。
 const isEditing = ref(false)
-/** 基本资料「保存」提交中（最多串行 3 次 PUT，防连点重复提交） */
+/** 基本资料「保存」提交中（防连点重复提交） */
 const savingEdit = ref(false)
 /**
  * 联系信息编辑表单。
@@ -122,6 +123,7 @@ function validateBirthDate(value: string): string | null {
   if (value > today) return '出生日期不能晚于今天'
   return null
 }
+
 /**
  * 出生日期写接口失败时的准确提示。
  * 区分：网络未到达服务器 / 接口未开放（404、405）/ 后端不支持该字段 / 其他服务端错误。
@@ -334,7 +336,7 @@ async function handleAvatarUpload(base64: string) {
         ></el-col>
         <el-col :span="24"
           ><el-form-item label="通讯地址" required
-            ><el-input v-model="formData.address" size="small" /></el-form-item
+            ><AddressPicker v-model="formData.address" size="small" /></el-form-item
         ></el-col>
         <el-col :span="12"
           ><el-form-item label="紧急联系人" required
