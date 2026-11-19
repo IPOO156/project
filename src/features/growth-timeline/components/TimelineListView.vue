@@ -3,6 +3,7 @@ import type { GrowthExperience } from '../timelineConstants'
 import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useSemesterRings } from '../composables/useSemesterRings'
+import { TIMELINE_EVENT_TYPE_COLORS, TIMELINE_EVENT_TYPE_LABELS } from '../timelineConstants'
 
 interface Props {
   experiences: GrowthExperience[]
@@ -22,34 +23,8 @@ const emit = defineEmits<{
 
 const { findRing, semesterLabel } = useSemesterRings()
 
-interface TypeMeta {
-  label: string
-  color: string
-}
-
-/** 经历类型元信息：与 GrowthCard 中已有的类型关键词保持一套口径，仅用作展示与筛选 */
-const TYPE_LIST: TypeMeta[] = [
-  { label: '竞赛', color: '#d4a574' },
-  { label: '科研', color: '#8b6340' },
-  { label: '实践', color: '#a67c52' },
-  { label: '学业', color: '#5a7c5a' },
-  { label: '技术', color: '#9a8474' },
-  { label: '其他', color: '#8b6340' },
-]
-
-function inferTypeLabel(tags: string[]): string {
-  const text = tags.join(' ')
-  if (text.includes('竞赛') || text.includes('比赛')) return '竞赛'
-  if (text.includes('科研') || text.includes('学术') || text.includes('论文')) return '科研'
-  if (text.includes('实践') || text.includes('志愿') || text.includes('公益')) return '实践'
-  if (text.includes('学业') || text.includes('奖学金') || text.includes('证书')) return '学业'
-  if (text.includes('技术') || text.includes('编程')) return '技术'
-  return '其他'
-}
-
-function typeColorOf(tags: string[]): string {
-  const label = inferTypeLabel(tags)
-  return TYPE_LIST.find((t) => t.label === label)?.color ?? TYPE_LIST[TYPE_LIST.length - 1]!.color
+function typeColorOf(type?: number): string {
+  return (type != null ? TIMELINE_EVENT_TYPE_COLORS[type] : undefined) ?? '#8b6340'
 }
 
 /** 学期筛选选项：复用 experiences 里的 semester 字段，按年轮 level 排序 */
@@ -68,19 +43,29 @@ const semesterOptions = computed(() => {
   return list.sort((a, b) => a.level - b.level)
 })
 
-/** 类型筛选选项：仅列出数据中实际出现的类型 */
+/** 类型筛选选项：按后端 eventType 归类，仅列出数据中实际出现的类型 */
 const typeOptions = computed(() => {
-  const labels = new Set(props.experiences.map((exp) => inferTypeLabel(exp.tags)))
-  return TYPE_LIST.filter((t) => labels.has(t.label))
+  const types = new Set(
+    props.experiences
+      .map((exp) => exp.eventType)
+      .filter((type): type is number => typeof type === 'number'),
+  )
+  return [...types]
+    .sort((a, b) => a - b)
+    .map((type) => ({
+      type,
+      label: TIMELINE_EVENT_TYPE_LABELS[type] ?? '其他',
+      color: typeColorOf(type),
+    }))
 })
 
 const semesterFilter = ref('')
-const typeFilter = ref('')
+const typeFilter = ref<number | ''>('')
 
 const filteredExperiences = computed(() => {
   return props.experiences.filter((exp) => {
     if (semesterFilter.value && exp.semester !== semesterFilter.value) return false
-    if (typeFilter.value && inferTypeLabel(exp.tags) !== typeFilter.value) return false
+    if (typeFilter.value !== '' && exp.eventType !== typeFilter.value) return false
     return true
   })
 })
@@ -154,11 +139,11 @@ function handleEdit(id: string) {
           </button>
           <button
             v-for="opt in typeOptions"
-            :key="opt.label"
+            :key="opt.type"
             type="button"
             class="tlv-chip"
-            :class="{ 'tlv-chip--active': typeFilter === opt.label }"
-            @click="typeFilter = opt.label"
+            :class="{ 'tlv-chip--active': typeFilter === opt.type }"
+            @click="typeFilter = opt.type"
           >
             {{ opt.label }}
           </button>
@@ -193,10 +178,11 @@ function handleEdit(id: string) {
           @click="handleSelect(exp.id)"
         >
           <span
+            v-if="exp.eventTypeLabel"
             class="tlv-type"
-            :style="{ color: typeColorOf(exp.tags), borderColor: typeColorOf(exp.tags) }"
+            :style="{ color: typeColorOf(exp.eventType), borderColor: typeColorOf(exp.eventType) }"
           >
-            {{ inferTypeLabel(exp.tags) }}
+            {{ exp.eventTypeLabel }}
           </span>
           <span class="tlv-main">
             <span class="tlv-item-title">{{ exp.title }}</span>

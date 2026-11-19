@@ -4,7 +4,15 @@ export interface GrowthExperience {
   date: string
   semester: string
   description: string
+  /** 用户自填标签（后端 tags），仅用于展示与检索；不含事件类型 */
   tags: string[]
+  /**
+   * 事件类型（后端 eventType，1-6，只读）。
+   * 由后端按来源记录推导，前端不提交、不自行映射，也不得塞进 tags 展示。
+   */
+  eventType?: number
+  /** 事件类型文案（后端 eventTypeLabel，只读） */
+  eventTypeLabel?: string
   /** 能力成长项：只读展示，由后端按来源类型套用计分规则生成后回传，前端不再提交 */
   skills: { name: string; growth: number; dimensionCode?: string }[]
   /** 后端事件对应的档案记录 ID（sourceId），本地新增经历无此字段 */
@@ -163,4 +171,14 @@ export const TIMELINE_EVENT_TYPE_LABELS: Record<number, string> = {
 
 export function mapTimelineEventType(type: number | undefined): string {
   return TIMELINE_EVENT_TYPE_LABELS[type ?? 0] ?? '其他'
+}
+
+/** 事件类型配色：仅用于类型标识（图标/文字），不代表业务状态 */
+export const TIMELINE_EVENT_TYPE_COLORS: Record<number, string> = {
+  1: '#c8943e',
+  2: '#5a7c5a',
+  3: '#a67c52',
+  4: '#6b8e5b',
+  5: '#9a8474',
+  6: '#8b6340',
 }

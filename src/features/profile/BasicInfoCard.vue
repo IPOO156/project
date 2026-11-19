@@ -8,6 +8,7 @@ import { ElMessage } from 'element-plus'
 import { Edit2, Info } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useArchiveStore, useUserStore } from '@/app/stores/stores'
+import { updateBirthDate } from '@/shared/api/student'
 import AddressPicker from '@/shared/ui/AddressPicker.vue'
 import { isValidEmail } from '@/shared/utils/validateEmail'
 import AvatarUploader from './components/AvatarUploader.vue'
@@ -16,9 +17,9 @@ const archiveStore = useArchiveStore()
 const userStore = useUserStore()
 
 // ── 基本资料编辑 ──
-// 学籍字段（学号/年级/专业/班级/姓名/学历层次/政治面貌/学生状态/出生日期）属学术身份信息，
-// 文档 4.1 明确由教务系统同步、应用层只读；学生本人只能更新联系方式
-// （邮箱/手机号等 PUT /profile/contact）。
+// 学籍字段（学号/年级/专业/班级/姓名/学历层次/政治面貌/学生状态）属学术身份信息，
+// 仅只读展示，由管理员在账号管理中维护；学生本人只能更新联系方式
+// （邮箱/手机号等 PUT /profile/contact）与出生日期（PUT /profile/birth-date）。
 const isEditing = ref(false)
 /** 基本资料「保存」提交中（防连点重复提交） */
 const savingEdit = ref(false)
@@ -35,8 +36,13 @@ interface ProfileEditForm {
   emergencyName: string
   emergencyRelation: string
   emergencyPhone: string
+  /**
+   * 出生日期（YYYY-MM-DD）。单独提交（PUT /profile/birth-date），
+   * 不混入 PUT /profile/contact 的六项联系方式。
+   */
+  birthDate: string
 }
-// 政治面貌、学生状态、学历层次、出生日期由学校/教务统一维护，仅在表单中只读展示，
+// 政治面貌、学生状态、学历层次由学校统一维护，仅在表单中只读展示，
 // 不进入编辑字段、不随保存提交。
 const formData = ref<Partial<ProfileEditForm>>({})
 /** /profile/info 中的学籍信息（学历层次/政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
@@ -68,6 +74,7 @@ const emergencyRelation = computed(
 const emergencyPhone = computed(() => archiveStore.profileData?.contactInfo?.emergencyPhone ?? '')
 
 function startEdit() {
+  const a = academicInfo.value
   const c = archiveStore.profileData?.contactInfo
   formData.value = {
     // 邮箱/手机号/紧急联系人电话均为脱敏值，留空让用户重新填写
@@ -77,11 +84,81 @@ function startEdit() {
     emergencyName: c?.emergencyName ?? '',
     emergencyRelation: c?.emergencyRelation ?? '',
     emergencyPhone: '',
+    // 出生日期单独提交（PUT /profile/birth-date）；
+    // 政治面貌、学生状态、学历层次只读展示，不进入表单
+    birthDate: a.birthDate ? String(a.birthDate).slice(0, 10) : '',
   }
   isEditing.value = true
 }
 
+/** 日期选择器：禁用未来日期与 1900 年之前的日期 */
+function disableBirthDate(date: Date): boolean {
+  const now = new Date()
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+  return date.getTime() > endOfToday.getTime() || date.getFullYear() < 1900
+}
+
+/**
+ * 出生日期保存前校验。空值视为不填写，直接通过。
+ * 校验格式 YYYY-MM-DD、是否为真实日期、不晚于今天、不早于 1900 年；
+ * 通过返回 null，否则返回提示文案。
+ */
+function validateBirthDate(value: string): string | null {
+  if (!value) return null
+  const matched = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!matched) return '出生日期格式应为 YYYY-MM-DD'
+  const year = Number(matched[1])
+  const month = Number(matched[2])
+  const day = Number(matched[3])
+  const date = new Date(Date.UTC(year, month - 1, day))
+  const isRealDate =
+    date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  if (!isRealDate) return '出生日期不是有效日期'
+  if (year < 1900) return '出生日期不能早于 1900 年'
+  // 用本地日期字符串比较（YYYY-MM-DD 可直接字典序比较），避免时区把「今天」误判为未来
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
+    now.getDate(),
+  ).padStart(2, '0')}`
+  if (value > today) return '出生日期不能晚于今天'
+  return null
+}
+
+/**
+ * 出生日期写接口失败时的准确提示。
+ * 区分：网络未到达服务器 / 接口未开放（404、405）/ 后端不支持该字段 / 其他服务端错误。
+ */
+function academicSaveErrorMessage(error: unknown): string {
+  const err = error as {
+    code?: string
+    response?: { status?: number; data?: { message?: string } }
+  } | null
+  if (!err?.response) {
+    return err?.code === 'ECONNABORTED'
+      ? '请求超时，联系方式已保存；出生日期未提交，填写内容已保留'
+      : '网络异常，联系方式已保存；出生日期未提交，填写内容已保留'
+  }
+  const status = err.response.status
+  const serverMessage = String(err.response.data?.message ?? '').trim()
+  if (status === 404 || status === 405) {
+    return '联系方式已保存；出生日期写接口不可用（PUT /profile/birth-date），填写内容已保留'
+  }
+  const fieldUnsupported =
+    status === 422 ||
+    (/birthDate|出生日期/i.test(serverMessage) &&
+      /不支持|未知|无法识别|not supported|unknown|unrecognized/i.test(serverMessage))
+  if (fieldUnsupported) {
+    return `联系方式已保存；后端暂不支持出生日期字段${
+      serverMessage ? `：${serverMessage}` : ''
+    }，填写内容已保留`
+  }
+  return `联系方式已保存；出生日期保存失败（HTTP ${status ?? '未知'}${
+    serverMessage ? `：${serverMessage}` : ''
+  }），填写内容已保留`
+}
+
 async function saveEdit() {
+  const a = academicInfo.value
   const required: Array<[keyof ProfileEditForm, string]> = [
     ['email', '联系邮箱'],
     ['phone', '手机号'],
@@ -99,7 +176,15 @@ async function saveEdit() {
     ElMessage.warning('请输入正确的邮箱地址')
     return
   }
-  // 联系方式 PUT /profile/contact：失败即终止流程，不提示「已保存」
+  // 出生日期先做本地校验：格式/真实日期/不晚于今天，避免把非法值提交到写接口
+  const birthDate = String(formData.value.birthDate ?? '').trim()
+  const birthDateError = validateBirthDate(birthDate)
+  if (birthDateError) {
+    ElMessage.warning(birthDateError)
+    return
+  }
+  // 两类保存（联系方式 PUT /profile/contact、出生日期 PUT /profile/birth-date）任一失败即终止流程，
+  // 不继续执行后续「已保存」，避免成败提示并存；失败提示由请求拦截器统一给出
   savingEdit.value = true
   try {
     await userStore.updateUserInfo({
@@ -115,9 +200,25 @@ async function saveEdit() {
     return
   }
 
+  // 学籍补充信息单独提交：不混入 /profile/contact，失败也不回滚上面已保存的联系方式。
+  // 政治面貌、学生状态、学历层次只读展示，不提交到任何更新接口；
+  // 只有出生日期变化时才调用写接口（空串 = 清空）。
+  const originalBirthDate = a.birthDate ? String(a.birthDate).slice(0, 10) : ''
+  if (birthDate !== originalBirthDate) {
+    try {
+      await updateBirthDate(birthDate)
+    } catch (error) {
+      savingEdit.value = false
+      // 写接口不可用时按真实原因提示，且保持编辑态与用户输入，不提示「已保存」
+      ElMessage.warning(academicSaveErrorMessage(error))
+      await archiveStore.fetchArchive(true)
+      return
+    }
+  }
+
   savingEdit.value = false
   isEditing.value = false
-  // 强制重新拉取 /profile/info（绕过 60s 缓存），保证刚保存的联系方式立即回显
+  // 强制重新拉取 /profile/info（绕过 60s 缓存），保证刚保存的出生日期立即回显
   await archiveStore.fetchArchive(true)
   ElMessage.success('已保存')
 }
@@ -214,7 +315,7 @@ async function handleAvatarUpload(base64: string) {
         联系邮箱同时是「忘记密码」的验证码接收地址，请填写本人常用邮箱。
       </p>
       <p class="contact-hint">
-        出生日期、政治面貌、学生状态、学历层次由学校/教务系统统一维护，仅展示不可修改。
+        出生日期可自行修改，保存后立即生效；政治面貌、学生状态、学历层次由学校统一维护，仅展示不可修改。
       </p>
       <el-row :gutter="12">
         <el-col :span="12"
@@ -274,10 +375,16 @@ async function handleAvatarUpload(base64: string) {
         >
         <el-col :span="12"
           ><el-form-item label="出生日期"
-            ><span class="readonly-value">{{ birthDateText }}</span>
-            <span class="form-readonly-hint">（由教务系统同步）</span></el-form-item
-          ></el-col
-        >
+            ><el-date-picker
+              v-model="formData.birthDate"
+              size="small"
+              type="date"
+              format="YYYY-MM-DD"
+              value-format="YYYY-MM-DD"
+              :disabled-date="disableBirthDate"
+              placeholder="请选择出生日期"
+              class="form-w" /></el-form-item
+        ></el-col>
         <el-col :span="12"
           ><el-form-item label="学历层次"
             ><span class="readonly-value">{{ degreeTypeText }}</span>

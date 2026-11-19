@@ -225,7 +225,7 @@ describe('buildContractPayload', () => {
     expect(ascii.projectType).toBe('plan')
   })
 
-  it('仅接受 ASCII 的字段把中文置空串，ASCII 值保留', async () => {
+  it('中文字段保留原值，ASCII 值同样保留', async () => {
     const result = await payload.buildContractPayload('internship', {
       company: '字节跳动',
       location: '北京',
@@ -234,7 +234,7 @@ describe('buildContractPayload', () => {
     })
 
     expect(result.companyName).toBe('字节跳动')
-    expect(result.location).toBe('')
+    expect(result.location).toBe('北京')
     expect(result.position).toBe('Backend Intern')
     expect(result.startDate).toBe('2025-07-01')
   })

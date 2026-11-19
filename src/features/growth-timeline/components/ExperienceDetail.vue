@@ -110,6 +110,10 @@ function handleBackdropClick(event: MouseEvent) {
     <div class="experience-detail" :class="{ 'is-open': isOpen }" @click="handleBackdropClick">
       <div v-if="experience" class="detail-content">
         <div class="detail-header">
+          <!-- 事件类型是后端只读字段，独立展示，不混入用户标签 -->
+          <span v-if="experience.eventTypeLabel" class="detail-type"
+            >类型 · {{ experience.eventTypeLabel }}</span
+          >
           <span v-if="semesterLabel" class="detail-semester">{{ semesterLabel }}</span>
           <span v-if="experience.statusLabel" class="detail-status">{{
             experience.statusLabel
@@ -237,9 +241,21 @@ function handleBackdropClick(event: MouseEvent) {
 
 .detail-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
+  gap: 0.6rem 1rem;
   margin-bottom: 1.5rem;
+}
+
+.detail-type {
+  font-family: var(--gt-font-ui);
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  color: var(--gt-accent, #8b6340);
+  border: 1px solid color-mix(in srgb, var(--gt-accent, #8b6340) 35%, transparent);
+  padding: 6px 14px;
+  border-radius: 100px;
+  background: color-mix(in srgb, var(--gt-accent, #8b6340) 8%, transparent);
 }
 
 .detail-semester {

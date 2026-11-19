@@ -128,6 +128,15 @@ export interface ProfileInfo {
     averageScore: number
     rankInClass: number
     rankInMajor: number
+    /** 本学期逐课期末成绩（gpa_records，按 courseCode 升序）；无课程记录时为 [] 或省略 */
+    courses?: Array<{
+      courseCode: string
+      courseName: string
+      courseType: string
+      credit: number
+      gpa: number
+      score: number
+    }>
   }>
   /**
    * 累计学分加权绩点（各学期 gpa 按 total_credit 加权 / 累计总学分）。
@@ -251,6 +260,14 @@ export function updateProfileContact(payload: {
   emergencyPhone: string | null
 }> {
   return request.put('/profile/contact', payload)
+}
+
+/**
+ * 更新出生日期（PUT /profile/birth-date）
+ * 传空字符串表示清空；学历层次、政治面貌、学生状态由管理员维护，学生端不提供写接口。
+ */
+export function updateBirthDate(birthDate: string): Promise<{ birthDate: string | null }> {
+  return request.put('/profile/birth-date', { birthDate })
 }
 
 /** 更新自我评价（PUT /profile/self-evaluation） */
