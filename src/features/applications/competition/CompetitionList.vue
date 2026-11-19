@@ -147,7 +147,8 @@ onMounted(() => {
           ><el-date-picker
             v-model="page.form.awardDate"
             type="month"
-            value-format="YYYY-MM-DD"
+            format="YYYY-MM"
+            value-format="YYYY-MM"
             :disabled-date="page.disabledDate"
             placeholder="例：2025-09"
         /></el-form-item>
