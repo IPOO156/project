@@ -20,7 +20,7 @@
 import { computed, nextTick, ref, useSlots, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTabs } from '@/app/composables/useTabs'
-import { useAppStore, useUserStore } from '@/app/stores/stores'
+import { useAppStore, useCursorStore, useUserStore } from '@/app/stores/stores'
 import AIChatDrawer from '@/features/ai-chat/components/AIChatDrawer.vue'
 import AIFloatingBall from '@/features/ai-chat/components/AIFloatingBall.vue'
 import { useGreeting } from '@/features/dashboard/composables/useGreeting'
@@ -28,7 +28,6 @@ import { useLoadingTip } from '@/shared/composables/useLoadingTip'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import GreetingToast from '@/shared/ui/GreetingToast.vue'
 import LoadingTipCard from '@/shared/ui/LoadingTipCard.vue'
-import bookCursor from '@/shared/utils/bookCursor'
 import HeaderBar from './components/HeaderBar.vue'
 import Sidebar from './components/Sidebar.vue'
 
@@ -37,6 +36,7 @@ defineOptions({ name: 'DefaultLayout' })
 const route = useRoute()
 const appStore = useAppStore()
 const userStore = useUserStore()
+const cursorStore = useCursorStore()
 const slots = useSlots()
 
 const drawerVisible = ref(false)
@@ -54,15 +54,12 @@ useTabs()
 
 /**
  * 书册光标只在学生端启用：教师端 / 管理员端采用普通系统指针。
- * 登录页可能在同一个 SPA 会话内切换账号，故监听 isTeacher 双向切换，
- * 离开教师端时恢复学生端书册光标。
+ * 学生端可在顶部栏开关；开关状态持久化在 useCursorStore。
+ * 登录页可能在同一个 SPA 会话内切换账号，故监听 isTeacher 双向切换。
  */
 watch(
-  () => userStore.isTeacher,
-  (isTeacher) => {
-    if (isTeacher) bookCursor.disable()
-    else bookCursor.enable()
-  },
+  [() => userStore.isTeacher, () => cursorStore.enabled],
+  ([isTeacher]) => cursorStore.apply(isTeacher),
   { immediate: true },
 )
 

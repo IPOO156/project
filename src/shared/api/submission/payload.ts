@@ -24,7 +24,7 @@ function toDateString(value: unknown): string | undefined {
   return undefined
 }
 
-/** 后端枚举/字典字段仅接受 ASCII（中文值会触发 10003 格式错误）：保留 ASCII，非 ASCII 置空串（后端接受空值） */
+/** 后端枚举字段仅接受 ASCII 枚举码：未知中文标签回退空串，避免 10003；普通文本字段不再走此逻辑 */
 function asciiOrEmpty(value: unknown): string {
   if (value === undefined || value === null) return ''
   const s = String(value)
@@ -154,11 +154,9 @@ export async function buildContractPayload(
       payload[backendKey] = toDateString(raw)
       continue
     }
-    // 后端枚举字段：中文 label → 枚举码；ASCII-only 字段：中文置空串，避免 10003
+    // 后端枚举字段：中文 label → 枚举码；普通文本字段原样提交（中文不再静默置空）
     if (contract.enumMap?.[backendKey]) {
       payload[backendKey] = contract.enumMap[backendKey][String(raw)] ?? asciiOrEmpty(raw)
-    } else if (contract.asciiFields?.includes(backendKey)) {
-      payload[backendKey] = asciiOrEmpty(raw)
     } else {
       payload[backendKey] = raw
     }
@@ -199,8 +197,6 @@ export async function buildCorrectionPayload(
     }
     if (contract.enumMap?.[backendKey]) {
       payload[backendKey] = contract.enumMap[backendKey][String(raw)] ?? asciiOrEmpty(raw)
-    } else if (contract.asciiFields?.includes(backendKey)) {
-      payload[backendKey] = asciiOrEmpty(raw)
     } else {
       payload[backendKey] = raw
     }

@@ -16,6 +16,7 @@ export const DETAIL_TO_FORM_MAP: Record<string, Record<string, string>> = {
     awardLevel: 'awardLevel',
     obtainedTime: 'awardDate',
     participantRole: 'role',
+    certificateNo: 'certNumber',
   },
   scholarship: {
     scholarshipName: 'awardName',

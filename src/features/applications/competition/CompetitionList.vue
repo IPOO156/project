@@ -51,6 +51,8 @@ const page = reactive(
       { key: 'semester', label: '学期' },
       { key: 'proofMaterials', label: '佐证材料' },
     ],
+    // 获奖时间必须落在所选学期内：禁用非学期月份，切换学期时清理越界值，提交前再校验一次
+    { monthField: 'awardDate', monthFieldLabel: '获奖时间' },
   ),
 )
 
@@ -142,7 +144,12 @@ onMounted(() => {
           </el-select>
         </el-form-item>
         <el-form-item label="获奖时间" required
-          ><el-date-picker v-model="page.form.awardDate" type="month" placeholder="例：2025-09"
+          ><el-date-picker
+            v-model="page.form.awardDate"
+            type="month"
+            value-format="YYYY-MM-DD"
+            :disabled-date="page.disabledDate"
+            placeholder="例：2025-09"
         /></el-form-item>
         <el-form-item label="学期" required>
           <el-select
@@ -160,7 +167,7 @@ onMounted(() => {
         </el-form-item>
         <ApplicationExtendedFields
           :form="page.extendedForm"
-          :hidden="['certNumber', 'issuingAuthority', 'acquisitionDate', 'validityPeriod']"
+          :hidden="['issuingAuthority', 'acquisitionDate', 'validityPeriod']"
           @update="
             (field: string, val: string) => {
               ;(page.extendedForm as Record<string, string>)[field] = val

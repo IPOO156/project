@@ -98,6 +98,65 @@ function parseJsonArray(raw: unknown): unknown[] {
 }
 
 /**
+ * 评选说明接口的原始响应。文档 7.0.2 / 8.1.3 约定返回归一化字段
+ * （type/typeLabel/title/content/requirements/notes/updatedAt）；
+ * 档案侧实测后端返回的是 `archiveType/typeName/evaluateDesc/evaluateRequirements/evaluateNotes`。
+ * 两种形状都兼容，避免后端形状变化时弹窗内容整体为空。
+ */
+export interface RawGuideResponse {
+  type?: string
+  archiveType?: string
+  typeLabel?: string
+  typeName?: string
+  title?: string
+  content?: string | null
+  evaluateDesc?: string | null
+  applyDesc?: string | null
+  requirements?: unknown
+  evaluateRequirements?: unknown
+  notes?: unknown
+  evaluateNotes?: unknown
+  updatedAt?: string
+}
+
+/**
+ * 归一化评选说明响应（档案 7.0.2 与奖项 8.1.3 共用）。
+ * 优先取文档约定的归一化字段，缺失时回退后端原始 evaluate* 字段；
+ * evaluateRequirements / evaluateNotes 可能是 JSON 字符串，统一解析为数组。
+ */
+export function normalizeGuideResponse(
+  raw: RawGuideResponse | null,
+  fallbackType: string,
+): ApplicationGuide {
+  const typeName = String(raw?.typeLabel ?? raw?.typeName ?? '')
+  const requirementsSource =
+    Array.isArray(raw?.requirements) && raw.requirements.length
+      ? raw.requirements
+      : raw?.evaluateRequirements
+  const notesSource = Array.isArray(raw?.notes) && raw.notes.length ? raw.notes : raw?.evaluateNotes
+  return {
+    type: raw?.type ?? raw?.archiveType ?? fallbackType,
+    typeLabel: typeName,
+    title: raw?.title || (typeName ? `${typeName}评选说明` : '评选说明'),
+    content: raw?.content ?? raw?.evaluateDesc ?? '',
+    applyDesc: raw?.applyDesc ?? '',
+    requirements: parseJsonArray(requirementsSource)
+      .filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null)
+      .map((r) => ({
+        field: String(r.field ?? ''),
+        label: String(r.label ?? ''),
+        required: Boolean(r.required),
+        description: String(r.description ?? ''),
+      })),
+    notes: parseJsonArray(notesSource)
+      .filter((n): n is string => typeof n === 'string')
+      .map((n) => n.trim())
+      .filter(Boolean),
+    updatedAt: raw?.updatedAt ?? '',
+  }
+}
+
+/**
  * 获取档案评选说明（GET /applications/{type}/guide）。
  *
  * 后端 ApplicationService.GuideResponse 返回的是
@@ -107,36 +166,8 @@ function parseJsonArray(raw: unknown): unknown[] {
  * 导致「评选说明」弹窗永远只有标题、正文与要求全部为空。此处统一归一化。
  */
 export async function getApplicationGuide(type: string): Promise<ApplicationGuide> {
-  const raw = (await request.get(`/applications/${type}/guide`)) as unknown as {
-    archiveType?: string
-    typeName?: string
-    evaluateDesc?: string | null
-    evaluateRequirements?: unknown
-    evaluateNotes?: unknown
-    applyDesc?: string | null
-  } | null
-  const typeName = raw?.typeName ?? ''
-  const notes = parseJsonArray(raw?.evaluateNotes)
-    .filter((n): n is string => typeof n === 'string')
-    .map((n) => n.trim())
-    .filter(Boolean)
-  return {
-    type: raw?.archiveType ?? type,
-    typeLabel: typeName,
-    title: typeName ? `${typeName}评选说明` : '评选说明',
-    content: raw?.evaluateDesc ?? '',
-    applyDesc: raw?.applyDesc ?? '',
-    requirements: parseJsonArray(raw?.evaluateRequirements)
-      .filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null)
-      .map((r) => ({
-        field: String(r.field ?? ''),
-        label: String(r.label ?? ''),
-        required: Boolean(r.required),
-        description: String(r.description ?? ''),
-      })),
-    notes,
-    updatedAt: '',
-  }
+  const raw = (await request.get(`/applications/${type}/guide`)) as RawGuideResponse | null
+  return normalizeGuideResponse(raw, type)
 }
 
 // 各类申报的提交入口统一走 shared/api/submission.ts 的 submitApplication(data)：

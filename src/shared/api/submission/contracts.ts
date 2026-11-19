@@ -7,8 +7,6 @@ interface TypeContract {
   endpoint: string
   mapping: Record<string, string>
   dateFields: string[]
-  /** 后端仅接受 ASCII/枚举码的字段（中文会触发 10003 格式错误），提交时非 ASCII 置空串 */
-  asciiFields?: string[]
   /** 后端枚举字段：前端中文 label → 后端枚举码 */
   enumMap?: Record<string, Record<string, string>>
 }
@@ -117,7 +115,7 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
     },
   },
   research: {
-    // 注意：契约要求 startDate/endDate 两个必填，前端表单仅有 projectDate（单月份），endDate 缺失会导致提交被后端校验拒绝
+    // 契约要求 startDate/endDate 两个必填；前端表单已提供 endDate 字段并映射到契约同名字段
     endpoint: '/applications/research',
     mapping: {
       projectName: 'projectName',
@@ -141,8 +139,6 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
       endDate: 'endDate',
     },
     dateFields: ['startDate', 'endDate'],
-    // 实测：location/position 仅接受 ASCII/数字（中文 10003），非 ASCII 置空串
-    asciiFields: ['location', 'position'],
   },
   organization: {
     endpoint: '/applications/organization',
@@ -155,8 +151,6 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
     },
     dateFields: ['startDate', 'endDate'],
     enumMap: { orgLevel: { 校级: 'school', 院级: 'college', 社团级: 'club', 班级: 'class' } },
-    // 实测：positionTitle 必填但仅接受 ASCII 枚举（leader/member/solo…），中文 10003
-    asciiFields: ['positionTitle'],
   },
   training: {
     endpoint: '/applications/training',
@@ -167,8 +161,6 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
       endDate: 'endDate',
     },
     dateFields: ['startDate', 'endDate'],
-    // 实测：projectContent 带中文会 10003（空值/ASCII 可存），非 ASCII 置空串
-    asciiFields: ['projectContent'],
   },
   socialPractice: {
     endpoint: '/applications/practice',
@@ -181,8 +173,6 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
       volunteerHours: 'volunteerHours',
     },
     dateFields: ['startDate', 'endDate'],
-    // 实测：practiceLocation/practiceUnit 仅接受 ASCII/数字，中文 10003
-    asciiFields: ['practiceLocation', 'practiceUnit'],
   },
   bookReport: {
     endpoint: '/applications/book-review',
