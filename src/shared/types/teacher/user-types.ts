@@ -53,6 +53,15 @@ export interface UserDetail {
   gender: number | null
   genderLabel: string | null
   birthDate: string | null
+  /** 学历层次（学生档案字段，管理员维护） */
+  degreeType: string | null
+  degreeTypeLabel: string | null
+  /** 政治面貌（学生档案字段，管理员维护） */
+  politicalStatus: string | null
+  politicalStatusLabel: string | null
+  /** 学生状态（学生档案字段，管理员维护） */
+  studentStatus: string | null
+  studentStatusLabel: string | null
   schoolId: number | null
   schoolName: string | null
   roles: UserRoleItem[]
@@ -84,6 +93,14 @@ export interface UpdateUserPayload {
   classId?: number
   majorId?: number
   collegeId?: number
+  /** 出生日期 yyyy-MM-dd；null/缺省=不修改，空串=清空 */
+  birthDate?: string | null
+  /** 学历层次枚举编码；null/缺省=不修改，空串=清空 */
+  degreeType?: string | null
+  /** 政治面貌字典编码；null/缺省=不修改，空串=清空 */
+  politicalStatus?: string | null
+  /** 学生状态枚举编码；null/缺省=不修改，空串=清空 */
+  studentStatus?: string | null
 }
 
 export interface UpdateStatusPayload {

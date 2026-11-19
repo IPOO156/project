@@ -70,7 +70,7 @@ const expanded = ref(false)
         </div>
       </div>
       <p class="completeness-detail__note">
-        同一项（如「志愿服务」）在多个维度中重复出现时只计一次分，重复出现不代表需要重复补充。
+        同一项若在多个维度中重复出现，只按一次计分，重复出现不代表需要重复补充。
       </p>
     </div>
   </div>
