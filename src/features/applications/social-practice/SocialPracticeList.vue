@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useSemesters } from '@/shared/composables/useSemesters'
+import AddressPicker from '@/shared/ui/AddressPicker.vue'
 import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
@@ -97,9 +98,9 @@ onMounted(() => {
             v-model="page.form.activityName"
             placeholder="例：2025 年暑期「三下乡」社会实践"
         /></el-form-item>
-        <el-form-item label="活动地点" required
-          ><el-input v-model="page.form.location" placeholder="例：浙江省杭州市淳安县下姜村"
-        /></el-form-item>
+        <el-form-item label="活动地点" required>
+          <AddressPicker v-model="page.form.location" />
+        </el-form-item>
         <el-form-item label="组织单位" required
           ><el-input v-model="page.form.organization" placeholder="例：校团委青年志愿者协会"
         /></el-form-item>

@@ -85,7 +85,7 @@ const routes: RouteRecordRaw[] = [
             component: () => import('@/features/applications/ApplicationHub.vue'),
             // 本页用 ?tab=xxx 切换 10 个申报子模块（见同文件的 redirect 子项），
             // singleTab 让它们共用顶栏一个标签（useTabs 据此判定），避免每切一个子模块裂一个标签。
-            meta: { title: '个人档案信息申报', singleTab: true },
+            meta: { title: '申报中心', singleTab: true },
           },
           {
             path: 'competition',

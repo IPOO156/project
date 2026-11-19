@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useSemesters } from '@/shared/composables/useSemesters'
+import AddressPicker from '@/shared/ui/AddressPicker.vue'
 import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
@@ -93,9 +94,9 @@ onMounted(() => {
         <el-form-item label="实习公司" required
           ><el-input v-model="page.form.company" placeholder="例：杭州海康威视数字技术股份有限公司"
         /></el-form-item>
-        <el-form-item label="实习地点" required
-          ><el-input v-model="page.form.location" placeholder="例：杭州市滨江区物联网街 518 号"
-        /></el-form-item>
+        <el-form-item label="实习地点" required>
+          <AddressPicker v-model="page.form.location" />
+        </el-form-item>
         <el-form-item label="实习岗位" required
           ><el-input v-model="page.form.position" placeholder="例：后端开发实习生"
         /></el-form-item>

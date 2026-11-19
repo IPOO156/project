@@ -14,6 +14,8 @@ import {
   mapDetailToForm,
   submitApplication,
 } from '@/shared/api/submission'
+import { APPLICATION_CONTRACTS } from '@/shared/api/submission/contracts'
+import { toDateString } from '@/shared/api/submission/payload'
 import {
   buildSemesterEndMonthDisabledDate,
   buildSemesterMonthDisabledDate,
@@ -173,6 +175,14 @@ export function useApplicationPage(
   async function checkDuplicateBeforeSubmit(data: Record<string, any>): Promise<boolean> {
     try {
       const title = deriveRecordTitle(data)
+      // 档案侧查重需要「证书编号 + 获得时间」才有意义：获得时间按该类型的契约映射取表单字段
+      // （学科竞赛 awardDate、奖学金 acquireDate、证书 certDate……），不能只读 acquisitionDate。
+      const obtainedFrontKey = Object.entries(APPLICATION_CONTRACTS[type]?.mapping ?? {}).find(
+        ([backendKey]) => backendKey === 'obtainedTime',
+      )?.[1]
+      const obtainedTime = toDateString(
+        (obtainedFrontKey ? data[obtainedFrontKey] : undefined) ?? data.acquisitionDate,
+      )
       // 奖项报名走 8.1.2 POST /awards/duplicate-check；档案申报走 POST /applications/duplicate-check
       const r: any =
         activityCategoryOf(appType) === 'award'
@@ -194,7 +204,7 @@ export function useApplicationPage(
               // duplicate_detection_rules.detect_fields，需放在 fields 内；平铺字段会被忽略。
               fields: {
                 ...(data.certNumber ? { certificateNo: data.certNumber } : {}),
-                ...(data.acquisitionDate ? { obtainedTime: data.acquisitionDate } : {}),
+                ...(obtainedTime ? { obtainedTime } : {}),
                 title,
               },
             })
@@ -344,6 +354,8 @@ export function useApplicationPage(
     }
     const ok = await checkDuplicateBeforeSubmit({
       ...toRaw(form),
+      // 扩展字段不在 form 内，查重也需要证书编号才能命中
+      certNumber: extendedForm.certNumber || undefined,
       acquisitionDate: extendedForm.acquisitionDate || undefined,
     })
     if (ok) await doSubmit(toRaw(form))

@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>实习地点选择 · 方案二（四级下拉）</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --brand: #1e3a5f;
+    --gold: #d4a574;
+    --gold-soft: #f7efe4;
+    --ok: #0f766e;
+    --danger: #b91c1c;
+    --radius: 12px;
+    --shadow: 0 8px 30px rgba(30, 58, 95, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 28px 20px 56px; }
+  .proto-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+  .proto-nav a {
+    text-decoration: none; color: var(--muted); font-size: 13px;
+    padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--card); transition: all .18s ease;
+  }
+  .proto-nav a:hover { color: var(--brand); border-color: var(--gold); }
+  .proto-nav a.active { color: #fff; background: var(--brand); border-color: var(--brand); }
+  .hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  .eyebrow { margin: 0 0 4px; font-size: 12px; letter-spacing: .12em; color: var(--gold); font-weight: 700; }
+  h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -.01em; }
+  .sub { margin: 0; color: var(--muted); font-size: 14px; }
+  .badge { flex: none; font-size: 12px; color: var(--ok); background: #e6f4f1; border: 1px solid #c7e7df; padding: 5px 10px; border-radius: 999px; }
+  .layout { display: grid; grid-template-columns: 1.05fr .95fr; gap: 18px; align-items: start; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+  .field { display: block; margin-bottom: 16px; }
+  .label { display: block; font-size: 13px; font-weight: 600; color: #334155; margin-bottom: 7px; }
+  .label i { color: var(--danger); font-style: normal; margin-left: 2px; }
+  select, input {
+    width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--line);
+    border-radius: 8px; background: #fff; color: var(--ink); font-size: 14px;
+    outline: none; transition: border-color .18s ease, box-shadow .18s ease;
+  }
+  select:focus, input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 165, 116, .15); }
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+  select:hover { border-color: var(--gold); }
+  select:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
+  .dd { position: relative; }
+  .trigger {
+    width: 100%; height: 40px; padding: 0 36px 0 12px; border: 1px solid var(--line);
+    border-radius: 8px; background: #fff; color: var(--ink); font-size: 14px;
+    text-align: left; cursor: pointer; position: relative; outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+  }
+  .trigger:hover { border-color: var(--gold); }
+  .trigger:focus, .trigger.open { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 165, 116, .15); }
+  .trigger.placeholder { color: #94a3b8; }
+  .trigger:disabled, .trigger.disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; }
+  .trigger::after {
+    content: ""; position: absolute; right: 14px; top: 50%; width: 7px; height: 7px;
+    border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted);
+    transform: translateY(-70%) rotate(45deg); transition: transform .18s ease;
+  }
+  .trigger.open::after { transform: translateY(-30%) rotate(225deg); }
+  .dd-panel {
+    position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 6px);
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, .16); padding: 4px;
+    max-height: 220px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+  }
+  .dd-panel::-webkit-scrollbar { width: 6px; }
+  .dd-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+  .option {
+    display: flex; align-items: center; width: 100%; text-align: left;
+    padding: 9px 12px; border: none; background: transparent; cursor: pointer;
+    font-size: 13px; color: #334155; border-radius: 6px;
+  }
+  .option:hover { background: #f8fafc; }
+  .option.active { background: var(--gold-soft); color: #7c5a2e; font-weight: 600; }
+  .card-head { margin: -2px 0 18px; padding-bottom: 14px; border-bottom: 1px solid #f1f5f9; }
+  .card-head h2 { margin: 0 0 4px; font-size: 17px; }
+  .card-head p { margin: 0; font-size: 12px; color: var(--muted); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+  .tip { display: flex; align-items: center; gap: 6px; margin: -6px 0 12px; font-size: 12px; color: var(--gold); }
+  .tip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+  .btn { height: 38px; padding: 0 18px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); font-size: 14px; cursor: pointer; transition: all .18s ease; }
+  .btn:hover { border-color: var(--gold); color: var(--brand); }
+  .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .btn.primary:hover { background: #172d4a; }
+  .btn.ghost { color: var(--muted); }
+  .error { margin: 12px 0 0; color: var(--danger); font-size: 13px; }
+  .field-error { margin: 6px 0 0; color: var(--danger); font-size: 12px; }
+  input.invalid, select.invalid { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(185, 28, 28, .08); }
+  .success { color: var(--ok); font-size: 13px; margin: 12px 0 0; }
+  .result-card h2 { margin: 0 0 14px; font-size: 16px; }
+  .result-row { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: #f8fafc; border: 1px dashed var(--line); border-radius: 8px; }
+  .result-row span { font-size: 12px; color: var(--muted); }
+  .result-row strong { font-size: 15px; font-weight: 600; color: var(--brand); word-break: break-all; min-height: 22px; }
+  pre { margin: 12px 0 0; padding: 14px; background: #0f172a; color: #dbeafe; border-radius: 8px; font-size: 12px; overflow: auto; max-height: 260px; }
+  .hint { margin: 0; color: #94a3b8; font-size: 12px; }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <nav class="proto-nav">
+    <a href="01-cascader.html">方案一 · 级联面板</a>
+    <a class="active" href="02-selects.html">方案二 · 四级下拉</a>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <p class="eyebrow">PROTOTYPE 02</p>
+      <h1>实习地点 · 四级下拉</h1>
+      <p class="sub">最稳妥的实现方式：每个层级一个下拉框，直辖市自动锁定“市”层级并置灰。</p>
+    </div>
+    <span class="badge">可点击试用</span>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <div class="card-head">
+        <h2>实习地点</h2>
+        <p>按顺序选择省 / 市 / 区 / 街道；北京、上海、天津、重庆会自动跳过重复的城市层级。</p>
+      </div>
+      <div id="regionBlock">
+        <div class="grid-2">
+          <div class="field">
+            <span class="label">省 / 直辖市 <i>*</i></span>
+            <div class="dd">
+              <button type="button" class="trigger placeholder" id="provinceTrigger">请选择省 / 直辖市</button>
+              <div class="dd-panel" id="provincePanel" hidden></div>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">城市 <i>*</i></span>
+            <div class="dd">
+              <button type="button" class="trigger placeholder" id="cityTrigger">请选择城市</button>
+              <div class="dd-panel" id="cityPanel" hidden></div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
+            <span class="label">区 / 县 <i>*</i></span>
+            <div class="dd">
+              <button type="button" class="trigger placeholder" id="districtTrigger">请选择区 / 县</button>
+              <div class="dd-panel" id="districtPanel" hidden></div>
+            </div>
+          </div>
+          <div class="field">
+            <span class="label">街道 / 乡镇 <i>*</i></span>
+            <div class="dd">
+              <button type="button" class="trigger placeholder" id="streetTrigger">请选择街道 / 乡镇</button>
+              <div class="dd-panel" id="streetPanel" hidden></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="tip" id="municipalityTip" hidden>当前选择为直辖市，城市层级已自动设为“市辖区”，无需重复选择。</p>
+
+      <label class="field">
+        <span class="label" id="detailLabel">详细地址 <i>*</i></span>
+        <input id="detail" placeholder="街道 / 门牌号 / 楼栋，例如：物联网街 518 号 3 幢 501">
+        <p id="detailError" class="field-error" hidden></p>
+      </label>
+
+      <div class="actions">
+        <button type="button" class="btn ghost" id="reset">重置</button>
+        <button type="button" class="btn primary" id="confirm">确认选择</button>
+      </div>
+      <p id="error" class="error" hidden></p>
+      <p id="success" class="success" hidden>已确认，可继续填写其他表单字段。</p>
+    </section>
+
+    <aside class="card result-card">
+      <h2>选择结果</h2>
+      <div class="result-row">
+        <span>完整地址</span>
+        <strong id="full">—</strong>
+      </div>
+      <pre id="json">{}</pre>
+      <p class="hint" style="margin-top:10px">字段结构：country / province / city / district / street / detail</p>
+    </aside>
+  </main>
+</div>
+
+<script src="china-regions.js"></script>
+<script>
+  // 数据来源：中国大陆省/市/区/街道来自国家统计局行政区划（china-regions.js）；
+  // 港澳台为演示补充，正式接入时应替换为完整行政区划数据。
+  const CHINA_REGIONS = window.CHINA_REGIONS;
+  const REGION_DATA = {
+    '中国': CHINA_REGIONS
+  };
+
+  const state = { country: '中国', province: '', city: '', district: '', street: '', detail: '' };
+  const $ = (id) => document.getElementById(id);
+  const detailInput = $('detail');
+
+  function regionOf(country) { return REGION_DATA[country] || {}; }
+  function currentProvince() { return regionOf(state.country)[state.province]; }
+  function municipality() { return Boolean(currentProvince()?.municipality); }
+  function citiesOfProvince() { return currentProvince()?.cities || {}; }
+  function districtsOfCity() {
+    if (!state.province) return {};
+    const cities = citiesOfProvince();
+    return cities[state.city] || {};
+  }
+  const dropdowns = []
+  function closeAllDropdowns() {
+    dropdowns.forEach((dd) => dd.close())
+  }
+  function createDropdown(triggerId, panelId, onChange) {
+    const trigger = $(triggerId)
+    const panel = $(panelId)
+    let items = []
+    let placeholder = '请选择'
+    let value = ''
+    let disabled = false
+    function sync() {
+      trigger.textContent = value || placeholder
+      trigger.classList.toggle('placeholder', !value)
+    }
+    function render() {
+      panel.innerHTML = ''
+      items.forEach((item) => {
+        const btn = document.createElement('button')
+        btn.type = 'button'
+        btn.className = 'option' + (item === value ? ' active' : '')
+        btn.textContent = item
+        btn.addEventListener('click', (event) => {
+          event.stopPropagation()
+          value = item
+          sync()
+          close()
+          onChange(item)
+        })
+        panel.appendChild(btn)
+      })
+    }
+    function open() {
+      if (disabled) return
+      closeAllDropdowns()
+      render()
+      panel.hidden = false
+      trigger.classList.add('open')
+    }
+    function close() {
+      panel.hidden = true
+      trigger.classList.remove('open')
+    }
+    trigger.addEventListener('click', (event) => {
+      event.stopPropagation()
+      if (panel.hidden) open(); else close()
+    })
+    const api = {
+      setOptions(nextItems, nextPlaceholder, selected) {
+        items = nextItems
+        placeholder = nextPlaceholder
+        value = selected || ''
+        disabled = false
+        trigger.disabled = false
+        trigger.classList.remove('disabled')
+        render()
+        sync()
+      },
+      setDisabled(flag, nextValue) {
+        disabled = flag
+        trigger.disabled = flag
+        trigger.classList.toggle('disabled', flag)
+        if (flag && nextValue !== undefined) {
+          value = nextValue
+          sync()
+        }
+        if (flag) close()
+      },
+      get value() { return value },
+      close,
+      open,
+    }
+    dropdowns.push(api)
+    return api
+  }
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.dd')) closeAllDropdowns()
+  })
+  function syncResult() {
+    const parts = [state.country === '中国' ? '' : state.country, state.province];
+    if (!municipality()) parts.push(state.city);
+    parts.push(state.district, state.street, state.detail);
+    $('full').textContent = parts.filter(Boolean).join('') || '—';
+    $('json').textContent = JSON.stringify(state, null, 2);
+  }
+  function resetDownstream(level) {
+    if (level === 'country') { state.province = ''; state.city = ''; state.district = ''; state.street = ''; }
+    if (level === 'province') { state.city = ''; state.district = ''; state.street = ''; }
+    if (level === 'city') { state.district = ''; state.street = ''; }
+    if (level === 'district') { state.street = ''; }
+  }
+  function renderProvince() {
+    provinceDD.setOptions(Object.keys(regionOf(state.country)), '请选择省 / 直辖市', state.province)
+  }
+  function renderCity() {
+    if (!state.province) {
+      cityDD.setOptions([], '请先选择省', '')
+      cityDD.setDisabled(true)
+      return
+    }
+    if (municipality()) {
+      state.city = Object.keys(citiesOfProvince())[0] || ''
+      cityDD.setOptions([state.city], '', state.city)
+      cityDD.setDisabled(true, state.city)
+      return
+    }
+    cityDD.setOptions(Object.keys(citiesOfProvince()), '请选择城市', state.city)
+  }
+  function renderDistrict() {
+    if (!state.province || (!municipality() && !state.city)) {
+      districtDD.setOptions([], '请先选择城市', '')
+      districtDD.setDisabled(true)
+      return
+    }
+    districtDD.setOptions(Object.keys(districtsOfCity()), '请选择区 / 县', state.district)
+  }
+  function renderStreet() {
+    if (!state.district) {
+      streetDD.setOptions([], '请先选择区 / 县', '')
+      streetDD.setDisabled(true)
+      return
+    }
+    streetDD.setOptions(districtsOfCity()[state.district] || [], '请选择街道 / 乡镇', state.street)
+  }
+  function renderAll() {
+    renderProvince()
+    renderCity()
+    renderDistrict()
+    renderStreet()
+    $('municipalityTip').hidden = !municipality()
+    syncResult()
+  }
+
+  const provinceDD = createDropdown('provinceTrigger', 'provincePanel', (value) => {
+    state.province = value
+    resetDownstream('province')
+    renderCity()
+    renderDistrict()
+    renderStreet()
+    $('municipalityTip').hidden = !municipality()
+    syncResult()
+  })
+  const cityDD = createDropdown('cityTrigger', 'cityPanel', (value) => {
+    state.city = value
+    resetDownstream('city')
+    renderDistrict()
+    renderStreet()
+    syncResult()
+  })
+  const districtDD = createDropdown('districtTrigger', 'districtPanel', (value) => {
+    state.district = value
+    resetDownstream('district')
+    renderStreet()
+    syncResult()
+  })
+  const streetDD = createDropdown('streetTrigger', 'streetPanel', (value) => {
+    state.street = value
+    syncResult()
+  })
+
+  function validateDetail(show) {
+    const value = state.detail;
+    const message = !value
+      ? '请填写详细地址（门牌号 / 楼栋）'
+      : value.length < 2
+        ? '详细地址至少 2 个字符'
+        : value.length > 100
+          ? '详细地址不能超过 100 个字符'
+          : '';
+    const el = $('detailError');
+    el.textContent = message;
+    el.hidden = !message || !show;
+    detailInput.classList.toggle('invalid', Boolean(message) && show);
+    return !message;
+  }
+  detailInput.addEventListener('input', () => {
+    state.detail = detailInput.value.trim();
+    if (!$('detailError').hidden) validateDetail(true);
+    syncResult();
+  });
+  detailInput.addEventListener('blur', () => validateDetail(true));
+  $('reset').addEventListener('click', () => {
+    state.country = '中国';
+    state.province = '';
+    state.city = '';
+    state.district = '';
+    state.street = '';
+    state.detail = '';
+    detailInput.value = '';
+    $('error').hidden = true;
+    $('success').hidden = true;
+    $('detailError').hidden = true;
+    detailInput.classList.remove('invalid');
+    renderAll();
+  });
+  $('confirm').addEventListener('click', () => {
+    const error = $('error');
+    const success = $('success');
+    success.hidden = true;
+    if (state.country !== '其他 / 海外') {
+      if (!state.province) { error.textContent = '请选择省 / 直辖市'; error.hidden = false; return; }
+      if (!municipality() && !state.city) { error.textContent = '请选择城市'; error.hidden = false; return; }
+      if (!state.district) { error.textContent = '请选择区 / 县'; error.hidden = false; return; }
+      if (!state.street) { error.textContent = '请选择街道 / 乡镇'; error.hidden = false; return; }
+    }
+    if (!validateDetail(true)) { error.hidden = true; return; }
+    error.hidden = true;
+    success.hidden = false;
+  });
+
+  renderAll();
+</script>
+</body>
+</html>

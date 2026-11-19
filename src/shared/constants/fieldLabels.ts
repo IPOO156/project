@@ -22,9 +22,9 @@ export const FIELD_LABELS: Record<string, string> = {
   competitionName: '竞赛名称',
   competitionType: '竞赛类型',
   competitionDate: '参赛时间',
+  awardDate: '获奖时间',
   competitionLevel: '竞赛级别',
   awardLevel: '获奖等级',
-  awardDate: '获奖时间',
   /* 创新创业 / 双创之星 */
   companyName: '公司名称',
   industryType: '行业类型',

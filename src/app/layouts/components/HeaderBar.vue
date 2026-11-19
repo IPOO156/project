@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   Moon,
+  MousePointer2,
   Search,
   Settings,
   Sun,
@@ -23,6 +24,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useThemeRipple } from '@/app/composables/useThemeRipple'
 import {
   useAppStore,
+  useCursorStore,
   useNotificationStore,
   useTeacherMessageStore,
   useThemeStore,
@@ -39,6 +41,7 @@ const appStore = useAppStore()
 const notificationStore = useNotificationStore()
 const teacherMessageStore = useTeacherMessageStore()
 const themeStore = useThemeStore()
+const cursorStore = useCursorStore()
 const router = useRouter()
 const route = useRoute()
 const { toggleThemeWithRipple } = useThemeRipple()
@@ -153,6 +156,24 @@ async function switchToStudent() {
         </el-button>
       </el-tooltip>
 
+      <!-- 书册光标开关：仅学生端，和主题切换同属外观偏好 -->
+      <el-tooltip
+        v-if="!isTeacher"
+        :content="cursorStore.enabled ? '关闭书册光标' : '开启书册光标'"
+        placement="bottom"
+      >
+        <el-button
+          text
+          class="header__action"
+          :class="{ 'header__action--on': cursorStore.enabled }"
+          :aria-label="cursorStore.enabled ? '关闭书册光标' : '开启书册光标'"
+          :aria-pressed="cursorStore.enabled"
+          @click="cursorStore.toggle(isTeacher)"
+        >
+          <MousePointer2 :size="18" />
+        </el-button>
+      </el-tooltip>
+
       <el-dropdown trigger="click">
         <span class="header__user">
           <el-avatar :size="32" :src="userStore.avatar" :icon="User" />
@@ -213,6 +234,10 @@ async function switchToStudent() {
   z-index: $z-sticky;
   // 固定栏位的稳定上下文：避免 NavTabs 滚动时 header 抖动
   contain: layout;
+
+  &__action--on {
+    color: var(--el-color-primary);
+  }
 
   &__left {
     display: flex;
@@ -281,10 +306,15 @@ async function switchToStudent() {
   &__right {
     display: flex;
     align-items: center;
-    gap: $spacing-md;
+    // 铃铛 / 主题 / 光标三个图标贴紧，用户区单独留白
+    gap: 2px;
     flex: 0 0 auto;
     // 防止用户区被 NavTabs 挤压消失
     padding-left: $spacing-lg;
+
+    :deep(.el-button + .el-button) {
+      margin-left: 0;
+    }
   }
 
   &__action {
@@ -296,6 +326,7 @@ async function switchToStudent() {
     align-items: center;
     gap: $spacing-sm;
     cursor: pointer;
+    margin-left: $spacing-sm;
     padding: $spacing-xs $spacing-sm;
     border-radius: $radius-base;
     transition: background-color $duration-fast $ease-standard;
