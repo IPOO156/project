@@ -129,20 +129,21 @@ function canEdit(s: string) {
 }
 .form-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
   gap: 12px;
-  margin-top: 8px;
-  /* 表单内容区固定为「标签 120px + 控件 480px」：用左右内边距把按钮收进控件列，
-     使其紧贴在佐证材料下方，而不是落在表单卡片最右缘 */
+  margin-top: 16px;
+  /* 与佐证材料上传区左缘（标签宽 120px）对齐，两个操作按钮靠左排布 */
   padding-left: 120px;
-  padding-right: calc(100% - 600px);
+
+  :deep(.el-button) {
+    min-width: 96px;
+  }
 }
 @media (max-width: 768px) {
-  /* 控件改为 100% 后按钮恢复占满整行、贴卡片右缘 */
+  /* 控件改为 100% 后按钮跟随表单左缘 */
   .form-actions {
     padding-left: 0;
-    padding-right: 0;
   }
   .form-card :deep(.el-form) .el-input,
   .form-card :deep(.el-form) .el-select,
