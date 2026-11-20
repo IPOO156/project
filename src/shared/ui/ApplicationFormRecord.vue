@@ -133,8 +133,17 @@ function canEdit(s: string) {
   align-items: center;
   gap: 12px;
   margin-top: 8px;
+  /* 表单内容区固定为「标签 120px + 控件 480px」：用左右内边距把按钮收进控件列，
+     使其紧贴在佐证材料下方，而不是落在表单卡片最右缘 */
+  padding-left: 120px;
+  padding-right: calc(100% - 600px);
 }
 @media (max-width: 768px) {
+  /* 控件改为 100% 后按钮恢复占满整行、贴卡片右缘 */
+  .form-actions {
+    padding-left: 0;
+    padding-right: 0;
+  }
   .form-card :deep(.el-form) .el-input,
   .form-card :deep(.el-form) .el-select,
   .form-card :deep(.el-form) .el-date-editor,
