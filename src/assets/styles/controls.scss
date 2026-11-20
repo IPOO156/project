@@ -287,3 +287,47 @@ html:has(#app :is(.layout--teacher, .layout--admin)) .el-select-dropdown__item:h
     min-height: var(--mc-ctl-h-touch);
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   G. 日期 / 月份选择器光标
+   可点击时用 pointer，禁用时用 not-allowed。
+   书册光标会给所有 input 写 text 光标，这里用更高优先级覆盖，
+   避免日期选择器看起来像普通文本框。
+   ══════════════════════════════════════════════════════════════════ */
+
+.el-date-editor,
+.el-date-editor .el-input__wrapper,
+.el-date-editor .el-input__inner,
+.el-date-editor .el-range-input,
+.el-date-editor .el-input__suffix,
+.el-date-editor .el-input__prefix {
+  cursor: pointer !important;
+}
+
+.el-date-editor.is-disabled,
+.el-date-editor.is-disabled .el-input__wrapper,
+.el-date-editor.is-disabled .el-input__inner,
+.el-date-editor.is-disabled .el-range-input,
+.el-date-editor .el-input.is-disabled .el-input__wrapper,
+.el-date-editor .el-input.is-disabled .el-input__inner {
+  cursor: not-allowed !important;
+}
+
+/* 弹出面板里的月份/日期格子：显式覆盖，避免书册光标的 text 状态残留到单元格 */
+.el-picker-panel .el-month-table td,
+.el-picker-panel .el-month-table td .cell,
+.el-picker-panel .el-month-table td .el-date-table-cell__text,
+.el-picker-panel .el-date-table td,
+.el-picker-panel .el-date-table td .cell,
+.el-picker-panel .el-date-table td .el-date-table-cell__text {
+  cursor: pointer !important;
+}
+
+.el-picker-panel .el-month-table td.disabled,
+.el-picker-panel .el-month-table td.disabled .cell,
+.el-picker-panel .el-month-table td.disabled .el-date-table-cell__text,
+.el-picker-panel .el-date-table td.disabled,
+.el-picker-panel .el-date-table td.disabled .cell,
+.el-picker-panel .el-date-table td.disabled .el-date-table-cell__text {
+  cursor: not-allowed !important;
+}

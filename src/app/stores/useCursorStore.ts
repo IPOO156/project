@@ -5,12 +5,13 @@ import bookCursor from '@/shared/utils/bookCursor'
 const STORAGE_KEY = 'app_book_cursor_enabled'
 
 function readEnabled(): boolean {
-  if (typeof window === 'undefined') return true
+  if (typeof window === 'undefined') return false
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw === null ? true : raw === '1'
+    // 默认关闭：书册光标改为用户显式开启后才生效
+    return raw === '1'
   } catch {
-    return true
+    return false
   }
 }
 
@@ -36,6 +37,11 @@ export const useCursorStore = defineStore('cursor', () => {
     else bookCursor.enable()
   }
 
+  /** 离开业务布局（登录/404 等 noLayout 页面）时关闭 */
+  function disable() {
+    bookCursor.disable()
+  }
+
   function setEnabled(next: boolean, isTeacher = false) {
     enabled.value = next
     writeEnabled(next)
@@ -46,5 +52,5 @@ export const useCursorStore = defineStore('cursor', () => {
     setEnabled(!enabled.value, isTeacher)
   }
 
-  return { enabled, setEnabled, toggle, apply }
+  return { enabled, setEnabled, toggle, apply, disable }
 })

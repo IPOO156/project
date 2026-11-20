@@ -27,7 +27,13 @@ export const useCareerPlanStore = defineStore('career-plan', () => {
   const CACHE_TTL_MS = 60_000
 
   async function fetchPlans(force = false): Promise<void> {
-    if (pendingFetch) return pendingFetch
+    if (!force && pendingFetch) return pendingFetch
+    // 强制刷新时先等在途请求结束再重新拉取，避免提交后回查命中提交前的旧请求（报告 #13）
+    let inflight = pendingFetch
+    while (inflight) {
+      await inflight
+      inflight = pendingFetch
+    }
     if (!force && Date.now() - lastFetchedAt < CACHE_TTL_MS && plans.value.length > 0) return
     loading.value = true
     pendingFetch = (async () => {

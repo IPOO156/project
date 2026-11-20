@@ -1,5 +1,6 @@
 import type { Component } from 'vue'
 import {
+  Award,
   Bell,
   Clock,
   Compass,
@@ -161,11 +162,11 @@ export const registeredModules: AppModule[] = [
   {
     id: 'approval',
     label: '我的奖项',
-    icon: Star,
+    icon: Award,
     order: 50,
     routePrefix: '/approval',
     description: '奖项看板：查看与管理奖项报名记录',
-    menuItems: [{ label: '我的奖项', icon: Star, path: '/approval/award-review' }],
+    menuItems: [{ label: '我的奖项', icon: Award, path: '/approval/award-review' }],
   },
 ]
 

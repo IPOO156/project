@@ -17,7 +17,8 @@
  *     - 时长 200-280ms（命中 skill §6 区间）
  *     - will-change 在动画结束后立即释放（避免常驻内存）
  */
-import { computed, nextTick, ref, useSlots, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTabs } from '@/app/composables/useTabs'
 import { useAppStore, useCursorStore, useUserStore } from '@/app/stores/stores'
@@ -62,6 +63,34 @@ watch(
   ([isTeacher]) => cursorStore.apply(isTeacher),
   { immediate: true },
 )
+
+// 离开业务布局（登录 / 404 等 noLayout 页面）时关闭书册光标（报告 #20）
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDisabledCellClick, true)
+  cursorStore.disable()
+})
+
+/**
+ * 日期/月份选择器里连续点击灰色不可选单元格时给出解释：
+ * 单次点击 Element Plus 没有任何反馈，连点三次以上容易被误认为“控件坏了”。
+ */
+let disabledCellClicks = 0
+let disabledCellTimer = 0
+function handleDisabledCellClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  if (!target?.closest('.el-month-table td.disabled, .el-date-table td.disabled')) return
+  disabledCellClicks += 1
+  window.clearTimeout(disabledCellTimer)
+  disabledCellTimer = window.setTimeout(() => {
+    disabledCellClicks = 0
+  }, 2000)
+  if (disabledCellClicks >= 3) {
+    disabledCellClicks = 0
+    ElMessage.warning('所选日期/月份不在学期范围内：请切换学期，或点击顶部箭头切换到学期对应年份')
+  }
+}
+
+onMounted(() => document.addEventListener('click', handleDisabledCellClick, true))
 
 // 人性化问候弹窗（useGreeting 内部已处理挂载与登录状态监听）
 const { visible, dismissing, greeting, theme, dismiss } = useGreeting()

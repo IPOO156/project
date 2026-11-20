@@ -130,6 +130,11 @@ function formatValue(key: string, val: unknown): string {
   return String(val)
 }
 
+/** location 在实习与实践中含义不同：按记录类型取对应标签（报告 #11） */
+const locationLabel = computed(() =>
+  props.record?.type === 'internship' ? '实习地点' : '活动地点',
+)
+
 /** 仅保留白名单内且非空的用户填写字段，按 FIELD_LABELS 定义顺序展示 */
 const displayItems = computed(() => {
   if (!props.record) return []
@@ -139,7 +144,11 @@ const displayItems = computed(() => {
       // title 是后端派生的展示标题，和业务名称（竞赛名称/项目名称等）重复，详情里不再渲染
       .filter(([key, val]) => key !== 'title' && FIELD_LABELS[key] && !isEmpty(val))
       .sort(([a], [b]) => order[a] - order[b])
-      .map(([key, val]) => ({ key, label: FIELD_LABELS[key], value: formatValue(key, val) }))
+      .map(([key, val]) => ({
+        key,
+        label: key === 'location' ? locationLabel.value : FIELD_LABELS[key],
+        value: formatValue(key, val),
+      }))
   )
 })
 </script>
@@ -153,7 +162,7 @@ const displayItems = computed(() => {
   >
     <el-alert
       v-if="record?.__detailUnavailable"
-      title="后端未提供详情接口，以下仅为列表摘要，部分字段可能缺失"
+      :title="record?.__detailUnavailableText || '详情加载失败，以下仅为列表摘要，部分字段可能缺失'"
       type="warning"
       :closable="false"
       show-icon
