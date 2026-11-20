@@ -126,7 +126,12 @@ export function sanitizeSemesterMonthPair<T extends Record<string, unknown>>(
   const normalizedMonth = normalizeMonthValue(monthValue)
   const hasSemester = typeof semesterValue === 'string' && semesterValue.trim() !== ''
 
-  if (normalizedMonth && monthValue !== normalizedMonth) {
+  // 只规范化「年-月」型手输值（2026-9 → 2026-09）。Date 与 YYYY-MM-DD 保持原值：
+  // 各页日期选择器的 value-format 不同（月份选择器多为 YYYY-MM，学科竞赛为 YYYY-MM-DD），
+  // 若把 YYYY-MM-DD 改写成 YYYY-MM，dayjs(值, 'YYYY-MM-DD') 解析失败，选择器会显示成空白
+  // —— 表现为「先填获奖时间，再选学期时无论是否匹配都被清空」。
+  const monthText = typeof monthValue === 'string' ? monthValue.trim() : ''
+  if (/^\d{4}-\d{1,2}$/.test(monthText) && monthText !== normalizedMonth) {
     form[monthField] = normalizedMonth as T[keyof T]
   }
 

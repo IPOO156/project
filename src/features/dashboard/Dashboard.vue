@@ -191,7 +191,12 @@ const comparedSemesterMap = computed(() => {
  */
 const hasPreviousFromApi = computed<boolean | null>(() => {
   const v = homeStore.data?.radarChart?.hasPrevious
-  return typeof v === 'boolean' ? v : null
+  if (typeof v !== 'boolean') return null
+  if (!v) return false
+  // 后端 hasPrevious=true 但 previous 全为 0：上一学期没有成绩（不是「上期考 0 分」），
+  // 此时不存在真实基线。按「暂无环比数据」展示，避免拼出「较上期 +5 分」这类虚构趋势。
+  const previous: number[] = homeStore.data?.radarChart?.previous ?? []
+  return previous.some((score) => Number(score) > 0)
 })
 
 const indicatorMeta = computed(() => {

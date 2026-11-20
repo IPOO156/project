@@ -18,6 +18,23 @@ const BAR_COLOR = '#4a7fb5'
 const dimensionList = computed(() => props.dimensions ?? [])
 const hasDetail = computed(() => dimensionList.value.length > 0)
 const expanded = ref(false)
+
+/**
+ * 学校维护、学生端只读的项：不能提示学生“还差”，否则会出现“提示缺学历层次但无处可填”的矛盾。
+ * 单独标注“由学校维护”，学生可补充的项仍显示“还差”。
+ */
+const SYSTEM_MAINTAINED_ITEMS = new Set(['学历层次', '政治面貌', '学生状态'])
+
+const dimensionRows = computed(() =>
+  dimensionList.value.map((dim) => {
+    const missing = dim.missingItems ?? []
+    return {
+      ...dim,
+      studentMissing: missing.filter((item) => !SYSTEM_MAINTAINED_ITEMS.has(item)),
+      systemMissing: missing.filter((item) => SYSTEM_MAINTAINED_ITEMS.has(item)),
+    }
+  }),
+)
 </script>
 
 <template>
@@ -42,7 +59,7 @@ const expanded = ref(false)
     </div>
 
     <div v-if="expanded" class="completeness-detail">
-      <div v-for="dim in dimensionList" :key="dim.dimensionCode" class="completeness-detail__item">
+      <div v-for="dim in dimensionRows" :key="dim.dimensionCode" class="completeness-detail__item">
         <div class="completeness-detail__head">
           <span class="completeness-detail__name">{{ dim.dimensionName }}</span>
           <span class="completeness-detail__rate">{{ dim.rate }}%</span>
@@ -55,10 +72,10 @@ const expanded = ref(false)
           class="completeness-detail__progress"
         />
         <div class="completeness-detail__missing">
-          <template v-if="dim.missingItems?.length">
+          <template v-if="dim.studentMissing.length">
             <span class="completeness-detail__hint">还差</span>
             <el-tag
-              v-for="item in dim.missingItems"
+              v-for="item in dim.studentMissing"
               :key="item"
               size="small"
               type="info"
@@ -66,7 +83,24 @@ const expanded = ref(false)
               >{{ item }}</el-tag
             >
           </template>
-          <span v-else class="completeness-detail__done">已完善</span>
+          <template v-if="dim.systemMissing.length">
+            <span class="completeness-detail__hint completeness-detail__hint--system"
+              >由学校维护</span
+            >
+            <el-tag
+              v-for="item in dim.systemMissing"
+              :key="item"
+              size="small"
+              type="info"
+              effect="plain"
+              >{{ item }}</el-tag
+            >
+          </template>
+          <span
+            v-if="!dim.studentMissing.length && !dim.systemMissing.length"
+            class="completeness-detail__done"
+            >已完善</span
+          >
         </div>
       </div>
       <p class="completeness-detail__note">
@@ -196,6 +230,11 @@ const expanded = ref(false)
 .completeness-detail__hint {
   font-size: 12px;
   color: #94a3b8;
+}
+
+.completeness-detail__hint--system {
+  margin-left: 8px;
+  color: #b45309;
 }
 
 .completeness-detail__done {

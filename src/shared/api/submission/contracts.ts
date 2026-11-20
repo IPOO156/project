@@ -127,7 +127,15 @@ export const APPLICATION_CONTRACTS: Record<string, TypeContract> = {
     dateFields: ['startDate', 'endDate'],
     // 后端 research_type 已用 experimental 取代旧码 development（见 businessDict RESEARCH_TYPES）
     // 表单为 ASCII 下拉；enumMap 仅兼容中文标签输入
-    enumMap: { projectType: { 基础研究: 'basic', 应用研究: 'applied', 试验发展: 'experimental' } },
+    enumMap: {
+      projectType: {
+        基础研究: 'basic',
+        应用研究: 'applied',
+        // 旧记录/旧字典用“试验发展”，新字典为“实验发展”，两者都映射到 experimental（报告 #12）
+        实验发展: 'experimental',
+        试验发展: 'experimental',
+      },
+    },
   },
   internship: {
     endpoint: '/applications/internship',

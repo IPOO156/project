@@ -104,6 +104,13 @@ function prefill(experience: GrowthExperience) {
   form.sourceKey = ''
 }
 
+/** 发生日期不得晚于今天（文档 4.2.1；学期上界仍由后端校验）（报告 #18） */
+function disabledExperienceDate(date: Date): boolean {
+  const now = new Date()
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+  return date.getTime() > endOfToday.getTime()
+}
+
 async function handleSubmit() {
   if (submitting.value) return
 
@@ -176,6 +183,7 @@ watch(
           type="date"
           placeholder="选择日期"
           value-format="YYYY-MM-DD"
+          :disabled-date="disabledExperienceDate"
         />
       </el-form-item>
 

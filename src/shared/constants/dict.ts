@@ -59,6 +59,8 @@ export const ROLE_OPTIONS = [
   { label: '负责人', value: 'leader' },
   { label: '成员', value: 'member' },
   { label: '独立完成', value: 'individual' },
+  // 后端 participant_role 字典实际返回 solo，缺这一项时预览/详情会直接显示 "solo"
+  { label: '独立完成', value: 'solo' },
 ] as const
 
 // 申请状态（含标签颜色）

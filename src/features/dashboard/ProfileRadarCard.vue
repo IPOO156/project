@@ -60,7 +60,10 @@ const profileSummary = computed(() => {
     // 后端给了显式开关就以它为准；开关缺省（老后端）时才退回「对比学期名是否存在」。
     const comparedSemesterName = comparedMap.get(item.label)
     const hasBaseline = apiHasPrevious ?? comparedSemesterName != null
-    const deltaFromPrevious = hasBaseline ? item.current - item.previous : 0
+    // 浮点直减会出现 3.3999999999999986，环比同样保留两位小数（报告 #19）
+    const deltaFromPrevious = hasBaseline
+      ? Math.round((item.current - item.previous) * 100) / 100
+      : 0
     return {
       label: item.label,
       current: item.current,

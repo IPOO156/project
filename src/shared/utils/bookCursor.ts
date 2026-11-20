@@ -219,7 +219,9 @@ const CURSOR_CSS = [
   `[${DATA_CURSOR_ATTR}='not-allowed']{cursor:var(--bc-na),not-allowed!important;}`,
   '[disabled],.is-disabled,[aria-disabled="true"]{cursor:var(--bc-na),not-allowed!important;}',
   `.${BUSY_CLASS},.${BUSY_CLASS} *{cursor:var(--bc-wait),progress!important;}`,
-  `.${OFF_CLASS},.${OFF_CLASS} *{cursor:auto!important;}`,
+  // 关闭时必须用 html.bc-off 提权：`.el-pager li` 这类「类+元素」选择器比原来的
+  // `.bc-off *`（0,1,0）权重更高，导致分页等位置关闭后仍显示书册光标。
+  `html.${OFF_CLASS},html.${OFF_CLASS} *{cursor:auto!important;}`,
 ].join('')
 
 /* ---------------- 运行时状态 ---------------- */
