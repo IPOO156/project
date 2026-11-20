@@ -21,6 +21,7 @@ import {
   buildSemesterMonthDisabledDate,
   isMonthAfterDate,
   isMonthInSemester,
+  normalizeMonthValue,
   parseSemesterRange,
   sanitizeSemesterMonthPair,
 } from '@/shared/utils/semester'
@@ -482,7 +483,14 @@ export function useApplicationPage(
       }
     }
     Object.keys(emptyForm()).forEach((key) => {
-      if (key in row) (form as Record<string, unknown>)[key] = row[key] ?? ''
+      if (!(key in row)) return
+      // 配置了学期-月份联动的字段，日期选择器统一为 YYYY-MM；详情接口返回的是 YYYY-MM-DD，
+      // 原样回填会让选择器按 value-format 解析失败、编辑态显示空白，这里统一归一化。
+      if (semesterMonthConfig && key === semesterMonthConfig.monthField) {
+        ;(form as Record<string, unknown>)[key] = normalizeMonthValue(row[key])
+        return
+      }
+      ;(form as Record<string, unknown>)[key] = row[key] ?? ''
     })
     extendedForm.role = row.role || ''
     extendedForm.certNumber = row.certNumber || ''

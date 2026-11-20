@@ -72,11 +72,17 @@ export interface Interest {
 // 多维度画像（后端返回 current/target/previous，color 由前端按主题派生）
 export interface ProfileDimension {
   label: string
+  /** 维度当前得分 */
   current: number
+  /**
+   * 维度满分（= 管理员指标权重 × 100，五维合计 100），来自后端 targetScore / radarChart.target。
+   * 不是学生自设目标，展示文案统一用「满分」，避免误导。
+   */
   target: number
+  /** 上一阶段得分；无环比基线时后端补位为 0，不代表真实得分为 0 */
   previous: number
   /**
-   * 距目标分（后端 /home/dashboard indicators[].gap，DECIMAL(5,2)）。
+   * 距满分差值（后端 /home/dashboard indicators[].gap，DECIMAL(5,2)）。
    * 有值时直接展示，禁止前端用 target - current 重算（浮点相减会出现 3.3999999999999986）。
    */
   gap?: number
