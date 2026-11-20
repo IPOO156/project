@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ElMessage } from 'element-plus'
 import { ChevronDown } from 'lucide-vue-next'
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { createAIConversation, deleteAIConversation, sendAIMessage } from '@/shared/api/ai-chat'
 import regionData from '@/shared/data/china-regions.json'
 
@@ -47,8 +47,14 @@ const detail = ref('')
 const pasteText = ref('')
 /** AI 识别中 */
 const parsing = ref(false)
-/** 外部回填的是无法解析的旧地址时，标记为 true；用户重新选省时清掉旧值，避免拼接重复 */
-const hydratedFromModel = ref(false)
+/** 回填但无法解析的整串原文：重选省份时清掉，避免旧串与新选择拼接重复 */
+const unparsedOriginal = ref('')
+/** 手动操作版本号：AI 识别结束后用于判断期间是否被手动修改 */
+let interactionRevision = 0
+
+function markInteraction() {
+  interactionRevision += 1
+}
 let hydrating = false
 
 const provinceNode = computed(() => (province.value ? regions[province.value] : undefined))
@@ -62,19 +68,26 @@ const districtMap = computed<DistrictMap>(() => {
 const districtNames = computed(() => Object.keys(districtMap.value))
 const streetNames = computed(() => districtMap.value[district.value] ?? [])
 
-const displayText = computed(() => {
-  const parts = [province.value]
-  if (!isMunicipality.value) parts.push(city.value)
-  parts.push(district.value, street.value)
-  return parts.filter(Boolean).join(' / ')
+/** 行政区划展示片段：剔除与市同名的区县、“市辖区”，并裁掉街道前的市名前缀 */
+const regionParts = computed(() => {
+  const parts: string[] = []
+  if (province.value) parts.push(province.value)
+  if (city.value && !isMunicipality.value) parts.push(city.value)
+  if (district.value && district.value !== city.value && district.value !== '市辖区') {
+    parts.push(district.value)
+  }
+  if (street.value) {
+    const prefix = city.value || ''
+    parts.push(
+      prefix && street.value.startsWith(prefix) ? street.value.slice(prefix.length) : street.value,
+    )
+  }
+  return parts.filter(Boolean)
 })
 
-const regionText = computed(() => {
-  const parts = [province.value]
-  if (!isMunicipality.value) parts.push(city.value)
-  parts.push(district.value, street.value)
-  return parts.filter(Boolean).join('')
-})
+const displayText = computed(() => regionParts.value.join(' / '))
+
+const regionText = computed(() => regionParts.value.join(''))
 
 const fullAddress = computed(() => `${regionText.value}${detail.value}`.trim())
 
@@ -86,6 +99,15 @@ watch(
   { flush: 'sync' },
 )
 
+// 外部值变化（切换记录、提交后重置）时重新回填，避免残留上一次选择（报告 #1）
+watch(
+  () => props.modelValue,
+  (value) => {
+    if (hydrating) return
+    hydrate(value ?? '')
+  },
+)
+
 function municipalityCityName(name: string): string {
   const node = regions[name]
   return Object.keys(node?.cities ?? {})[0] ?? ''
@@ -95,15 +117,16 @@ function commitSelection(mutate: () => void) {
   hydrating = true
   mutate()
   hydrating = false
+  markInteraction()
   emit('update:modelValue', fullAddress.value)
 }
 
 function selectProvince(name: string) {
   commitSelection(() => {
-    if (hydratedFromModel.value) {
+    if (unparsedOriginal.value && detail.value === unparsedOriginal.value) {
       detail.value = ''
-      hydratedFromModel.value = false
     }
+    unparsedOriginal.value = ''
     province.value = name
     city.value = regions[name]?.municipality ? municipalityCityName(name) : ''
     district.value = ''
@@ -140,9 +163,97 @@ function clear() {
   district.value = ''
   street.value = ''
   detail.value = ''
-  hydratedFromModel.value = false
+  unparsedOriginal.value = ''
   hydrating = false
   emit('update:modelValue', '')
+}
+
+/** 取最长的前缀匹配，避免“东莞市”被“东城街道”之类短名误匹配 */
+function matchPrefix(value: string, names: string[]): string {
+  const text = value.trim()
+  if (!text) return ''
+  let matched = ''
+  for (const name of names) {
+    if (name && text.startsWith(name) && name.length > matched.length) matched = name
+  }
+  return matched
+}
+
+interface ParsedAddress {
+  province: string
+  city: string
+  district: string
+  street: string
+  detail: string
+}
+
+/**
+ * 把已保存的地址串拆成四级 + 详细地址（报告 #2）。
+ * 匹配不到省份时整串作为详细地址，保证旧数据不丢。
+ */
+function parseAddress(value: string): ParsedAddress {
+  const text = (value ?? '').trim()
+  if (!text) return { province: '', city: '', district: '', street: '', detail: '' }
+  const provinceName = matchPrefix(text, provinces)
+  if (!provinceName) return { province: '', city: '', district: '', street: '', detail: text }
+
+  const node = regions[provinceName]
+  let rest = text.slice(provinceName.length)
+  const cityName = node.municipality
+    ? municipalityCityName(provinceName)
+    : matchPrefix(rest, Object.keys(node.cities ?? {}))
+  if (!cityName) return { province: provinceName, city: '', district: '', street: '', detail: rest }
+  if (!node.municipality) rest = rest.slice(cityName.length)
+
+  const districtNamesInCity = Object.keys(node.cities?.[cityName] ?? {})
+  const districtName = matchPrefix(rest, districtNamesInCity)
+  if (districtName) {
+    rest = rest.slice(districtName.length)
+  } else if (districtNamesInCity.length === 1) {
+    // 省直辖县级市：区县层只有“市辖区”或与市同名，街道名可能带市名前缀
+    const onlyDistrict = districtNamesInCity[0]
+    const withoutCityPrefix = rest.startsWith(cityName) ? rest.slice(cityName.length) : rest
+    const streetCandidate = matchPrefix(
+      withoutCityPrefix,
+      node.cities?.[cityName]?.[onlyDistrict] ?? [],
+    )
+    if (streetCandidate) {
+      return {
+        province: provinceName,
+        city: cityName,
+        district: onlyDistrict,
+        street: streetCandidate,
+        detail: withoutCityPrefix.slice(streetCandidate.length),
+      }
+    }
+  }
+
+  const streetName = districtName
+    ? matchPrefix(rest, node.cities?.[cityName]?.[districtName] ?? [])
+    : ''
+  if (streetName) rest = rest.slice(streetName.length)
+  return {
+    province: provinceName,
+    city: cityName,
+    district: districtName,
+    street: streetName,
+    detail: rest,
+  }
+}
+
+/** 送 AI 前剥离手机号、身份证号、邮箱等个人信息（报告 #6） */
+function sanitizeForAI(text: string): string {
+  return (
+    text
+      // “姓名：张三” / “姓名:张三”
+      .replace(/姓名[：:]?\s*[\u4E00-\u9FA5]{2,4}/g, '')
+      // 开头“张三13800138000…”：仅当 2-4 个汉字紧邻手机号时按姓名剥离，避免误伤地址
+      .replace(/^[\u4E00-\u9FA5]{2,4}\s*(?=1[3-9]\d{9})/, '')
+      .replace(/1[3-9]\d{9}/g, '')
+      .replace(/\b\d{17}[\dX]\b/i, '')
+      .replace(/\w[\w.%+-]*@[\w.-]+\.[a-z]{2,}/gi, '')
+      .trim()
+  )
 }
 
 function extractJson(content: string): Record<string, unknown> | null {
@@ -226,7 +337,16 @@ async function parsePaste() {
     ElMessage.warning('请先粘贴地址')
     return
   }
-  if (parsing.value) return
+  if (parsing.value || props.disabled) return
+
+  // 姓名/手机号/身份证/邮箱等个人信息不发送给 AI（报告 #6）
+  const safeText = sanitizeForAI(text)
+  if (!safeText) {
+    ElMessage.warning('粘贴内容只有个人信息，请补充地址')
+    return
+  }
+  // 记录识别开始前的手动操作版本，识别期间被手动修改则丢弃结果（报告 #5）
+  const revisionAtStart = interactionRevision
 
   parsing.value = true
   let conversationId: number | null = null
@@ -234,15 +354,16 @@ async function parsePaste() {
     const conversation = await createAIConversation({ title: '地址识别' })
     conversationId = conversation.conversationId
     const prompt = [
-      '你是一个中国地址解析器。请从下面的文本中提取行政区划，严格只返回 JSON，不要解释、不要 markdown。',
-      '字段格式：{"province":"省/直辖市/自治区/特别行政区","city":"市/自治州/地区","district":"区/县/县级市","street":"街道/镇/乡","detail":"剩余详细地址"}',
+      '我在填写学生成长档案系统的申报表单，“实习地点 / 活动地点 / 通讯地址”字段需要把地址拆分为省、市、区县、街道和详细地址，这是档案申报材料的一部分。',
+      '请只返回一行 JSON，不要解释、不要 markdown：{"province":"省/直辖市/自治区/特别行政区","city":"市/自治州/地区","district":"区/县/县级市","street":"街道/镇/乡","detail":"剩余详细地址"}',
       '无法识别的层级返回空字符串。',
-      `地址文本：${text}`,
+      `地址文本：${safeText}`,
     ].join('\n')
 
     let result = readAIReply((await sendAIMessage(conversationId, prompt)).content)
     if (!result) {
-      const retryPrompt = `只返回一行 JSON，不要解释：{"province":"","city":"","district":"","street":"","detail":""}。地址：${text}`
+      // 重试时保留“档案申报表单”上下文，否则 AI 助手会按超范围请求拒绝解析
+      const retryPrompt = `请把下面地址拆成省、市、区县、街道、详细地址五个字段，用于学生档案申报的地点填写。只输出一行 JSON，不要解释：{"province":"","city":"","district":"","street":"","detail":""}。地址：${safeText}`
       result = readAIReply((await sendAIMessage(conversationId, retryPrompt)).content)
     }
     if (!result) {
@@ -284,14 +405,26 @@ async function parsePaste() {
         ? findName(streetRaw, node.cities?.[cityName]?.[districtName] ?? [])
         : ''
 
+    // AI 未匹配到的层级回退进详细地址，避免“高新区”这类数据缺失的文本被静默丢弃（报告 #4）
+    const leftovers: string[] = []
+    if (!cityName && cityRaw) leftovers.push(cityRaw)
+    if (!districtName && districtRaw) leftovers.push(districtRaw)
+    if (!streetName && streetRaw) leftovers.push(streetRaw)
+
+    if (interactionRevision !== revisionAtStart) {
+      ElMessage.warning('AI 识别期间地址已被手动修改，本次结果未覆盖')
+      return
+    }
+
     hydrating = true
     province.value = provinceName
     city.value = cityName
     district.value = districtName
     street.value = streetName
-    detail.value = detailRaw
-    hydratedFromModel.value = false
+    detail.value = `${leftovers.join('')}${detailRaw}`
+    unparsedOriginal.value = ''
     hydrating = false
+    markInteraction()
     emit('update:modelValue', fullAddress.value)
     pasteText.value = ''
     panelOpen.value = !cityName || !districtName
@@ -303,8 +436,30 @@ async function parsePaste() {
     } else {
       ElMessage.success('AI 已识别并填入地址')
     }
-  } catch {
-    ElMessage.error('AI 识别失败，请稍后重试或手动选择')
+  } catch (error) {
+    // 请求拦截器已统一提示后端错误；这里把真实状态码/后端信息打到控制台，便于排查环境差异
+    const err = error as {
+      code?: string
+      __handled?: boolean
+      response?: { status?: number; data?: { code?: number; message?: string } }
+    } | null
+    const status = err?.response?.status
+    const backendMessage = String(err?.response?.data?.message ?? '').trim()
+    console.error('[AddressPicker] AI 地址识别失败', {
+      status,
+      backendCode: err?.response?.data?.code,
+      backendMessage,
+      transportCode: err?.code,
+    })
+    if (status === 404 || status === 405) {
+      ElMessage.error('当前后端未部署 AI 识别接口，请联系管理员')
+    } else if (!err?.response && !err?.__handled) {
+      ElMessage.error(
+        err?.code === 'ECONNABORTED'
+          ? 'AI 识别超时，请检查网络后重试'
+          : 'AI 识别失败，请检查网络后重试',
+      )
+    }
   } finally {
     parsing.value = false
     if (conversationId != null) {
@@ -314,17 +469,18 @@ async function parsePaste() {
 }
 
 function hydrate(value: string) {
-  if (value === fullAddress.value) return
+  const next = value ?? ''
+  if (next === fullAddress.value) return
+  const parsed = parseAddress(next)
   hydrating = true
-  province.value = ''
-  city.value = ''
-  district.value = ''
-  street.value = ''
-  detail.value = value ?? ''
-  hydratedFromModel.value = Boolean(value)
-  void nextTick(() => {
-    hydrating = false
-  })
+  province.value = parsed.province
+  city.value = parsed.city
+  district.value = parsed.district
+  street.value = parsed.street
+  detail.value = parsed.detail
+  unparsedOriginal.value = parsed.province ? '' : next
+  hydrating = false
+  markInteraction()
 }
 
 function togglePanel() {
@@ -467,8 +623,10 @@ onBeforeUnmount(() => {
       v-model="detail"
       class="address-detail"
       :size="size"
+      :disabled="disabled"
       clearable
       placeholder="街道 / 门牌号 / 楼栋，例如：物联网街 518 号 3 幢 501"
+      @input="markInteraction"
     />
   </div>
 </template>

@@ -30,8 +30,9 @@ if (typeof document !== 'undefined') {
 initAuthState()
 
 // 书册鼠标指针：配色自动跟随 html[data-theme]（theme store 切换时由 MutationObserver 同步）
+// 默认不启用：由 DefaultLayout 按「学生端 + 用户偏好」开启，登录/404 等无布局页面不显示（报告 #20）
 // 加载态由 request.ts 的全局请求计数驱动（延迟 180ms 触发，避免短请求闪烁）
-bookCursor.init({ theme: 'auto' })
+bookCursor.init({ theme: 'auto', enabled: false })
 
 const app = createApp(App)
 

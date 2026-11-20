@@ -10,13 +10,19 @@ import { useUserStore } from './useUserStore'
 /** 维度画像 */
 export function mapDimensions(profile: any): ProfileDimension[] | null {
   if (!Array.isArray(profile?.dimensionProfile)) return null
-  return profile.dimensionProfile.map((d: any) => ({
-    label: d.dimensionName,
-    current: d.score,
-    target: d.targetScore,
-    // /profile/info 未返回上阶段分数，无环比数据时 previous 与 current 相同（前端不编造趋势）
-    previous: d.score,
-  }))
+  return profile.dimensionProfile.map((d: any) => {
+    // BigDecimal 可能序列化为字符串（"3.40"），统一转数字后再透传
+    const gap = Number(d.gap)
+    return {
+      label: d.dimensionName,
+      current: d.score,
+      target: d.targetScore,
+      // /profile/info 未返回上阶段分数，无环比数据时 previous 与 current 相同（前端不编造趋势）
+      previous: d.score,
+      // 后端 gap 为权威值，有值直接透传，避免档案/AI 路径用浮点重算（报告 #16）
+      gap: d.gap != null && Number.isFinite(gap) ? gap : undefined,
+    }
+  })
 }
 
 /** 兴趣标签 */

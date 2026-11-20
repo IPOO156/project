@@ -5,8 +5,9 @@ import { onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
-import { CERTIFICATE_TYPES } from '@/shared/constants/dict'
+import { CERTIFICATE_TYPES, ROLE_OPTIONS } from '@/shared/constants/dict'
 import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
+import ApplicationFormLayout from '@/shared/ui/ApplicationFormLayout.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
 import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
@@ -31,15 +32,44 @@ function emptyForm() {
   }
 }
 
+/** 必填项：与 useApplicationPage 提交校验共用同一份，右栏进度据此计算 */
+const REQUIRED_FIELDS = [
+  { key: 'certType', label: '证书类型' },
+  { key: 'certName', label: '证书名称' },
+  { key: 'certDate', label: '获得时间' },
+  { key: 'semester', label: '学期' },
+  { key: 'proofMaterials', label: '佐证材料' },
+] as const
+
 const page = reactive(
-  useApplicationPage('certificate', '荣誉证书', emptyForm, undefined, [
-    { key: 'certType', label: '证书类型' },
-    { key: 'certName', label: '证书名称' },
-    { key: 'certDate', label: '获得时间' },
-    { key: 'semester', label: '学期' },
-    { key: 'proofMaterials', label: '佐证材料' },
-  ]),
+  useApplicationPage('certificate', '荣誉证书', emptyForm, undefined, [...REQUIRED_FIELDS]),
 )
+
+/** 实时预览字段：码值用下拉同源映射转文案 */
+const PREVIEW_FIELDS = [
+  { key: 'certType', label: '类型', options: certTypeOptions },
+  { key: 'certName', label: '证书名称' },
+  { key: 'certDate', label: '获得时间' },
+  { key: 'semester', label: '学期' },
+  { key: 'role', label: '角色', options: ROLE_OPTIONS, source: 'extended' as const },
+  { key: 'certNumber', label: '证书编号', source: 'extended' as const },
+  { key: 'issuingAuthority', label: '发证单位', source: 'extended' as const },
+  { key: 'validityPeriod', label: '有效期', source: 'extended' as const },
+]
+
+const GUIDE_ITEMS = [
+  '证书类型、名称按证书原文填写。',
+  '获得时间按证书落款日期选择。',
+  '证书编号、发证单位、有效期选填；长期有效可留空。',
+  '佐证材料必传，支持 JPG / PNG / PDF，单文件不超过 10MB。',
+]
+
+const REJECT_ITEMS = [
+  '五项必填有缺项，提交时会提示「请填写必填项」。',
+  '获得时间与所选学期不匹配。',
+  '佐证材料未上传，或格式、大小不符合上传限制。',
+  '与已有记录重复，提交前的查重检测会拦截。',
+]
 
 function handleEditClick(row: any) {
   page.form.certName = row.certName || ''
@@ -92,54 +122,68 @@ onMounted(() => {
     @score="(row: FormRecord) => page.handleViewScore(row)"
   >
     <template #form>
-      <el-form :model="page.form" label-width="120px">
-        <el-form-item label="证书类型" required>
-          <el-select
-            v-model="page.form.certType"
-            placeholder="选择证书类型（如 技能证书）"
-            class="form-select"
-          >
-            <el-option
-              v-for="t in certTypeOptions"
-              :key="t.value"
-              :label="t.label"
-              :value="t.value"
+      <ApplicationFormLayout
+        :required-fields="REQUIRED_FIELDS"
+        :form="page.form"
+        :preview-fields="PREVIEW_FIELDS"
+        :extended-form="page.extendedForm"
+        :guide-items="GUIDE_ITEMS"
+        :reject-items="REJECT_ITEMS"
+      >
+        <el-form :model="page.form" label-width="120px">
+          <el-form-item label="证书类型" required>
+            <el-select
+              v-model="page.form.certType"
+              placeholder="选择证书类型（如 技能证书）"
+              class="form-select"
+            >
+              <el-option
+                v-for="t in certTypeOptions"
+                :key="t.value"
+                :label="t.label"
+                :value="t.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="证书名称" required
+            ><el-input
+              v-model="page.form.certName"
+              placeholder="例：全国计算机等级考试二级（Java）"
+          /></el-form-item>
+          <el-form-item label="获得时间" required
+            ><el-date-picker v-model="page.form.certDate" type="month" placeholder="例：2025-06"
+          /></el-form-item>
+          <el-form-item label="学期" required>
+            <el-select
+              v-model="page.form.semester"
+              placeholder="选择学期（如 2025-2026-1）"
+              class="form-select"
+            >
+              <el-option
+                v-for="s in semesterOptions"
+                :key="s.value"
+                :label="s.label"
+                :value="s.value"
+              />
+            </el-select>
+          </el-form-item>
+          <ApplicationExtendedFields
+            :form="page.extendedForm"
+            :hidden="['role', 'acquisitionDate']"
+            @update="
+              (field: string, val: string) => {
+                ;(page.extendedForm as Record<string, string>)[field] = val
+              }
+            "
+          />
+          <el-form-item label="佐证材料" required>
+            <ProofUpload
+              v-model:file-list="page.form.proofMaterials"
+              :status="page.currentStatus"
             />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="证书名称" required
-          ><el-input v-model="page.form.certName" placeholder="例：全国计算机等级考试二级（Java）"
-        /></el-form-item>
-        <el-form-item label="获得时间" required
-          ><el-date-picker v-model="page.form.certDate" type="month" placeholder="例：2025-06"
-        /></el-form-item>
-        <el-form-item label="学期" required>
-          <el-select
-            v-model="page.form.semester"
-            placeholder="选择学期（如 2025-2026-1）"
-            class="form-select"
-          >
-            <el-option
-              v-for="s in semesterOptions"
-              :key="s.value"
-              :label="s.label"
-              :value="s.value"
-            />
-          </el-select>
-        </el-form-item>
-        <ApplicationExtendedFields
-          :form="page.extendedForm"
-          :hidden="['role', 'acquisitionDate']"
-          @update="
-            (field: string, val: string) => {
-              ;(page.extendedForm as Record<string, string>)[field] = val
-            }
-          "
-        />
-        <el-form-item label="佐证材料" required>
-          <ProofUpload v-model:file-list="page.form.proofMaterials" :status="page.currentStatus" />
-        </el-form-item>
-      </el-form>
+          </el-form-item>
+        </el-form>
+      </ApplicationFormLayout>
     </template>
     <template #columns>
       <el-table-column type="index" label="序号" width="60" />

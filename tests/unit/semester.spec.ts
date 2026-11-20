@@ -107,6 +107,19 @@ describe('sanitizeSemesterMonthPair', () => {
     expect(form.month).toBe('2026-09')
   })
 
+  it('月份选择器返回的 YYYY-MM-DD 值匹配学期时保持原格式', () => {
+    // 学科竞赛月份选择器 value-format=YYYY-MM-DD；改写成 YYYY-MM 会导致 dayjs 解析失败、输入框空白
+    const form = { month: '2026-10-01', semester: '2026-2027-第1学期' }
+    sanitizeSemesterMonthPair(form, 'month', 'semester')
+    expect(form.month).toBe('2026-10-01')
+  })
+
+  it('月份选择器返回的 YYYY-MM-DD 值不匹配学期时清空', () => {
+    const form = { month: '2026-05-01', semester: '2026-2027-第1学期' }
+    sanitizeSemesterMonthPair(form, 'month', 'semester')
+    expect(form.month).toBe('')
+  })
+
   it('月份不在学期内时清空', () => {
     const form = { month: '2027-05', semester: '2026-2027-1' }
     sanitizeSemesterMonthPair(form, 'month', 'semester')

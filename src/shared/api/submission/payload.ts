@@ -101,15 +101,17 @@ export async function resolveSemesterId(value: unknown): Promise<number | undefi
   const name = typeof value === 'string' ? value.trim() : ''
   if (!name) return undefined
   if (!semesterIdMap) {
-    semesterIdMap = {}
+    const map: Record<string, number> = {}
     try {
       const list = await getSemesters()
       for (const s of list) {
-        if (s.name) semesterIdMap[s.name] = s.value
-        semesterIdMap[String(s.value)] = s.value
+        if (s.name) map[s.name] = s.value
+        map[String(s.value)] = s.value
       }
+      // 仅在成功时写入缓存：拉取失败后下次提交会重试，避免整个会话都缺 semesterId（报告 #8）
+      semesterIdMap = map
     } catch {
-      /* 学期列表拉取失败：保持空映射，交由后端校验报必填 */
+      return undefined
     }
   }
   const id = semesterIdMap[name]

@@ -63,6 +63,8 @@ export function useApplicationPage(
   // 申报类型 key 由页面常量传入（对应 ApplicationType），activityCategoryOf 参数类型收窄为 ApplicationType
   const appType = type as ApplicationType
   const submitting = ref(false)
+  /** 查重进行中：防止连点导致重复查重、重复弹窗 */
+  let duplicateChecking = false
 
   // ── 学期-日期联动 ──
   // 配置了 semesterMonthConfig 时，自动处理：
@@ -78,16 +80,22 @@ export function useApplicationPage(
   })
 
   if (semesterMonthConfig) {
-    const { monthField, endDateOnly } = semesterMonthConfig
+    const { monthField, monthFieldLabel, endDateOnly } = semesterMonthConfig
     watch(
       () => form.semester,
       () => {
+        const before = String((form as Record<string, unknown>)[monthField] ?? '').trim()
         sanitizeSemesterMonthPair(
           form,
           monthField,
           'semester',
           endDateOnly ? semesterEndDateOf(form.semester) : undefined,
         )
+        const after = String((form as Record<string, unknown>)[monthField] ?? '').trim()
+        // 只有“原来有值、切换学期后被清空”才提示；日期本来就匹配时不会被重置
+        if (before && !after) {
+          ElMessage.warning(`${monthFieldLabel}与所选学期不匹配，已清空，请重新选择`)
+        }
       },
     )
   }
@@ -191,12 +199,14 @@ export function useApplicationPage(
               awardType: awardTypeCodeOf(type),
               certificateNo: data.certNumber,
               title,
-              participatedTime:
+              // 月份选择器原值是 YYYY-MM，契约要求 YYYY-MM-DD：统一补全为当月 01 日（报告 #9）
+              participatedTime: toDateString(
                 data.competitionDate ||
-                data.approveDate ||
-                data.publishDate ||
-                data.registerDate ||
-                undefined,
+                  data.approveDate ||
+                  data.publishDate ||
+                  data.registerDate ||
+                  undefined,
+              ),
             })
           : await duplicateCheck({
               archiveType: ARCHIVE_TYPE_ALIASES[type]?.[0] ?? type,
@@ -218,7 +228,16 @@ export function useApplicationPage(
         // title/suggestion 均为后端/用户输入，禁止拼进 HTML：改用纯文本弹窗，
         // 由文本节点自动转义，避免 dangerouslyUseHTMLString 引入 XSS。
         const items = duplicateList
-          .map((d) => `${d.title}${d.similarity != null ? `（相似度 ${d.similarity}%）` : ''}`)
+          .map((d) => {
+            // 后端 similarity 为 0-1 小数（文档示例 0.92），展示时换算成百分比（报告 #10）
+            const percent =
+              d.similarity == null
+                ? null
+                : d.similarity <= 1
+                  ? Math.round(d.similarity * 100)
+                  : Math.round(d.similarity)
+            return `${d.title}${percent != null ? `（相似度 ${percent}%）` : ''}`
+          })
           .join('；')
         const suggestion = r?.suggestion ? `。建议：${r.suggestion}` : ''
         const content = `${items || '检测到可能重复的申报记录'}${suggestion}`
@@ -280,7 +299,15 @@ export function useApplicationPage(
       // 编辑已存在的后端记录时带上 recordId：submitApplication 内部改走 PUT 更新，
       // 避免「编辑后提交」变成新增一条、旧记录残留。
       const editing = editingId.value
-      const recordId = editing && /^\d+$/.test(editing) ? Number(editing) : undefined
+      // 自动保存已建过后端草稿（form.archiveId/applicationId）时，正式提交复用该 id，
+      // 走 PUT 更新为待审批，避免残留一条草稿（报告 #7）
+      const draftId = data.archiveId ?? data.applicationId
+      const recordId =
+        editing && /^\d+$/.test(editing)
+          ? Number(editing)
+          : draftId != null && /^\d+$/.test(String(draftId))
+            ? Number(draftId)
+            : undefined
       await submitApplication({ type, typeLabel, recordId, ...submitData })
       const title = deriveRecordTitle(submitData) || `${typeLabel}申报`
       if (editing) {
@@ -314,6 +341,8 @@ export function useApplicationPage(
   }
 
   async function handleSubmit() {
+    // 连点保护：查重阶段还没进入 doSubmit，submitting 仍是 false，需要在入口单独拦截
+    if (submitting.value || duplicateChecking) return
     // 必填项校验：后端对应档案扩展表多为 NOT NULL 字段，空值会被 buildContractPayload 跳过，
     // 直接 POST 会触发后端非空约束 → 409「数据校验失败」。这里在本地拦截并明确提示缺哪个字段。
     const missing = requiredFields.filter((f) => {
@@ -352,13 +381,18 @@ export function useApplicationPage(
         }
       }
     }
-    const ok = await checkDuplicateBeforeSubmit({
-      ...toRaw(form),
-      // 扩展字段不在 form 内，查重也需要证书编号才能命中
-      certNumber: extendedForm.certNumber || undefined,
-      acquisitionDate: extendedForm.acquisitionDate || undefined,
-    })
-    if (ok) await doSubmit(toRaw(form))
+    duplicateChecking = true
+    try {
+      const ok = await checkDuplicateBeforeSubmit({
+        ...toRaw(form),
+        // 扩展字段不在 form 内，查重也需要证书编号才能命中
+        certNumber: extendedForm.certNumber || undefined,
+        acquisitionDate: extendedForm.acquisitionDate || undefined,
+      })
+      if (ok) await doSubmit(toRaw(form))
+    } finally {
+      duplicateChecking = false
+    }
   }
 
   async function handleSaveDraft() {
@@ -385,6 +419,41 @@ export function useApplicationPage(
     }
   }
 
+  /**
+   * 详情加载失败提示：只有 404/405 才能断定“接口不存在”，
+   * 网络异常 / 超时 / 5xx 必须按真实原因提示，不能一律甩给后端（报告 9.4）。
+   */
+  function detailLoadFailureText(error: unknown, action: 'edit' | 'correction' | 'view'): string {
+    const err = error as { code?: string; response?: { status?: number } } | null
+    const status = err?.response?.status
+    if (status === 404 || status === 405) {
+      return action === 'view'
+        ? '后端未提供详情接口，以下仅为列表摘要，部分字段可能缺失'
+        : action === 'correction'
+          ? '后端未提供详情接口，纠错仅能修改列表已有字段'
+          : '后端未提供详情接口，本次仅按列表已有字段回填；缺失字段不会提交'
+    }
+    if (err?.code === 'ECONNABORTED') {
+      return action === 'view'
+        ? '详情加载超时，以下仅为列表摘要'
+        : action === 'correction'
+          ? '详情加载超时，纠错仅能修改列表已有字段'
+          : '详情加载超时，本次仅按列表已有字段回填；缺失字段不会提交'
+    }
+    if (!err?.response) {
+      return action === 'view'
+        ? '网络异常，详情加载失败，以下仅为列表摘要'
+        : action === 'correction'
+          ? '网络异常，纠错仅能修改列表已有字段'
+          : '网络异常，本次仅按列表已有字段回填；缺失字段不会提交'
+    }
+    return action === 'view'
+      ? `详情加载失败（HTTP ${status ?? '未知'}），以下仅为列表摘要`
+      : action === 'correction'
+        ? `详情加载失败（HTTP ${status ?? '未知'}），纠错仅能修改列表已有字段`
+        : `详情加载失败（HTTP ${status ?? '未知'}），本次仅按列表已有字段回填；缺失字段不会提交`
+  }
+
   async function handleEditClick(row: any) {
     // 后端真实记录（非本地临时 rec- / draft-local 记录）：拉取 6.2 详情补齐表单字段（列表仅含摘要字段）
     const isBackendRecord =
@@ -406,10 +475,10 @@ export function useApplicationPage(
           if (detail.rejectedReason) row.rejectedReason = detail.rejectedReason
         }
         detailUnavailable.value = false
-      } catch {
-        // 详情接口不可用：保留列表摘要字段，明确告知用户缺失项不会被提交
+      } catch (error) {
+        // 详情接口不可用：保留列表摘要字段，按真实失败原因提示（仅 404/405 才是接口不存在）
         detailUnavailable.value = true
-        ElMessage.warning('后端未提供详情接口，本次仅按列表已有字段回填；缺失字段不会提交')
+        ElMessage.warning(detailLoadFailureText(error, 'edit'))
       }
     }
     Object.keys(emptyForm()).forEach((key) => {
@@ -479,9 +548,9 @@ export function useApplicationPage(
     try {
       const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))
       if (detail) enrichCorrectionSnapshot(mapDetailToForm(type, detail))
-    } catch {
-      // 详情拉取失败：仅可修改列表摘要里已有的字段，明确提示而不是静默降级
-      ElMessage.warning('后端未提供详情接口，纠错仅能修改列表已有字段')
+    } catch (error) {
+      // 详情拉取失败：仅可修改列表摘要里已有的字段，按真实原因提示而不是静默降级
+      ElMessage.warning(detailLoadFailureText(error, 'correction'))
     }
   }
   async function viewRecord(row: any) {
@@ -498,9 +567,13 @@ export function useApplicationPage(
       const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))
       // mapDetailToForm 仅映射业务字段（不含 status），避免覆盖行上的前端状态/退回原因
       if (detail) _viewRecord({ ...row, ...mapDetailToForm(type, detail) })
-    } catch {
-      // 详情接口不可用：弹窗顶部明确标注「仅列表摘要」，不伪装成完整详情
-      _viewRecord({ ...row, __detailUnavailable: true })
+    } catch (error) {
+      // 详情接口不可用：弹窗顶部按真实失败原因标注「仅列表摘要」，不伪装成完整详情
+      _viewRecord({
+        ...row,
+        __detailUnavailable: true,
+        __detailUnavailableText: detailLoadFailureText(error, 'view'),
+      })
     } finally {
       detailLoading.value = false
     }
