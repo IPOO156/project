@@ -129,12 +129,22 @@ function canEdit(s: string) {
 }
 .form-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
   gap: 12px;
-  margin-top: 8px;
+  margin-top: 16px;
+  /* 与佐证材料上传区左缘（标签宽 120px）对齐，两个操作按钮靠左排布 */
+  padding-left: 120px;
+
+  :deep(.el-button) {
+    min-width: 96px;
+  }
 }
 @media (max-width: 768px) {
+  /* 控件改为 100% 后按钮跟随表单左缘 */
+  .form-actions {
+    padding-left: 0;
+  }
   .form-card :deep(.el-form) .el-input,
   .form-card :deep(.el-form) .el-select,
   .form-card :deep(.el-form) .el-date-editor,

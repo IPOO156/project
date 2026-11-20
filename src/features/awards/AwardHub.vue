@@ -3,13 +3,14 @@
  * AwardHub - 奖项中心
  *
  * 合并原「我的奖项」（奖项看板）与「奖项报名」（三类之星）两个菜单入口。
- * 与申报中心同一套交互：看板页只做总览，报名页顶部才出现卡片页签，用 ?tab= 切换子页面。
- * 默认展示「奖项看板」，由看板「参与度总览」的绿色入口进入三类之星报名页。
+ * 与申报中心同一套交互：默认进入「竞赛之星」报名页，顶部用卡片页签切换 4 个子页面；
+ * 「奖项看板」只做总览，进入后不展示页签，可经「参与度总览」的绿色入口回到报名页。
  */
 import { GraduationCap, LayoutDashboard, Lightbulb, Trophy } from 'lucide-vue-next'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AwardReview from '@/features/approval/AwardReview.vue'
+import { getAwardsOverview } from '@/shared/api/awards'
 import CompetitionStarList from './competition-star/CompetitionStarList.vue'
 import InnovationStarList from './innovation-star/InnovationStarList.vue'
 import ScientificStarList from './scientific-star/ScientificStarList.vue'
@@ -48,7 +49,17 @@ const modules = [
   },
 ] as const
 
-const DEFAULT_KEY = 'award-review'
+/** 看板页：只做总览，不展示页签卡片 */
+const BOARD_KEY = 'award-review'
+/** 无 tab 参数时落到报名页（与申报中心默认进入「学科竞赛」一致），而不是看板 */
+const DEFAULT_KEY = 'competition-star'
+
+/** 页签 key → /awards/overview 的 typeDistribution key */
+const COUNT_KEY_OF_MODULE: Record<string, string> = {
+  'competition-star': 'competition_star',
+  'scientific-star': 'research_star',
+  'innovation-star': 'innovation_star',
+}
 
 function resolveKeyFromRoute(tab: unknown): string {
   const key = typeof tab === 'string' ? tab : DEFAULT_KEY
@@ -57,6 +68,23 @@ function resolveKeyFromRoute(tab: unknown): string {
 
 const activeKey = ref(resolveKeyFromRoute(route.query.tab))
 const activeModule = computed(() => modules.find((item) => item.key === activeKey.value)!)
+
+/** 各页签的报名数量，用于卡片右上角徽标（与申报中心同一视觉口径） */
+const overview = ref<Awaited<ReturnType<typeof getAwardsOverview>> | null>(null)
+
+function countOf(key: string): number {
+  if (!overview.value) return 0
+  if (key === BOARD_KEY) return overview.value.totalSubmissions ?? 0
+  return overview.value.typeDistribution?.[COUNT_KEY_OF_MODULE[key]] ?? 0
+}
+
+onMounted(async () => {
+  try {
+    overview.value = await getAwardsOverview()
+  } catch {
+    // 徽标属于辅助信息，失败时静默不展示，不影响报名流程
+  }
+})
 
 watch(
   () => route.query.tab,
@@ -76,7 +104,7 @@ function switchModule(key: string) {
 <template>
   <div class="award-hub">
     <!-- 看板页保持「只看总览」；进入任一之星报名页后顶部才出现页签，可互相切换或回到看板 -->
-    <div v-if="activeKey !== DEFAULT_KEY" class="award-hub__grid">
+    <div v-if="activeKey !== BOARD_KEY" class="award-hub__grid">
       <button
         v-for="item in modules"
         :key="item.key"
@@ -85,6 +113,9 @@ function switchModule(key: string) {
         :class="{ 'is-active': item.key === activeKey }"
         @click="switchModule(item.key)"
       >
+        <div v-if="countOf(item.key) > 0" class="award-hub__tab-badge">
+          {{ countOf(item.key) }}
+        </div>
         <div class="award-hub__tab-icon">
           <component :is="item.icon" :size="18" />
         </div>
@@ -147,6 +178,23 @@ function switchModule(key: string) {
 
 .award-hub__tab.is-active .award-hub__tab-title {
   color: var(--el-color-primary);
+}
+
+.award-hub__tab-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--el-color-primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .award-hub__tab-icon {
