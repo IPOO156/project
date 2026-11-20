@@ -13,7 +13,8 @@ const STORAGE_KEYS = {
 } as const
 
 const VERSION_KEY = 'dashboard_quick_entries_version'
-const CURRENT_VERSION = 1
+// 2：奖项报名 + 我的奖项合并为「奖项中心」，旧入口 id（_awards_competition-star 等）失效
+const CURRENT_VERSION = 2
 
 const MAX_HISTORY = 3
 const VISIBLE_COUNT = 6
@@ -120,7 +121,7 @@ const DEFAULT_ENTRY_IDS = [
   '_growth-timeline',
   '_messages',
   '_applications',
-  '_awards_competition-star',
+  '_awards',
 ]
 
 function buildDefaultPool(): string[] {

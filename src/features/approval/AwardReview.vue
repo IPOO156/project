@@ -2,7 +2,7 @@
 /**
  * AwardBoard - 奖项看板（三个之星报名）
  *
- * 统计总览 + 奖项类型分布 + 提交状态分布 + 学期趋势 + 参与度网格。
+ * 统计总览 + 各类型报名数量 + 提交状态分布 + 学期趋势 + 参与度网格。
  * 数据源：GET /awards/overview（真实聚合统计，字段与后端一致）。
  */
 import { Check, CircleCheck, Clock, Medal, Plus, TrendingUp, X } from 'lucide-vue-next'
@@ -12,6 +12,7 @@ import { getAwardsOverview } from '@/shared/api/awards'
 import { APPLICATION_STATUS, STAR_TYPE_LABELS } from '@/shared/constants/dict'
 import PageContainer from '@/shared/ui/PageContainer.vue'
 import PageHeader from '@/shared/ui/PageHeader.vue'
+import BoardCharts from './components/BoardCharts.vue'
 import PieChart from './components/PieChart.vue'
 import TrendChart from './components/TrendChart.vue'
 
@@ -64,10 +65,11 @@ const trendData = computed(() =>
 )
 
 // 组件特有 UI 配置（含看板卡片跳转路由 path），非通用字典，保留在本组件
+// 跳转目标为「奖项中心」的页签地址，避免绕一次旧路径重定向
 const STAR_TYPES_CONFIG = [
-  { key: 'competition_star', label: '竞赛之星', path: '/awards/competition-star' },
-  { key: 'research_star', label: '科研之星', path: '/awards/scientific-star' },
-  { key: 'innovation_star', label: '双创之星', path: '/awards/innovation-star' },
+  { key: 'competition_star', label: '竞赛之星', path: '/awards?tab=competition-star' },
+  { key: 'research_star', label: '科研之星', path: '/awards?tab=scientific-star' },
+  { key: 'innovation_star', label: '双创之星', path: '/awards?tab=innovation-star' },
 ]
 
 const completenessList = computed(() =>
@@ -134,7 +136,7 @@ function goTo(path: string) {
     </el-row>
 
     <el-row :gutter="16">
-      <el-col :span="12"><PieChart :data="typeData" title="奖项类型分布" /></el-col>
+      <el-col :span="12"><BoardCharts :data="typeData" title="各类型报名数量" /></el-col>
       <el-col :span="12"><PieChart :data="statusData" title="提交状态分布" /></el-col>
     </el-row>
 

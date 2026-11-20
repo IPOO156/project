@@ -129,32 +129,32 @@ const routes: RouteRecordRaw[] = [
           },
         ],
       },
-      // ─── 奖项报名 ───
+      // ─── 奖项中心（我的奖项 + 奖项报名合并） ───
       {
         path: 'awards',
         children: [
           {
-            // 奖项总览已并入「我的奖项」，此处重定向避免悬空路由
             path: '',
-            redirect: '/approval/award-review',
+            name: 'AwardsHub',
+            component: () => import('@/features/awards/AwardHub.vue'),
+            // 与申报中心同一套机制：?tab= 切换页签，singleTab 让 4 个页签共用顶栏一个标签
+            meta: { title: '奖项中心', singleTab: true },
           },
           {
+            // 旧地址保留重定向：消息中心等处仍按 /awards/*-star 跳转，需带上原 query（sub / edit）
             path: 'competition-star',
-            name: 'CompetitionStar',
-            component: () => import('@/features/awards/competition-star/CompetitionStarList.vue'),
-            meta: { title: '竞赛之星报名' },
+            redirect: (to) => ({
+              path: '/awards',
+              query: { ...to.query, tab: 'competition-star' },
+            }),
           },
           {
             path: 'scientific-star',
-            name: 'ScientificStar',
-            component: () => import('@/features/awards/scientific-star/ScientificStarList.vue'),
-            meta: { title: '科研之星报名' },
+            redirect: (to) => ({ path: '/awards', query: { ...to.query, tab: 'scientific-star' } }),
           },
           {
             path: 'innovation-star',
-            name: 'InnovationStar',
-            component: () => import('@/features/awards/innovation-star/InnovationStarList.vue'),
-            meta: { title: '双创之星报名' },
+            redirect: (to) => ({ path: '/awards', query: { ...to.query, tab: 'innovation-star' } }),
           },
         ],
       },
@@ -187,10 +187,9 @@ const routes: RouteRecordRaw[] = [
             meta: { title: '申报看板' },
           },
           {
+            // 奖项看板已并入「奖项中心」，保留旧地址重定向避免书签/快捷入口悬空
             path: 'award-review',
-            name: 'AwardReview',
-            component: () => import('@/features/approval/AwardReview.vue'),
-            meta: { title: '奖项看板' },
+            redirect: (to) => ({ path: '/awards', query: { ...to.query, tab: 'award-review' } }),
           },
         ],
       },

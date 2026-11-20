@@ -4,15 +4,12 @@ import {
   Clock,
   Compass,
   FilePen,
-  GraduationCap,
   Home,
   IdCard,
   Images,
   Inbox,
-  Lightbulb,
   MessageSquare,
   Star,
-  Trophy,
   User,
 } from 'lucide-vue-next'
 
@@ -141,31 +138,14 @@ export const registeredModules: AppModule[] = [
   },
   {
     id: 'awards',
-    label: '奖项报名',
+    label: '奖项中心',
     icon: Star,
     order: 40,
     routePrefix: '/awards',
-    description: '三类之星奖项报名（总览见「我的奖项」）',
-    menuItems: [
-      {
-        label: '奖项报名',
-        icon: Star,
-        children: [
-          { label: '竞赛之星报名', icon: Trophy, path: '/awards/competition-star' },
-          { label: '科研之星报名', icon: GraduationCap, path: '/awards/scientific-star' },
-          { label: '双创之星报名', icon: Lightbulb, path: '/awards/innovation-star' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'approval',
-    label: '我的奖项',
-    icon: Star,
-    order: 50,
-    routePrefix: '/approval',
-    description: '奖项看板：查看与管理奖项报名记录',
-    menuItems: [{ label: '我的奖项', icon: Star, path: '/approval/award-review' }],
+    description: '奖项看板与三类之星报名',
+    // 与申报中心一致：菜单只保留一个入口，页内用 ?tab= 切换「奖项看板 / 三类之星」；
+    // 入口不带 tab，由 AwardHub 回落到默认的奖项看板，菜单高亮才能按 path 精确命中。
+    menuItems: [{ label: '奖项中心', icon: Star, path: '/awards' }],
   },
 ]
 
