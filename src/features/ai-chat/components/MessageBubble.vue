@@ -33,7 +33,15 @@ const userInitial = computed(() => {
   return name.trim().charAt(0).toUpperCase()
 })
 
-const showActions = computed(() => isAi.value && props.showFeedback)
+// 流式生成中、用户停止或生成失败时不展示反馈/复制（避免对不完整内容表态）
+const showActions = computed(
+  () =>
+    isAi.value &&
+    props.showFeedback &&
+    !props.message.streaming &&
+    !props.message.stopped &&
+    !props.message.failed,
+)
 
 /**
  * 复制到剪贴板（含 HTTP 环境降级方案）：
@@ -93,11 +101,19 @@ async function handleCopy() {
         <!-- 离线回退回复明确标注，避免与在线回复混淆 -->
         <div v-if="message.offline" class="mb__offline">离线模式</div>
         <RichContentRenderer v-if="isAi && message.richContent" :content="message.richContent" />
-        <p v-else class="mb__text">{{ message.content }}</p>
+        <p v-else class="mb__text">
+          {{ message.content
+          }}<span v-if="message.streaming" class="mb__caret" aria-hidden="true" />
+        </p>
       </div>
 
-      <!-- 欢迎语是固定文案，不重复展示 AI 内容免责声明 -->
-      <div v-if="isAi && message.id !== 'welcome'" class="mb__disclaimer">AI 生成内容仅供参考</div>
+      <!-- 用户主动停止：后端未落库该条回复，明确标注避免误以为回答已完整 -->
+      <div v-if="message.stopped" class="mb__stopped">已停止生成</div>
+
+      <!-- 欢迎语是固定文案，不重复展示 AI 内容免责声明；流式生成中暂不展示 -->
+      <div v-if="isAi && message.id !== 'welcome' && !message.streaming" class="mb__disclaimer">
+        AI 生成内容仅供参考
+      </div>
 
       <div class="mb__footer">
         <span class="mb__time">{{ message.time }}</span>
@@ -196,6 +212,23 @@ async function handleCopy() {
   &__text {
     margin: 0;
     line-height: 1.6;
+    // 流式输出保留 markdown 换行，避免逐字追加时整段挤成一行
+    white-space: pre-wrap;
+  }
+
+  &__caret {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    background: var(--mc-primary);
+    animation: caretBlink 1s step-end infinite;
+  }
+
+  &__stopped {
+    font-size: $font-size-xs;
+    color: var(--el-text-color-secondary);
   }
 
   &__disclaimer {
@@ -268,6 +301,18 @@ async function handleCopy() {
     &.is-active {
       color: var(--mc-accent);
     }
+  }
+}
+
+/* 流式输出光标（状态指示，非装饰发光） */
+@keyframes caretBlink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
   }
 }
 </style>

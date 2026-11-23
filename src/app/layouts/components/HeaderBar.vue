@@ -8,7 +8,6 @@
 import {
   Bell,
   LayoutDashboard,
-  Lightbulb,
   LogOut,
   Menu,
   Moon,
@@ -31,7 +30,6 @@ import {
   useUserStore,
 } from '@/app/stores/stores'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
-import StudyTipsDialog from '@/shared/ui/StudyTipsDialog.vue'
 import NavTabs from './NavTabs.vue'
 import TeacherBreadcrumb from './TeacherBreadcrumb.vue'
 import TeacherCommandPalette from './TeacherCommandPalette.vue'
@@ -45,7 +43,6 @@ const cursorStore = useCursorStore()
 const router = useRouter()
 const route = useRoute()
 const { toggleThemeWithRipple } = useThemeRipple()
-const tipsDialogVisible = ref(false)
 const commandVisible = ref(false)
 // 角色中文名取自 /auth/me 的 roleNames，不再由前端角色枚举映射
 const { roleLabel } = useTeacherAuthz()
@@ -184,9 +181,6 @@ async function switchToStudent() {
         </span>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item v-if="!isTeacher" @click="tipsDialogVisible = true">
-              <Lightbulb :size="14" /> 学习建议
-            </el-dropdown-item>
             <template v-if="isTeacher">
               <el-dropdown-item @click="router.push('/teacher/dashboard')">
                 <LayoutDashboard :size="16" /> 工作台
@@ -210,9 +204,6 @@ async function switchToStudent() {
         </template>
       </el-dropdown>
     </div>
-
-    <!-- 学习建议管理：仅学生端（教师端不展示该入口） -->
-    <StudyTipsDialog v-if="!isTeacher" v-model="tipsDialogVisible" />
 
     <!-- 教师端页内搜索 -->
     <TeacherCommandPalette v-if="isTeacher" v-model="commandVisible" />

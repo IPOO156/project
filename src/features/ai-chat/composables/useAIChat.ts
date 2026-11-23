@@ -24,9 +24,11 @@ import type {
  * - 旧 API 签名不变：sendMessage(text) / clearMessages() / formatTime
  *   AIChatDrawer 解构 { messages, loading, sendMessage } 零改动
  */
+import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
 // 真实接口 + 本地模拟回复（离线回退）与反馈占位实现
 import {
+  AIStreamPreflightError,
   submitFeedback as apiSubmitFeedback,
   createAIConversation,
   deleteAIConversation,
@@ -35,6 +37,7 @@ import {
   regenerateAIMessage,
   renameAIConversation,
   sendAIMessage,
+  sendAIMessageStream,
 } from '@/shared/api/ai-chat'
 import { sendMessage as apiSendMessageOffline } from '../services/offlineChat'
 import { parseMarkdownToRichContent } from '../utils/richText'
@@ -93,6 +96,10 @@ export function useAIChat() {
   // ── 实例级状态（保持现状，AIChatDrawer 无感知）──
   const messages = ref<ChatMessage[]>(createWelcomeMessages())
   const loading = ref(false)
+  /** 当前是否正在流式生成（用于发送/停止按钮切换） */
+  const isStreaming = ref(false)
+  /** 当前流式请求的中断控制器（停止生成 / 切换会话 / 清空时中断） */
+  let abortController: AbortController | null = null
   /** 最近一次 AI 请求是否失败（用于展示“重新生成”重试入口） */
   const error = ref(false)
   /**
@@ -140,8 +147,8 @@ export function useAIChat() {
     }
   }
 
-  /** 在线发送：确保会话存在后调用 sendAIMessage，返回助手消息 */
-  async function requestOnlineReply(text: string): Promise<ChatMessage> {
+  /** 确保当前会话存在：未绑定时先创建（流式/同步/重新生成共用） */
+  async function ensureConversation(): Promise<number> {
     let cid = currentConversationId.value
     if (cid == null) {
       const conv = await createAIConversation()
@@ -149,6 +156,12 @@ export function useAIChat() {
       currentConversationId.value = cid
       void loadConversations()
     }
+    return cid
+  }
+
+  /** 在线发送（同步接口，作为旧后端/流式不可用时的降级路径）：返回助手消息 */
+  async function requestOnlineReply(text: string): Promise<ChatMessage> {
+    const cid = await ensureConversation()
     const res: AISendMessageResult = await sendAIMessage(cid, text)
     offlineMode.value = false
     lastAssistantMessageId = res.messageId
@@ -165,23 +178,148 @@ export function useAIChat() {
     }
   }
 
+  /** 中断当前流式请求（切换会话 / 清空 / 新建对话时调用） */
+  function abortActiveStream() {
+    abortController?.abort()
+    abortController = null
+    isStreaming.value = false
+  }
+
+  /** 标记用户主动停止：保留已收到的片段，未收到任何内容则移除空气泡 */
+  function markStopped(msg: ChatMessage) {
+    msg.streaming = false
+    msg.stopped = true
+    if (!msg.content) {
+      const idx = messages.value.indexOf(msg)
+      if (idx !== -1) messages.value.splice(idx, 1)
+    }
+  }
+
+  /** 旧后端尚未实现流式接口（404/405/415） */
+  function isStreamEndpointMissing(err: unknown): boolean {
+    return (
+      err instanceof AIStreamPreflightError &&
+      (err.status === 404 || err.status === 405 || err.status === 415)
+    )
+  }
+
+  /**
+   * 流式请求彻底失败时的降级：
+   * - 旧后端没有 /messages/stream → 退回同步接口，与改造前体验一致
+   * - 后端不可用（网络/超时/5xx）→ 退回离线模拟回复
+   * - 其余真实业务错误 → 错误气泡 + 重新生成入口
+   */
+  async function fallbackReply(text: string, streamError: unknown) {
+    let err = streamError
+    if (isStreamEndpointMissing(err)) {
+      try {
+        messages.value.push(await requestOnlineReply(text))
+        error.value = false
+        return
+      } catch (syncErr) {
+        err = syncErr
+      }
+    }
+    if (isBackendUnavailable(err)) {
+      messages.value.push(await requestOfflineReply(text))
+      lastAssistantMessageId = null
+      error.value = false
+    } else {
+      ElMessage.error(err instanceof Error ? err.message : '网络错误')
+      pushErrorMessage()
+    }
+  }
+
+  /**
+   * 流式请求 AI 回复（9.4.1）：
+   * 先插入助手占位气泡，delta 逐段追加；done 回填真实 messageId 供反馈/重新生成；
+   * 用户停止或流未建立时按 markStopped / fallbackReply 收尾。
+   */
+  async function requestStreamingReply(text: string) {
+    const placeholder: ChatMessage = {
+      id: `ai-stream-${Date.now()}`,
+      role: 'ai',
+      content: '',
+      time: formatTime(new Date()),
+      streaming: true,
+    }
+    messages.value.push(placeholder)
+    // 必须从数组中读回响应式代理再改字段：直接改 push 进去的原始对象不会触发重渲染，
+    // 流式增量会全部看不到。
+    const streamMsg = messages.value[messages.value.length - 1]
+    const controller = new AbortController()
+    abortController = controller
+    isStreaming.value = true
+
+    try {
+      const cid = await ensureConversation()
+      await sendAIMessageStream(
+        cid,
+        text,
+        {
+          onDelta(chunk) {
+            streamMsg.content += chunk
+          },
+          onDone(payload) {
+            streamMsg.id = String(payload.messageId)
+            streamMsg.streaming = false
+            streamMsg.richContent = parseMarkdownToRichContent(streamMsg.content)
+            streamMsg.time = formatTime(
+              payload.createdAt ? new Date(payload.createdAt) : new Date(),
+            )
+            lastAssistantMessageId = payload.messageId
+            offlineMode.value = false
+            // 首条消息后后端会生成会话标题，刷新左侧列表（标题/最后时间/排序）
+            void loadConversations()
+          },
+          onError(message) {
+            streamMsg.streaming = false
+            streamMsg.failed = true
+            if (!streamMsg.content) {
+              streamMsg.content = '抱歉，AI 助手暂时无法响应，请稍后重试。'
+            }
+            error.value = true
+            ElMessage.error(message)
+          },
+        },
+        controller.signal,
+      )
+      if (controller.signal.aborted) markStopped(streamMsg)
+    } catch (err) {
+      if (controller.signal.aborted) {
+        markStopped(streamMsg)
+        return
+      }
+      // 流未建立成功：移除占位，按旧策略降级
+      const idx = messages.value.indexOf(streamMsg)
+      if (idx !== -1) messages.value.splice(idx, 1)
+      await fallbackReply(text, err)
+    } finally {
+      // 仅当前流仍是活跃流时复位，避免中断后新请求被旧请求的 finally 清掉
+      if (abortController === controller) {
+        abortController = null
+        isStreaming.value = false
+        loading.value = false
+      }
+      streamMsg.streaming = false
+    }
+  }
+
   /** 请求 AI 回复并写入消息列表；成功/离线回退清除错误状态，真实业务错误展示错误气泡 */
   async function requestAIReply(text: string) {
     loading.value = true
+    error.value = false
     try {
-      messages.value.push(await requestOnlineReply(text))
-      error.value = false
-    } catch (err) {
-      if (isBackendUnavailable(err)) {
-        messages.value.push(await requestOfflineReply(text))
-        lastAssistantMessageId = null
-        error.value = false
-      } else {
-        pushErrorMessage()
-      }
+      await requestStreamingReply(text)
     } finally {
-      loading.value = false
+      // 活跃流已在 requestStreamingReply 内复位；中断场景由调用方复位 loading
+      if (isStreaming.value === false && abortController === null) loading.value = false
     }
+  }
+
+  /** 停止当前流式生成（仅中断本地连接；后端不会落库这条助手消息） */
+  function stopGeneration() {
+    abortController?.abort()
   }
 
   /** 重新生成：调用后端 regenerateAIMessage，失败时按同样策略回退 */
@@ -233,7 +371,7 @@ export function useAIChat() {
   async function retry() {
     if (loading.value || !lastUserText) return
     const last = messages.value[messages.value.length - 1]
-    if (last && last.role === 'ai' && last.id.startsWith('ai-error-')) {
+    if (last && last.role === 'ai' && (last.id.startsWith('ai-error-') || last.failed)) {
       messages.value.pop()
     }
     error.value = false
@@ -254,6 +392,7 @@ export function useAIChat() {
    * 旧会话本身仍保留在历史列表中，可手动删除。
    */
   function clearMessages() {
+    abortActiveStream()
     messages.value = createWelcomeMessages()
     loading.value = false
     error.value = false
@@ -277,10 +416,12 @@ export function useAIChat() {
 
   /** 新建对话：重置为欢迎语；会话由后端在首条消息发送时按需创建 */
   function createConversation(): null {
+    abortActiveStream()
     currentConversationId.value = null
     lastAssistantMessageId = null
     messages.value = createWelcomeMessages()
     error.value = false
+    loading.value = false
     return null
   }
 
@@ -288,6 +429,7 @@ export function useAIChat() {
   async function switchConversation(id: number) {
     const conv = conversations.value.find((c) => c.id === id)
     if (!conv) return
+    abortActiveStream()
     currentConversationId.value = id
     lastAssistantMessageId = null
     loading.value = false
@@ -331,6 +473,7 @@ export function useAIChat() {
     }
     conversations.value.splice(idx, 1)
     if (currentConversationId.value === id) {
+      abortActiveStream()
       currentConversationId.value = null
       lastAssistantMessageId = null
       messages.value = createWelcomeMessages()
@@ -378,6 +521,9 @@ export function useAIChat() {
     sendMessage,
     clearMessages,
     formatTime,
+    // 流式
+    isStreaming,
+    stopGeneration,
     // 新增 API
     error,
     offlineMode,

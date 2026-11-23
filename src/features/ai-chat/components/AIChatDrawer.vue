@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Send, Sparkles, X } from 'lucide-vue-next'
+import { Send, Sparkles, Square, X } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/app/stores/stores'
@@ -19,7 +19,7 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const userStore = useUserStore()
-const { messages, loading, sendMessage } = useAIChat()
+const { messages, loading, isStreaming, stopGeneration, sendMessage } = useAIChat()
 
 const inputValue = ref('')
 const chatBodyRef = ref<HTMLElement | null>(null)
@@ -88,6 +88,14 @@ watch(
   { immediate: true },
 )
 
+// 流式增量不会改变消息条数，需监听最后一条内容变化才能持续吸底
+watch(
+  () => messages.value[messages.value.length - 1]?.content ?? '',
+  () => {
+    if (isStreaming.value) scrollToBottom()
+  },
+)
+
 onMounted(() => document.addEventListener('keydown', onEscKey))
 onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
 </script>
@@ -135,7 +143,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
               </div>
             </div>
 
-            <div v-if="loading" class="ai-drawer__msg ai-drawer__msg--loading">
+            <div v-if="loading && !isStreaming" class="ai-drawer__msg ai-drawer__msg--loading">
               <ChatAvatar role="ai" />
               <div class="ai-drawer__bubble ai-drawer__bubble--loading">
                 <Sparkles :size="14" class="ai-drawer__thinking-icon" />
@@ -166,6 +174,17 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
               @keydown="handleKeydown"
             />
             <button
+              v-if="isStreaming"
+              type="button"
+              class="ai-drawer__send ai-drawer__send--stop"
+              aria-label="停止生成"
+              title="停止生成"
+              @click="stopGeneration()"
+            >
+              <Square :size="14" />
+            </button>
+            <button
+              v-else
               type="button"
               class="ai-drawer__send"
               aria-label="发送"
@@ -444,6 +463,16 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    &--stop {
+      background: var(--el-fill-color-dark);
+      color: var(--el-text-color-primary);
+
+      &:hover:not(:disabled) {
+        background: var(--el-fill-color);
+        transform: none;
+      }
     }
   }
 }

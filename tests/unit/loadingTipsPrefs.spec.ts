@@ -1,78 +1,14 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  getFavoriteTipIds,
-  getFavoriteTips,
-  getHiddenTipCategories,
-  hideTipCategory,
-  isTipFavorited,
-  LOADING_TIP_CATEGORY_LABELS,
-  pickLoadingTip,
-  resolveLoadingTipCategories,
-  restoreTipCategory,
-  toggleFavoriteTip,
-} from '@/shared/constants/loadingTips'
-
-const ALL_CATEGORIES = Object.keys(LOADING_TIP_CATEGORY_LABELS) as Array<
-  keyof typeof LOADING_TIP_CATEGORY_LABELS
->
+import { pickLoadingTip, resolveLoadingTipCategories } from '@/shared/constants/loadingTips'
 
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
 })
 
-describe('提示主题屏蔽', () => {
-  it('屏蔽后可读出，恢复后消失', () => {
-    expect(hideTipCategory('college')).toBe(true)
-    expect(getHiddenTipCategories()).toContain('college')
-
-    restoreTipCategory('college')
-    expect(getHiddenTipCategories()).not.toContain('college')
-  })
-
-  it('重复屏蔽幂等', () => {
-    hideTipCategory('college')
-    hideTipCategory('college')
-    expect(getHiddenTipCategories().filter((c) => c === 'college')).toHaveLength(1)
-  })
-
-  it('不允许把全部主题屏蔽（至少保留一类）', () => {
-    ALL_CATEGORIES.forEach((category) => hideTipCategory(category))
-    expect(getHiddenTipCategories().length).toBe(ALL_CATEGORIES.length - 1)
-  })
-
-  it('脏数据被过滤，不产生非法分类', () => {
-    localStorage.setItem('loading_tip:hidden_categories', JSON.stringify(['college', 'not-exist']))
-    expect(getHiddenTipCategories()).toEqual(['college'])
-  })
-})
-
-describe('提示收藏', () => {
-  it('收藏与取消收藏返回状态并持久化', () => {
-    expect(isTipFavorited('tip-1')).toBe(false)
-    expect(toggleFavoriteTip('tip-1')).toBe(true)
-    expect(isTipFavorited('tip-1')).toBe(true)
-    expect(getFavoriteTipIds()).toEqual(['tip-1'])
-
-    expect(toggleFavoriteTip('tip-1')).toBe(false)
-    expect(getFavoriteTipIds()).toEqual([])
-  })
-
-  it('已下线的收藏 id 不返回文案', () => {
-    toggleFavoriteTip('legacy-tip-not-exist')
-    expect(getFavoriteTips()).toEqual([])
-  })
-})
-
 describe('pickLoadingTip 选池', () => {
-  it('排除 hidden 主题', () => {
-    hideTipCategory('college')
-    const picked = pickLoadingTip(['college', 'growth'])
-    expect(picked.category).not.toBe('college')
-  })
-
-  it('全部主题被屏蔽时回落到平台使用', () => {
+  it('无匹配主题时回落到平台使用', () => {
     const picked = pickLoadingTip([])
     expect(picked.category).toBe('platform')
   })

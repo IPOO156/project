@@ -14,6 +14,8 @@ import MessageBubble from './MessageBubble.vue'
 const props = defineProps<{
   messages: ChatMessage[]
   loading: boolean
+  /** 是否正在流式生成（流式气泡已显示内容，不再叠加“思考中”） */
+  streaming?: boolean
   /** 最近一次 AI 请求是否失败（用于展示"重新生成"按钮） */
   error: boolean
   /** 是否显示思考动画（设置项） */
@@ -42,6 +44,13 @@ function scrollToBottom() {
 
 // 消息数变化或 loading 出现时滚动
 watch(() => props.messages.length, scrollToBottom)
+// 流式增量只改最后一条消息的 content，长度不变，需单独监听内容增长
+watch(
+  () => props.messages[props.messages.length - 1]?.content ?? '',
+  () => {
+    if (props.streaming) scrollToBottom()
+  },
+)
 watch(
   () => props.loading,
   (v) => {
@@ -75,7 +84,7 @@ watch(() => props.showThinking, scrollToBottom)
       </div>
 
       <Transition name="think">
-        <div v-if="props.loading && props.showThinking" class="cm__thinking">
+        <div v-if="props.loading && props.showThinking && !props.streaming" class="cm__thinking">
           <div class="cm__thinking-avatar">
             <Sparkles :size="20" />
           </div>

@@ -26,6 +26,12 @@ export interface ChatMessage {
   feedback?: MessageFeedback
   /** 是否离线模式回复（后端不可用时本地模拟，标注“离线模式”） */
   offline?: boolean
+  /** 是否正在流式生成（内容持续追加，操作区与免责声明暂不展示） */
+  streaming?: boolean
+  /** 用户主动停止生成（后端不落库该助手消息，仅保留本地已收到的片段） */
+  stopped?: boolean
+  /** 流式生成失败（展示错误气泡 + 重新生成入口） */
+  failed?: boolean
 }
 
 /** 富文本高亮片段（splitHighlight 产出的切分单元） */

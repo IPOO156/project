@@ -11,10 +11,16 @@ import {
   writeTokenPreservingSource,
 } from '@/shared/utils/token'
 
+/**
+ * 接口基础路径。SSE 流式请求走原生 fetch（axios 不支持逐段读取），
+ * 复用该常量保证与 axios 实例的 baseURL 一致。
+ */
+export const API_BASE_URL = '/api/v1'
+
 const request = axios.create({
   // 后端全局 context-path 为 /api/v1（见后端 application.yml），接口文档基础 URL 亦为 /api/v1。
   // 此前为 /api 与后端前缀不一致，联调时全部 404；现统一对齐后端契约。
-  baseURL: '/api/v1',
+  baseURL: API_BASE_URL,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -100,7 +106,11 @@ const FORCE_PASSWORD_CHANGE_NOTIFY_WINDOW_MS = 1000
 // ── 401 令牌刷新：并发去重，单飞（singleton）──
 let refreshPromise: Promise<string | null> | null = null
 
-function tryRefreshToken(): Promise<string | null> {
+/**
+ * 用 refreshToken 换新访问令牌（并发去重）。
+ * 导出供 SSE 流式请求复用：fetch 不经过 axios 拦截器，401 时需自行刷新后重试。
+ */
+export function tryRefreshToken(): Promise<string | null> {
   const refreshToken = getRefreshToken()
   if (!refreshToken) return Promise.resolve(null)
   if (!refreshPromise) {
@@ -152,7 +162,11 @@ function clearAuthCaches() {
   }
 }
 
-function forceLogout() {
+/**
+ * 会话失效：清空令牌与用户级缓存并回登录页。
+ * 导出供 SSE 流式请求复用（fetch 不经过 axios 拦截器）。
+ */
+export function forceLogout() {
   clearAuth()
   clearAuthCaches()
   // 已在登录页/根路径时禁止整页跳转：对相同 URL 赋值 location 会触发 reload。
