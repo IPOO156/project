@@ -1,0 +1,346 @@
+<script setup lang="ts">
+/**
+ * AwardBoard - 奖项看板（三个之星报名）
+ *
+ * 统计总览 + 各类型报名数量 + 提交状态分布 + 学期趋势 + 参与度网格。
+ * 数据源：GET /awards/overview（真实聚合统计，字段与后端一致）。
+ */
+import { Check, CircleCheck, Clock, Medal, Plus, TrendingUp, X } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import PageContainer from '@/components/ui/PageContainer.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import { getAwardsOverview } from '@/shared/api/awards'
+import { APPLICATION_STATUS, STAR_TYPE_LABELS } from '@/shared/constants/dict'
+import BoardCharts from './components/BoardCharts.vue'
+import PieChart from './components/PieChart.vue'
+import TrendChart from './components/TrendChart.vue'
+
+const router = useRouter()
+
+/** GET /awards/overview 返回结构 */
+interface AwardsOverview {
+  totalSubmissions: number
+  pendingReview: number
+  approved: number
+  newThisSemester: number
+  typeDistribution: Record<string, number>
+  statusDistribution: Record<string, number>
+  semesterTrend: Array<{ semesterId: number; semesterName: string; count: number }>
+}
+
+const overview = ref<AwardsOverview | null>(null)
+const loading = ref(true)
+
+onMounted(async () => {
+  try {
+    overview.value = await getAwardsOverview()
+  } finally {
+    loading.value = false
+  }
+})
+
+const totalCount = computed(() => overview.value?.totalSubmissions ?? 0)
+const pendingCount = computed(() => overview.value?.pendingReview ?? 0)
+const approvedCount = computed(() => overview.value?.approved ?? 0)
+const newThisSemester = computed(() => overview.value?.newThisSemester ?? 0)
+
+const typeData = computed(() =>
+  Object.entries(overview.value?.typeDistribution ?? {})
+    .map(([key, value]) => ({ name: STAR_TYPE_LABELS[key] ?? key, value }))
+    .filter((d) => d.value > 0),
+)
+
+const statusData = computed(() => {
+  const statusMap = APPLICATION_STATUS as Record<string, { label: string }>
+  return Object.entries(overview.value?.statusDistribution ?? {})
+    .map(([key, value]) => ({ name: statusMap[key]?.label ?? key, value }))
+    .filter((d) => d.value > 0)
+})
+
+const trendData = computed(() =>
+  (overview.value?.semesterTrend ?? [])
+    .map((t) => ({ semester: t.semesterName, count: t.count }))
+    .filter((t) => t.semester),
+)
+
+// 组件特有 UI 配置（含看板卡片跳转路由 path），非通用字典，保留在本组件
+// 跳转目标为「奖项中心」的页签地址，避免绕一次旧路径重定向
+const STAR_TYPES_CONFIG = [
+  { key: 'competition_star', label: '竞赛之星', path: '/awards?tab=competition-star' },
+  { key: 'research_star', label: '科研之星', path: '/awards?tab=scientific-star' },
+  { key: 'innovation_star', label: '双创之星', path: '/awards?tab=innovation-star' },
+]
+
+const completenessList = computed(() =>
+  STAR_TYPES_CONFIG.map((cfg) => ({
+    ...cfg,
+    hasData: (overview.value?.typeDistribution?.[cfg.key] ?? 0) > 0,
+  })),
+)
+
+function goTo(path: string) {
+  router.push(path)
+}
+</script>
+
+<template>
+  <PageContainer class="page-enter">
+    <PageHeader title="奖项看板" subtitle="总览各之星报名情况，快速了解参与度" />
+
+    <el-row :gutter="16" class="stats-row">
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">报名总数</p>
+              <p class="stat-card__value">{{ totalCount }}</p>
+            </div>
+            <div class="stat-card__icon"><Medal :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">待审核</p>
+              <p class="stat-card__value">{{ pendingCount }}</p>
+            </div>
+            <div class="stat-card__icon stat-card__icon--warning"><Clock :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">已通过</p>
+              <p class="stat-card__value">{{ approvedCount }}</p>
+            </div>
+            <div class="stat-card__icon stat-card__icon--success"><CircleCheck :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card shadow="hover" class="stat-card">
+          <div class="stat-card__body">
+            <div class="stat-card__info">
+              <p class="stat-card__label">本学期新增</p>
+              <p class="stat-card__value">{{ newThisSemester }}</p>
+            </div>
+            <div class="stat-card__icon stat-card__icon--primary"><TrendingUp :size="24" /></div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="16">
+      <el-col :span="12"><BoardCharts :data="typeData" title="各类型报名数量" /></el-col>
+      <el-col :span="12"><PieChart :data="statusData" title="提交状态分布" /></el-col>
+    </el-row>
+
+    <el-row :gutter="16">
+      <el-col :span="24"><TrendChart :data="trendData" title="各学期报名趋势" /></el-col>
+    </el-row>
+
+    <el-card class="completeness-card">
+      <template #header>
+        <div class="completeness-header">
+          <span class="completeness-title">参与度总览</span>
+          <span class="completeness-sub"
+            >已参与 {{ completenessList.filter((c) => c.hasData).length }}/{{
+              completenessList.length
+            }}
+            项</span
+          >
+        </div>
+      </template>
+      <el-row :gutter="16">
+        <el-col v-for="item in completenessList" :key="item.key" :span="8" class="completeness-col">
+          <div
+            class="completeness-item"
+            :class="{ 'is-filled': item.hasData }"
+            @click="goTo(item.path)"
+          >
+            <div class="completeness-item__icon">
+              <Check v-if="item.hasData" :size="20" class="check" />
+              <X v-else :size="20" class="cross" />
+            </div>
+            <div class="completeness-item__label">{{ item.label }}</div>
+            <el-button
+              :type="item.hasData ? 'primary' : 'default'"
+              size="small"
+              link
+              @click.stop="goTo(item.path)"
+            >
+              {{ item.hasData ? '查看' : '去报名' }}
+              <Plus class="u-ml-2" :size="16" />
+            </el-button>
+          </div>
+        </el-col>
+      </el-row>
+    </el-card>
+  </PageContainer>
+</template>
+
+<style scoped lang="scss">
+.page-enter {
+  @include page-enter;
+}
+
+.stats-row {
+  margin-bottom: 16px;
+}
+.stat-card {
+  &__body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  &__label {
+    font-size: 14px;
+    color: var(--el-text-color-secondary);
+    margin-bottom: 4px;
+  }
+  &__value {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+  &__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: var(--el-text-color-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &--warning {
+      background: #e6a23c15;
+      color: #e6a23c;
+    }
+    &--success {
+      background: #67c23a15;
+      color: #67c23a;
+    }
+    &--primary {
+      background: #409eff15;
+      color: var(--el-color-primary);
+    }
+  }
+}
+.completeness-card {
+  margin-bottom: 16px;
+}
+.completeness-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.completeness-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.completeness-sub {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+.completeness-col {
+  margin-bottom: 12px;
+}
+.completeness-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--el-border-color-lighter);
+  background: var(--el-fill-color-light);
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+  &:hover {
+    border-color: #94a3b8;
+    background: #fff;
+  }
+  &.is-filled {
+    border-color: #d4edda;
+    background: #f0fdf4;
+    &:hover {
+      border-color: #10b981;
+    }
+    .check {
+      color: #10b981;
+    }
+  }
+  .cross {
+    color: var(--el-text-color-secondary);
+  }
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+  }
+  &__label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--el-text-color-primary);
+    text-align: center;
+  }
+}
+
+// ─── 夜间模式适配 ───
+// 图标盒降为低透明度叠色；完整度项 hover 不再纯白、已填写项改暗绿色调；
+// 硬编码深色文字亮化保证可读
+html.dark {
+  .stat-card__value {
+    color: #f1f5f9;
+  }
+  .stat-card__icon {
+    background: rgba(255, 255, 255, 0.06);
+    // 基础色 #64748b 在深色卡片底上实测 2.98:1，按同色相提亮到 #94a3b8（约 5.1:1）
+    color: #94a3b8;
+
+    // 彩色修饰类需重申，避免被基础覆盖的高特异性吞掉；夜间略提透明度保证可见
+    &--warning {
+      background: rgba(230, 162, 60, 0.14);
+      color: #e6a23c;
+    }
+    &--success {
+      background: rgba(103, 194, 58, 0.14);
+      color: #67c23a;
+    }
+    &--primary {
+      background: rgba(64, 158, 255, 0.14);
+      color: var(--el-color-primary);
+    }
+  }
+
+  .completeness-title {
+    color: #f1f5f9;
+  }
+
+  .completeness-item {
+    &:hover {
+      background: #1e293b;
+    }
+
+    &.is-filled {
+      border-color: rgba(16, 185, 129, 0.3);
+      background: rgba(16, 185, 129, 0.08);
+
+      &:hover {
+        border-color: rgba(16, 185, 129, 0.5);
+      }
+    }
+  }
+}
+</style>

@@ -4,7 +4,7 @@ import {
   isLocalNotification,
   mergeNotifications,
   patchNotifications,
-} from '@/app/stores/notificationHelpers'
+} from '@/stores/notificationHelpers'
 
 function makeNotification(overrides: Partial<Notification> & { id: string }): Notification {
   return {

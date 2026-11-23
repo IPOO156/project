@@ -23,7 +23,9 @@ export default antfu({
     // 运行检查脚本/截图/报告，非产品代码
     '.runtime-check/**',
     // 参考手册、文档与修改记录中的代码片段不参与 ESLint 校验
+    // Windows 下文件名不区分大小写，仓库跟踪为 claude.md、磁盘上可能显示为 CLAUDE.md，两者都要忽略
     'claude.md',
+    'CLAUDE.md',
     '开发手册.md',
     '前端开发规范与最佳实践（优化版）.md',
     'docs/**/*.md',
@@ -41,8 +43,15 @@ export default antfu({
     // 分层约束（见 docs/architecture.md「分层约束」）：
     // 页面/组件层禁止绕过服务层直接用 axios，保证 token、错误提示、401 兜底只有一处实现。
     {
-      name: 'project/layer-boundary-features',
-      files: ['src/features/**/*.ts', 'src/features/**/*.vue'],
+      name: 'project/layer-boundary-views',
+      files: [
+        'src/views/**/*.ts',
+        'src/views/**/*.vue',
+        'src/components/**/*.ts',
+        'src/components/**/*.vue',
+        'src/layouts/**/*.ts',
+        'src/layouts/**/*.vue',
+      ],
       rules: {
         'no-restricted-imports': [
           'error',
@@ -57,13 +66,13 @@ export default antfu({
         ],
       },
     },
-    // shared 层不得反向依赖 app / features；仅类型导入放行。
+    // shared 层不得反向依赖视图层 / 组件层 / 应用装配层；仅类型导入放行。
     // ignores 中的文件是已知技术债，改完应同步从列表移除（只减不增）。
     {
       name: 'project/layer-boundary-shared',
       files: ['src/shared/**/*.ts', 'src/shared/**/*.vue'],
       ignores: [
-        // 学习建议组合式函数读 user store 的年级，且被 shared/ui/StudyTipInline 复用；
+        // 学习建议组合式函数读 user store 的年级，且被 components/ui/StudyTipInline 复用；
         // 迁移需先把该 UI 组件改为纯展示（props 注入），暂列例外。
         'src/shared/composables/useLoadingTip.ts',
       ],
@@ -73,9 +82,24 @@ export default antfu({
           {
             patterns: [
               {
-                group: ['@/app', '@/app/*', '@/features', '@/features/*'],
+                group: [
+                  '@/views',
+                  '@/views/*',
+                  '@/views/**',
+                  '@/components',
+                  '@/components/*',
+                  '@/components/**',
+                  '@/layouts',
+                  '@/layouts/*',
+                  '@/router',
+                  '@/router/*',
+                  '@/stores',
+                  '@/stores/*',
+                  '@/composables',
+                  '@/composables/*',
+                ],
                 allowTypeImports: true,
-                message: 'shared 层不得反向依赖 app / features（分层红线）',
+                message: 'shared 层不得反向依赖视图层 / 组件层（分层红线）',
               },
             ],
           },

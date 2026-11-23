@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { statusLabel, statusOptions, statusTagType } from '@/features/teacher/archive/archiveStatus'
+import { statusLabel, statusOptions, statusTagType } from '@/views/teacher/archive/archiveStatus'
 
 describe('archiveStatus', () => {
   it('选项覆盖全部状态且以「全部状态」开头', () => {

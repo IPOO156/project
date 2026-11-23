@@ -23,9 +23,9 @@ vi.mock('@/shared/api/student', () => ({ updateProfileContact: mocks.updateProfi
 vi.mock('@/shared/composables/useTeacherMe', () => ({
   useTeacherMe: () => ({ clear: mocks.teacherClear }),
 }))
-vi.mock('@/app/stores/sessionReset', () => ({ resetUserScopedStores: mocks.resetStores }))
+vi.mock('@/stores/sessionReset', () => ({ resetUserScopedStores: mocks.resetStores }))
 
-const { useUserStore } = await import('@/app/stores/useUserStore')
+const { useUserStore } = await import('@/stores/useUserStore')
 
 /** 构造完整 UserInfo（接口要求必填字段齐全，避免用类型断言绕过检查） */
 function userInfo(overrides: Partial<UserInfo> = {}): UserInfo {

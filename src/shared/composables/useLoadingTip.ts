@@ -1,13 +1,13 @@
 import type { LoadingTip } from '@/shared/constants/loadingTips'
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useUserStore } from '@/app/stores/stores'
 import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
 import {
   pickLoadingTip,
   resolveGradeStage,
   resolveLoadingTipCategories,
 } from '@/shared/constants/loadingTips'
+import { useUserStore } from '@/stores/stores'
 
 type LoadingRole = 'student' | 'teacher' | 'admin'
 

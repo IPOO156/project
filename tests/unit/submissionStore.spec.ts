@@ -17,7 +17,7 @@ vi.mock('@/shared/api/submission', () => ({
 }))
 vi.mock('@/shared/api/activities', () => ({ deleteActivity: mocks.deleteActivity }))
 
-const { useSubmissionStore } = await import('@/app/stores/useSubmissionStore')
+const { useSubmissionStore } = await import('@/stores/useSubmissionStore')
 
 function record(id: string, overrides: Partial<SubmissionRecord> = {}): SubmissionRecord {
   return {
