@@ -6,11 +6,13 @@
  * `features/ai-chat/services/offlineChat.ts`，避免 shared 反向依赖上层。
  *
  * 真实后端接口：/ai/conversations、/ai/conversations/{id}/messages、
+ * /ai/conversations/{id}/messages/stream（SSE 流式，接口文档 9.4.1）、
  * /ai/conversations/{id}/messages/{mid}/regenerate、/ai/suggestions、/ai/messages/{mid}/feedback、
  * DELETE /ai/conversations/{id}。
  */
-import type { AISuggestion, RichContent } from '@/features/ai-chat/ai-chat.types'
-import request from './request'
+import type { AISuggestedAction, AISuggestion, RichContent } from '@/features/ai-chat/ai-chat.types'
+import { getToken } from '@/shared/utils/token'
+import request, { API_BASE_URL, forceLogout, tryRefreshToken } from './request'
 
 export interface ConversationSummary {
   id: string
@@ -105,6 +107,211 @@ export function sendAIMessage(
     { content },
     { timeout: 65_000 },
   )
+}
+
+// ── 流式发送（9.4.1 SSE）──
+
+/** 流式结束事件载荷（done），字段含义同 9.4 同步响应 */
+export interface AIStreamDonePayload {
+  messageId: number
+  role: 'assistant'
+  modelName?: string
+  tokenUsage?: number
+  generationTimeMs?: number
+  createdAt?: string
+  suggestedActions?: AISuggestedAction[]
+}
+
+export interface AIStreamHandlers {
+  /** 增量文本，调用方追加到当前助手消息 */
+  onDelta: (content: string) => void
+  /** 生成完成：携带后端真实 messageId（反馈/重新生成的入参） */
+  onDone: (payload: AIStreamDonePayload) => void
+  /** 流内 error 事件或连接中断（业务提示，调用方负责展示） */
+  onError: (message: string) => void
+}
+
+/**
+ * 流式接口在建立 SSE 之前就失败（HTTP 非 2xx / 非 text/event-stream）。
+ * 调用方据 status 判断是否属于「旧后端未实现流式接口」并回退同步接口。
+ */
+export class AIStreamPreflightError extends Error {
+  readonly status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'AIStreamPreflightError'
+    this.status = status
+  }
+}
+
+/**
+ * 发送消息（SSE 流式，接口文档 9.4.1）。
+ *
+ * 必须用 fetch + getReader：EventSource 只支持 GET 且无法携带 Authorization。
+ * `done.messageId` 在流结束前不可知，由 onDone 回填给调用方。
+ * 用户主动中断时抛出 AbortError（调用方按 signal.aborted 处理，不提示失败）。
+ */
+export async function sendAIMessageStream(
+  conversationId: number,
+  content: string,
+  handlers: AIStreamHandlers,
+  signal?: AbortSignal,
+): Promise<void> {
+  const url = `${API_BASE_URL}/ai/conversations/${conversationId}/messages/stream`
+
+  const postStream = (token: string) =>
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ content }),
+      signal,
+    })
+
+  let res = await postStream(getToken())
+  // fetch 不经过 axios 拦截器：401 时复用同一套刷新逻辑重试一次，失败则登出
+  if (res.status === 401) {
+    const newToken = await tryRefreshToken()
+    if (!newToken) {
+      forceLogout()
+      throw new AIStreamPreflightError('登录已过期，请重新登录', 401)
+    }
+    res = await postStream(newToken)
+  }
+
+  // 前置校验错误（会话不存在/非本人/已禁用/内容为空等）仍返回 ApiResult JSON
+  const contentType = res.headers.get('content-type') ?? ''
+  if (!res.ok || !contentType.includes('text/event-stream')) {
+    throw new AIStreamPreflightError(await readStreamErrorMessage(res), res.status)
+  }
+
+  const reader = res.body?.getReader()
+  if (!reader) {
+    handlers.onError('当前浏览器不支持流式响应，请更换浏览器后重试')
+    return
+  }
+
+  const decoder = new TextDecoder('utf-8')
+  let buffer = ''
+  let doneReceived = false
+  let failed = false
+
+  const handleLine = (raw: string) => {
+    const line = raw.replace(/\r$/, '')
+    if (!line.startsWith('data:')) return
+    const event = parseStreamEvent(line.slice(5).trim())
+    if (!event) return
+    if (event.type === 'delta') {
+      handlers.onDelta(event.content)
+    } else if (event.type === 'done') {
+      doneReceived = true
+      handlers.onDone(event.payload)
+    } else if (event.type === 'error') {
+      failed = true
+      handlers.onError(event.message)
+    }
+  }
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      // 末尾可能是不完整行，留到下一轮拼接，不能直接整段解析
+      buffer = lines.pop() ?? ''
+      for (const line of lines) handleLine(line)
+    }
+    buffer += decoder.decode()
+    for (const line of buffer.split('\n')) handleLine(line)
+  } catch (err) {
+    // 用户主动中断：交由调用方按 signal.aborted 标记「已停止」
+    if (signal?.aborted || isAbortError(err)) throw err
+    if (!failed) handlers.onError('回复中断，请稍后重试')
+    return
+  }
+
+  // 连接正常关闭但没收到 done：后端落库失败或代理提前断开
+  if (!doneReceived && !failed && !signal?.aborted) {
+    handlers.onError('回复中断，请稍后重试')
+  }
+}
+
+type ParsedStreamEvent =
+  | { type: 'start' }
+  | { type: 'delta'; content: string }
+  | { type: 'done'; payload: AIStreamDonePayload }
+  | { type: 'error'; message: string }
+
+/** 解析单行 data JSON；字段不合法时返回 null（忽略该事件，不中断流） */
+function parseStreamEvent(raw: string): ParsedStreamEvent | null {
+  if (!raw) return null
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return null
+  }
+  if (!parsed || typeof parsed !== 'object') return null
+  const record = parsed as Record<string, unknown>
+
+  switch (record.type) {
+    case 'start':
+      return { type: 'start' }
+    case 'delta':
+      return typeof record.content === 'string' ? { type: 'delta', content: record.content } : null
+    case 'error':
+      return {
+        type: 'error',
+        message:
+          typeof record.message === 'string' ? record.message : 'AI 服务暂时不可用，请稍后重试。',
+      }
+    case 'done':
+      return typeof record.messageId === 'number'
+        ? { type: 'done', payload: toDonePayload(record) }
+        : null
+    default:
+      return null
+  }
+}
+
+function toDonePayload(record: Record<string, unknown>): AIStreamDonePayload {
+  return {
+    messageId: record.messageId as number,
+    role: 'assistant',
+    modelName: typeof record.modelName === 'string' ? record.modelName : undefined,
+    tokenUsage: typeof record.tokenUsage === 'number' ? record.tokenUsage : undefined,
+    generationTimeMs:
+      typeof record.generationTimeMs === 'number' ? record.generationTimeMs : undefined,
+    createdAt: typeof record.createdAt === 'string' ? record.createdAt : undefined,
+    suggestedActions: Array.isArray(record.suggestedActions)
+      ? (record.suggestedActions as AISuggestedAction[])
+      : undefined,
+  }
+}
+
+function isAbortError(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && 'name' in err && err.name === 'AbortError'
+}
+
+/** 读取前置错误响应体：优先展示后端 message，避免向用户暴露状态码等技术细节 */
+async function readStreamErrorMessage(res: Response): Promise<string> {
+  try {
+    const body: unknown = await res.json()
+    if (body && typeof body === 'object' && 'message' in body) {
+      const message = (body as { message?: unknown }).message
+      if (typeof message === 'string' && message.trim()) return message
+    }
+  } catch {
+    // 非 JSON 响应（如代理错误页），走下方兜底文案
+  }
+  if (res.status === 429) return '请求过于频繁，请稍后重试'
+  if (res.status >= 500) return '服务器异常，请稍后重试'
+  return '请求失败，请稍后重试'
 }
 
 /** 重新生成 AI 消息（POST /ai/conversations/{conversationId}/messages/{messageId}/regenerate） */

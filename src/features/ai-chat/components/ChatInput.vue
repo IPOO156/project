@@ -8,16 +8,19 @@
  * - Enter 发送 / Shift+Enter 换行
  */
 import { ElMessage } from 'element-plus'
-import { Mic, Paperclip, Send, X } from 'lucide-vue-next'
+import { Mic, Paperclip, Send, Square, X } from 'lucide-vue-next'
 import { computed, ref } from 'vue'
 import { useVoiceInput } from '../composables/useVoiceInput'
 
 const props = defineProps<{
   loading: boolean
+  /** 助手正在流式输出：发送键切换为「停止生成」 */
+  streaming?: boolean
 }>()
 
 const emit = defineEmits<{
   send: [text: string, files: File[]]
+  stop: []
   voiceToggle: []
 }>()
 
@@ -188,8 +191,19 @@ function handleVoiceClick() {
           @keydown="handleKeydown"
         />
 
+        <!-- 流式生成中：发送键切换为停止，避免用户误以为无法中断 -->
+        <button
+          v-if="props.streaming"
+          class="ci__send ci__send--stop"
+          title="停止生成"
+          aria-label="停止生成"
+          @click="emit('stop')"
+        >
+          <Square :size="16" />
+        </button>
         <!-- 发送按钮 -->
         <button
+          v-else
           class="ci__send"
           :disabled="!canSend"
           title="发送"
@@ -206,7 +220,7 @@ function handleVoiceClick() {
 <style scoped lang="scss">
 .ci {
   flex-shrink: 0;
-  padding: $spacing-sm $spacing-xl $spacing-md;
+  padding: $spacing-md $spacing-xl $spacing-lg;
   background: var(--el-bg-color);
   border-top: 1px solid var(--el-border-color-lighter);
 
@@ -287,14 +301,21 @@ function handleVoiceClick() {
     display: flex;
     align-items: flex-end;
     gap: $spacing-sm;
-    padding: $spacing-sm;
+    padding: 6px $spacing-sm;
     background: var(--el-bg-color-page);
     border: 1px solid var(--el-border-color);
     border-radius: $radius-xl;
-    transition: border-color $duration-fast $ease-standard;
+    transition:
+      border-color $duration-fast $ease-standard,
+      box-shadow $duration-fast $ease-standard;
+
+    &:hover {
+      border-color: var(--el-border-color-hover);
+    }
 
     &:focus-within {
       border-color: var(--mc-primary);
+      box-shadow: 0 0 0 3px var(--el-color-primary-light-9);
     }
 
     &.is-recording {
@@ -333,20 +354,24 @@ function handleVoiceClick() {
 
   &__textarea {
     flex: 1;
+    display: block;
+    box-sizing: border-box;
     border: none;
     outline: none;
     background: transparent;
     resize: none;
     font-family: inherit;
-    font-size: $font-size-base;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 24px;
     color: var(--el-text-color-primary);
+    min-height: 40px;
     max-height: 120px;
-    padding: $spacing-xs $spacing-xs 0;
+    padding: $spacing-sm $spacing-xs;
     min-width: 0;
 
     &::placeholder {
       color: var(--el-text-color-placeholder);
+      font-size: 14px;
     }
   }
 
@@ -372,6 +397,15 @@ function handleVoiceClick() {
       background: var(--el-fill-color);
       color: var(--el-text-color-placeholder);
       cursor: not-allowed;
+    }
+
+    &--stop {
+      background: var(--el-fill-color-dark);
+      color: var(--el-text-color-primary);
+
+      &:hover {
+        transform: none;
+      }
     }
   }
 }

@@ -34,6 +34,8 @@ const userStore = useUserStore()
 const {
   messages,
   loading,
+  isStreaming,
+  stopGeneration,
   error,
   offlineMode,
   retry,
@@ -87,6 +89,11 @@ function handleQuickAsk(question: string) {
 /** AI 回复失败后重新生成 */
 function handleRetry() {
   void retry()
+}
+
+/** 停止流式生成：保留已收到的片段并标注「已停止生成」 */
+function handleStop() {
+  stopGeneration()
 }
 
 /** 清空对话 → 弹确认 */
@@ -220,6 +227,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       <ChatMessages
         :messages="messages"
         :loading="loading"
+        :streaming="isStreaming"
         :error="error"
         :show-thinking="settings.thinking"
         :show-feedback="settings.feedback"
@@ -235,7 +243,12 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         @ask="handleQuickAsk"
       />
 
-      <ChatInput :loading="loading" @send="handleSend" />
+      <ChatInput
+        :loading="loading"
+        :streaming="isStreaming"
+        @send="handleSend"
+        @stop="handleStop"
+      />
     </section>
 
     <!-- 浮层：设置面板（右侧滑入） -->
