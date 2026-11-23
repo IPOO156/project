@@ -3,8 +3,8 @@
  * AwardHub - 奖项中心
  *
  * 合并原「我的奖项」（奖项看板）与「奖项报名」（三类之星）两个菜单入口。
- * 与申报中心同一套交互：默认进入「竞赛之星」报名页，顶部用卡片页签切换 4 个子页面；
- * 「奖项看板」只做总览，进入后不展示页签，可经「参与度总览」的绿色入口回到报名页。
+ * 默认进入「奖项看板」总览，看板页不展示页签，可经「参与度总览」的入口进入报名页；
+ * 报名页顶部保留 4 张卡片页签，可互相切换或点「奖项看板」返回总览。
  */
 import { GraduationCap, LayoutDashboard, Lightbulb, Trophy } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -51,8 +51,8 @@ const modules = [
 
 /** 看板页：只做总览，不展示页签卡片 */
 const BOARD_KEY = 'award-review'
-/** 无 tab 参数时落到报名页（与申报中心默认进入「学科竞赛」一致），而不是看板 */
-const DEFAULT_KEY = 'competition-star'
+/** 无 tab 参数时落到奖项看板（2026-11-23 反馈：点开奖项中心需先看到看板） */
+const DEFAULT_KEY = 'award-review'
 
 /** 页签 key → /awards/overview 的 typeDistribution key */
 const COUNT_KEY_OF_MODULE: Record<string, string> = {

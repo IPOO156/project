@@ -5,7 +5,6 @@ import {
   Compass,
   FilePen,
   Home,
-  IdCard,
   Images,
   Inbox,
   MessageSquare,
@@ -81,22 +80,26 @@ export const registeredModules: AppModule[] = [
     menuItems: [{ label: '成果墙', icon: Images, path: '/achievements' }],
   },
   {
+    // 成长发展原是「个人中心」的子菜单，学生端反馈折叠在二级菜单里不好找，
+    // 独立成一级模块并紧跟「成长时间轴」（order 20）之后；routePrefix 取完整路径，
+    // findModuleByRoutePrefix 的最长前缀匹配不会误命中 /profile。
+    id: 'career-plan',
+    label: '成长发展',
+    icon: Compass,
+    order: 21,
+    routePrefix: '/profile/career-plan',
+    description: '职业规划、短板分析与成长记录',
+    menuItems: [{ label: '成长发展', icon: Compass, path: '/profile/career-plan' }],
+  },
+  {
     id: 'profile',
     label: '个人中心',
     icon: User,
     order: 70,
     routePrefix: '/profile',
-    description: '档案概览与成长发展',
-    menuItems: [
-      {
-        label: '个人中心',
-        icon: User,
-        children: [
-          { label: '档案概览', icon: IdCard, path: '/profile/info' },
-          { label: '成长发展', icon: Compass, path: '/profile/career-plan' },
-        ],
-      },
-    ],
+    description: '档案概览',
+    // 成长发展已提升为一级模块，这里只剩档案概览，不再需要二级下拉
+    menuItems: [{ label: '个人中心', icon: User, path: '/profile/info' }],
   },
   {
     id: 'messages',
