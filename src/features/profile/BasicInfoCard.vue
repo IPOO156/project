@@ -58,6 +58,11 @@ const studentStatusText = computed(() => academicInfo.value.studentStatusLabel ?
 const birthDateText = computed(() =>
   academicInfo.value.birthDate ? String(academicInfo.value.birthDate).slice(0, 10) : '-',
 )
+/** 志愿时长：/profile/info 的 totalVolunteerHours（后端汇总，单位小时）；0 为有效值，不能按 falsy 显示成 '-' */
+const volunteerHoursText = computed(() => {
+  const hours = archiveStore.profileData?.totalVolunteerHours
+  return typeof hours === 'number' ? `${hours} 小时` : '-'
+})
 
 /**
  * 联系邮箱/手机号：来自 /profile/info 的 contactInfo（PUT /profile/contact 的写入目标）。
@@ -72,6 +77,20 @@ const emergencyRelation = computed(
   () => archiveStore.profileData?.contactInfo?.emergencyRelation ?? '',
 )
 const emergencyPhone = computed(() => archiveStore.profileData?.contactInfo?.emergencyPhone ?? '')
+
+/**
+ * 脱敏字段（邮箱/手机号/紧急联系人电话）的编辑占位文本。
+ * 后端只返回脱敏值，回填提交过不了 @Email/@Pattern 校验，因此输入框仍需重新填写完整值；
+ * 但把当前脱敏值展示在占位里，编辑时不再是「一片空白」，可对照原信息逐项修改。
+ */
+function maskedPlaceholder(current: string, fallback: string): string {
+  return current ? `当前 ${current}，请重新输入完整值` : fallback
+}
+const emailPlaceholder = computed(() => maskedPlaceholder(contactEmail.value, '请输入联系邮箱'))
+const phonePlaceholder = computed(() => maskedPlaceholder(contactPhone.value, '请输入手机号'))
+const emergencyPhonePlaceholder = computed(() =>
+  maskedPlaceholder(emergencyPhone.value, '请输入紧急联系人电话'),
+)
 
 function startEdit() {
   const a = academicInfo.value
@@ -302,6 +321,7 @@ async function handleAvatarUpload(base64: string) {
       }}</el-descriptions-item>
       <el-descriptions-item label="出生日期">{{ birthDateText }}</el-descriptions-item>
       <el-descriptions-item label="学历层次">{{ degreeTypeText }}</el-descriptions-item>
+      <el-descriptions-item label="志愿时长">{{ volunteerHoursText }}</el-descriptions-item>
       <el-descriptions-item label="联系邮箱">{{ contactEmail || '-' }}</el-descriptions-item>
       <el-descriptions-item label="手机号">{{ contactPhone || '-' }}</el-descriptions-item>
       <el-descriptions-item label="通讯地址">{{ contactAddress || '-' }}</el-descriptions-item>
@@ -324,7 +344,7 @@ async function handleAvatarUpload(base64: string) {
               v-model="formData.email"
               size="small"
               maxlength="254"
-              placeholder="请输入联系邮箱" /></el-form-item
+              :placeholder="emailPlaceholder" /></el-form-item
         ></el-col>
         <el-col :span="12"
           ><el-form-item label="手机号" required
@@ -332,7 +352,7 @@ async function handleAvatarUpload(base64: string) {
               v-model="formData.phone"
               size="small"
               maxlength="11"
-              placeholder="请输入手机号" /></el-form-item
+              :placeholder="phonePlaceholder" /></el-form-item
         ></el-col>
         <el-col :span="24"
           ><el-form-item label="通讯地址" required
@@ -361,7 +381,7 @@ async function handleAvatarUpload(base64: string) {
               v-model="formData.emergencyPhone"
               size="small"
               maxlength="11"
-              placeholder="请输入紧急联系人电话" /></el-form-item
+              :placeholder="emergencyPhonePlaceholder" /></el-form-item
         ></el-col>
         <el-col :span="12"
           ><el-form-item label="政治面貌"
