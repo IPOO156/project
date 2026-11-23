@@ -1,0 +1,656 @@
+<script setup lang="ts">
+/**
+ * DefaultLayout - 全局页面级布局容器
+ *
+ * 设计目标
+ *  1. 一个 Layout 满足绝大多数业务页面（列表/详情/表单/审批/统计）
+ *  2. 通过 slot + meta 解耦菜单、标题、工具栏、内容区
+ *  3. 与 .cursor 规则中的 ui-ux-pro-max 设计语言保持一致：
+ *     - 8pt 间距网格（$spacing-xs..$spacing-2xl）
+ *     - 圆角 6/8/12（$radius-base / $radius-lg / $radius-xl）
+ *     - 三层阴影（$shadow-sm / $shadow-base / $shadow-lg）
+ *     - 主色深海蓝 + 琥珀金（$color-primary / $color-accent）
+ *  4. 响应式：≥992 三栏、<992 自动折叠侧边栏为抽屉
+ *  5. A11y：role/aria-label/aria-live
+ *  6. 动画：4 套统一过渡（sidebar 滑入 / header 淡入 / route 切换 / loading 出场）
+ *     - 全部使用 transform + opacity（合成层，GPU 加速）
+ *     - 时长 200-280ms（命中 skill §6 区间）
+ *     - will-change 在动画结束后立即释放（避免常驻内存）
+ */
+import { ElMessage } from 'element-plus'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import HeaderBar from '@/components/layout/HeaderBar.vue'
+import Sidebar from '@/components/layout/Sidebar.vue'
+import GreetingToast from '@/components/ui/GreetingToast.vue'
+import LoadingTipCard from '@/components/ui/LoadingTipCard.vue'
+import { useTabs } from '@/composables/useTabs'
+import { useLoadingTip } from '@/shared/composables/useLoadingTip'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
+import { useAppStore, useCursorStore, useUserStore } from '@/stores/stores'
+import AIChatDrawer from '@/views/school/ai-chat/components/AIChatDrawer.vue'
+import AIFloatingBall from '@/views/school/ai-chat/components/AIFloatingBall.vue'
+import { useGreeting } from '@/views/school/dashboard/composables/useGreeting'
+
+defineOptions({ name: 'DefaultLayout' })
+
+const route = useRoute()
+const appStore = useAppStore()
+const userStore = useUserStore()
+const cursorStore = useCursorStore()
+const slots = useSlots()
+
+const drawerVisible = ref(false)
+
+/**
+ * 管理员端与教师端共用同一套路由，但视觉语言要分开：
+ * 管理员＝治理总览（石墨蓝 + 中性灰），教师＝待审队列（墨蓝 + 琥珀）。
+ * 这里只落一个 layout--admin 类，具体差异集中在 teacher-console.scss；
+ * 学生端 isAdmin 恒为 false，不会命中任何管理员样式。
+ */
+const { isAdmin } = useTeacherAuthz()
+
+// 启动 tab 状态监听：路由切换时把已访问页面写入 useTabsStore
+useTabs()
+
+/**
+ * 书册光标只在学生端启用：教师端 / 管理员端采用普通系统指针。
+ * 学生端可在顶部栏开关；开关状态持久化在 useCursorStore。
+ * 登录页可能在同一个 SPA 会话内切换账号，故监听 isTeacher 双向切换。
+ */
+watch(
+  [() => userStore.isTeacher, () => cursorStore.enabled],
+  ([isTeacher]) => cursorStore.apply(isTeacher),
+  { immediate: true },
+)
+
+// 离开业务布局（登录 / 404 等 noLayout 页面）时关闭书册光标（报告 #20）
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDisabledCellClick, true)
+  cursorStore.disable()
+})
+
+/**
+ * 日期/月份选择器里连续点击灰色不可选单元格时给出解释：
+ * 单次点击 Element Plus 没有任何反馈，连点三次以上容易被误认为“控件坏了”。
+ */
+let disabledCellClicks = 0
+let disabledCellTimer = 0
+function handleDisabledCellClick(event: MouseEvent) {
+  const target = event.target as HTMLElement | null
+  if (!target?.closest('.el-month-table td.disabled, .el-date-table td.disabled')) return
+  disabledCellClicks += 1
+  window.clearTimeout(disabledCellTimer)
+  disabledCellTimer = window.setTimeout(() => {
+    disabledCellClicks = 0
+  }, 2000)
+  if (disabledCellClicks >= 3) {
+    disabledCellClicks = 0
+    ElMessage.warning('所选日期/月份不在学期范围内：请切换学期，或点击顶部箭头切换到学期对应年份')
+  }
+}
+
+onMounted(() => document.addEventListener('click', handleDisabledCellClick, true))
+
+// 人性化问候弹窗（useGreeting 内部已处理挂载与登录状态监听）
+const { visible, dismissing, greeting, theme, dismiss } = useGreeting()
+
+const hasHeader = computed(() => !!slots.header)
+const hasToolbar = computed(() => !!slots.toolbar)
+const hasPageHeader = computed(() => hasHeader.value || hasToolbar.value)
+const hasFooter = computed(() => !!slots.footer)
+const isLoading = computed(() => appStore.pageLoading)
+
+// 加载页温馨提示：按当前路由/角色取主题，每次加载出现时换一条
+const { message: loadingMessage, hint: loadingHint, refresh: refreshLoadingTip } = useLoadingTip()
+
+/** 从路由 meta 中推断页面标题，用于文档标题与无障碍属性 */
+const pageTitle = computed(() => (route.meta?.title as string) || '')
+
+/** 是否教师端页面（教师端路由均带 meta.teacher，见 router/teacher-routes.ts） */
+const isTeacherSide = computed(() => !!route.meta?.teacher)
+
+/** 文档标题：品牌后缀随端切换（学生端/教师端共用 DefaultLayout，不能写死一端） */
+const docTitle = computed(() =>
+  pageTitle.value ? `${pageTitle.value} · ${isTeacherSide.value ? '教师' : '学生'}档鉴未来` : '',
+)
+
+/** 是否全宽出血页面（如成长时间轴），需要去掉内容区 padding 与最大宽度限制 */
+const isFullBleed = computed(() => !!route.meta?.fullBleed)
+
+// 同步文档标题 → 屏幕阅读器在路由切换时能播报新页面
+// 监听整个 docTitle（含端后缀）而非仅 pageTitle：学生端与教师端首页 meta.title 同为「首页」，
+// 只监听 pageTitle 时两端互跳标题串不变，标签页仍显示上一端的品牌。
+watch(
+  docTitle,
+  (title) => {
+    if (typeof document !== 'undefined' && title) {
+      document.title = title
+    }
+  },
+  { immediate: true },
+)
+
+// 加载态切换时，给 spinner/遮罩加 will-change，结束后释放
+const loadingEl = ref<HTMLElement | null>(null)
+watch(isLoading, async (loading) => {
+  if (!loading) {
+    return
+  }
+  // 教师端 / 管理员端不展示加载温馨提示，仅在学生端按新页面主题重新抽取
+  if (!userStore.isTeacher) {
+    refreshLoadingTip()
+  }
+  await nextTick()
+  if (loadingEl.value) {
+    loadingEl.value.style.willChange = 'transform, opacity'
+    // 动画结束后（约 320ms）立即释放 will-change，避免常驻图层占内存
+    setTimeout(() => {
+      if (loadingEl.value) {
+        loadingEl.value.style.willChange = ''
+      }
+    }, 320)
+  }
+})
+</script>
+
+<template>
+  <div
+    class="layout"
+    :class="{
+      'layout--collapsed': appStore.isSidebarCollapsed,
+      'layout--mobile': appStore.isMobile,
+      'layout--has-footer': hasFooter,
+      'layout--teacher': userStore.isTeacher,
+      'layout--admin': isAdmin,
+    }"
+  >
+    <!-- 侧边栏（折叠/展开动画：280ms 横向滑入） -->
+    <Transition name="layout-sidebar" mode="out-in">
+      <Sidebar
+        v-if="!appStore.isMobile || !appStore.isSidebarCollapsed"
+        :key="String(appStore.isSidebarCollapsed)"
+      />
+    </Transition>
+
+    <!-- 右侧主区域 -->
+    <div class="layout__main">
+      <!-- 顶部栏：保持挂载，内部 NavTabs 自行响应路由变化 -->
+      <HeaderBar />
+
+      <!-- 多标签页导航（由 NavTabs 接管） -->
+
+      <!-- 内容区 -->
+      <main
+        class="layout__content"
+        :class="{ 'layout__content--full-bleed': isFullBleed }"
+        :aria-busy="isLoading"
+        :aria-label="pageTitle || '主内容区'"
+      >
+        <div
+          class="layout__content-inner"
+          :class="{ 'layout__content-inner--full-bleed': isFullBleed }"
+        >
+          <!-- 页面头：仅当页面显式使用 header / toolbar 插槽时渲染 -->
+          <Transition name="layout-fade">
+            <section v-if="hasPageHeader" class="layout__page-header">
+              <div class="layout__page-header-row">
+                <div v-if="hasHeader" class="layout__page-header-main">
+                  <slot name="header" />
+                </div>
+                <div v-if="hasToolbar" class="layout__page-header-toolbar">
+                  <slot name="toolbar" />
+                </div>
+              </div>
+            </section>
+          </Transition>
+
+          <!-- 主内容：路由出口 / 自定义内容 -->
+          <section class="layout__page-body">
+            <router-view v-slot="{ Component, route: routeSlot }">
+              <!-- key 用 path（含 params、不含 query）：同页仅改 query 时不再整页重挂/重播路由过渡 -->
+              <!-- 路由页面组件必须是单根元素（根节点前也不能放顶层注释，否则编译为 Fragment）：
+                   out-in 模式下 Fragment 离开时不会复位 isLeaving，之后整个路由出口渲染为空，
+                   只能刷新恢复（2026-11-12 竞赛之星/双创之星空白反馈）。 -->
+              <Transition name="layout-route" mode="out-in">
+                <keep-alive :max="20">
+                  <component :is="Component" :key="routeSlot.path" />
+                </keep-alive>
+              </Transition>
+            </router-view>
+          </section>
+
+          <!-- 可选底部 -->
+          <Transition name="layout-fade">
+            <footer v-if="hasFooter" class="layout__page-footer">
+              <slot name="footer" />
+            </footer>
+          </Transition>
+        </div>
+      </main>
+    </div>
+
+    <!-- 全局遮罩（移动端抽屉式侧边栏使用） -->
+    <Transition name="layout-mask">
+      <div
+        v-if="appStore.isMobile && !appStore.isSidebarCollapsed"
+        class="layout__mask"
+        aria-hidden="true"
+        @click="appStore.setSidebarCollapsed(true)"
+      />
+    </Transition>
+
+    <!-- 页面级全局加载（aria-live 区域：屏幕阅读器会播报；强调入场 220ms） -->
+    <Transition name="layout-loading">
+      <div
+        v-if="isLoading"
+        ref="loadingEl"
+        class="layout__loading"
+        role="status"
+        aria-live="polite"
+        aria-label="页面加载中"
+      >
+        <div class="layout__loading-spinner" aria-hidden="true" />
+        <span class="layout__loading-text">{{ loadingMessage }}</span>
+        <!-- 温馨提示：单行细线提示 + 2px 进度条，各端共用；文案随身份轮换 -->
+        <LoadingTipCard :text="loadingHint" />
+        <span class="layout__loading-progress" aria-hidden="true"><i /></span>
+      </div>
+    </Transition>
+
+    <!-- 调试用：暴露给 E2E -->
+    <div v-if="false" aria-hidden="true" data-test="layout-user">
+      {{ userStore.userName }}
+    </div>
+
+    <!-- AI 悬浮球：仅学生端展示（教师端不提供 AI 助手入口） -->
+    <template v-if="!userStore.isTeacher">
+      <AIFloatingBall :open="drawerVisible" @toggle="drawerVisible = !drawerVisible" />
+      <AIChatDrawer :visible="drawerVisible" @close="drawerVisible = false" />
+    </template>
+
+    <!-- 人性化问候通知条 -->
+    <GreetingToast
+      :visible="visible"
+      :dismissing="dismissing"
+      :greeting="greeting"
+      :theme="theme"
+      @close="dismiss"
+    />
+  </div>
+</template>
+
+<style scoped lang="scss">
+// =============================================================================
+// 1. 主布局（基础样式 + 折叠/移动端 margin 切换）
+// =============================================================================
+.layout {
+  display: flex;
+  // dvh 跟随浏览器工具栏收放，避免移动端 100vh 把内容顶到屏幕外
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--el-bg-color-page);
+
+  &__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: $sidebar-width;
+    transition: margin-left $duration-slow $ease-standard;
+    min-width: 0;
+  }
+
+  // 折叠侧边栏
+  &--collapsed &__main {
+    margin-left: $sidebar-collapsed-width;
+  }
+
+  &--mobile &__main {
+    margin-left: 0;
+  }
+
+  &__content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: $spacing-xl;
+    background-color: var(--el-bg-color-page);
+    position: relative;
+    // 滚动使用 passive 滚动（浏览器原生优化，避免阻塞主线程）
+    overscroll-behavior: contain;
+    // 预留垂直滚动条空间，避免滚动条显隐导致居中内容左右偏移
+    scrollbar-gutter: stable;
+  }
+
+  &__content-inner {
+    max-width: $content-max-width;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xl;
+  }
+
+  // 全宽出血页面：去掉内容区 padding 与最大宽度限制，让页面背景能顶满可视区域
+  &__content--full-bleed {
+    padding: 0;
+  }
+
+  &__content-inner--full-bleed {
+    max-width: none;
+    margin: 0;
+    gap: 0;
+  }
+
+  // 页面级标题区
+  &__page-header {
+    background: var(--el-bg-color);
+    border: 1px solid var(--el-border-color-light);
+    border-radius: $radius-lg;
+    padding: $spacing-xl;
+    box-shadow: $shadow-sm;
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-lg;
+  }
+
+  &__page-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $spacing-xl;
+    flex-wrap: wrap;
+  }
+
+  &__page-header-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__page-header-toolbar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    flex-wrap: wrap;
+  }
+
+  // 主内容
+  &__page-body {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xl;
+    min-height: 200px;
+  }
+
+  &__page-footer {
+    color: var(--el-text-color-secondary);
+    font-size: $font-size-sm;
+    text-align: center;
+    padding: $spacing-xl 0 $spacing-sm;
+  }
+
+  // 移动端遮罩（z-index 使用项目统一比例尺：modal-backdrop 层）
+  &__mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.32);
+    z-index: $z-modal-backdrop;
+    cursor: pointer;
+  }
+
+  // 全局加载（z-index 使用项目统一比例尺：modal 层）
+  // 结构：转圈 → 主文案（16px）→ 单行提示（14px）→ 2px 进度条
+  // 垂直节奏：16px（$spacing-lg）/ 24px（$spacing-xl，由 LoadingTipCard 自带）/ 16px
+  &__loading {
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(2px);
+    z-index: $z-modal;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+
+  &__loading-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid var(--el-color-primary-light-8);
+    border-top-color: var(--el-color-primary);
+    border-radius: 50%;
+    // 旋转动画：只动 transform（合成层）；自带 will-change 由 JS 注入，结束即释放
+    animation: layout-spin 0.8s linear infinite;
+  }
+
+  &__loading-text {
+    margin-top: $spacing-lg;
+    color: var(--el-text-color-primary);
+    font-size: $font-size-lg;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    // 只动 opacity + transform；与遮罩入场错开 40ms，读起来有先后
+    animation: layout-loading-text-in 240ms $ease-decelerate both;
+    animation-delay: 40ms;
+  }
+
+  &__loading-progress {
+    width: 160px;
+    height: 2px;
+    margin-top: $spacing-lg;
+    border-radius: $radius-pill;
+    background: var(--el-fill-color);
+    overflow: hidden;
+    animation: layout-loading-progress-in 240ms $ease-decelerate both;
+    animation-delay: 120ms;
+
+    i {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--el-color-primary);
+      transform: scaleX(0.04);
+      transform-origin: left center;
+      // 无真实进度可读：用先快后慢的推进表达「仍在进行」，只动 transform/opacity
+      animation: layout-loading-progress 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+  }
+}
+
+// 夜间模式适配：加载遮罩改为页面底色系深色蒙层，避免白色高亮刺眼
+html.dark .layout__loading {
+  background: rgba(11, 17, 32, 0.72);
+}
+
+// =============================================================================
+// 2. 动画系统（ui-ux-pro-max skill §6：transform + opacity，150-280ms）
+//    所有动画使用合成层属性；时长统一从 $duration-* 取
+//    will-change 由 JS 按需注入，避免常驻图层
+// =============================================================================
+
+// A. Sidebar 折叠/展开 → 横向滑入 + 淡入（280ms Material 强调曲线）
+.layout-sidebar-enter-active,
+.layout-sidebar-leave-active {
+  transition:
+    transform $duration-slow $ease-standard,
+    opacity $duration-slow $ease-standard;
+}
+
+.layout-sidebar-enter-from {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.layout-sidebar-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+// B. 移动端遮罩 → 仅淡入（180ms，避免视觉抢占）
+.layout-mask-enter-active,
+.layout-mask-leave-active {
+  transition: opacity $duration-fast $ease-standard;
+}
+
+.layout-mask-enter-from,
+.layout-mask-leave-to {
+  opacity: 0;
+}
+
+// E. 通用淡入（页面头、页脚存在/消失时使用，180ms）
+.layout-fade-enter-active,
+.layout-fade-leave-active {
+  transition:
+    transform $duration-base $ease-decelerate,
+    opacity $duration-base $ease-decelerate;
+}
+
+.layout-fade-enter-from {
+  transform: translateY(4px);
+  opacity: 0;
+}
+
+.layout-fade-leave-to {
+  transform: translateY(-2px);
+  opacity: 0;
+}
+
+// F. Loading 强调出场（220ms 弹性曲线 + 缩放，给用户"加载启动"反馈）
+.layout-loading-enter-active {
+  transition:
+    transform $duration-slow $ease-emphasized,
+    opacity $duration-slow $ease-emphasized;
+}
+
+.layout-loading-leave-active {
+  transition:
+    transform $duration-base $ease-accelerate,
+    opacity $duration-fast $ease-accelerate;
+}
+
+.layout-loading-enter-from {
+  transform: scale(0.96);
+  opacity: 0;
+}
+
+.layout-loading-leave-to {
+  transform: scale(1.02);
+  opacity: 0;
+}
+
+// G. 路由切换 → 纯透明度淡出淡入，无位移
+//    页面级“走位”会让内容整体跳一下；out-in 保证新旧页面不重叠，
+//    避免两页文字同时可见的双重曝光
+.layout-route-enter-active {
+  transition: opacity $duration-base $ease-decelerate;
+}
+
+.layout-route-leave-active {
+  transition: opacity $duration-instant $ease-accelerate;
+}
+
+.layout-route-enter-from,
+.layout-route-leave-to {
+  opacity: 0;
+}
+
+// 关键帧
+@keyframes layout-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes layout-loading-text-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes layout-loading-progress-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes layout-loading-progress {
+  0% {
+    opacity: 0.45;
+    transform: scaleX(0.04);
+  }
+
+  60% {
+    opacity: 1;
+    transform: scaleX(0.82);
+  }
+
+  100% {
+    opacity: 0.35;
+    transform: scaleX(0.96);
+  }
+}
+
+// =============================================================================
+// 3. 响应式断点（覆盖 skill 要求的 4 个标准断点：375 / 768 / 1024 / 1440）
+// =============================================================================
+
+// 平板：1199px 以下缩小内边距
+@media (max-width: 1199px) {
+  .layout__content {
+    padding: $spacing-lg;
+  }
+}
+
+// 移动端横屏：768px 以下
+@media (max-width: 768px) {
+  .layout__content {
+    padding: $spacing-md;
+  }
+  .layout__page-header {
+    padding: $spacing-lg;
+  }
+  // 移动端动画时长减半（更短的视距 = 更短的过渡）
+  .layout-sidebar-enter-active,
+  .layout-sidebar-leave-active {
+    transition-duration: $duration-base;
+  }
+}
+
+// 移动端竖屏：375px 以下（小间距，禁止横向滚动）
+@media (max-width: 375px) {
+  .layout__content {
+    padding: $spacing-sm;
+  }
+  .layout__page-header {
+    padding: $spacing-md;
+  }
+  .layout__page-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .layout__page-header-toolbar {
+    justify-content: flex-start;
+  }
+  // 极小屏：禁用 transform 位移，仅保留 opacity（避免低端机卡顿）
+  .layout-fade-enter-from,
+  .layout-fade-leave-to {
+    transform: none;
+  }
+}
+
+// 动效策略：始终启用，不提供 prefers-reduced-motion 降级；
+// 系统开启“减少动效”时也保持完整动画（统一说明见 assets/styles/motion-override.scss）
+</style>

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { watch } from 'vue'
-import { useAIChat } from '@/features/ai-chat/composables/useAIChat'
 import { createAIConversation, getAIConversations, sendAIMessageStream } from '@/shared/api/ai-chat'
+import { useAIChat } from '@/views/school/ai-chat/composables/useAIChat'
 
 vi.mock('@/shared/api/ai-chat', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/shared/api/ai-chat')>()

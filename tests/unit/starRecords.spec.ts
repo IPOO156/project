@@ -1,10 +1,10 @@
-import type { StarRecord } from '@/features/approval/composables/starRecords'
+import type { StarRecord } from '@/views/school/approval/composables/starRecords'
 import { describe, expect, it } from 'vitest'
 import {
   canEditStar,
   filterStarRecords,
   SCIENTIFIC_SUB_TYPES,
-} from '@/features/approval/composables/starRecords'
+} from '@/views/school/approval/composables/starRecords'
 
 function record(id: string, type: string): StarRecord {
   return {

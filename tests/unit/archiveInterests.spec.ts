@@ -19,7 +19,7 @@ vi.mock('@/shared/api/student', () => ({
 }))
 vi.mock('element-plus', () => ({ ElMessage: { success: mocks.success } }))
 
-const { createInterestActions } = await import('@/app/stores/archiveInterests')
+const { createInterestActions } = await import('@/stores/archiveInterests')
 
 function interest(id: number, tagName = '足球'): Interest {
   return { id, tagName, proficiencyLevel: 3, detailContent: '爱好', isDetail: 1 }

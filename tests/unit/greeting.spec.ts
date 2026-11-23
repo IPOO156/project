@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getGreetingByHour, getPeriodTheme } from '@/features/dashboard/composables/useGreeting'
+import { getGreetingByHour, getPeriodTheme } from '@/views/school/dashboard/composables/useGreeting'
 
 /** 固定到指定本地时刻，避免用例随执行时间漂移 */
 function at(hour: number) {

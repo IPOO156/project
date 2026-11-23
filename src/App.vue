@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { onMounted } from 'vue'
-import { useUserStore } from '@/app/stores/stores'
+import { useUserStore } from '@/stores/stores'
 
 const userStore = useUserStore()
 

@@ -2,7 +2,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { nextTick } from 'vue'
-import { initTabsRouter, MAX_TABS, useTabsStore } from '@/app/stores/useTabsStore'
+import { initTabsRouter, MAX_TABS, useTabsStore } from '@/stores/useTabsStore'
 
 function tab(path: string, affix = false, closable = !affix) {
   return { path, title: path, closable, affix }

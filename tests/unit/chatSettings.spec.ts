@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useChatSettings } from '@/features/ai-chat/composables/useChatSettings'
+import { useChatSettings } from '@/views/school/ai-chat/composables/useChatSettings'
 
 const STORAGE_KEY = 'ai_chat_settings'
 

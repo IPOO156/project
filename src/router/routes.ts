@@ -1,0 +1,375 @@
+import type { RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
+import { getCurrentUser } from '@/shared/api/auth'
+import { useTeacherMe } from '@/shared/composables/useTeacherMe'
+import { isModuleAllowed, isRoleMatchedLoginTab } from '@/shared/config/teacherModuleRegistry'
+import { USER_INFO_CACHE_KEY } from '@/shared/constants/storageKeys'
+import { isMustChangePassword } from '@/shared/utils/forcePasswordChange'
+import { getToken } from '@/shared/utils/token'
+import { setupNavigationLoading } from './loadingIndicator'
+import teacherRoutes from './teacher-routes'
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/auth/Login.vue'),
+    meta: { title: '登录', noLayout: true },
+  },
+  {
+    path: '/',
+    component: () => import('@/layouts/DefaultLayout.vue'),
+    redirect: '/dashboard',
+    // 学生端路由组标记：供守卫拦截非学生登录（如教师用 URL 直接打开学生页）。
+    // 与下方 /teacher 的 meta.teacher 对称，声明在父路由上、由子路由继承。
+    meta: { student: true },
+    children: [
+      {
+        path: 'dashboard',
+        name: 'Dashboard',
+        component: () => import('@/views/school/dashboard/Dashboard.vue'),
+        meta: { title: '首页', affix: true },
+      },
+      {
+        path: 'growth-timeline',
+        name: 'GrowthTimeline',
+        component: () => import('@/views/school/growth-timeline/GrowthTimeline.vue'),
+        meta: { title: '成长时间轴', fullBleed: true },
+      },
+      // ─── 成果墙 ───
+      {
+        path: 'achievements',
+        name: 'AchievementWall',
+        component: () => import('@/views/school/achievements/AchievementWall.vue'),
+        meta: { title: '成果墙' },
+      },
+      // ─── AI 助手 ───
+      {
+        path: 'ai-chat',
+        name: 'AIChat',
+        component: () => import('@/views/school/ai-chat/AIChat.vue'),
+        meta: { title: 'AI 助手', fullBleed: true },
+      },
+      // ─── 个人中心 ───
+      {
+        path: 'profile',
+        redirect: '/profile/info',
+        children: [
+          {
+            path: 'edit-password',
+            name: 'EditPassword',
+            component: () => import('@/views/school/profile/EditPassword.vue'),
+            meta: { title: '修改密码' },
+          },
+          {
+            path: 'info',
+            name: 'ProfileInfo',
+            component: () => import('@/views/school/profile/ProfileInfo.vue'),
+            meta: { title: '档案概览' },
+          },
+          {
+            path: 'career-plan',
+            name: 'CareerPlan',
+            component: () => import('@/views/school/profile/CareerPlan.vue'),
+            meta: { title: '成长发展' },
+          },
+        ],
+      },
+      // ─── 各类申报板块 ───
+      {
+        path: 'applications',
+        children: [
+          {
+            path: '',
+            name: 'ApplicationsHub',
+            component: () => import('@/views/school/applications/ApplicationHub.vue'),
+            // 本页用 ?tab=xxx 切换 10 个申报子模块（见同文件的 redirect 子项），
+            // singleTab 让它们共用顶栏一个标签（useTabs 据此判定），避免每切一个子模块裂一个标签。
+            meta: { title: '申报中心', singleTab: true },
+          },
+          {
+            path: 'competition',
+            redirect: '/applications?tab=competition',
+          },
+          {
+            path: 'innovation',
+            redirect: '/applications?tab=innovation',
+          },
+          {
+            path: 'research',
+            redirect: '/applications?tab=research',
+          },
+          {
+            path: 'scholarship',
+            redirect: '/applications?tab=scholarship',
+          },
+          {
+            path: 'certificate',
+            redirect: '/applications?tab=certificate',
+          },
+          {
+            path: 'internship',
+            redirect: '/applications?tab=internship',
+          },
+          {
+            path: 'organization',
+            redirect: '/applications?tab=organization',
+          },
+          {
+            path: 'training',
+            redirect: '/applications?tab=training',
+          },
+          {
+            path: 'social-practice',
+            redirect: '/applications?tab=social-practice',
+          },
+          {
+            path: 'book-report',
+            redirect: '/applications?tab=book-report',
+          },
+        ],
+      },
+      // ─── 奖项中心（我的奖项 + 奖项报名合并） ───
+      {
+        path: 'awards',
+        children: [
+          {
+            path: '',
+            name: 'AwardsHub',
+            component: () => import('@/views/school/awards/AwardHub.vue'),
+            // 与申报中心同一套机制：?tab= 切换页签，singleTab 让 4 个页签共用顶栏一个标签
+            meta: { title: '奖项中心', singleTab: true },
+          },
+          {
+            // 旧地址保留重定向：消息中心等处仍按 /awards/*-star 跳转，需带上原 query（sub / edit）
+            path: 'competition-star',
+            redirect: (to) => ({
+              path: '/awards',
+              query: { ...to.query, tab: 'competition-star' },
+            }),
+          },
+          {
+            path: 'scientific-star',
+            redirect: (to) => ({ path: '/awards', query: { ...to.query, tab: 'scientific-star' } }),
+          },
+          {
+            path: 'innovation-star',
+            redirect: (to) => ({ path: '/awards', query: { ...to.query, tab: 'innovation-star' } }),
+          },
+        ],
+      },
+      // ─── 消息中心 ───
+      {
+        path: 'messages',
+        children: [
+          {
+            path: '',
+            name: 'MessageCenter',
+            component: () => import('@/views/school/messages/MessageCenter.vue'),
+            meta: { title: '消息中心' },
+          },
+          {
+            path: 'activities',
+            name: 'MessageActivities',
+            component: () => import('@/views/school/messages/activities/ActivityList.vue'),
+            meta: { title: '动态中心' },
+          },
+        ],
+      },
+      // ─── 我的申报 ───
+      {
+        path: 'approval',
+        children: [
+          {
+            path: 'pending',
+            name: 'ApprovalPending',
+            component: () => import('@/views/school/approval/PendingApproval.vue'),
+            meta: { title: '申报看板' },
+          },
+          {
+            // 奖项看板已并入「奖项中心」，保留旧地址重定向避免书签/快捷入口悬空
+            path: 'award-review',
+            redirect: (to) => ({ path: '/awards', query: { ...to.query, tab: 'award-review' } }),
+          },
+        ],
+      },
+    ],
+  },
+  // ─── 教师端路由 ───
+  {
+    path: '/teacher',
+    component: () => import('@/layouts/DefaultLayout.vue'),
+    redirect: '/teacher/dashboard',
+    meta: { teacher: true },
+    children: teacherRoutes,
+  },
+  // ─── 404 兜底 ───
+  // 必须放在最后：命中前两条路由组之外的任意路径（手输错误 URL、合并后遗留的旧书签）。
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/error/NotFound.vue'),
+    meta: { title: '页面不存在', noLayout: true },
+  },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+})
+
+/**
+ * /auth/me 身份缓存（teacher_me）缺失时的补拉标记。
+ * 教师端菜单与模块授权全部依赖 permissions，缓存丢失会导致侧边栏为空，
+ * 故每次会话首次进入时补拉一次；仅一次，避免接口异常时每次跳转都等待网络。
+ */
+let meRecovered = false
+
+type LoginType = 'student' | 'teacher'
+
+/**
+ * 读取身份缓存中的端级类型；缓存缺失或损坏时返回 null（由调用方回源 /auth/me）。
+ * 返回 null 不能直接视为学生或教师，否则守卫会错误放行/死循环。
+ */
+function readCachedLoginType(): LoginType | null {
+  const raw = localStorage.getItem(USER_INFO_CACHE_KEY)
+  if (!raw) return null
+  try {
+    const loginType = JSON.parse(raw).loginType
+    return loginType === 'student' || loginType === 'teacher' ? loginType : null
+  } catch {
+    return null
+  }
+}
+
+// /auth/me 回源去重：缓存丢失时（如手动清理 localStorage）同一会话只请求一次
+let loginTypeResolve: Promise<LoginType | null> | null = null
+
+/**
+ * 解析当前登录账号属于学生端还是教师端。
+ * 身份缓存存在时直接使用；缓存缺失时用 /auth/me 的 roles 回源并补写最小缓存，
+ * 避免"有 token 但无缓存"时学生端守卫 fail-open，让教师账号渲染学生页面。
+ */
+function resolveLoginType(): Promise<LoginType | null> {
+  const cached = readCachedLoginType()
+  if (cached) return Promise.resolve(cached)
+  if (!loginTypeResolve) {
+    loginTypeResolve = getCurrentUser()
+      .then((me) => {
+        const roles = me.roles ?? []
+        const type: LoginType | null = isRoleMatchedLoginTab(roles, 'admin')
+          ? 'teacher'
+          : isRoleMatchedLoginTab(roles, 'student')
+            ? 'student'
+            : null
+        if (type) {
+          try {
+            localStorage.setItem(
+              USER_INFO_CACHE_KEY,
+              JSON.stringify({
+                id: String(me.userId),
+                username: me.userNo,
+                realName: me.name,
+                email: me.email ?? '',
+                phone: me.phone ?? '',
+                avatar: me.avatar ?? undefined,
+                loginType: type,
+              }),
+            )
+          } catch {
+            // 隐私模式写缓存失败：本次仍按解析结果分流，不阻断导航
+          }
+        }
+        return type
+      })
+      .catch(() => null)
+      .finally(() => {
+        loginTypeResolve = null
+      })
+  }
+  return loginTypeResolve
+}
+
+// 路由守卫
+router.beforeEach(async (to, _from, next) => {
+  const token = getToken()
+
+  if (to.name !== 'Login' && !token) {
+    next({ name: 'Login' })
+    return
+  }
+
+  // 强制改密期间收起一切业务页面，只允许停留在登录页（登录页会切换为改密表单）：
+  // 后端此时只放行 /auth/password、/auth/me、/auth/logout，进其他页面只会连环吃 403。
+  // 标记来源见 shared/utils/forcePasswordChange.ts（登录响应 + 403 兜底补写）。
+  const mustChangePassword = Boolean(token) && isMustChangePassword()
+  if (mustChangePassword && to.name !== 'Login') {
+    next({ name: 'Login' })
+    return
+  }
+
+  // 正常登录态访问登录页时回首页；强制改密态必须留在登录页（由页面渲染改密表单）
+  if (to.name === 'Login' && token && !mustChangePassword) {
+    next({ path: '/dashboard' })
+    return
+  }
+
+  // 学生端路由需 student 登录类型（与下方教师端守卫对称）。
+  //
+  // 此前只守了 to.path === '/dashboard' 一条：教师/管理员登录后手动敲 URL 仍能打开
+  // /profile/info、/applications 等其余学生页，在教师外壳里渲染出学生内容。
+  // 现改为按路由组的 meta.student 判定，覆盖学生端全部路由。
+  if (to.meta?.student) {
+    const loginType = await resolveLoginType()
+    // 缓存缺失时回源 /auth/me 判定；无法判定（令牌失效或角色异常）不进学生页，
+    // 避免教师/管理员账号在缓存被清理后渲染学生端页面。
+    if (loginType === null) {
+      next({ name: 'Login' })
+      return
+    }
+    // 只在**明确**是教师端账号时重定向。不可写成 `!== 'student'` 一律重定向：
+    // loginType 缺失时会被送往 /teacher/dashboard，而教师端守卫见 loginType 非 teacher
+    // 又会送回 /dashboard，两端守卫互相重定向形成死循环。
+    if (loginType === 'teacher') {
+      next({ path: '/teacher/dashboard' })
+      return
+    }
+  }
+
+  // 教师端路由需 teacher 登录类型 + 模块权限校验
+  if (to.meta?.teacher) {
+    const loginType = await resolveLoginType()
+    if (loginType === null) {
+      next({ name: 'Login' })
+      return
+    }
+    if (loginType !== 'teacher') {
+      next({ path: '/dashboard' })
+      return
+    }
+    // 模块权限校验：直接输入 URL 绕过菜单时重定向回教师首页。
+    // meta.permission 为模块 id（对应 teacherModuleRegistry 的 id），
+    // 判定依据是 /auth/me 的 permissionCode，不再是前端角色枚举。
+    const moduleId = to.meta?.permission
+    if (typeof moduleId === 'string' && moduleId) {
+      const { me, refresh } = useTeacherMe()
+      if (!me.value && !meRecovered) {
+        meRecovered = true
+        await refresh()
+      }
+      // 与侧边栏菜单同源判定：持 admin 角色直通（镜像后端 AdminAuthService），
+      // 否则按 module 声明的权限码（any-of）判定。
+      if (!isModuleAllowed(moduleId, me.value?.permissions ?? [], me.value?.roles ?? [])) {
+        next({ path: '/teacher/dashboard' })
+        return
+      }
+    }
+  }
+
+  next()
+})
+
+// 慢导航加载页：必须在全部鉴权守卫之后注册，避免重定向流程重复触发
+setupNavigationLoading(router)
+
+export default router

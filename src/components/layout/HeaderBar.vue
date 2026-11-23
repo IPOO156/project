@@ -1,0 +1,377 @@
+<script setup lang="ts">
+/**
+ * HeaderBar - 顶部栏
+ *  - 左侧：移动端菜单按钮 + 教师端面包屑 / 学生端已访问页面标签栏
+ *  - 教师端：页内搜索（Ctrl / ⌘ + K）
+ *  - 右侧：通知 + 用户下拉（个人中心 / 修改密码 / 退出登录）
+ */
+import {
+  Bell,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Moon,
+  MousePointer2,
+  Search,
+  Settings,
+  Sun,
+  SwitchCamera,
+  User,
+} from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useThemeRipple } from '@/composables/useThemeRipple'
+import { useTeacherAuthz } from '@/shared/composables/useTeacherAuthz'
+import {
+  useAppStore,
+  useCursorStore,
+  useNotificationStore,
+  useTeacherMessageStore,
+  useThemeStore,
+  useUserStore,
+} from '@/stores/stores'
+import NavTabs from './NavTabs.vue'
+import TeacherBreadcrumb from './TeacherBreadcrumb.vue'
+import TeacherCommandPalette from './TeacherCommandPalette.vue'
+
+const userStore = useUserStore()
+const appStore = useAppStore()
+const notificationStore = useNotificationStore()
+const teacherMessageStore = useTeacherMessageStore()
+const themeStore = useThemeStore()
+const cursorStore = useCursorStore()
+const router = useRouter()
+const route = useRoute()
+const { toggleThemeWithRipple } = useThemeRipple()
+const commandVisible = ref(false)
+// 角色中文名取自 /auth/me 的 roleNames，不再由前端角色枚举映射
+const { roleLabel } = useTeacherAuthz()
+const isGrowthTimeline = computed(() => route.path.startsWith('/growth-timeline'))
+const isTeacher = computed(() => userStore.isTeacher)
+
+// 铃铛角标：学生端取学生消息 Store；教师端取 /teacher/messages 的未读总数
+const unreadBadge = computed(() =>
+  isTeacher.value ? teacherMessageStore.unreadCount : notificationStore.unreadCount,
+)
+
+onMounted(() => {
+  if (isTeacher.value) {
+    teacherMessageStore.refreshUnread()
+  }
+  window.addEventListener('keydown', handleCommandHotkey)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleCommandHotkey)
+})
+
+/** 教师端页内搜索：Ctrl / ⌘ + K */
+function handleCommandHotkey(event: KeyboardEvent) {
+  if (!isTeacher.value) return
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'k') return
+  event.preventDefault()
+  commandVisible.value = !commandVisible.value
+}
+
+function openMessages() {
+  if (isTeacher.value) {
+    router.push('/teacher/messages')
+  } else {
+    router.push('/messages')
+  }
+}
+
+async function handleLogout() {
+  await userStore.logout()
+  // 整页跳转而非 router.push：Pinia 中的档案/申报/消息等业务数据仍驻留内存，
+  // 仅切路由会让下一个登录账号在刷新前读到上一个账号的数据。整页跳转可彻底重置。
+  window.location.replace('/login')
+}
+
+function openSidebar() {
+  appStore.setSidebarCollapsed(false)
+}
+
+async function switchToStudent() {
+  await userStore.logout()
+  window.location.replace('/login')
+}
+</script>
+
+<template>
+  <header class="header" :class="{ 'header--warm': isGrowthTimeline }">
+    <div class="header__left">
+      <!-- 移动端菜单按钮 -->
+      <el-button
+        v-if="appStore.isMobile"
+        text
+        class="header__menu-btn"
+        aria-label="打开侧边栏"
+        @click="openSidebar"
+      >
+        <Menu :size="20" />
+      </el-button>
+
+      <!-- 教师端：面包屑 + 页内搜索；学生端：已访问页面标签栏 -->
+      <template v-if="isTeacher">
+        <TeacherBreadcrumb />
+        <button
+          type="button"
+          class="header__search"
+          aria-label="打开页内搜索（Ctrl+K）"
+          @click="commandVisible = true"
+        >
+          <Search :size="16" />
+          <span class="header__search-text">搜索页面…</span>
+          <kbd>Ctrl K</kbd>
+        </button>
+      </template>
+      <NavTabs v-else />
+    </div>
+
+    <div class="header__right">
+      <!-- 通知铃铛：学生端跳 /messages；教师端跳 /teacher/messages（各自 Store 维护角标） -->
+      <el-badge :value="unreadBadge" :hidden="unreadBadge === 0" class="header__action">
+        <el-button text :aria-label="`消息中心，未读消息 ${unreadBadge} 条`" @click="openMessages">
+          <Bell :size="isTeacher ? 20 : 18" />
+        </el-button>
+      </el-badge>
+
+      <!-- 主题切换：三端统一支持（teacher-console.scss 已配套 dark 变体，
+           与学生端 themes.css 同深蓝黑基调，无割裂） -->
+      <el-tooltip
+        :content="themeStore.isDark ? '切换至日间模式' : '切换至夜间模式'"
+        placement="bottom"
+      >
+        <el-button
+          text
+          class="header__action"
+          :aria-label="themeStore.isDark ? '切换至日间模式' : '切换至夜间模式'"
+          @click="toggleThemeWithRipple"
+        >
+          <component :is="themeStore.isDark ? Sun : Moon" :size="isTeacher ? 20 : 18" />
+        </el-button>
+      </el-tooltip>
+
+      <!-- 书册光标开关：仅学生端，和主题切换同属外观偏好 -->
+      <el-tooltip
+        v-if="!isTeacher"
+        :content="cursorStore.enabled ? '关闭书册光标' : '开启书册光标'"
+        placement="bottom"
+      >
+        <el-button
+          text
+          class="header__action"
+          :class="{ 'header__action--on': cursorStore.enabled }"
+          :aria-label="cursorStore.enabled ? '关闭书册光标' : '开启书册光标'"
+          :aria-pressed="cursorStore.enabled"
+          @click="cursorStore.toggle(isTeacher)"
+        >
+          <MousePointer2 :size="18" />
+        </el-button>
+      </el-tooltip>
+
+      <el-dropdown trigger="click">
+        <span class="header__user">
+          <el-avatar :size="32" :src="userStore.avatar" :icon="User" />
+          <span class="header__user-name">{{ userStore.userName || '用户' }}</span>
+          <el-tag v-if="isTeacher" size="small" type="info" effect="light" class="header__role-tag">
+            {{ roleLabel }}
+          </el-tag>
+        </span>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <template v-if="isTeacher">
+              <el-dropdown-item @click="router.push('/teacher/dashboard')">
+                <LayoutDashboard :size="16" /> 工作台
+              </el-dropdown-item>
+              <el-dropdown-item divided @click="switchToStudent">
+                <SwitchCamera :size="16" /> 切换账号
+              </el-dropdown-item>
+            </template>
+            <template v-else>
+              <el-dropdown-item @click="router.push('/profile/info')">
+                <User :size="14" /> 个人中心
+              </el-dropdown-item>
+              <el-dropdown-item @click="router.push('/profile/edit-password')">
+                <Settings :size="14" /> 修改密码
+              </el-dropdown-item>
+            </template>
+            <el-dropdown-item divided @click="handleLogout">
+              <LogOut :size="isTeacher ? 16 : 14" /> 退出登录
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
+
+    <!-- 教师端页内搜索 -->
+    <TeacherCommandPalette v-if="isTeacher" v-model="commandVisible" />
+  </header>
+</template>
+
+<style scoped lang="scss">
+.header {
+  height: $header-height;
+  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 $spacing-xl;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: $z-sticky;
+  // 固定栏位的稳定上下文：避免 NavTabs 滚动时 header 抖动
+  contain: layout;
+
+  &__action--on {
+    color: var(--el-color-primary);
+  }
+
+  &__left {
+    display: flex;
+    align-items: center;
+    // 关键：与右侧用户区视觉重量平衡 → tab 区域呼吸感更强
+    gap: $spacing-lg;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+  }
+
+  &__menu-btn {
+    color: var(--el-text-color-primary);
+    flex: 0 0 auto;
+    // 与 NavTabs 中轴对齐：菜单按钮图标 20px + 按钮 padding 8px ≈ 36px
+    // 让按钮视觉中心 ≈ tab 视觉中心
+    height: 32px;
+    padding: 0 $spacing-xs;
+  }
+
+  // 教师端页内搜索：点击 / Ctrl+K 打开页内搜索
+  &__search {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: 260px;
+    height: 32px;
+    margin-left: auto;
+    padding: 0 8px;
+    border: 1px solid var(--el-border-color-light);
+    border-radius: 6px;
+    background: var(--el-fill-color-lighter);
+    color: var(--el-text-color-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    transition:
+      border-color $duration-fast $ease-standard,
+      background-color $duration-fast $ease-standard;
+
+    &:hover {
+      border-color: var(--el-border-color);
+      background: var(--el-bg-color);
+    }
+
+    &-text {
+      flex: 1;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    kbd {
+      flex-shrink: 0;
+      padding: 1px 4px;
+      border: 1px solid var(--el-border-color);
+      border-radius: 6px;
+      background: var(--el-bg-color);
+      font-family: inherit;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--el-text-color-placeholder);
+    }
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    // 铃铛 / 主题 / 光标三个图标贴紧，用户区单独留白
+    gap: 2px;
+    flex: 0 0 auto;
+    // 防止用户区被 NavTabs 挤压消失
+    padding-left: $spacing-lg;
+
+    :deep(.el-button + .el-button) {
+      margin-left: 0;
+    }
+  }
+
+  &__action {
+    cursor: pointer;
+  }
+
+  &__user {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    cursor: pointer;
+    margin-left: $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
+    border-radius: $radius-base;
+    transition: background-color $duration-fast $ease-standard;
+
+    &:hover {
+      background-color: var(--el-fill-color-light);
+    }
+
+    &-name {
+      font-size: $font-size-base;
+      color: var(--el-text-color-primary);
+    }
+
+    &-role-tag {
+      margin-left: $spacing-xs;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 0 $spacing-md;
+  }
+  .header__user-name {
+    display: none;
+  }
+  .header__right {
+    padding-left: $spacing-md;
+  }
+  .header__search {
+    width: 34px;
+    justify-content: center;
+    padding: 0;
+
+    &-text,
+    kbd {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 375px) {
+  .header {
+    padding: 0 $spacing-sm;
+  }
+  .header__left {
+    gap: $spacing-sm;
+  }
+  .header__right {
+    padding-left: $spacing-sm;
+  }
+}
+
+.header--warm {
+  border-bottom-color: var(--gt-ring-soft, #a88560);
+}
+</style>

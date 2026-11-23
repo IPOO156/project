@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useThemeStore } from '@/app/stores/useThemeStore'
+import { useThemeStore } from '@/stores/useThemeStore'
 
 function resetDom() {
   localStorage.clear()

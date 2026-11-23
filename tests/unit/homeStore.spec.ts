@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({ getHomeDashboard: vi.fn() }))
 
 vi.mock('@/shared/api/student', () => ({ getHomeDashboard: mocks.getHomeDashboard }))
 
-const { useHomeStore } = await import('@/app/stores/useHomeStore')
+const { useHomeStore } = await import('@/stores/useHomeStore')
 
 beforeEach(() => {
   setActivePinia(createPinia())

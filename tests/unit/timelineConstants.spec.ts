@@ -8,7 +8,7 @@ import {
   mapTimelineEventType,
   resolveCohortYear,
   TIMELINE_EVENT_TYPE_LABELS,
-} from '@/features/growth-timeline/timelineConstants'
+} from '@/views/school/growth-timeline/timelineConstants'
 
 describe('学期环形映射', () => {
   it('按入学年份生成 8 个连续且唯一的学期编码', () => {
