@@ -1,0 +1,589 @@
+<script setup lang="ts">
+/**
+ * StudentAccount - 学生账号管理
+ *
+ * 对接后端 /admin/users（roleId=1 学生），支持按关键词/年级/状态筛选与分页；
+ * 重置密码对接 PUT /admin/users/{id}/password/reset，
+ * 启停账号对接 PUT /admin/users/{id}/status。
+ * 年级下拉取自 GET /admin/classes 的 grade 去重（后端 grade 过滤即按班级年级匹配）。
+ */
+import type { UpdateUserPayload, UserDetail, UserListItem } from '@/shared/types/teacher'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { RefreshCw, Search } from 'lucide-vue-next'
+import { onMounted, reactive, ref } from 'vue'
+import EmptyState from '@/components/ui/EmptyState.vue'
+
+import RowActions from '@/components/ui/RowActions.vue'
+import {
+  getUserDetail,
+  listAllClasses,
+  listUsers,
+  resetUserPassword,
+  updateUser,
+  updateUserStatus,
+} from '@/shared/api/teacher-api'
+import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
+import { useRemoteDict } from '@/shared/composables/useRemoteDict'
+import {
+  DEGREE_TYPE_OPTIONS,
+  POLITICAL_STATUS_OPTIONS,
+  STUDENT_STATUS_OPTIONS,
+} from '@/shared/constants/dict'
+import { formatDateTime } from '@/shared/utils/time'
+
+const props = defineProps<{ embed?: boolean }>()
+
+const loading = ref(false)
+const users = ref<UserListItem[]>([])
+// 首次拿到非空账号后只播一次，翻页 / 筛选改变行数不会重播
+const staggerActive = useFirstLoadStagger(() => users.value.length)
+const total = ref(0)
+const page = ref(1)
+const perPage = ref(10)
+
+const search = reactive({ keyword: '', status: '', grade: '' })
+
+/** 年级选项：来自班级列表（grade 为入学年份字符串） */
+const grades = ref<string[]>([])
+
+async function loadGrades() {
+  try {
+    // 后端单页上限 100，分页取全量后再去重年级，避免第 101 个班级起年级缺失
+    const list = await listAllClasses()
+    const distinct = new Set(list.map((c) => (c.grade ?? '').trim()).filter(Boolean))
+    grades.value = [...distinct].sort((a, b) => b.localeCompare(a))
+  } catch {
+    grades.value = []
+  }
+}
+
+async function load() {
+  loading.value = true
+  try {
+    const res = await listUsers({
+      roleId: 1,
+      keyword: search.keyword || undefined,
+      grade: search.grade || undefined,
+      status: search.status === '' ? undefined : Number(search.status),
+      page: page.value,
+      per_page: perPage.value,
+    })
+    users.value = res.list
+    total.value = res.total
+  } catch {
+    users.value = []
+    total.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+function handleSearch() {
+  page.value = 1
+  void load()
+}
+
+function handleReset() {
+  search.keyword = ''
+  search.status = ''
+  search.grade = ''
+  page.value = 1
+  void load()
+}
+
+function handlePageChange(p: number) {
+  page.value = p
+  void load()
+}
+
+function handleSizeChange(size: number) {
+  perPage.value = size
+  page.value = 1
+  void load()
+}
+
+// ── 重置密码 ──
+const passwordDialogVisible = ref(false)
+const passwordForm = reactive({ newPassword: '' })
+const currentUser = ref<UserListItem | null>(null)
+const resettingPwd = ref(false)
+
+function openPasswordDialog(row: UserListItem) {
+  currentUser.value = row
+  passwordForm.newPassword = ''
+  passwordDialogVisible.value = true
+}
+
+async function handleResetPassword() {
+  if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
+    ElMessage.warning('新密码至少 6 位')
+    return
+  }
+  if (!currentUser.value) return
+  resettingPwd.value = true
+  try {
+    await resetUserPassword(currentUser.value.userId, passwordForm.newPassword)
+    ElMessage.success('密码已重置')
+    passwordDialogVisible.value = false
+  } catch {
+    /* 拦截器已提示 */
+  } finally {
+    resettingPwd.value = false
+  }
+}
+
+// ── 启停账号 ──
+async function handleToggleStatus(row: UserListItem) {
+  const next = row.status === 1 ? 0 : 1
+  const action = next === 1 ? '启用' : '禁用'
+  try {
+    await ElMessageBox.confirm(`确定${action}账号「${row.name}」吗？`, '提示', { type: 'warning' })
+  } catch {
+    return
+  }
+  try {
+    await updateUserStatus(row.userId, next)
+    row.status = next
+    row.statusLabel = next === 1 ? '正常' : '禁用'
+    ElMessage.success(`已${action}`)
+  } catch {
+    /* 拦截器已提示 */
+  }
+}
+
+// ── 详情 ──
+const detailDialogVisible = ref(false)
+const detail = ref<UserDetail | null>(null)
+
+async function openDetail(row: UserListItem) {
+  detailDialogVisible.value = true
+  detail.value = null
+  try {
+    detail.value = await getUserDetail(row.userId)
+  } catch {
+    /* 拦截器已提示 */
+  }
+}
+
+// ── 编辑 ──
+// 学籍字段（出生日期/学历层次/政治面貌/学生状态）仅管理员可写；
+// 保存时只提交发生变化的字段：未提交=不修改，空串=清空（后端 PUT /admin/users/{id}）。
+const editDialogVisible = ref(false)
+const editForm = reactive({
+  name: '',
+  email: '',
+  phone: '',
+  birthDate: '' as string | null,
+  degreeType: '' as string | null,
+  politicalStatus: '' as string | null,
+  studentStatus: '' as string | null,
+})
+const editUser = ref<UserListItem | null>(null)
+const savingEdit = ref(false)
+/** 详情加载中：未拿到原值时禁止提交学籍字段，避免空串覆盖已有值 */
+const editLoading = ref(false)
+type AcademicSnapshot = Pick<
+  UserDetail,
+  'birthDate' | 'degreeType' | 'politicalStatus' | 'studentStatus'
+>
+const editOriginal = ref<AcademicSnapshot | null>(null)
+
+/** 政治面貌：后端字典优先，常量兜底（GET /common/dict?dictType=political_status） */
+const { options: politicalOptions, load: loadPoliticalOptions } = useRemoteDict(
+  'political_status',
+  POLITICAL_STATUS_OPTIONS,
+)
+
+/** 出生日期不得晚于今天（与后端校验一致） */
+function isFutureDate(date: Date): boolean {
+  const endOfToday = new Date()
+  endOfToday.setHours(23, 59, 59, 999)
+  return date.getTime() > endOfToday.getTime()
+}
+
+async function openEdit(row: UserListItem) {
+  editUser.value = row
+  editOriginal.value = null
+  Object.assign(editForm, {
+    name: row.name,
+    email: row.email ?? '',
+    phone: row.phone ?? '',
+    birthDate: '',
+    degreeType: '',
+    politicalStatus: '',
+    studentStatus: '',
+  })
+  editDialogVisible.value = true
+  void loadPoliticalOptions()
+
+  editLoading.value = true
+  try {
+    const detailData = await getUserDetail(row.userId)
+    if (editUser.value?.userId !== row.userId) return
+    const original: AcademicSnapshot = {
+      birthDate: detailData.birthDate ?? '',
+      degreeType: detailData.degreeType ?? '',
+      politicalStatus: detailData.politicalStatus ?? '',
+      studentStatus: detailData.studentStatus ?? '',
+    }
+    editOriginal.value = original
+    Object.assign(editForm, original)
+  } catch {
+    /* 拦截器已提示；editOriginal 保持 null，保存时只提交基础字段 */
+  } finally {
+    if (editUser.value?.userId === row.userId) editLoading.value = false
+  }
+}
+
+function resetEditState() {
+  editUser.value = null
+  editOriginal.value = null
+  editLoading.value = false
+}
+
+async function handleSaveEdit() {
+  if (!editForm.name.trim()) {
+    ElMessage.warning('请填写姓名')
+    return
+  }
+  if (!editUser.value || editLoading.value) return
+  const payload: UpdateUserPayload = {
+    name: editForm.name.trim(),
+    email: editForm.email || undefined,
+    phone: editForm.phone || undefined,
+  }
+  // 只提交 dirty 字段：历史脏数据（如中文学历值）不会因为改姓名而触发校验失败
+  const original = editOriginal.value
+  if (original) {
+    const nextBirthDate = editForm.birthDate ?? ''
+    if (nextBirthDate !== original.birthDate) payload.birthDate = nextBirthDate
+    const nextDegreeType = editForm.degreeType ?? ''
+    if (nextDegreeType !== original.degreeType) payload.degreeType = nextDegreeType
+    const nextPoliticalStatus = editForm.politicalStatus ?? ''
+    if (nextPoliticalStatus !== original.politicalStatus) {
+      payload.politicalStatus = nextPoliticalStatus
+    }
+    const nextStudentStatus = editForm.studentStatus ?? ''
+    if (nextStudentStatus !== original.studentStatus) payload.studentStatus = nextStudentStatus
+  }
+  savingEdit.value = true
+  try {
+    await updateUser(editUser.value.userId, payload)
+    ElMessage.success('已保存')
+    editDialogVisible.value = false
+    void load()
+  } catch {
+    /* 拦截器已提示 */
+  } finally {
+    savingEdit.value = false
+  }
+}
+
+onMounted(() => {
+  void loadGrades()
+  void load()
+})
+</script>
+
+<template>
+  <div class="mc-page student-account" :class="{ 'is-stagger-armed': staggerActive }">
+    <div v-if="!props.embed" class="mc-page-head">
+      <div class="mc-page-head__left">
+        <h2 class="mc-page-head__title">学生账号管理</h2>
+        <p class="mc-page-head__desc">
+          查看学生账号信息，处理密码重置与账号启停。学生账号由管理员统一创建并分配班级。
+        </p>
+      </div>
+      <div class="mc-page-head__actions">
+        <el-button :icon="RefreshCw" :loading="loading" @click="load">刷新</el-button>
+      </div>
+    </div>
+
+    <div class="mc-filter-bar">
+      <el-form inline @submit.prevent="handleSearch">
+        <el-form-item label="关键词">
+          <el-input
+            v-model="search.keyword"
+            class="u-w-180"
+            maxlength="50"
+            placeholder="姓名 / 学号"
+            clearable
+            @keyup.enter="handleSearch"
+          />
+        </el-form-item>
+        <el-form-item label="年级">
+          <el-select v-model="search.grade" class="u-w-140" placeholder="全部年级" clearable>
+            <el-option v-for="g in grades" :key="g" :label="`${g}级`" :value="g" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="search.status" class="u-w-140" placeholder="全部状态" clearable>
+            <el-option label="正常" value="1" />
+            <el-option label="禁用" value="0" />
+          </el-select>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" :loading="loading" @click="handleSearch">
+            查询
+          </el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <div class="mc-card">
+      <div class="mc-card__head">
+        <span class="mc-card__title">学生账号列表</span>
+        <span class="student-account__total">共 {{ total }} 条</span>
+      </div>
+      <div class="mc-card__body">
+        <el-table v-loading="loading" class="u-w-full" :data="users" max-height="600">
+          <el-table-column type="index" label="序号" width="56" align="right" />
+          <el-table-column prop="userNo" label="学号" width="120" class-name="col-secondary" />
+          <el-table-column label="姓名" width="112" show-overflow-tooltip>
+            <template #default="{ row }">
+              <span class="col-primary">{{ row.name }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="性别" width="64">
+            <template #default="{ row }">
+              <span class="col-secondary">{{ row.genderLabel ?? '-' }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="学院 / 专业 / 班级"
+            min-width="180"
+            show-overflow-tooltip
+            class-name="col-secondary"
+          >
+            <template #default="{ row }">{{ row.departmentPath ?? '-' }}</template>
+          </el-table-column>
+          <el-table-column label="状态" width="88">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+                {{ row.statusLabel }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="176" align="right" fixed="right">
+            <template #default="{ row }">
+              <RowActions>
+                <el-button
+                  text
+                  type="primary"
+                  size="small"
+                  @click="openDetail(row as UserListItem)"
+                >
+                  详情
+                </el-button>
+                <el-button text type="primary" size="small" @click="openEdit(row as UserListItem)">
+                  编辑
+                </el-button>
+                <!-- 低风险操作沉到「更多」：4 个文字按钮并排会超出操作列宽，
+                     在最右侧列被表格 overflow 裁掉，导致「禁用账号」不可点 -->
+                <template #more>
+                  <el-dropdown-item @click="openPasswordDialog(row as UserListItem)">
+                    重置密码
+                  </el-dropdown-item>
+                  <el-dropdown-item @click="handleToggleStatus(row as UserListItem)">
+                    <span :class="row.status === 1 ? 'row-actions__danger' : ''">
+                      {{ row.status === 1 ? '禁用账号' : '启用账号' }}
+                    </span>
+                  </el-dropdown-item>
+                </template>
+              </RowActions>
+            </template>
+          </el-table-column>
+          <template #empty>
+            <EmptyState text="暂无学生账号" compact />
+          </template>
+        </el-table>
+
+        <div class="student-account__pagination">
+          <el-pagination
+            :current-page="page"
+            :page-size="perPage"
+            :total="total"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            @current-change="handlePageChange"
+            @size-change="handleSizeChange"
+          />
+        </div>
+      </div>
+    </div>
+
+    <el-dialog
+      v-model="passwordDialogVisible"
+      title="重置密码"
+      width="420px"
+      @close="currentUser = null"
+    >
+      <el-form label-width="80px">
+        <el-form-item label="账号">
+          <span>{{ currentUser?.name }}（{{ currentUser?.userNo }}）</span>
+        </el-form-item>
+        <el-form-item label="新密码" required>
+          <el-input
+            v-model="passwordForm.newPassword"
+            type="password"
+            show-password
+            maxlength="32"
+            placeholder="输入新密码（6-32 位）"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="resettingPwd"
+          :disabled="resettingPwd"
+          @click="handleResetPassword"
+        >
+          确认重置
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="detailDialogVisible" title="账号详情" width="560px" @close="detail = null">
+      <el-descriptions v-if="detail" :column="2" border>
+        <el-descriptions-item label="学号">{{ detail.userNo }}</el-descriptions-item>
+        <el-descriptions-item label="姓名">{{ detail.name }}</el-descriptions-item>
+        <el-descriptions-item label="性别">{{ detail.genderLabel ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="出生日期">{{ detail.birthDate ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="学历层次">
+          {{ detail.degreeTypeLabel ?? '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="政治面貌">
+          {{ detail.politicalStatusLabel ?? '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="学生状态">
+          {{ detail.studentStatusLabel ?? '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag :type="detail.status === 1 ? 'success' : 'danger'" size="small">
+            {{ detail.statusLabel }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="邮箱">{{ detail.email ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="手机">{{ detail.phone ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="学校">{{ detail.schoolName ?? '-' }}</el-descriptions-item>
+        <el-descriptions-item label="角色">
+          {{ detail.roles?.map((r) => r.roleName).join('、') || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="最后登录" :span="2">
+          {{ detail.lastLoginAt ? formatDateTime(detail.lastLoginAt) : '-' }}
+        </el-descriptions-item>
+      </el-descriptions>
+      <template #footer>
+        <el-button @click="detailDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="editDialogVisible" title="编辑账号" width="560px" @close="resetEditState">
+      <el-form v-loading="editLoading" label-width="80px">
+        <el-form-item label="学号">
+          <span>{{ editUser?.userNo }}</span>
+        </el-form-item>
+        <el-form-item label="姓名" required>
+          <el-input v-model="editForm.name" maxlength="50" show-word-limit placeholder="姓名" />
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="editForm.email" maxlength="254" placeholder="邮箱" />
+        </el-form-item>
+        <el-form-item label="手机">
+          <el-input v-model="editForm.phone" maxlength="11" placeholder="手机" />
+        </el-form-item>
+        <el-form-item label="出生日期">
+          <el-date-picker
+            v-model="editForm.birthDate"
+            type="date"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            :disabled-date="isFutureDate"
+            placeholder="请选择出生日期"
+            class="u-w-full"
+          />
+        </el-form-item>
+        <el-form-item label="学历层次">
+          <el-select v-model="editForm.degreeType" clearable placeholder="请选择" class="u-w-full">
+            <el-option
+              v-for="o in DEGREE_TYPE_OPTIONS"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="政治面貌">
+          <el-select
+            v-model="editForm.politicalStatus"
+            clearable
+            placeholder="请选择"
+            class="u-w-full"
+          >
+            <el-option
+              v-for="o in politicalOptions"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="学生状态">
+          <el-select
+            v-model="editForm.studentStatus"
+            clearable
+            placeholder="请选择"
+            class="u-w-full"
+          >
+            <el-option
+              v-for="o in STUDENT_STATUS_OPTIONS"
+              :key="o.value"
+              :label="o.label"
+              :value="o.value"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="savingEdit"
+          :disabled="savingEdit || editLoading"
+          @click="handleSaveEdit"
+          >保存</el-button
+        >
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<style scoped lang="scss">
+// 表格刷入：右→左 / 0.32s / 40ms 递进 / 仅首次加载（筛选 / 翻页 / 轮询不重播）
+.is-stagger-armed {
+  :deep(.el-table) {
+    --mc-row-duration: 0.32s;
+    --mc-row-delay: 0.04s;
+    --mc-row-offset: 60px;
+    --mc-row-easing: #{$ease-out-cubic};
+  }
+
+  @include table-row-staggered(20);
+}
+
+.student-account {
+  &__total {
+    font-size: 13px;
+    color: var(--el-text-color-secondary);
+  }
+
+  &__pagination {
+    margin-top: $spacing-lg;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+</style>

@@ -12,7 +12,7 @@ import {
   PAGE_SIZE,
   PRACTICE_TAG_OPTIONS,
   useAchievementWall,
-} from '@/features/achievements/composables/useAchievementWall'
+} from '@/views/school/achievements/composables/useAchievementWall'
 
 const api = vi.hoisted(() => ({
   getAchievements: vi.fn(),

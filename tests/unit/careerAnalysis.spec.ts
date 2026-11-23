@@ -1,6 +1,6 @@
 import type { Award, Grade, ProfileDimension } from '@/shared/types/types'
 import { describe, expect, it } from 'vitest'
-import { analyzeCareer } from '@/features/ai-chat/composables/useCareerAnalysis'
+import { analyzeCareer } from '@/views/school/ai-chat/composables/useCareerAnalysis'
 
 const DIMMS: ProfileDimension[] = [{ label: '科研创新', current: 60, target: 90, previous: 60 }]
 

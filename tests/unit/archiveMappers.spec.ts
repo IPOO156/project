@@ -7,8 +7,8 @@ import {
   mapGrades,
   mapInterests,
   syncAcademicToUser,
-} from '@/app/stores/archiveMappers'
-import { useUserStore } from '@/app/stores/useUserStore'
+} from '@/stores/archiveMappers'
+import { useUserStore } from '@/stores/useUserStore'
 
 beforeEach(() => {
   localStorage.clear()

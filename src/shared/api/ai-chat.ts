@@ -10,7 +10,11 @@
  * /ai/conversations/{id}/messages/{mid}/regenerate、/ai/suggestions、/ai/messages/{mid}/feedback、
  * DELETE /ai/conversations/{id}。
  */
-import type { AISuggestedAction, AISuggestion, RichContent } from '@/features/ai-chat/ai-chat.types'
+import type {
+  AISuggestedAction,
+  AISuggestion,
+  RichContent,
+} from '@/views/school/ai-chat/ai-chat.types'
 import { getToken } from '@/shared/utils/token'
 import request, { API_BASE_URL, forceLogout, tryRefreshToken } from './request'
 

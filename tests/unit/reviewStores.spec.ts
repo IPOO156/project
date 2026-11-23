@@ -11,9 +11,9 @@ vi.mock('@/shared/api/activity', () => ({ getActivities: mocks.getActivities }))
 vi.mock('@/shared/api/activities', () => ({ updateActivity: mocks.updateActivity }))
 vi.mock('element-plus', () => ({ ElMessage: { success: mocks.success } }))
 
-const { useReviewStore } = await import('@/app/stores/useReviewStore')
-const { useAwardReviewStore } = await import('@/app/stores/useAwardReviewStore')
-const { RESUBMIT_SUCCESS_MESSAGE } = await import('@/app/stores/reviewRecordShared')
+const { useReviewStore } = await import('@/stores/useReviewStore')
+const { useAwardReviewStore } = await import('@/stores/useAwardReviewStore')
+const { RESUBMIT_SUCCESS_MESSAGE } = await import('@/stores/reviewRecordShared')
 
 /** 后端 /activities 的原始记录（字段名与前端模型不同） */
 function activity(overrides: Record<string, any> = {}) {

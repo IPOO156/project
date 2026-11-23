@@ -1,10 +1,10 @@
-import type { RichContent } from '@/features/ai-chat/ai-chat.types'
+import type { RichContent } from '@/views/school/ai-chat/ai-chat.types'
 import { describe, expect, it } from 'vitest'
 import {
   parseMarkdownToRichContent,
   richToPlain,
   splitHighlight,
-} from '@/features/ai-chat/utils/richText'
+} from '@/views/school/ai-chat/utils/richText'
 
 describe('richToPlain', () => {
   it('问候语单独一行，各块按类型转纯文本', () => {

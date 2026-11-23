@@ -35,42 +35,44 @@
 
 - **文件夹命名**：统一使用 `kebab-case`（如 `user-profile`）。
 - **组件文件命名**：使用 `PascalCase`（如 `UserProfile.vue`）。
-- **目录结构推荐（混合模式）**：
+- **目录结构（2026-11-23 按实际目录校正）**：
 
 ```
 src/
-├── features/          # 按业务模块划分（高内聚）
-│   ├── student/       # 学生档案模块
-│   ├── auth/          # 认证模块
-│   └── ...
+├── assets/            # 静态资源（styles/ 全局样式）
+├── components/
+│   ├── layout/        # 布局组件（HeaderBar / Sidebar / NavTabs 等）
+│   └── ui/            # 通用 UI 组件（PageContainer / StatusTag 等）
+├── composables/       # 应用级组合式函数（useTabs / useThemeRipple）
+├── layouts/           # 布局壳（DefaultLayout）
+├── router/            # 路由与守卫（routes / teacher-routes）
 ├── shared/            # 全局共享
-│   ├── ui/            # 基础 UI 组件（Button/Input 等原子组件）
-│   ├── utils/         # 工具函数
-│   ├── api/           # 请求封装
+│   ├── api/           # 请求封装与服务层
+│   ├── composables/   # 通用组合式函数
+│   ├── config/        # 模块注册等配置
+│   ├── constants/     # 全局常量、字典
+│   ├── data/          # 静态数据
+│   ├── directives/    # 自定义指令
 │   ├── types/         # 全局类型
-│   └── constants/     # 全局常量、字典
-├── app/               # 应用入口（路由、全局样式、Provider）
-├── assets/            # 静态资源
-├── composables/       # 组合式函数
-│   ├── usePagination.ts
-│   ├── useTableQuery.ts
-│   ├── usePermission.ts
-│   ├── useDict.ts
-│   ├── useUpload.ts
-│   ├── useExport.ts
-│   └── useFormValidate.ts
-└── stores/            # Pinia 状态管理
+│   └── utils/         # 工具函数
+├── stores/            # Pinia 状态管理
+└── views/             # 页面级组件
+    ├── auth/          # 登录
+    ├── error/         # 404
+    ├── school/        # 学生端（achievements / ai-chat / applications / approval / awards / dashboard / growth-timeline / messages / profile / submission-records）
+    └── teacher/       # 教师端（archive / review / org / ops）
 ```
 
 - **路径别名**：在 `vite.config` 或 `tsconfig.json` 中配置 `@` 指向 `src`。
 - **禁止跨层引用**；路径嵌套不要超过 4 层。
 - **同一项目内禁止出现同名文件**（含不同目录）。
 
-> **实际落地约定（2026-10-25 修订，与代码保持一致）**：
+> **实际落地约定（2026-11-23 修订，与代码保持一致）**：
 >
-> - Store 位于 `src/app/stores/`，文件名统一为 `useXxxStore.ts`（与 `docs/style-guide.md` 一致）。
-> - 通用 Composable 位于 `src/shared/composables/`（不在 `src/composables/`）。
-> - 教师端位于 `src/features/teacher/`，按业务域分为 `archive` / `review` / `org` / `ops` 四组；组内页面与子组件同级，不再嵌套 `components/`，保证路径 ≤ 4 层。
+> - 原 `src/features/**`、`src/app/**`、`src/shared/ui/**` 已统一迁入 `src/views/**`、`src/components/**`、`src/layouts/**`、`src/router/**`、`src/stores/**`、`src/composables/**`；新增页面/组件按上表放置，不再新建 `features/`、`app/` 目录。
+> - Store 位于 `src/stores/`，文件名统一为 `useXxxStore.ts`。
+> - 通用 Composable 位于 `src/shared/composables/`；仅应用级（标签栏、主题波纹等）放 `src/composables/`。
+> - 教师端页面位于 `src/views/teacher/`，按业务域分为 `archive` / `review` / `org` / `ops` 四组；组内页面与子组件同级，保证路径 ≤ 4 层。
 > - 类型文件按业务域拆分，`src/shared/types/teacher/` 下冲突域名统一加 `-types.ts` 后缀。
 > - 上述差异以代码为准；如需调整结构，先更新本节再改代码。
 
