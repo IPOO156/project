@@ -77,25 +77,6 @@ export function changePassword(payload: {
 }
 
 /**
- * 请求重置密码（发送邮件验证码，对接后端 POST /auth/password/reset）
- */
-export function requestPasswordReset(email: string): Promise<void> {
-  return request.post('/auth/password/reset', { email })
-}
-
-/**
- * 确认重置密码（对接后端 POST /auth/password/reset/confirm）
- */
-export function confirmPasswordReset(payload: {
-  verificationCode: string
-  email: string
-  newPassword: string
-  confirmPassword: string
-}): Promise<void> {
-  return request.post('/auth/password/reset/confirm', payload)
-}
-
-/**
  * 刷新访问令牌（对接后端 POST /auth/refresh）
  */
 export function refreshToken(refreshToken: string): Promise<{

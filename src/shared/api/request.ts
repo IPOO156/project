@@ -271,7 +271,7 @@ request.interceptors.response.use(
               ElMessage.error(error.response.data?.message || '用户名、密码或验证码错误')
             }
           } else if (url?.includes('/auth/password')) {
-            // 修改密码/忘记密码返回 401 表示原密码或验证码有误：仅提示，不登出
+            // 修改密码返回 401 表示原密码有误：仅提示，不登出
             if (!silent) {
               ElMessage.error(error.response.data?.message || '原密码错误或修改失败')
             }

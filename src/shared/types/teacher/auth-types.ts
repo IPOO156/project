@@ -78,18 +78,7 @@ export interface CurrentUser {
   avatar: string | null
 }
 
-/* ===================== 密码重置 / 令牌刷新（/auth）===================== */
-
-export interface PasswordResetPayload {
-  email: string
-}
-
-export interface PasswordResetConfirmPayload {
-  verificationCode: string
-  email: string
-  newPassword: string
-  confirmPassword: string
-}
+/* ===================== 令牌刷新（/auth）===================== */
 
 export interface TokenRefreshResult {
   accessToken: string
