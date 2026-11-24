@@ -1,3 +1,4 @@
+export * from './teacher/ai-faq'
 export * from './teacher/announcement'
 export * from './teacher/approval-flow'
 export * from './teacher/archive-types'

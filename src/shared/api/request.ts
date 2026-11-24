@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { USER_AVATAR_LOCAL_CACHE_KEY, USER_SCOPED_PREFIXES } from '@/shared/constants/storageKeys'
@@ -10,6 +11,19 @@ import {
   getToken,
   writeTokenPreservingSource,
 } from '@/shared/utils/token'
+
+/**
+ * 请求级静默开关：失败时不在拦截器弹全局错误提示，由调用方自行降级。
+ * 仅抑制提示，不改变 401 刷新/登出、403 强制改密跳转等鉴权副作用。
+ */
+export interface RequestConfig extends AxiosRequestConfig {
+  silent?: boolean
+}
+
+/** 是否为静默请求（只影响全局错误提示，不影响鉴权处理） */
+function isSilentRequest(config?: RequestConfig): boolean {
+  return Boolean(config?.silent)
+}
 
 /**
  * 接口基础路径。SSE 流式请求走原生 fetch（axios 不支持逐段读取），
@@ -197,7 +211,9 @@ request.interceptors.response.use(
     }
     const res = response.data
     if (res.code !== 0 && res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
+      if (!isSilentRequest(response.config as RequestConfig)) {
+        ElMessage.error(res.message || '请求失败')
+      }
       // 标记「拦截器已提示」：调用方 catch 到业务错误时不再二次弹窗
       // （HTTP 错误走下方 error 分支，axios 错误自带 isAxiosError，无需该标记）
       return Promise.reject(
@@ -209,6 +225,8 @@ request.interceptors.response.use(
   (error) => {
     // 先于任何分支结束加载态：401 刷新/重试、业务 401 下抛等提前 return 的场景也要归零
     endRequestLoading()
+    // silent 只跳过提示；401 刷新/登出、403 强制改密跳转等副作用照常执行
+    const silent = isSilentRequest(error.config as RequestConfig)
     if (error.response) {
       const status = error.response.status
       const url: string | undefined = error.config?.url
@@ -249,10 +267,14 @@ request.interceptors.response.use(
           // 登录请求（/auth/login）返回 401 表示账号/密码/验证码有误：
           // 只提示错误并交由登录页刷新验证码，禁止强制登出跳转导致整页刷新
           if (url?.includes('/auth/login')) {
-            ElMessage.error(error.response.data?.message || '用户名、密码或验证码错误')
+            if (!silent) {
+              ElMessage.error(error.response.data?.message || '用户名、密码或验证码错误')
+            }
           } else if (url?.includes('/auth/password')) {
             // 修改密码/忘记密码返回 401 表示原密码或验证码有误：仅提示，不登出
-            ElMessage.error(error.response.data?.message || '原密码错误或修改失败')
+            if (!silent) {
+              ElMessage.error(error.response.data?.message || '原密码错误或修改失败')
+            }
           } else if (url?.includes('/auth/logout')) {
             forceLogout()
           } else {
@@ -270,7 +292,9 @@ request.interceptors.response.use(
             markMustChangePassword()
             if (Date.now() - lastForcePasswordChangeAt > FORCE_PASSWORD_CHANGE_NOTIFY_WINDOW_MS) {
               lastForcePasswordChangeAt = Date.now()
-              ElMessage.warning(deniedMessage)
+              if (!silent) {
+                ElMessage.warning(deniedMessage)
+              }
               // 全量刷新回到登录页：登录页检测到强制改密标记后会直接显示改密表单，
               // 视觉与原登录卡片一致。当前页可能已并发发出多个 403 请求，整页跳转
               // 可一并终止它们；已在登录页时不再跳转，避免循环刷新。
@@ -278,32 +302,40 @@ request.interceptors.response.use(
                 window.location.assign('/login')
               }
             }
-          } else {
+          } else if (!silent) {
             ElMessage.error('没有权限执行此操作')
           }
           break
         }
         case 429:
-          ElMessage.error('请求过于频繁，请稍后重试')
+          if (!silent) {
+            ElMessage.error('请求过于频繁，请稍后重试')
+          }
           break
         case 500:
-          ElMessage.error('服务器异常，请稍后重试')
+          if (!silent) {
+            ElMessage.error('服务器异常，请稍后重试')
+          }
           break
         case 404: {
           // GET 多为可选数据接口，缺失时由调用方降级为空态，保持静默；
           // 写操作是用户主动提交，静默会让用户以为「点确定没反应」，必须给出反馈
           const method = String(error.config?.method ?? 'get').toLowerCase()
-          if (method !== 'get') {
+          if (method !== 'get' && !silent) {
             ElMessage.error('操作未生效，请稍后重试；如持续失败请联系管理员')
           }
           break
         }
         default:
-          ElMessage.error(error.response.data?.message || '网络错误')
+          if (!silent) {
+            ElMessage.error(error.response.data?.message || '网络错误')
+          }
       }
     } else if (error.code === 'ECONNABORTED') {
-      ElMessage.error('请求超时，请检查网络')
-    } else {
+      if (!silent) {
+        ElMessage.error('请求超时，请检查网络')
+      }
+    } else if (!silent) {
       ElMessage.error('网络异常，请检查网络连接')
     }
     return Promise.reject(error)

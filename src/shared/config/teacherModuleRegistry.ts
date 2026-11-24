@@ -341,9 +341,10 @@ export const teacherModules: TeacherModule[] = [
       'semester:manage',
       'semester:import',
       'log:view',
+      'ai:faq:manage',
       ADMIN_MENU_CODE,
     ],
-    description: '数据字典、学期、系统配置、定时任务与操作日志',
+    description: '数据字典、学期、系统配置、定时任务、操作日志与 AI 常见问题',
     menuItems: [{ label: '系统设置', icon: Settings, path: '/teacher/system-settings' }],
   },
   // ── 「运维监控 / 信息安全」两个模块不在此注册，且其页面已于 2026-10-10 删除：

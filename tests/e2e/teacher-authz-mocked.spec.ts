@@ -146,7 +146,7 @@ test.describe('教师端权限码驱动入口（mock）', () => {
     await expect(page).toHaveURL(/tab=logs/)
   })
 
-  test('管理员（admin 角色）可看到系统设置全部 5 个 Tab', async ({ page }) => {
+  test('管理员（admin 角色）可看到系统设置全部 6 个 Tab', async ({ page }) => {
     await enterAs(
       page,
       { permissions: [], roles: ['admin'], roleNames: ['管理员'] },
@@ -154,11 +154,23 @@ test.describe('教师端权限码驱动入口（mock）', () => {
     )
 
     const tabs = page.locator('.system-settings .el-tabs__item')
-    await expect(tabs).toHaveCount(5)
+    await expect(tabs).toHaveCount(6)
     await expect(tabs.nth(0)).toHaveText('数据字典')
     await expect(tabs.nth(1)).toHaveText('学期设置')
     await expect(tabs.nth(2)).toHaveText('系统配置')
     await expect(tabs.nth(3)).toHaveText('定时任务')
     await expect(tabs.nth(4)).toHaveText('操作日志')
+    await expect(tabs.nth(5)).toHaveText('AI 常见问题')
+  })
+
+  test('仅持 ai:faq:manage 时系统设置只显示「AI 常见问题」Tab', async ({ page }) => {
+    await enterAs(page, { permissions: ['ai:faq:manage'] }, '/teacher/system-settings')
+
+    const tabs = page.locator('.system-settings .el-tabs__item')
+    await expect(tabs).toHaveCount(1)
+    await expect(tabs.first()).toHaveText('AI 常见问题')
+
+    // /admin/ai-faqs 在 mock 下返回 EMPTY_LIST 对象而非数组，页面应归一为空态
+    await expect(page.getByText('暂无常见问题，学生端将隐藏快捷提问区')).toBeVisible()
   })
 })

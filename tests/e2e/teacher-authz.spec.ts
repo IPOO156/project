@@ -83,16 +83,17 @@ test.describe('教师端权限码驱动入口', () => {
     await expect(page).toHaveURL(/tab=logs/)
   })
 
-  test('管理员（admin 角色）可看到系统设置全部 5 个 Tab', async ({ page }) => {
+  test('管理员（admin 角色）可看到系统设置全部 6 个 Tab', async ({ page }) => {
     await login(page, 'admin', ACCOUNTS.admin)
     await page.goto('/teacher/system-settings')
 
     const tabs = page.locator('.system-settings .el-tabs__item')
-    await expect(tabs).toHaveCount(5)
+    await expect(tabs).toHaveCount(6)
     await expect(tabs.nth(0)).toHaveText('数据字典')
     await expect(tabs.nth(1)).toHaveText('学期设置')
     await expect(tabs.nth(2)).toHaveText('系统配置')
     await expect(tabs.nth(3)).toHaveText('定时任务')
     await expect(tabs.nth(4)).toHaveText('操作日志')
+    await expect(tabs.nth(5)).toHaveText('AI 常见问题')
   })
 })

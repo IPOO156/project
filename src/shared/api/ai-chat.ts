@@ -10,6 +10,7 @@
  * /ai/conversations/{id}/messages/{mid}/regenerate、/ai/suggestions、/ai/messages/{mid}/feedback、
  * DELETE /ai/conversations/{id}。
  */
+import type { RequestConfig } from './request'
 import type {
   AISuggestedAction,
   AISuggestion,
@@ -342,6 +343,23 @@ export function regenerateAIMessage(
     null,
     { timeout: 65_000 },
   )
+}
+
+/** 学生端常见问题（GET /ai/faqs；仅返回启用项，按 sort 升序） */
+export interface AIFaqItem {
+  id: number
+  question: string
+  sort: number
+}
+
+/**
+ * 获取常见问题列表。
+ * silent：失败时由聊天页静默隐藏快捷区，不弹全局错误提示，也不阻塞聊天主流程。
+ */
+export function getAIFaqs(): Promise<AIFaqItem[]> {
+  return request
+    .get('/ai/faqs', { silent: true } as RequestConfig)
+    .then((data) => (Array.isArray(data) ? (data as AIFaqItem[]) : []))
 }
 
 /** 获取 AI 辅助建议（GET /ai/suggestions，按来源记录查询改进建议） */

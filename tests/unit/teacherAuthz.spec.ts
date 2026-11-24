@@ -86,6 +86,13 @@ describe('isModuleAllowed 判定顺序', () => {
     expect(isModuleAllowed('system-settings', ['org:manage'], ['teacher'])).toBe(false)
   })
 
+  it('仅持 AI 常见问题权限码也可进入系统设置', () => {
+    expect(isModuleAllowed('system-settings', ['ai:faq:manage'], ['teacher'])).toBe(true)
+    expect(getTeacherMenuItems(['ai:faq:manage'], ['teacher']).map((item) => item.path)).toContain(
+      '/teacher/system-settings',
+    )
+  })
+
   it('授权数据为空时按角色基线兜底，非空时不兜底', () => {
     // teacher 基线：首页 / 消息 / 档案查看 / 导出中心 / 热力图 / 系统设置
     expect(isModuleAllowed('archive-view', [], ['teacher'])).toBe(true)
