@@ -5,7 +5,7 @@ export interface PasswordStrengthResult {
 
 /**
  * 密码强度校验
- * 后端规则（POST /auth/password/reset/confirm、PUT /auth/password）：
+ * 后端规则（PUT /auth/password 及管理端重置密码）：
  * 长度 6-32 位，必须同时包含大写字母、小写字母、数字和特殊字符。
  */
 export function validatePasswordStrength(password: string): PasswordStrengthResult {

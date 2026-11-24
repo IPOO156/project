@@ -456,6 +456,11 @@
     justify-content: space-between;
     margin: 6px 0 22px;
   }
+  /* 忘记密码提示：账号由学校统一创建，无自助找回入口 */
+  &__forgot-tip {
+    font-size: 13px;
+    color: var(--login-text-faint);
+  }
   &__link {
     border: 0;
     padding: 0;

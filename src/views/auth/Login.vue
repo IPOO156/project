@@ -5,7 +5,6 @@ import { useThemeRipple } from '@/composables/useThemeRipple'
 import { isRoleMatchedLoginTab } from '@/shared/config/teacherModuleRegistry'
 import { validatePasswordStrength } from '@/shared/utils/validatePassword'
 import { useThemeStore } from '@/stores/stores'
-import ChangePasswordDialog from './components/ChangePasswordDialog.vue'
 import LoginBackground from './components/LoginBackground.vue'
 import LoginHero from './components/LoginHero.vue'
 import LoginParticles from './components/LoginParticles.vue'
@@ -58,7 +57,6 @@ const forcePasswordStrength = computed(() =>
 )
 const isEntered = ref(false)
 const showCard = ref(false)
-const forgotDialogVisible = ref(false)
 
 function onParticleMouseMove(pos: { x: number; y: number }) {
   mouseX.value = pos.x
@@ -67,10 +65,6 @@ function onParticleMouseMove(pos: { x: number; y: number }) {
 
 function handleThemeToggle(e: MouseEvent) {
   toggleThemeWithRipple(e, () => refreshCaptcha())
-}
-
-function openForgotDialog() {
-  forgotDialogVisible.value = true
 }
 
 onMounted(() => {
@@ -355,9 +349,8 @@ onMounted(() => {
                 </el-form-item>
                 <div class="login__options">
                   <el-checkbox v-model="loginForm.remember">记住密码</el-checkbox>
-                  <button type="button" class="login__link" @click="openForgotDialog">
-                    忘记密码？
-                  </button>
+                  <!-- 账号由学校统一创建，无自助注册/找回入口；忘记密码需联系教师或管理员重置 -->
+                  <span class="login__forgot-tip">忘记密码请联系教师或管理员重置</span>
                 </div>
                 <!-- native-type="submit"：使按钮成为表单默认提交按钮，Enter 键隐式提交与点击共用 @submit.prevent 一条链路 -->
                 <el-button
@@ -383,9 +376,6 @@ onMounted(() => {
         </div>
       </Transition>
     </section>
-
-    <!-- 忘记密码 / 改密弹窗 -->
-    <ChangePasswordDialog v-model="forgotDialogVisible" />
   </div>
 </template>
 

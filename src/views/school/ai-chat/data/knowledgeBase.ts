@@ -146,9 +146,12 @@ export const knowledgeBase: KnowledgeEntry[] = [
     topic: '密码',
     keywords: ['密码', '忘记', '重置', '找回', '登录', '修改密码'],
     rich: {
-      greeting: '密码重置与修改指南 🔐',
+      greeting: '密码修改与重置指南 🔐',
       blocks: [
-        { type: 'paragraph', text: '忘记密码或需要修改密码，可通过以下方式处理：' },
+        {
+          type: 'paragraph',
+          text: '系统账号由学校统一创建，不提供自助注册与找回密码。需要修改或忘记密码时，可通过以下方式处理：',
+        },
         {
           type: 'steps',
           items: [
@@ -159,8 +162,8 @@ export const knowledgeBase: KnowledgeEntry[] = [
             },
             {
               num: 2,
-              strong: '联系管理员',
-              text: '若忘记原密码无法登录，可联系辅导员或系统管理员在后台重置。',
+              strong: '联系教师或管理员',
+              text: '若忘记原密码无法登录，请联系辅导员、教师或系统管理员在后台重置。',
             },
           ],
         },

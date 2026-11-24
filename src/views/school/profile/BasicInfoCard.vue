@@ -66,7 +66,7 @@ const volunteerHoursText = computed(() => {
 
 /**
  * 联系邮箱/手机号：来自 /profile/info 的 contactInfo（PUT /profile/contact 的写入目标）。
- * 后端只有这一份邮箱（user_contact_info.email）：登录用学号/工号，邮箱用于找回密码与系统邮件；
+ * 后端只有这一份邮箱（user_contact_info.email）：登录用学号/工号，邮箱用于接收系统通知与邮件；
  * 登录响应 /auth/me 返回的 email 也取自同一字段，不存在独立的「账号邮箱」。
  */
 const contactEmail = computed(() => archiveStore.profileData?.contactInfo?.email ?? '')
@@ -332,7 +332,7 @@ async function handleAvatarUpload(base64: string) {
     <el-form v-else :model="formData" label-width="112px" class="profile-form">
       <p class="contact-hint">
         联系邮箱、手机号、紧急联系人电话在展示时已脱敏；保存前请重新填写这三项。
-        联系邮箱同时是「忘记密码」的验证码接收地址，请填写本人常用邮箱。
+        联系邮箱用于接收系统通知与邮件，请填写本人常用邮箱。
       </p>
       <p class="contact-hint">
         出生日期可自行修改，保存后立即生效；政治面貌、学生状态、学历层次由学校统一维护，仅展示不可修改。

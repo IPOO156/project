@@ -3,8 +3,6 @@ import type {
   CurrentUser,
   LoginPayload,
   LoginResponse,
-  PasswordResetConfirmPayload,
-  PasswordResetPayload,
   TokenRefreshResult,
 } from '@/shared/types/teacher'
 import request from './request'
@@ -32,14 +30,6 @@ export function getCurrentUser(): Promise<CurrentUser> {
 
 export function teacherLogout(): Promise<void> {
   return request.post('/auth/logout')
-}
-
-export function requestPasswordReset(payload: PasswordResetPayload): Promise<void> {
-  return request.post('/auth/password/reset', payload)
-}
-
-export function confirmPasswordReset(payload: PasswordResetConfirmPayload): Promise<void> {
-  return request.post('/auth/password/reset/confirm', payload)
 }
 
 export function refreshAccessToken(refreshToken: string): Promise<TokenRefreshResult> {
