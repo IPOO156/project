@@ -17,6 +17,13 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '登录', noLayout: true },
   },
   {
+    // 学生自助注册：公开页面，无需登录态
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/auth/Register.vue'),
+    meta: { title: '学生注册', noLayout: true },
+  },
+  {
     path: '/',
     component: () => import('@/layouts/DefaultLayout.vue'),
     redirect: '/dashboard',
@@ -294,7 +301,7 @@ function resolveLoginType(): Promise<LoginType | null> {
 router.beforeEach(async (to, _from, next) => {
   const token = getToken()
 
-  if (to.name !== 'Login' && !token) {
+  if (to.name !== 'Login' && to.name !== 'Register' && !token) {
     next({ name: 'Login' })
     return
   }
@@ -310,6 +317,12 @@ router.beforeEach(async (to, _from, next) => {
 
   // 正常登录态访问登录页时回首页；强制改密态必须留在登录页（由页面渲染改密表单）
   if (to.name === 'Login' && token && !mustChangePassword) {
+    next({ path: '/dashboard' })
+    return
+  }
+
+  // 已登录用户访问注册页直接回首页，避免拿到 token 后又注册出重复账号
+  if (to.name === 'Register' && token) {
     next({ path: '/dashboard' })
     return
   }
