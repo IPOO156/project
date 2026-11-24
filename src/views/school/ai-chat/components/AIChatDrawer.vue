@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import type { ChatMessage } from '../ai-chat.types'
 import { Send, Sparkles, Square, X } from 'lucide-vue-next'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/stores'
 import { useAIChat } from '../composables/useAIChat'
 import { useAIFaqs } from '../composables/useAIFaqs'
+import { useChatSettings } from '../composables/useChatSettings'
 import ChatAvatar from './ChatAvatar.vue'
+import ThinkingDots from './ThinkingDots.vue'
 
 defineOptions({ name: 'AIChatDrawer' })
 
@@ -23,6 +26,8 @@ const userStore = useUserStore()
 const { messages, loading, isStreaming, stopGeneration, sendMessage } = useAIChat()
 // 与管理端配置的常见问题同源（GET /ai/faqs）；为空或失败时整块隐藏
 const { questions: aiFaqs, load: loadAIFaqs } = useAIFaqs()
+// 与完整对话页共用同一设置项：「思考动画」关闭时不显示三点占位
+const { settings } = useChatSettings()
 
 const inputValue = ref('')
 const chatBodyRef = ref<HTMLElement | null>(null)
@@ -31,6 +36,11 @@ const chatBodyRef = ref<HTMLElement | null>(null)
 const quickQuestions = computed(() => aiFaqs.value.slice(0, 4))
 
 const aiName = computed(() => 'AI 智能助手')
+
+/** 流式占位阶段（尚未收到内容）且开启思考动画：气泡内显示三点指示器 */
+function isThinkingMessage(msg: ChatMessage): boolean {
+  return msg.role === 'ai' && msg.streaming === true && !msg.content && settings.value.thinking
+}
 
 function scrollToBottom() {
   nextTick(() => {
@@ -138,15 +148,23 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
                 :src="msg.role === 'user' ? userStore.avatar : undefined"
               />
               <div class="ai-drawer__bubble">
-                <p class="ai-drawer__content">{{ msg.content }}</p>
-                <span class="ai-drawer__time">{{ msg.time }}</span>
+                <div v-if="isThinkingMessage(msg)" class="ai-drawer__thinking">
+                  <ThinkingDots />
+                </div>
+                <template v-else>
+                  <p class="ai-drawer__content">{{ msg.content }}</p>
+                  <span class="ai-drawer__time">{{ msg.time }}</span>
+                </template>
               </div>
             </div>
 
-            <div v-if="loading && !isStreaming" class="ai-drawer__msg ai-drawer__msg--loading">
+            <div
+              v-if="loading && !isStreaming && settings.thinking"
+              class="ai-drawer__msg ai-drawer__msg--loading"
+            >
               <ChatAvatar role="ai" />
               <div class="ai-drawer__bubble ai-drawer__bubble--loading">
-                <Sparkles :size="14" class="ai-drawer__thinking-icon" />
+                <ThinkingDots />
                 <span>AI 思考中…</span>
               </div>
             </div>
@@ -364,21 +382,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     padding: 12px 16px;
   }
 
-  &__thinking-icon {
-    animation: aiDrawerPulse 1.6s ease-in-out infinite;
-    color: var(--mc-primary);
-  }
-
-  @keyframes aiDrawerPulse {
-    0%,
-    100% {
-      opacity: 0.55;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 1;
-      transform: scale(1.15);
-    }
+  &__thinking {
+    display: inline-flex;
+    align-items: center;
+    min-height: 21px;
   }
 
   &__quick {

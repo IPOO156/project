@@ -11,6 +11,7 @@ import { Copy, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { richToPlain } from '../utils/richText'
 import RichContentRenderer from './RichContentRenderer.vue'
+import ThinkingDots from './ThinkingDots.vue'
 
 const props = defineProps<{
   message: ChatMessage
@@ -18,6 +19,8 @@ const props = defineProps<{
   userName: string
   /** 是否显示反馈操作（有用/无用/复制） */
   showFeedback: boolean
+  /** 是否显示思考动画（设置项） */
+  showThinking: boolean
 }>()
 
 const emit = defineEmits<{
@@ -26,6 +29,15 @@ const emit = defineEmits<{
 }>()
 
 const isAi = computed(() => props.message.role === 'ai')
+
+/**
+ * 流式占位阶段（已插入 AI 气泡但尚未收到任何内容）且开启思考动画：
+ * 用三点跳动替代空气泡里的闪动光标，避免只看到一条竖线。
+ */
+const isThinking = computed(
+  () =>
+    isAi.value && props.message.streaming === true && !props.message.content && props.showThinking,
+)
 
 /** 用户头像首字 */
 const userInitial = computed(() => {
@@ -98,13 +110,19 @@ async function handleCopy() {
     <!-- 气泡 + meta + actions -->
     <div class="mb__col">
       <div class="mb__bubble" :class="isAi ? 'mb__bubble--ai' : 'mb__bubble--user'">
-        <!-- 离线回退回复明确标注，避免与在线回复混淆 -->
-        <div v-if="message.offline" class="mb__offline">离线模式</div>
-        <RichContentRenderer v-if="isAi && message.richContent" :content="message.richContent" />
-        <p v-else class="mb__text">
-          {{ message.content
-          }}<span v-if="message.streaming" class="mb__caret" aria-hidden="true" />
-        </p>
+        <div v-if="isThinking" class="mb__thinking">
+          <ThinkingDots />
+          <span class="mb__thinking-text">正在思考</span>
+        </div>
+        <template v-else>
+          <!-- 离线回退回复明确标注，避免与在线回复混淆 -->
+          <div v-if="message.offline" class="mb__offline">离线模式</div>
+          <RichContentRenderer v-if="isAi && message.richContent" :content="message.richContent" />
+          <p v-else class="mb__text">
+            {{ message.content
+            }}<span v-if="message.streaming" class="mb__caret" aria-hidden="true" />
+          </p>
+        </template>
       </div>
 
       <!-- 用户主动停止：后端未落库该条回复，明确标注避免误以为回答已完整 -->
@@ -214,6 +232,18 @@ async function handleCopy() {
     line-height: 1.6;
     // 流式输出保留 markdown 换行，避免逐字追加时整段挤成一行
     white-space: pre-wrap;
+  }
+
+  &__thinking {
+    display: inline-flex;
+    align-items: center;
+    gap: $spacing-xs;
+    min-height: 22px;
+  }
+
+  &__thinking-text {
+    font-size: $font-size-sm;
+    color: var(--el-text-color-secondary);
   }
 
   &__caret {
