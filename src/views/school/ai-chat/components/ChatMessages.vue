@@ -4,12 +4,13 @@ import type { ChatMessage } from '../ai-chat.types'
  * ChatMessages - 消息区容器
  *
  * - v-for 渲染 MessageBubble
- * - loading 时显示 thinking 指示器（AI Thinking... + 脉冲图标）
+ * - loading 时显示 thinking 指示器（三点跳动 + AI 思考中…）
  * - 自动滚动到底部（messages 变化 + loading 出现时）
  */
 import { RotateCcw, Sparkles } from 'lucide-vue-next'
 import { nextTick, ref, watch } from 'vue'
 import MessageBubble from './MessageBubble.vue'
+import ThinkingDots from './ThinkingDots.vue'
 
 const props = defineProps<{
   messages: ChatMessage[]
@@ -71,6 +72,7 @@ watch(() => props.showThinking, scrollToBottom)
         :message="msg"
         :user-name="props.userName"
         :show-feedback="props.showFeedback"
+        :show-thinking="props.showThinking"
         @feedback="(t) => emit('feedback', msg.id, t)"
         @copy="(success) => emit('copy', msg.id, success)"
       />
@@ -89,7 +91,7 @@ watch(() => props.showThinking, scrollToBottom)
             <Sparkles :size="20" />
           </div>
           <div class="cm__thinking-bubble">
-            <Sparkles :size="14" class="cm__thinking-icon" />
+            <ThinkingDots />
             <span>AI 思考中…</span>
           </div>
         </div>
@@ -163,24 +165,6 @@ watch(() => props.showThinking, scrollToBottom)
     border-radius: $radius-lg;
     border-top-left-radius: $radius-sm;
     color: var(--el-text-color-secondary);
-  }
-
-  &__thinking-icon {
-    color: var(--mc-primary);
-    animation: thinkingPulse 1.6s $ease-standard infinite;
-  }
-}
-
-@keyframes thinkingPulse {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.15);
   }
 }
 
