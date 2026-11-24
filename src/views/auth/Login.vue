@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { KeyRound, Lock, Moon, Shield, Sun, User } from 'lucide-vue-next'
+import { ArrowRight, KeyRound, Lock, Moon, Shield, Sun, User } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useThemeRipple } from '@/composables/useThemeRipple'
 import { isRoleMatchedLoginTab } from '@/shared/config/teacherModuleRegistry'
 import { validatePasswordStrength } from '@/shared/utils/validatePassword'
 import { useThemeStore } from '@/stores/stores'
+import ForgotPasswordDialog from './components/ForgotPasswordDialog.vue'
 import LoginBackground from './components/LoginBackground.vue'
 import LoginHero from './components/LoginHero.vue'
 import LoginParticles from './components/LoginParticles.vue'
 import { useLoginFlow } from './composables/useLoginFlow'
 
 const themeStore = useThemeStore()
+const router = useRouter()
 const { toggleThemeWithRipple } = useThemeRipple()
 
 // 角色页签判定保留在调用侧：登录流程在写 token 之前回调它，不把判定逻辑迁进 composable
@@ -65,6 +68,18 @@ function onParticleMouseMove(pos: { x: number; y: number }) {
 
 function handleThemeToggle(e: MouseEvent) {
   toggleThemeWithRipple(e, () => refreshCaptcha())
+}
+
+/** 学生自助注册入口（仅学生页签展示） */
+function goRegister() {
+  void router.push('/register')
+}
+
+/** 忘记密码：邮箱验证码重置 */
+const forgotVisible = ref(false)
+
+function openForgotPassword() {
+  forgotVisible.value = true
 }
 
 onMounted(() => {
@@ -349,8 +364,11 @@ onMounted(() => {
                 </el-form-item>
                 <div class="login__options">
                   <el-checkbox v-model="loginForm.remember">记住密码</el-checkbox>
-                  <!-- 账号由学校统一创建，无自助注册/找回入口；忘记密码需联系教师或管理员重置 -->
-                  <span class="login__forgot-tip">忘记密码请联系教师或管理员重置</span>
+                  <!-- 学生账号可自助注册；忘记密码通过邮箱验证码自助重置 -->
+                  <button type="button" class="login__forgot-link" @click="openForgotPassword">
+                    <KeyRound :size="14" />
+                    <span>忘记密码</span>
+                  </button>
                 </div>
                 <!-- native-type="submit"：使按钮成为表单默认提交按钮，Enter 键隐式提交与点击共用 @submit.prevent 一条链路 -->
                 <el-button
@@ -368,6 +386,13 @@ onMounted(() => {
                   </span>
                 </el-button>
               </el-form>
+              <div v-if="loginType === 'student'" class="login__register-entry">
+                <button type="button" class="login__register-btn" @click="goRegister">
+                  <span>还没有学生账号？</span>
+                  <strong>立即注册</strong>
+                  <ArrowRight :size="15" />
+                </button>
+              </div>
               <div class="login__security">
                 <Shield :size="13" /><span>全程加密传输 · 数据安全有保障</span>
               </div>
@@ -376,6 +401,8 @@ onMounted(() => {
         </div>
       </Transition>
     </section>
+
+    <ForgotPasswordDialog v-model="forgotVisible" />
   </div>
 </template>
 
