@@ -18,11 +18,12 @@ import { ADMIN_MENU_CODE } from '@/shared/config/teacherModuleRegistry'
 import LogView from '@/views/teacher/ops/LogView.vue'
 import ScheduledTask from '@/views/teacher/ops/ScheduledTask.vue'
 
+import AiFaqManagement from './AiFaqManagement.vue'
 import DictManagement from './DictManagement.vue'
 import SemesterManagement from './SemesterManagement.vue'
 import SystemConfig from './SystemConfig.vue'
 
-type TabKey = 'dict' | 'semester' | 'config' | 'tasks' | 'logs'
+type TabKey = 'dict' | 'semester' | 'config' | 'tasks' | 'logs' | 'faq'
 
 interface HubTab {
   key: TabKey
@@ -78,6 +79,14 @@ const TABS: HubTab[] = [
     baselineVisible: true,
     component: LogView,
   },
+  {
+    // 追加在末尾：既有 tab 的索引保持不变（E2E 按索引断言）
+    key: 'faq',
+    label: 'AI 常见问题',
+    permissions: ['ai:faq:manage'],
+    baselineVisible: false,
+    component: AiFaqManagement,
+  },
 ]
 
 const { canAccessAny, baselineFallback } = useTeacherAuthz()
@@ -99,7 +108,7 @@ const { activeTab } = useTabRoute<TabKey>(availableKeys, 'dict')
       <div class="mc-page-head__left">
         <h2 class="mc-page-head__title">系统设置</h2>
         <p class="mc-page-head__desc">
-          维护数据字典、学期与系统参数，管理后台定时任务，并查看系统操作日志。
+          维护数据字典、学期与系统参数，配置 AI 常见问题，管理后台定时任务，并查看系统操作日志。
         </p>
       </div>
     </div>

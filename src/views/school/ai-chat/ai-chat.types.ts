@@ -214,6 +214,8 @@ export interface KnowledgeEntry {
 
 /** 快捷问题项 */
 export interface QuickQuestion {
+  /** 后端 FAQ 主键（允许问题文本重复，列表 key 优先用它） */
+  id?: number
   /** 显示文案 */
   label: string
   /** 点击后发送的提问 */

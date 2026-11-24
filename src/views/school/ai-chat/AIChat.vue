@@ -24,9 +24,9 @@ import ClearConfirmModal from './components/ClearConfirmModal.vue'
 import QuickQuestions from './components/QuickQuestions.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import { useAIChat } from './composables/useAIChat'
+import { useAIFaqs } from './composables/useAIFaqs'
 import { useChatExport } from './composables/useChatExport'
 import { useChatSettings } from './composables/useChatSettings'
-import { quickQuestions } from './data/quickQuestions'
 
 defineOptions({ name: 'AIChat' })
 
@@ -52,6 +52,11 @@ const {
 } = useAIChat()
 const { settings, update: updateSetting } = useChatSettings()
 const { exportConversation } = useChatExport()
+// 常见问题来自管理员配置（GET /ai/faqs）；失败/为空时快捷区自然隐藏
+const { questions: aiFaqs, load: loadAIFaqs } = useAIFaqs()
+
+/** 聊天页最多展示 6 条，超出部分不渲染（管理端建议维持 6 条以内） */
+const MAX_QUICK_QUESTIONS = 6
 
 const showSettings = ref(false)
 const showClearModal = ref(false)
@@ -70,6 +75,8 @@ const currentTitle = computed(() => {
 })
 /** 快捷问题有效可见 = 设置开关 && 对话状态 */
 const quickEffectiveVisible = computed(() => settings.value.quick && quickVisible.value)
+/** 展示层截断，composable 保留全量供抽屉按自身宽度取前 4 条 */
+const quickQuestionList = computed(() => aiFaqs.value.slice(0, MAX_QUICK_QUESTIONS))
 
 /** 发送消息（thinking 开启时 800ms 思考，关闭时 150ms 快速回复） */
 function handleSend(text: string, files: File[]) {
@@ -195,6 +202,7 @@ function onKeydown(e: KeyboardEvent) {
 onMounted(() => {
   window.addEventListener('keydown', onKeydown)
   loadConversations()
+  void loadAIFaqs()
 })
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
@@ -238,7 +246,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       />
 
       <QuickQuestions
-        :questions="quickQuestions"
+        :questions="quickQuestionList"
         :visible="quickEffectiveVisible"
         @ask="handleQuickAsk"
       />

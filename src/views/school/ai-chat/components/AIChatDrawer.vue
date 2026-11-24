@@ -4,6 +4,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/stores'
 import { useAIChat } from '../composables/useAIChat'
+import { useAIFaqs } from '../composables/useAIFaqs'
 import ChatAvatar from './ChatAvatar.vue'
 
 defineOptions({ name: 'AIChatDrawer' })
@@ -20,16 +21,14 @@ const emit = defineEmits<{
 const router = useRouter()
 const userStore = useUserStore()
 const { messages, loading, isStreaming, stopGeneration, sendMessage } = useAIChat()
+// 与管理端配置的常见问题同源（GET /ai/faqs）；为空或失败时整块隐藏
+const { questions: aiFaqs, load: loadAIFaqs } = useAIFaqs()
 
 const inputValue = ref('')
 const chatBodyRef = ref<HTMLElement | null>(null)
 
-const quickQuestions = [
-  '如何填写个人档案信息？',
-  '奖项申报需要准备哪些材料？',
-  '成长时间轴怎么添加经历？',
-  '如何查看审批进度？',
-]
+/** 抽屉高度有限，只取前 4 条 */
+const quickQuestions = computed(() => aiFaqs.value.slice(0, 4))
 
 const aiName = computed(() => 'AI 智能助手')
 
@@ -76,6 +75,7 @@ watch(
   () => props.visible,
   (val) => {
     if (val) {
+      void loadAIFaqs()
       nextTick(scrollToBottom)
       // 如果有初始问题且当前只有欢迎语，自动发送
       // immediate: true 保证被 :key 强制重新挂载时（如 CareerPlan「重新分析」）
@@ -152,16 +152,17 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
             </div>
           </div>
 
-          <div class="ai-drawer__quick">
+          <div v-if="quickQuestions.length" class="ai-drawer__quick">
             <button
-              v-for="q in quickQuestions"
-              :key="q"
+              v-for="(q, i) in quickQuestions"
+              :key="q.id ?? i"
               type="button"
               class="ai-drawer__quick-btn"
+              :title="q.question"
               :disabled="loading"
-              @click="handleQuickQuestion(q)"
+              @click="handleQuickQuestion(q.question)"
             >
-              {{ q }}
+              {{ q.question }}
             </button>
           </div>
 
@@ -391,6 +392,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
   }
 
   &__quick-btn {
+    max-width: 100%;
     padding: 8px 8px;
     border-radius: 999px;
     border: 1px solid var(--el-border-color);
@@ -398,6 +400,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
     color: var(--el-text-color-secondary);
     font-size: 12px;
     cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     @include transition-ui;
     &:hover:not(:disabled) {
       border-color: var(--mc-primary);

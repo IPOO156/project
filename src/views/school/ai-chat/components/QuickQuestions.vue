@@ -7,7 +7,7 @@ import type { QuickQuestion } from '../ai-chat.types'
  * icon 标识映射到 lucide 图标（数据层保持纯净不引组件）
  * visible 由父组件控制（设置开关 + 首次提问后隐藏）
  */
-import { Award, CheckCircle2, Clock, Download, FileText, Shield } from 'lucide-vue-next'
+import { Award, CheckCircle2, Clock, Download, FileText, Shield, Sparkles } from 'lucide-vue-next'
 
 const props = defineProps<{
   questions: QuickQuestion[]
@@ -25,6 +25,8 @@ const iconMap: Record<string, Component> = {
   check: CheckCircle2,
   lock: Shield,
   download: Download,
+  // 后端 FAQ 无图标字段，统一使用 Sparkles
+  sparkles: Sparkles,
 }
 
 function getIcon(icon: string): Component {
@@ -43,8 +45,9 @@ function getIcon(icon: string): Component {
         <div class="qq__list">
           <button
             v-for="(q, i) in props.questions"
-            :key="i"
+            :key="q.id ?? i"
             class="qq__chip"
+            :title="q.question"
             @click="emit('ask', q.question)"
           >
             <component :is="getIcon(q.icon)" :size="16" />
@@ -95,6 +98,8 @@ function getIcon(icon: string): Component {
     display: inline-flex;
     align-items: center;
     gap: $spacing-xs;
+    max-width: 100%;
+    min-width: 0;
     padding: $spacing-xs $spacing-md;
     border: 1px solid var(--el-border-color);
     background: var(--el-bg-color);
@@ -109,6 +114,14 @@ function getIcon(icon: string): Component {
       color: var(--mc-primary);
       background: color-mix(in srgb, var(--mc-accent) 8%, transparent);
       transform: translateY(-1px);
+    }
+
+    // 管理员可配置 200 字问题，单行省略避免撑破胶囊
+    span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
   }
 }

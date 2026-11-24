@@ -9,6 +9,7 @@
  * 本文件为纯 barrel：实现已按业务域拆分至同目录 teacher-*.ts，
  * 对外导出符号与拆分前保持一致，调用方无需改动导入路径。
  */
+export * from './teacher-ai-faq'
 export * from './teacher-approval-flow'
 export * from './teacher-archive'
 export * from './teacher-audit-task'
