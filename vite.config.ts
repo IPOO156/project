@@ -36,12 +36,12 @@ export default defineConfig({
   server: {
     // 端口必须是后端 WebConfig 默认 CORS 白名单中的地址（3000/5173/8080），
     // 否则登录等带 Origin 的请求会被后端以 403 Invalid CORS request 拒绝。
-    // 本地联调指向服务器已部署后端（111.228.56.207:8089，
-    // context-path 为 /api/v1，前端 baseURL '/api/v1' 由此经代理转发）。
+    // 默认指向服务器已部署后端（111.228.56.207:8089，context-path 为 /api/v1）。
+    // 需联调本地后端时，先启动后端，再以 VITE_API_PROXY_TARGET=http://localhost:8080 启动前端。
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://111.228.56.207:8089',
+        target: process.env.VITE_API_PROXY_TARGET || 'http://111.228.56.207:8089',
         changeOrigin: true,
       },
     },
