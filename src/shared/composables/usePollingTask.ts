@@ -80,12 +80,15 @@ export function usePollingTask<T>(options: PollingTaskOptions<T>): UsePollingTas
       timers.delete(id)
     }
     failures.delete(id)
+    // 解除在途占位：停止后若立即用同 id 重启，新一轮不应被上一轮未返回的请求挡掉一拍
+    inFlight.delete(id)
   }
 
   function stopAll() {
     timers.forEach((timer) => clearInterval(timer))
     timers.clear()
     failures.clear()
+    inFlight.clear()
   }
 
   function isPolling(id: number): boolean {
