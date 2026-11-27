@@ -534,6 +534,10 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onEscKey))
       margin: 0;
       border-radius: $radius-xl $radius-xl 0 0;
     }
+    /* 抽屉贴底显示，输入栏补 iPhone 全面屏底部安全区 */
+    &__input-bar {
+      padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
   }
   .ai-drawer-enter-from,
   .ai-drawer-leave-to {
