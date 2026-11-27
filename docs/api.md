@@ -214,7 +214,7 @@ POST /upload
 
 **响应 `data`：** `{ url: string }` — 上传后的文件访问 URL
 
-> 前端通过 `useUpload` composable（`src/shared/composables/useUpload.ts`）统一调用，支持进度跟踪和文件校验。
+> 前端由 `ProofUpload.vue` 组件调用 `src/shared/api/common.ts` 的 `uploadFile`（POST `/common/upload`）完成上传，支持格式/大小校验与逐文件进度；不要在页面里直接写 FormData 请求。
 
 ---
 

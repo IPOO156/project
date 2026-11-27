@@ -102,8 +102,8 @@ function handleClick() {
     box-shadow $duration-base $ease-standard,
     transform $duration-base $ease-standard;
 
-  // 呼吸动画
-  animation: aiFbBreathe 3s ease-in-out infinite;
+  // 呼吸动画：有限次数，避免装饰性动效无限循环（项目动效口径）
+  animation: aiFbBreathe 3s ease-in-out 3;
 
   &:hover {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
@@ -195,6 +195,9 @@ function handleClick() {
 // 移动端适配
 @media (max-width: 768px) {
   .ai-fb {
+    // 触屏不保留无限呼吸：持续缩放会让点击目标一直在动，也违反项目「无限循环仅限加载/进度」的口径
+    animation: none;
+    touch-action: manipulation;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 
     &:hover {

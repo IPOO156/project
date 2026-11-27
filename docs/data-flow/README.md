@@ -48,7 +48,7 @@ formData / tableData / pagination
 
 - 列表页初始化时调用 `useTableQuery` 拉取分页数据。
 - 表单提交时调用 `useApplication` 封装的提交逻辑。
-- 文件上传统一走 `useUpload`。
+- 文件上传统一由 `ProofUpload.vue` + `shared/api/common.ts` 的 `uploadFile`（POST `/common/upload`）处理。
 
 ## 审批模块数据流
 

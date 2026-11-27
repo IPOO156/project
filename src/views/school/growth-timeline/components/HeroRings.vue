@@ -135,6 +135,8 @@ const electrons = computed<ElectronItem[]>(() => {
 })
 
 let rafId: number | null = null
+/** 电子入场延时：组件卸载时需清理，避免定时器在销毁后改状态 */
+let electronsTimer: number | null = null
 
 function tick() {
   if (!props.paused) {
@@ -280,8 +282,9 @@ function handleElectronLeave() {
 
 onMounted(() => {
   rafId = requestAnimationFrame(tick)
-  setTimeout(() => {
+  electronsTimer = window.setTimeout(() => {
     electronsVisible.value = true
+    electronsTimer = null
   }, 2000)
   bindScroll()
   // 滚动联动动效（非 CSS keyframe）单独尊重系统的「减少动效」偏好：
@@ -298,6 +301,10 @@ onDeactivated(unbindScroll)
 onBeforeUnmount(() => {
   if (rafId) {
     cancelAnimationFrame(rafId)
+  }
+  if (electronsTimer != null) {
+    window.clearTimeout(electronsTimer)
+    electronsTimer = null
   }
   unbindScroll()
   motionQuery?.removeEventListener('change', syncReducedMotion)
@@ -479,272 +486,4 @@ watch(
   </section>
 </template>
 
-<style scoped lang="scss">
-.hero-rings {
-  // --hero-scale 必须等于「渲染尺寸 / viewBox 尺寸(400)」，
-  // 小球的圆周定位依赖它，改 --hero-svg-size 时两者要同步改。
-  --hero-scale: 1.75;
-  --hero-svg-size: 700px;
-  position: relative;
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 2rem;
-  overflow: hidden;
-}
-
-.hero-rings__system {
-  // 滚动视差变量由模板内联注入（--ring-zoom 与 --hero-scale 分离）：
-  // 环、球、中心按钮共享同一个 transform，层内不存在第二个缩放。
-  --ring-zoom: 1;
-  --ring-parallax-opacity: 0.5;
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: scale(var(--ring-zoom));
-  opacity: var(--ring-parallax-opacity);
-  transform-origin: center;
-  z-index: 1;
-}
-
-.hero-rings__bg {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  opacity: 0.6;
-  z-index: 0;
-}
-
-.hero-rings__halo {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  overflow: hidden;
-}
-
-.hero-rings__halo::before,
-.hero-rings__halo::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-}
-
-.hero-rings__halo::before {
-  top: 18%;
-  left: 16%;
-  width: 48vh;
-  height: 48vh;
-  background: radial-gradient(
-    circle,
-    var(--gt-halo-gold, rgba(200, 148, 62, 0.28)) 0%,
-    transparent 70%
-  );
-  opacity: 0.5;
-  animation: haloBreathe 10s ease-in-out infinite alternate;
-}
-
-.hero-rings__halo::after {
-  bottom: 14%;
-  right: 18%;
-  width: 42vh;
-  height: 42vh;
-  background: radial-gradient(
-    circle,
-    var(--gt-halo-green, rgba(90, 124, 90, 0.24)) 0%,
-    transparent 70%
-  );
-  opacity: 0.4;
-  animation: haloBreathe 12s ease-in-out infinite alternate-reverse;
-}
-
-@keyframes haloBreathe {
-  from {
-    transform: scale(1);
-    opacity: 0.35;
-  }
-  to {
-    transform: scale(1.12);
-    opacity: 0.5;
-  }
-}
-
-/* 兜底规则已移至 src/assets/styles/motion-override.scss 统一管理
-   （项目内"强制启用动画"开关可一键覆盖） */
-
-.hero-rings__content {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5rem 3rem 4.5rem;
-  pointer-events: none;
-}
-
-.hero-rings__top,
-.hero-rings__poem {
-  opacity: 0;
-  animation: fadeSlideUp 1s $ease-emphasized forwards;
-  pointer-events: auto;
-}
-
-.hero-rings__top {
-  animation-delay: 0.6s;
-}
-
-.hero-rings__title {
-  font-family: var(--gt-font-display);
-  font-size: clamp(1.8rem, 4vw, 2.8rem);
-  font-weight: 600;
-  margin: 0;
-  letter-spacing: 2px;
-  user-select: none;
-
-  &-accent {
-    color: var(--gt-accent, #8b6340);
-  }
-
-  &-sub {
-    color: var(--bark-dark, #2d1e12);
-  }
-}
-
-.hero-rings__poem {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  user-select: none;
-  z-index: 4;
-}
-
-.hero-rings__poem-scroll {
-  position: absolute;
-  top: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.85rem;
-  transform: translateY(-50%);
-}
-
-.hero-rings__poem-scroll--left {
-  left: clamp(1.5rem, 5vw, 4rem);
-}
-
-.hero-rings__poem-scroll--right {
-  right: clamp(1.5rem, 5vw, 4rem);
-}
-
-.hero-rings__char {
-  font-family: var(--gt-font-display);
-  font-size: clamp(1.1rem, 1.9vw, 1.35rem);
-  font-weight: 500;
-  color: var(--bark-dark, #2d1e12);
-  letter-spacing: 0;
-  line-height: 1;
-  opacity: 0;
-  transform: translateY(-18px);
-  animation: charDropIn 0.55s $ease-emphasized forwards;
-  animation-delay: calc(0.9s + var(--char-index, 0) * 0.08s);
-}
-
-@keyframes charDropIn {
-  from {
-    opacity: 0;
-    transform: translateY(-18px);
-  }
-  to {
-    opacity: 0.85;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 768px) {
-  // 窄屏按可用宽度收紧年轮：400 × 0.9 = 360px，最外圈直径 320px，
-  // 375 / 390 下都能完整成环，不再被 hero 的 overflow 裁掉左右两侧。
-  .hero-rings {
-    --hero-scale: 0.9;
-    --hero-svg-size: 360px;
-  }
-
-  .hero-rings__poem-scroll {
-    gap: 0.55rem;
-  }
-
-  .hero-rings__poem-scroll--left {
-    left: 0.75rem;
-  }
-
-  .hero-rings__poem-scroll--right {
-    right: 0.75rem;
-  }
-
-  .hero-rings__char {
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 340px) {
-  // 320px 级超窄屏：400 × 0.75 = 300px，最外圈直径 267px，左右各留 26px 不裁切。
-  // 注意与 .hero-rings 的 --hero-scale 保持同一份来源，小球定位依赖它。
-  .hero-rings {
-    --hero-scale: 0.75;
-    --hero-svg-size: 300px;
-  }
-}
-
-.hero-rings__scroll {
-  position: absolute;
-  bottom: 2.5rem;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  background: transparent;
-  border: none;
-  color: var(--bark-light, #8b6340);
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: auto;
-  animation: fadeSlideUp 0.8s ease 2s forwards;
-}
-
-.hero-rings__scroll svg {
-  width: 20px;
-  height: 20px;
-  animation: scrollBounce 2s ease-in-out infinite;
-}
-
-@keyframes fadeSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(25px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scrollBounce {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(6px);
-  }
-}
-</style>
+<style scoped lang="scss" src="./hero-rings.scss"></style>

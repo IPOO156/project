@@ -9,7 +9,8 @@
 | `src/shared/composables/useDict.ts`                     | `useDict`         | 字典值 → 文本/颜色/选项转换                   | ✅ 已提供 |
 | `src/shared/composables/usePagination.ts`               | `usePagination`   | 分页状态 + 分页事件 + 数据获取                | ✅ 已提供 |
 | `src/shared/composables/useTableQuery.ts`               | `useTableQuery`   | 整合 searchForm + pagination + loading + list | ✅ 已提供 |
-| `src/shared/composables/useUpload.ts`                   | `useUpload`       | 文件上传封装                                  | ✅ 已提供 |
+| `src/shared/composables/useFormDraft.ts`                | `useFormDraft`    | 草稿本地/后端双写、串行保存与离开拦截         | ✅ 已提供 |
+| `src/shared/composables/useFormRecords.ts`              | `useFormRecords`  | 申报记录列表、本地草稿合并与权限开关映射      | ✅ 已提供 |
 | `src/shared/composables/useApplication.ts`              | `useApplication`  | 通用申报表单/弹窗状态管理                     | ✅ 已提供 |
 | `src/shared/composables/usePermission.ts`               | `usePermission`   | 权限判断（待实现）                            | 🚧 占位   |
 | `src/shared/composables/useExport.ts`                   | `useExport`       | 导入/导出逻辑（待实现）                       | 🚧 占位   |

@@ -1,20 +1,17 @@
+import type { UploadUserFile } from 'element-plus'
+import type { FormRecord } from './useFormRecords'
 import type { ApplicationType } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, reactive, ref, toRaw, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { deleteActivity, getActivityDetail, withdrawActivity } from '@/shared/api/activities'
-import { duplicateCheck } from '@/shared/api/applications'
-import { awardDuplicateCheck } from '@/shared/api/awards'
 import { getProfileInfo } from '@/shared/api/student'
 import {
   activityCategoryOf,
-  ARCHIVE_TYPE_ALIASES,
-  awardTypeCodeOf,
   deriveRecordTitle,
   mapDetailToForm,
   submitApplication,
 } from '@/shared/api/submission'
-import { APPLICATION_CONTRACTS } from '@/shared/api/submission/contracts'
 import { toDateString } from '@/shared/api/submission/payload'
 import {
   buildSemesterEndMonthDisabledDate,
@@ -25,7 +22,9 @@ import {
   parseSemesterRange,
   sanitizeSemesterMonthPair,
 } from '@/shared/utils/semester'
+import { asOptionalNumber, asText } from '@/shared/utils/unknown'
 import { useCorrection } from './useCorrection'
+import { checkDuplicateBeforeSubmit } from './useDuplicateCheck'
 import { useFormDraft } from './useFormDraft'
 import { useFormEdit } from './useFormEdit'
 import { DRAFT_LOCAL_ID, useFormRecords } from './useFormRecords'
@@ -48,10 +47,10 @@ export interface SemesterMonthConfig {
   endDateOnly?: boolean
 }
 
-export function useApplicationPage(
+export function useApplicationPage<F extends Record<string, unknown>>(
   type: string,
   typeLabel: string,
-  emptyForm: () => Record<string, any>,
+  emptyForm: () => F,
   draftKey?: string,
   requiredFields: { key: string; label: string }[] = [],
   semesterMonthConfig?: SemesterMonthConfig,
@@ -60,10 +59,14 @@ export function useApplicationPage(
   const _u_route = useRoute()
   const effectiveDraftKey = draftKey || type
 
-  const form = reactive(emptyForm())
+  // 申报页表单统一包含佐证材料上传；emptyForm 里历史写法为 `[] as string[]`，
+  // 这里按 el-upload 的真实绑定类型收窄，避免模板 v-model:file-list 类型不匹配。
+  const form = reactive(emptyForm()) as F & { proofMaterials?: UploadUserFile[] }
   // 申报类型 key 由页面常量传入（对应 ApplicationType），activityCategoryOf 参数类型收窄为 ApplicationType
   const appType = type as ApplicationType
   const submitting = ref(false)
+  /** 保存草稿进行中：按钮 loading + 入口拦截，防止连点触发重复建草稿/重复 autosave */
+  const draftSaving = ref(false)
   /** 查重进行中：防止连点导致重复查重、重复弹窗 */
   let duplicateChecking = false
 
@@ -162,10 +165,10 @@ export function useApplicationPage(
     viewRecord: _viewRecord,
     startEdit,
     cancelEdit,
-    closeDetail,
+    closeDetail: _closeDetail,
   } = useFormEdit()
 
-  const enrollmentInfo = ref<any>(undefined)
+  const enrollmentInfo = ref<Record<string, string> | undefined>(undefined)
   async function loadEnrollmentInfo() {
     try {
       const profile = await getProfileInfo()
@@ -178,81 +181,6 @@ export function useApplicationPage(
       }
     } catch {
       /* ignore */
-    }
-  }
-
-  async function checkDuplicateBeforeSubmit(data: Record<string, any>): Promise<boolean> {
-    try {
-      const title = deriveRecordTitle(data)
-      // 档案侧查重需要「证书编号 + 获得时间」才有意义：获得时间按该类型的契约映射取表单字段
-      // （学科竞赛 awardDate、奖学金 acquireDate、证书 certDate……），不能只读 acquisitionDate。
-      const obtainedFrontKey = Object.entries(APPLICATION_CONTRACTS[type]?.mapping ?? {}).find(
-        ([backendKey]) => backendKey === 'obtainedTime',
-      )?.[1]
-      const obtainedTime = toDateString(
-        (obtainedFrontKey ? data[obtainedFrontKey] : undefined) ?? data.acquisitionDate,
-      )
-      // 奖项报名走 8.1.2 POST /awards/duplicate-check；档案申报走 POST /applications/duplicate-check
-      const r: any =
-        activityCategoryOf(appType) === 'award'
-          ? await awardDuplicateCheck({
-              // 后端按 award_type 枚举码严格相等匹配（competition_star / innovation_star / research_star）
-              awardType: awardTypeCodeOf(type),
-              certificateNo: data.certNumber,
-              title,
-              // 月份选择器原值是 YYYY-MM，契约要求 YYYY-MM-DD：统一补全为当月 01 日（报告 #9）
-              participatedTime: toDateString(
-                data.competitionDate ||
-                  data.approveDate ||
-                  data.publishDate ||
-                  data.registerDate ||
-                  undefined,
-              ),
-            })
-          : await duplicateCheck({
-              archiveType: ARCHIVE_TYPE_ALIASES[type]?.[0] ?? type,
-              // 后端 DuplicateCheckRequest 为 { archiveType, fields: Map }，检测字段取自
-              // duplicate_detection_rules.detect_fields，需放在 fields 内；平铺字段会被忽略。
-              fields: {
-                ...(data.certNumber ? { certificateNo: data.certNumber } : {}),
-                ...(obtainedTime ? { obtainedTime } : {}),
-                title,
-              },
-            })
-      // 奖项(8.x)返回 isDuplicate/duplicateRecords；档案(7.0.1)实测返回 hasDuplicate/similarItems/suggestion，统一归一化读取
-      const hasDuplicate = r?.isDuplicate ?? r?.hasDuplicate
-      const duplicateList = (r?.duplicateRecords ?? r?.similarItems ?? []) as {
-        title: string
-        similarity?: number
-      }[]
-      if (hasDuplicate) {
-        // title/suggestion 均为后端/用户输入，禁止拼进 HTML：改用纯文本弹窗，
-        // 由文本节点自动转义，避免 dangerouslyUseHTMLString 引入 XSS。
-        const items = duplicateList
-          .map((d) => {
-            // 后端 similarity 为 0-1 小数（文档示例 0.92），展示时换算成百分比（报告 #10）
-            const percent =
-              d.similarity == null
-                ? null
-                : d.similarity <= 1
-                  ? Math.round(d.similarity * 100)
-                  : Math.round(d.similarity)
-            return `${d.title}${percent != null ? `（相似度 ${percent}%）` : ''}`
-          })
-          .join('；')
-        const suggestion = r?.suggestion ? `。建议：${r.suggestion}` : ''
-        const content = `${items || '检测到可能重复的申报记录'}${suggestion}`
-        ElMessageBox.alert(content, '检测到重复申报', {
-          confirmButtonText: '知道了',
-          type: 'warning',
-        }).catch(() => {})
-        return false
-      }
-      return true
-    } catch {
-      // 查重服务失败不阻塞提交，但需明确告知用户本次未执行重复检测
-      ElMessage.warning('查重服务暂不可用，本次未执行重复检测')
-      return true
     }
   }
 
@@ -283,10 +211,12 @@ export function useApplicationPage(
   const rejectionReason = ref('')
   // 查看详情弹窗加载态：真实后端记录需拉取详情接口补全表单字段，加载期间弹窗显示 loading
   const detailLoading = ref(false)
+  // 详情请求序号：快速切换记录或关闭弹窗后，晚到的响应不得覆盖当前内容/重新打开弹窗
+  let viewSeq = 0
   /** 详情接口不可用：编辑/查看按列表摘要降级，提示用户缺失字段 */
   const detailUnavailable = ref(false)
 
-  async function doSubmit(data: Record<string, any>) {
+  async function doSubmit(data: Record<string, unknown>) {
     submitting.value = true
     try {
       const submitData = {
@@ -354,6 +284,13 @@ export function useApplicationPage(
       ElMessage.warning(`请填写必填项：${missing.map((f) => f.label).join('、')}`)
       return
     }
+    // 起止时间先后校验：指南明确要求结束时间不得早于开始时间，本地先拦截，避免提交后才被后端拒绝
+    const startDate = toDateString((form as Record<string, unknown>).startDate)
+    const endDate = toDateString((form as Record<string, unknown>).endDate)
+    if (startDate && endDate && startDate > endDate) {
+      ElMessage.error('结束时间不能早于开始时间')
+      return
+    }
     // 学期-日期联动校验：若配置了 monthField，提交前校验日期是否在所选学期内。
     // 这里**只校验、不清空**表单：清空动作只属于「学期切换」场景（见上方 watch）。
     // 提交时若直接清空，用户会看到“日期自己消失”，且输入内容丢失（2026-11-12 反馈）。
@@ -384,7 +321,7 @@ export function useApplicationPage(
     }
     duplicateChecking = true
     try {
-      const ok = await checkDuplicateBeforeSubmit({
+      const ok = await checkDuplicateBeforeSubmit(type, {
         ...toRaw(form),
         // 扩展字段不在 form 内，查重也需要证书编号才能命中
         certNumber: extendedForm.certNumber || undefined,
@@ -397,19 +334,26 @@ export function useApplicationPage(
   }
 
   async function handleSaveDraft() {
-    // 草稿双写：本地 localStorage 兜底，同时调用 isDraft=1 建后端草稿 / autosave 更新。
-    // 必须等后端保存结束再刷新列表：后端保存成功会删掉本地副本，列表只保留一条草稿记录，
-    // 否则本地草稿与后端草稿同时出现（2026-11-10 修复重复展示）。
-    // 保存后表单转空白待填写态：修改草稿需在下拉记录里点"编辑"回填，正常情况表单保持空白。
-    const backendSaved = await saveNow()
-    currentStatus.value = 'draft'
-    await loadRecords()
-    resetForm()
-    cancelEdit()
-    ElMessage.success(backendSaved ? '草稿已保存' : '草稿已保存到本地')
+    // 连点保护：saveNow 期间按钮保持 loading，重复点击直接忽略
+    if (draftSaving.value) return
+    draftSaving.value = true
+    try {
+      // 草稿双写：本地 localStorage 兜底，同时调用 isDraft=1 建后端草稿 / autosave 更新。
+      // 必须等后端保存结束再刷新列表：后端保存成功会删掉本地副本，列表只保留一条草稿记录，
+      // 否则本地草稿与后端草稿同时出现（2026-11-10 修复重复展示）。
+      // 保存后表单转空白待填写态：修改草稿需在下拉记录里点"编辑"回填，正常情况表单保持空白。
+      const backendSaved = await saveNow()
+      currentStatus.value = 'draft'
+      await loadRecords()
+      resetForm()
+      cancelEdit()
+      ElMessage.success(backendSaved ? '草稿已保存' : '草稿已保存到本地')
+    } finally {
+      draftSaving.value = false
+    }
   }
 
-  async function handleWithdraw(row: any) {
+  async function handleWithdraw(row: FormRecord) {
     try {
       await ElMessageBox.confirm('确定撤回？', '撤回确认', { type: 'warning' })
       await withdrawActivity(Number(row.id), activityCategoryOf(appType))
@@ -455,18 +399,18 @@ export function useApplicationPage(
         : `详情加载失败（HTTP ${status ?? '未知'}），本次仅按列表已有字段回填；缺失字段不会提交`
   }
 
-  async function handleEditClick(row: any) {
+  async function handleEditClick(row: Record<string, unknown>) {
+    // 进入编辑即作废在途的查看详情响应：避免晚到的详情把刚关闭的查看弹窗重新打开
+    viewSeq += 1
     // 后端真实记录（非本地临时 rec- / draft-local 记录）：拉取 6.2 详情补齐表单字段（列表仅含摘要字段）
-    const isBackendRecord =
-      row.id && row.id !== DRAFT_LOCAL_ID && !String(row.id).startsWith('rec-')
+    const rowId = asText(row.id)
+    const isBackendRecord = Boolean(rowId) && rowId !== DRAFT_LOCAL_ID && !rowId.startsWith('rec-')
     // 真实记录回填其 id，后续自动保存走 autosave；本地草稿若已关联后端草稿（backendId），
     // 同样回填该 id，避免再次保存时又 POST 一条新草稿；无关联时才走 isDraft=1 建草稿
-    setRecordId(
-      isBackendRecord ? Number(row.id) : row.backendId != null ? Number(row.backendId) : null,
-    )
+    setRecordId(isBackendRecord ? Number(rowId) : (asOptionalNumber(row.backendId) ?? null))
     if (isBackendRecord) {
       try {
-        const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))
+        const detail = await getActivityDetail(Number(rowId), activityCategoryOf(appType))
         // 后端业务字段嵌在 detail.detail（后端字段名），按类型逆向映射为前端表单字段后并入 row，
         // 否则 emptyForm() 循环全部落空 → 表单空白（2026-08-31 修复）。
         // 注意不能用 {...row, ...detail} 直接展开：会把 row.status 覆盖成后端数字状态码
@@ -492,14 +436,14 @@ export function useApplicationPage(
       }
       ;(form as Record<string, unknown>)[key] = row[key] ?? ''
     })
-    extendedForm.role = row.role || ''
-    extendedForm.certNumber = row.certNumber || ''
-    extendedForm.issuingAuthority = row.issuingAuthority || ''
-    extendedForm.acquisitionDate = row.acquisitionDate || ''
-    extendedForm.validityPeriod = row.validityPeriod || ''
-    currentStatus.value = row.status || 'draft'
-    rejectionReason.value = row.rejectedReason || ''
-    startEdit(row)
+    extendedForm.role = asText(row.role)
+    extendedForm.certNumber = asText(row.certNumber)
+    extendedForm.issuingAuthority = asText(row.issuingAuthority)
+    extendedForm.acquisitionDate = asText(row.acquisitionDate)
+    extendedForm.validityPeriod = asText(row.validityPeriod)
+    currentStatus.value = asText(row.status) || 'draft'
+    rejectionReason.value = asText(row.rejectedReason)
+    startEdit(row as unknown as FormRecord)
   }
 
   /**
@@ -544,10 +488,10 @@ export function useApplicationPage(
     detailUnavailable.value = false
     setRecordId(null)
   }
-  function handleViewScore(row: any) {
+  function handleViewScore(row: FormRecord) {
     openIndicator(type, row.title || '')
   }
-  async function handleCorrection(row: any) {
+  async function handleCorrection(row: FormRecord) {
     openCorrection(row)
     // 列表接口只返回摘要，纠错的「变更字段」需要完整字段：先拉详情补全快照
     const isBackendRecord =
@@ -561,8 +505,10 @@ export function useApplicationPage(
       ElMessage.warning(detailLoadFailureText(error, 'correction'))
     }
   }
-  async function viewRecord(row: any) {
-    rejectionReason.value = row.rejectedReason || ''
+  async function viewRecord(row: FormRecord) {
+    // 记录本次查看序号：用户快速点两行或中途关闭弹窗时，晚到的详情响应直接丢弃
+    const seq = ++viewSeq
+    rejectionReason.value = asText(row.rejectedReason)
     // 先展示列表摘要，立即打开弹窗，避免点击后无反馈
     _viewRecord(row)
     // 真实后端记录：列表接口（GET /activities）仅返回摘要字段，详情接口才含用户填写的表单内容。
@@ -573,9 +519,11 @@ export function useApplicationPage(
     detailLoading.value = true
     try {
       const detail = await getActivityDetail(Number(row.id), activityCategoryOf(appType))
+      if (seq !== viewSeq) return
       // mapDetailToForm 仅映射业务字段（不含 status），避免覆盖行上的前端状态/退回原因
       if (detail) _viewRecord({ ...row, ...mapDetailToForm(type, detail) })
     } catch (error) {
+      if (seq !== viewSeq) return
       // 详情接口不可用：弹窗顶部按真实失败原因标注「仅列表摘要」，不伪装成完整详情
       _viewRecord({
         ...row,
@@ -583,8 +531,15 @@ export function useApplicationPage(
         __detailUnavailableText: detailLoadFailureText(error, 'view'),
       })
     } finally {
-      detailLoading.value = false
+      if (seq === viewSeq) detailLoading.value = false
     }
+  }
+
+  /** 关闭详情弹窗：递增序号让在途详情响应失效，避免关闭后被晚到响应重新打开 */
+  function closeDetail() {
+    viewSeq += 1
+    detailLoading.value = false
+    _closeDetail()
   }
   function init() {
     loadEnrollmentInfo()
@@ -593,6 +548,7 @@ export function useApplicationPage(
   return {
     form,
     submitting,
+    draftSaving,
     disabledDate,
     records,
     isEditing,

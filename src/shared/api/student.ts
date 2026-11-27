@@ -301,9 +301,9 @@ export function getGrowthTimeline(params?: {
   viewType?: 'list' | 'tree' | 'ring'
 }): Promise<{
   summary: { experiences: number; skills: number; averageGrowth: string; potential: string }
-  timeline?: Array<Record<string, any>>
-  tree?: Array<Record<string, any>>
-  ring?: Array<Record<string, any>>
+  timeline?: Array<Record<string, unknown>>
+  tree?: Array<Record<string, unknown>>
+  ring?: Array<Record<string, unknown>>
 }> {
   return request.get('/profile/growth-timeline', { params })
 }
@@ -314,7 +314,7 @@ export function getCareerPlans(params?: {
   page?: number
   per_page?: number
 }): Promise<{
-  list: Array<Record<string, any>>
+  list: Array<Record<string, unknown>>
   pagination: { page: number; per_page: number; total: number; total_pages: number }
 }> {
   return request.get('/profile/career-plans', { params })

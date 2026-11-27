@@ -16,7 +16,7 @@ const { useAwardReviewStore } = await import('@/stores/useAwardReviewStore')
 const { RESUBMIT_SUCCESS_MESSAGE } = await import('@/stores/reviewRecordShared')
 
 /** 后端 /activities 的原始记录（字段名与前端模型不同） */
-function activity(overrides: Record<string, any> = {}) {
+function activity(overrides: Record<string, unknown> = {}) {
   return {
     id: 9001,
     type: 'competition',

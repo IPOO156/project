@@ -13,6 +13,17 @@ const TOKEN_KEY = 'token'
 const REFRESH_TOKEN_KEY = 'refresh_token'
 const REMEMBER_KEY = 'remember_me'
 
+/**
+ * 登录会话代次：登录写入 / 登出清除时递增。
+ * 令牌刷新是异步的，发起时捕获代次，响应回来若代次已变（期间登出或换了账号），
+ * 则丢弃这次刷新结果，禁止把旧会话的 token 写回存储。
+ */
+let authEpoch = 0
+
+export function getAuthEpoch(): number {
+  return authEpoch
+}
+
 function storageOf(remember: boolean): Storage {
   return remember ? localStorage : sessionStorage
 }
@@ -34,6 +45,7 @@ export function setToken(token: string, remember = false): void {
   sessionStorage.removeItem(TOKEN_KEY)
   storageOf(remember).setItem(TOKEN_KEY, token)
   syncRememberMark(remember)
+  authEpoch += 1
 }
 
 /** 写入 refresh_token（与 token 使用同一存储策略） */
@@ -66,6 +78,7 @@ export function clearAuth(): void {
   localStorage.removeItem(REFRESH_TOKEN_KEY)
   sessionStorage.removeItem(REFRESH_TOKEN_KEY)
   localStorage.removeItem(REMEMBER_KEY)
+  authEpoch += 1
 }
 
 /**

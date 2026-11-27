@@ -41,10 +41,10 @@ export function mapActivityBase(a: ActivityLike) {
 export function applyResubmitted<T extends { id: string }>(
   list: T[],
   id: string,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
 ): void {
   const idx = list.findIndex((r) => r.id === id)
-  if (idx >= 0) list[idx] = { ...list[idx], ...data, status: 'pending' }
+  if (idx >= 0) list[idx] = { ...list[idx], ...data, status: 'pending' } as T
 }
 
 /**
@@ -54,7 +54,7 @@ export function applyResubmitted<T extends { id: string }>(
 export async function resubmitActivity(
   id: string,
   scope: 'archive' | 'award',
-  data: Record<string, any>,
+  data: Record<string, unknown>,
 ): Promise<void> {
   await updateActivity(Number(id), scope, data)
   ElMessage.success(RESUBMIT_SUCCESS_MESSAGE)

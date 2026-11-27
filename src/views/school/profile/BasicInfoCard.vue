@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ProfileInfo } from '@/shared/api/student'
 /**
  * 基本资料卡片（档案概览页左列）。
  * 数据来自 useUserStore（账号信息/头像）与 useArchiveStore（/profile/info 的学籍与联系方式），
@@ -46,7 +47,9 @@ interface ProfileEditForm {
 // 不进入编辑字段、不随保存提交。
 const formData = ref<Partial<ProfileEditForm>>({})
 /** /profile/info 中的学籍信息（学历层次/政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
-const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})
+const academicInfo = computed<Partial<ProfileInfo['academicInfo']>>(
+  () => archiveStore.profileData?.academicInfo ?? {},
+)
 /** 学历层次只读展示文本：后端标签优先，缺标签时回退原始值 */
 const degreeTypeText = computed(
   () => academicInfo.value.degreeTypeLabel ?? academicInfo.value.degreeType ?? '-',

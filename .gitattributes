@@ -1,0 +1,11 @@
+# 统一换行处理：仓库内保存 LF，检出时按平台自动转换。
+# 配合 .editorconfig（end_of_line=lf）与 Prettier endOfLine=auto，避免 Windows 下 CRLF 全部被判为格式错误。
+* text=auto
+
+*.ts text
+*.tsx text
+*.vue text
+*.scss text
+*.css text
+*.json text
+*.md text

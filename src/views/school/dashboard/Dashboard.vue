@@ -3,7 +3,7 @@ import type { QuickEntry } from './composables/useQuickEntries'
 import type { HomeDashboard } from '@/shared/api/student'
 import { ElMessage } from 'element-plus'
 import { Award, Clock, FileText, TrendingUp } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ScoreIndicatorDialog from '@/components/ui/ScoreIndicatorDialog.vue'
 import { useScoreIndicator } from '@/shared/composables/composables'
@@ -18,8 +18,13 @@ import QuickEntries from './components/QuickEntries.vue'
 import QuickEntrySettings from './components/QuickEntrySettings.vue'
 import StatsOverview from './components/StatsOverview.vue'
 import { useQuickEntries } from './composables/useQuickEntries'
-import ProfileRadarCard from './ProfileRadarCard.vue'
 import RecentActivitiesCard from './RecentActivitiesCard.vue'
+
+/**
+ * 雷达图依赖 echarts（体积约 500KB），改为异步组件：
+ * 首页 KPI/快捷入口先渲染，图表 chunk 到达后再挂载，避免整页首屏等待图表库。
+ */
+const ProfileRadarCard = defineAsyncComponent(() => import('./ProfileRadarCard.vue'))
 
 const router = useRouter()
 const activityStore = useActivityStore()
@@ -87,6 +92,9 @@ const kpiSnapshot = computed<KpiSnapshot>(() => {
   }
 })
 
+/** 首屏统计加载态：任一数据源在途即显示骨架，避免把「--」误读成 0 条 */
+const statsLoading = computed(() => homeStore.loading || submissionStore.loading)
+
 /** 通过率：仅在总数与通过数都真实存在时计算 */
 const passRate = computed<number | null>(() => {
   const { total, approved } = kpiSnapshot.value
@@ -143,7 +151,7 @@ const profileDimensions = computed(() => {
   const home: HomeDashboard | null = homeStore.data
   if (home?.radarChart?.dimensions && home.radarChart.dimensions.length > 0) {
     const { dimensions, current, target, previous } = home.radarChart
-    return dimensions.map((d: any, i: number) => {
+    return dimensions.map((d, i) => {
       // 距满分差值取后端 indicators[].gap（已按 DECIMAL(5,2) 取整），
       // 不在前端用 target - current 重算，避免浮点误差带出 3.3999999999999986 这类尾数
       const indicator = (home.indicators ?? []).find(
@@ -259,6 +267,7 @@ onMounted(() => {
       :cards="statsCards"
       :snapshot="kpiSnapshot"
       :meta="indicatorMeta"
+      :loading="statsLoading"
       @card-click="onStatCardClick"
     />
 

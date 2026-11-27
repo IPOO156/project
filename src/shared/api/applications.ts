@@ -5,7 +5,7 @@ import request from './request'
  */
 export function autosaveApplication(
   archiveId: number,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
 ): Promise<{
   archiveId: number
   status: number
@@ -60,7 +60,10 @@ export function getApplicationVersions(archiveId: number): Promise<{
 /** 更正已通过申报（POST /applications/{archiveId}/correction） */
 export function correctApplication(
   archiveId: number,
-  payload: { correctionReason: string; correctedData?: Record<string, any> } & Record<string, any>,
+  payload: { correctionReason: string; correctedData?: Record<string, unknown> } & Record<
+    string,
+    unknown
+  >,
 ): Promise<{
   archiveId: number
   newArchiveId: number

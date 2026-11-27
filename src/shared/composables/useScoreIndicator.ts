@@ -49,8 +49,8 @@ export function useScoreIndicator() {
        * 两者等价。Σ 不为 100 时只有后端字段是对的。
        * 更早曾用 `score / targetScore`（即得分率）冒充权重，使「权重」列与「得分率」列数字恒等（§5.2）。
        */
-      const totalTargetScore = list.reduce((sum: number, d: any) => sum + (d.targetScore ?? 0), 0)
-      indicators.value = list.map((d: any) => ({
+      const totalTargetScore = list.reduce((sum: number, d) => sum + (d.targetScore ?? 0), 0)
+      indicators.value = list.map((d) => ({
         label: d.dimensionName,
         score: d.score,
         // 不编造满分：后端未给出时按 0 处理（此前写死 100，会让「加权总分」的满分数值虚高）

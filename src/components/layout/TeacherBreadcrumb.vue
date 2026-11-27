@@ -99,4 +99,17 @@ const showGroup = computed(
     white-space: nowrap;
   }
 }
+
+// 窄屏只保留当前页层级，避免分组名 + 面包屑挤占顶栏
+@media (max-width: 768px) {
+  .teacher-crumb {
+    &__group {
+      display: none;
+    }
+
+    &__group + &__sep {
+      display: none;
+    }
+  }
+}
 </style>

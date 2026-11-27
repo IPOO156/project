@@ -1,4 +1,5 @@
 import type { ProfileDimension, TimelineNode } from '@/shared/types/types'
+import { asOptionalNumber, asText } from '@/shared/utils/unknown'
 import request from './request'
 import { getGrowthTimeline } from './student'
 
@@ -172,14 +173,14 @@ export async function getTimelineEvents(): Promise<TimelineNode[]> {
   const data = await getGrowthTimeline({ viewType: 'list' })
   const list = data.timeline ?? []
   return list.map((e) => ({
-    id: String(e.id),
-    semester: e.semesterName || '',
-    type: mapBackendEventType(e.eventType),
-    title: e.eventName,
-    description: e.content || '',
-    date: e.eventAt,
-    recordId: e.sourceId != null ? String(e.sourceId) : undefined,
-    status: e.status,
-    statusLabel: e.statusLabel || undefined,
+    id: asText(e.id),
+    semester: asText(e.semesterName),
+    type: mapBackendEventType(asOptionalNumber(e.eventType)),
+    title: asText(e.eventName),
+    description: asText(e.content),
+    date: asText(e.eventAt),
+    recordId: e.sourceId != null ? asText(e.sourceId) : undefined,
+    status: asOptionalNumber(e.status),
+    statusLabel: asText(e.statusLabel) || undefined,
   }))
 }
