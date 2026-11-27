@@ -15,7 +15,7 @@ interface Props {
   showRecords?: boolean
   status?: string
   rejectionReason?: string
-  enrollmentInfo?: Record<string, any>
+  enrollmentInfo?: Record<string, string>
   submitText?: string
 }
 

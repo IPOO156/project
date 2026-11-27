@@ -5,7 +5,7 @@ import { computed, ref } from 'vue'
  * 全局应用级状态
  *  - 侧边栏折叠 / 移动端检测
  *  - 面包屑（可由 Layout 接管，此处保留为兜底数据源）
- *  - 全局页面级 loading（供 useTableQuery / useUpload 等切换）
+ *  - 全局页面级 loading（供 useTableQuery 等切换）
  */
 export const useAppStore = defineStore('app', () => {
   // state

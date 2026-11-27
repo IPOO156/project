@@ -21,7 +21,7 @@ interface Props {
   /** 必填项清单：与 useApplicationPage 提交校验共用同一份，右栏进度据此计算 */
   requiredFields: readonly { key: string; label: string }[]
   /** 主表单 */
-  form: Record<string, any>
+  form: Record<string, unknown>
   /** 实时预览字段；不传时按必填项生成 */
   previewFields?: readonly ApplicationPreviewField[]
   /** 扩展信息（本人角色/证书编号/发证单位/有效期） */

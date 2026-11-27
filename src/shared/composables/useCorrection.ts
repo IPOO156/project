@@ -8,11 +8,12 @@ import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
 import { correctApplication } from '@/shared/api/applications'
 import { buildCorrectionPayload } from '@/shared/api/submission/payload'
+import { asRecord, asText } from '@/shared/utils/unknown'
 
 /** 纠错表单 */
 export interface CorrectionForm {
   reason: string
-  changedFields: Record<string, { old: any; new: any }>
+  changedFields: Record<string, { old: unknown; new: unknown }>
 }
 
 /** 不进入「变更字段」候选的展示型字段 */
@@ -29,8 +30,8 @@ const READONLY_FIELDS = new Set([
 export function useCorrection(type: string) {
   const correctionVisible = ref(false)
   const correctionSubmitting = ref(false)
-  const correctionRecord = ref<any>(null)
-  const originalSnapshot = ref<any>(null)
+  const correctionRecord = ref<Record<string, unknown> | null>(null)
+  const originalSnapshot = ref<Record<string, unknown> | null>(null)
 
   const correctionForm = reactive<CorrectionForm>({
     reason: '',
@@ -50,18 +51,18 @@ export function useCorrection(type: string) {
   }
 
   /** 打开纠错弹窗 */
-  function openCorrection(record: any) {
-    correctionRecord.value = record
-    originalSnapshot.value = { ...record }
+  function openCorrection(record: unknown) {
+    correctionRecord.value = asRecord(record)
+    originalSnapshot.value = { ...asRecord(record) }
     correctionForm.reason = ''
     correctionForm.changedFields = {}
     correctionVisible.value = true
   }
 
   /** 详情接口返回后补全快照（保留已填写的修改原因与变更项） */
-  function enrichCorrectionSnapshot(record: any) {
+  function enrichCorrectionSnapshot(record: unknown) {
     if (!correctionVisible.value || !record) return
-    originalSnapshot.value = { ...originalSnapshot.value, ...record }
+    originalSnapshot.value = { ...originalSnapshot.value, ...asRecord(record) }
   }
 
   /** 关闭纠错弹窗 */
@@ -77,9 +78,9 @@ export function useCorrection(type: string) {
    * 设置字段：`reason` 是修改原因输入框的受控值，其余字段记为变更项。
    * （此前 reason 也走变更字段，导致输入框永远空、原因跑到「变更字段」里。）
    */
-  function setChangedField(field: string, value: any) {
+  function setChangedField(field: string, value: unknown) {
     if (field === 'reason') {
-      correctionForm.reason = value ?? ''
+      correctionForm.reason = asText(value)
       return
     }
     if (!originalSnapshot.value) return
@@ -107,7 +108,7 @@ export function useCorrection(type: string) {
 
     correctionSubmitting.value = true
     try {
-      const changed: Record<string, any> = {}
+      const changed: Record<string, unknown> = {}
       for (const [field, item] of Object.entries(correctionForm.changedFields)) {
         changed[field] = item.new
       }

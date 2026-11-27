@@ -97,8 +97,14 @@ function handleEdit(id: string) {
 <template>
   <section class="timeline-list-view">
     <header class="tlv-header">
-      <h2 class="tlv-title">成长记录</h2>
-      <p class="tlv-subtitle">按学期或类型，快速回顾每一段成长。</p>
+      <div class="tlv-header__copy">
+        <h2 class="tlv-title">成长记录</h2>
+        <p class="tlv-subtitle">按学期或类型，快速回顾每一段成长。</p>
+      </div>
+      <button v-if="experiences.length > 0" type="button" class="tlv-add-header" @click="handleAdd">
+        <Plus :size="16" />
+        <span>添加经历</span>
+      </button>
     </header>
 
     <div class="tlv-filters">
@@ -225,7 +231,58 @@ function handleEdit(id: string) {
 }
 
 .tlv-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 2rem;
+}
+
+.tlv-header__copy {
+  min-width: 0;
+}
+
+// 列表视图的常驻新增入口：此前只有空态才出现「添加第一条经历」，
+// 有记录时移动端默认列表视图无新增入口，只能切回年轮点中心。
+.tlv-add-header {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  min-height: 40px;
+  border: 1px solid rgba(var(--gt-bark-rgb, 30 58 95), 0.35);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bark-mid, #2d5a87);
+  font-family: var(--gt-font-ui);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease;
+
+  &:hover {
+    border-color: rgba(var(--gt-bark-rgb, 30 58 95), 0.62);
+    background: rgba(var(--gt-bark-rgb, 30 58 95), 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--bark-mid, #2d5a87);
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 560px) {
+  .tlv-header {
+    align-items: center;
+  }
+
+  .tlv-add-header {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+  }
 }
 
 .tlv-title {

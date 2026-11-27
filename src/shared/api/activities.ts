@@ -68,7 +68,10 @@ export function getActivities(params?: {
 }
 
 /** 获取动态详情（GET /activities/{type}/{activityId}） */
-export function getActivityDetail(activityId: number, type: ActivityType): Promise<any> {
+export function getActivityDetail(
+  activityId: number,
+  type: ActivityType,
+): Promise<Record<string, unknown>> {
   return request.get(`/activities/${type}/${activityId}`)
 }
 
@@ -76,7 +79,7 @@ export function getActivityDetail(activityId: number, type: ActivityType): Promi
 export function updateActivity(
   activityId: number,
   type: ActivityType,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
 ): Promise<{
   archiveId: number
   status: number

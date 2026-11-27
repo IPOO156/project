@@ -17,9 +17,50 @@ import { previewFile } from '@/shared/api/common'
 import { CAREER_ACTION_STATUS_OPTIONS } from '@/shared/constants/dict'
 import { downloadBlobFile } from '@/shared/utils/download'
 
+/** 成果文件 / 里程碑佐证行 */
+interface PlanFile {
+  fileId?: number
+  fileName?: string
+}
+
+/** 里程碑行（行动下的 milestones） */
+interface CareerMilestoneRow {
+  id: number
+  milestoneTitle: string
+  milestoneDate?: string
+  isAchieved?: number
+  proofFileId?: number
+  proofFileName?: string
+}
+
+/** 行动行（目标下的 actions） */
+interface CareerActionRow {
+  id: number
+  actionTitle: string
+  actionDesc?: string
+  startDate?: string
+  endDate?: string
+  status: number
+  statusLabel?: string
+  completionRate?: number
+  files?: PlanFile[]
+  milestones?: CareerMilestoneRow[]
+}
+
+/** 目标行（详情接口的 goals） */
+interface CareerGoalRow {
+  id: number
+  goalTitle: string
+  goalDesc?: string
+  targetDate?: string
+  status: number
+  statusLabel?: string
+  actions?: CareerActionRow[]
+}
+
 const props = defineProps<{
   /** 目标列表（详情接口的 goals） */
-  goals?: any[]
+  goals?: CareerGoalRow[]
   /** 当前规划 id（写操作寻址） */
   planId: number | null
   /** 全量编辑：草稿 / 已退回（可增删改目标、行动、里程碑） */
@@ -29,11 +70,11 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'editGoal', goal?: any): void
-  (e: 'editAction', goal: any, action?: any): void
-  (e: 'editMilestone', action: any, milestone?: any): void
-  (e: 'editMilestoneProof', action: any, milestone: any): void
-  (e: 'uploadAction', action: any): void
+  (e: 'editGoal', goal?: CareerGoalRow): void
+  (e: 'editAction', goal: CareerGoalRow, action?: CareerActionRow): void
+  (e: 'editMilestone', action: CareerActionRow, milestone?: CareerMilestoneRow): void
+  (e: 'editMilestoneProof', action: CareerActionRow, milestone: CareerMilestoneRow): void
+  (e: 'uploadAction', action: CareerActionRow): void
   (e: 'refresh'): void
 }>()
 
@@ -41,11 +82,6 @@ const emit = defineEmits<{
 const deletingId = ref<number | null>(null)
 // ─── 成果文件打开 Loading（预览接口需要携带 Authorization，不能直接用 fileUrl 直链） ───
 const fileOpeningId = ref<number | null>(null)
-
-interface PlanFile {
-  fileId?: number
-  fileName?: string
-}
 
 /**
  * 打开行动成果 / 里程碑佐证：
@@ -105,7 +141,7 @@ async function confirmDelete(message: string, id: number, action: () => Promise<
   }
 }
 
-function handleDeleteGoal(goal: any) {
+function handleDeleteGoal(goal: CareerGoalRow) {
   if (props.planId == null) return
   const planId = props.planId
   confirmDelete('确定删除该目标吗？其下行动与里程碑将被一并删除。', goal.id, async () => {
@@ -113,7 +149,7 @@ function handleDeleteGoal(goal: any) {
   })
 }
 
-function handleDeleteAction(action: any) {
+function handleDeleteAction(action: CareerActionRow) {
   if (props.planId == null) return
   const planId = props.planId
   confirmDelete('确定删除该行动吗？其下里程碑将被一并删除。', action.id, async () => {
@@ -121,7 +157,7 @@ function handleDeleteAction(action: any) {
   })
 }
 
-function handleDeleteMilestone(milestone: any) {
+function handleDeleteMilestone(milestone: CareerMilestoneRow) {
   if (props.planId == null) return
   const planId = props.planId
   confirmDelete('确定删除该里程碑吗？', milestone.id, async () => {
@@ -129,7 +165,7 @@ function handleDeleteMilestone(milestone: any) {
   })
 }
 
-async function toggleMilestone(milestone: any, checked: string | number | boolean) {
+async function toggleMilestone(milestone: CareerMilestoneRow, checked: string | number | boolean) {
   if (props.planId == null) return
   const achieved = Boolean(checked)
   const payload: {
@@ -155,7 +191,7 @@ async function toggleMilestone(milestone: any, checked: string | number | boolea
   }
 }
 
-async function changeActionStatus(action: any, status: number) {
+async function changeActionStatus(action: CareerActionRow, status: number) {
   if (props.planId == null) return
   try {
     await updateCareerActionStatus(props.planId, action.id, status as 0 | 1 | 2)

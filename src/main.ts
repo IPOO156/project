@@ -17,7 +17,9 @@ import './assets/styles/teacher-console.scss'
 import './assets/styles/controls.scss'
 import './assets/styles/containers.scss'
 import './assets/styles/feedback.scss'
-import './shared/utils/echarts-setup'
+import './assets/styles/mobile.scss'
+// ECharts 按需注册由各图表组件自行完成（ProfileRadarCard / BoardCharts / PieChart / TrendChart），
+// 不再从入口全局引入，避免 echarts 被打进入口 chunk 拖慢登录页与首页首屏。
 
 // 项目动画策略：始终启用，不受系统 prefers-reduced-motion 影响
 // 详细见 src/assets/styles/motion-override.scss 和 docs/2026-07-20.md

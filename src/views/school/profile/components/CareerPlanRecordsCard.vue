@@ -41,7 +41,7 @@ const detailVisible = ref(false)
 const detailPlanId = ref<number | null>(null)
 const copyDialogVisible = ref(false)
 
-function openDetail(row: any) {
+function openDetail(row: Record<string, unknown>) {
   detailPlanId.value = Number(row.id)
   detailVisible.value = true
 }
@@ -268,6 +268,23 @@ function auditTime(row: CareerPlanRecord): string {
 
 .feedback-empty {
   color: var(--el-text-color-placeholder);
+}
+
+// ─── 窄屏：操作区换行，避免学期筛选与按钮超出卡片 ───
+@media (max-width: 480px) {
+  .card-space {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .card-space__ops {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .semester-filter {
+    width: 100%;
+  }
 }
 
 // ─── 夜间模式适配 ───

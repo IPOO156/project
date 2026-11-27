@@ -131,6 +131,31 @@ describe('useFormDraft 保存草稿与后端联动', () => {
     expect(raw.__backendId).toBe(5)
     app?.unmount()
   })
+
+  it('并发保存只建一次草稿，在途请求结束后的最新内容合并为 autosave', async () => {
+    let resolveCreate!: (id: number) => void
+    api.createDraft.mockReturnValue(
+      new Promise<number>((resolve) => {
+        resolveCreate = resolve
+      }),
+    )
+    api.autosaveApplication.mockResolvedValue(undefined)
+    const form: Record<string, unknown> = { competitionName: '草稿杯' }
+    const draft = mountDraft(form)
+
+    // 连点/慢网：第一次 createDraft 未返回时再次保存，不得重复 POST 建草稿
+    const first = draft.saveNow()
+    const second = draft.saveNow()
+    expect(api.createDraft).toHaveBeenCalledTimes(1)
+
+    resolveCreate(33)
+    await Promise.all([first, second])
+
+    expect(api.createDraft).toHaveBeenCalledTimes(1)
+    expect(api.autosaveApplication).toHaveBeenCalledTimes(1)
+    expect(form.archiveId).toBe(33)
+    app?.unmount()
+  })
 })
 
 describe('useFormDraft 扩展字段（本人角色等）', () => {

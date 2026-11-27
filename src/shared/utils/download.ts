@@ -36,6 +36,16 @@ export function downloadFromUrl(url: string, fileName: string): void {
 }
 
 /**
+ * 延迟回收 blob URL。
+ * `link.click()` 后同一 tick 立即 revoke，Firefox/Safari 在大文件下可能尚未开始读取 blob，
+ * 导致下载失败；统一延迟一段时间再回收（页面卸载时浏览器也会自动回收）。
+ */
+export function revokeObjectUrlAfterDelay(url: string, delayMs = 10_000): void {
+  if (typeof window === 'undefined') return
+  window.setTimeout(() => URL.revokeObjectURL(url), delayMs)
+}
+
+/**
  * 以 blob 方式请求文件并触发浏览器下载。
  * 接口需要携带 Authorization，因此不能直接用 <a href> 打开后端地址；
  * responseType=blob 时请求拦截器会把完整响应交回这里（见 request.ts）。
@@ -58,5 +68,5 @@ export async function downloadBlobFile(
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
-  URL.revokeObjectURL(url)
+  revokeObjectUrlAfterDelay(url)
 }

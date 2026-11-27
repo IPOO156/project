@@ -1,3 +1,4 @@
+import type { ProfileInfo } from '@/shared/api/student'
 import type { Award, Grade, Interest, ProfileDimension, TimelineNode } from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
@@ -25,7 +26,7 @@ export const useArchiveStore = defineStore('archive', () => {
   const dimensions = ref<ProfileDimension[]>([])
   const timelineEvents = ref<TimelineNode[]>([])
   /** GET /profile/info 原始响应（学籍/联系/自我评价等字段供页面直接消费） */
-  const profileData = ref<any>(null)
+  const profileData = ref<ProfileInfo | null>(null)
   const loading = ref(false)
   /**
    * /profile/info 是否**加载失败**（区别于「后端确实没有数据」）。
@@ -44,7 +45,7 @@ export const useArchiveStore = defineStore('archive', () => {
   const CACHE_TTL_MS = 60_000
 
   /** 把 /profile/info 的字段写入 state（保留原始响应供页面消费） */
-  function applyProfileInfo(profile: any) {
+  function applyProfileInfo(profile: ProfileInfo) {
     profileData.value = profile
     syncAcademicToUser(profile)
     const mappedDimensions = mapDimensions(profile)

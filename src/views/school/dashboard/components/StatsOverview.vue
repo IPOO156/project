@@ -27,6 +27,8 @@ const props = defineProps<{
   cards: StatCard[]
   snapshot: StatSnapshot
   meta: { ruleVersion: string; calculatedAt: string; completeness: string }
+  /** 首屏数据加载中：数字与图形用骨架占位，脚注显示「加载中…」 */
+  loading?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -173,7 +175,8 @@ function handleCardKeydown(event: KeyboardEvent, path?: string) {
         v-for="(card, index) in cards"
         :key="card.label"
         class="kpi"
-        :class="{ 'kpi--clickable': card.path }"
+        :class="{ 'kpi--clickable': card.path, 'kpi--loading': loading }"
+        :aria-busy="loading"
         role="button"
         :tabindex="card.path ? 0 : undefined"
         @click="handleCardClick(card.path)"
@@ -183,8 +186,11 @@ function handleCardKeydown(event: KeyboardEvent, path?: string) {
           <div class="kpi__info">
             <p class="kpi__label">{{ card.label }}</p>
             <p class="kpi__num">
-              <b class="kpi__value">{{ card.value }}</b>
-              <span class="kpi__unit">{{ card.unit }}</span>
+              <span v-if="loading" class="kpi__value-skeleton" aria-hidden="true" />
+              <template v-else>
+                <b class="kpi__value">{{ card.value }}</b>
+                <span class="kpi__unit">{{ card.unit }}</span>
+              </template>
             </p>
           </div>
           <span class="kpi__icon" :style="{ color: card.color, background: `${card.color}15` }">
@@ -193,55 +199,58 @@ function handleCardKeydown(event: KeyboardEvent, path?: string) {
         </div>
 
         <div class="kpi__viz">
-          <!-- 申报总数：通过 / 待审 / 其他 三色点阵 -->
-          <div v-if="index === 0" class="dots12" :class="{ 'dots12--empty': !hasTotal }">
-            <i v-for="(state, dotIndex) in dots" :key="dotIndex" :class="state" />
-          </div>
-
-          <!-- 已通过：三色图例（数值取自真实计数） -->
-          <div v-else-if="index === 1" class="dotlegend">
-            <span v-if="snapshot.approved !== null">
-              <i class="dotlegend__sq dotlegend__sq--pass" />通过 {{ snapshot.approved }}
-            </span>
-            <span v-if="snapshot.pending !== null">
-              <i class="dotlegend__sq dotlegend__sq--wait" />待审 {{ snapshot.pending }}
-            </span>
-            <span v-if="snapshot.rejected !== null">
-              <i class="dotlegend__sq dotlegend__sq--other" />其他 {{ snapshot.rejected }}
-            </span>
-            <span v-if="snapshot.approved === null" class="dotlegend__empty">
-              <i class="dotlegend__sq dotlegend__sq--empty" />暂无通过记录
-            </span>
-          </div>
-
-          <!-- 待审批：固定 5 格，按真实待审数点亮 -->
-          <div
-            v-else-if="index === 2"
-            class="pend"
-            :aria-label="`${snapshot.pending ?? 0} 项待审批`"
-          >
-            <i v-for="n in 5" :key="n" :class="{ on: n <= pendingSegments }" />
-          </div>
-
-          <!-- 学期均绩：0–4.0 刻度 -->
-          <div v-else class="gscale-wrap">
-            <div class="gscale" :class="{ 'gscale--empty': gpaPercent === null }">
-              <span
-                v-if="gpaPercent !== null"
-                class="gscale__fill"
-                :style="{ width: `${gpaPercent}%` }"
-              />
-              <span
-                v-if="gpaPercent !== null"
-                class="gscale__mk"
-                :style="{ left: `${gpaPercent}%` }"
-              />
+          <span v-if="loading" class="kpi__viz-skeleton" aria-hidden="true" />
+          <template v-else>
+            <!-- 申报总数：通过 / 待审 / 其他 三色点阵 -->
+            <div v-if="index === 0" class="dots12" :class="{ 'dots12--empty': !hasTotal }">
+              <i v-for="(state, dotIndex) in dots" :key="dotIndex" :class="state" />
             </div>
-            <div class="gscale__lab"><span>0</span><span>4.0</span></div>
-          </div>
+
+            <!-- 已通过：三色图例（数值取自真实计数） -->
+            <div v-else-if="index === 1" class="dotlegend">
+              <span v-if="snapshot.approved !== null">
+                <i class="dotlegend__sq dotlegend__sq--pass" />通过 {{ snapshot.approved }}
+              </span>
+              <span v-if="snapshot.pending !== null">
+                <i class="dotlegend__sq dotlegend__sq--wait" />待审 {{ snapshot.pending }}
+              </span>
+              <span v-if="snapshot.rejected !== null">
+                <i class="dotlegend__sq dotlegend__sq--other" />其他 {{ snapshot.rejected }}
+              </span>
+              <span v-if="snapshot.approved === null" class="dotlegend__empty">
+                <i class="dotlegend__sq dotlegend__sq--empty" />暂无通过记录
+              </span>
+            </div>
+
+            <!-- 待审批：固定 5 格，按真实待审数点亮 -->
+            <div
+              v-else-if="index === 2"
+              class="pend"
+              :aria-label="`${snapshot.pending ?? 0} 项待审批`"
+            >
+              <i v-for="n in 5" :key="n" :class="{ on: n <= pendingSegments }" />
+            </div>
+
+            <!-- 学期均绩：0–4.0 刻度 -->
+            <div v-else class="gscale-wrap">
+              <div class="gscale" :class="{ 'gscale--empty': gpaPercent === null }">
+                <span
+                  v-if="gpaPercent !== null"
+                  class="gscale__fill"
+                  :style="{ width: `${gpaPercent}%` }"
+                />
+                <span
+                  v-if="gpaPercent !== null"
+                  class="gscale__mk"
+                  :style="{ left: `${gpaPercent}%` }"
+                />
+              </div>
+              <div class="gscale__lab"><span>0</span><span>4.0</span></div>
+            </div>
+          </template>
         </div>
 
-        <div class="kpi__foot">{{ card.foot }}</div>
+        <div class="kpi__foot">{{ loading ? '加载中…' : card.foot }}</div>
       </div>
     </div>
   </section>
@@ -384,6 +393,31 @@ function handleCardKeydown(event: KeyboardEvent, path?: string) {
     color: var(--el-text-color-primary);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
+  }
+
+  /* 首屏加载骨架：只占位，不显示假数字 */
+  &__value-skeleton,
+  &__viz-skeleton {
+    display: block;
+    border-radius: 6px;
+    background: linear-gradient(
+      90deg,
+      var(--el-fill-color-light) 25%,
+      var(--el-fill-color-lighter) 37%,
+      var(--el-fill-color-light) 63%
+    );
+    background-size: 400% 100%;
+    animation: kpi-skeleton 1.2s ease-in-out infinite;
+  }
+
+  &__value-skeleton {
+    width: 64px;
+    height: 30px;
+  }
+
+  &__viz-skeleton {
+    width: 100%;
+    height: 18px;
   }
 
   &__unit {
@@ -545,6 +579,22 @@ function handleCardKeydown(event: KeyboardEvent, path?: string) {
     margin-top: 2px;
     font-size: $font-size-xs;
     color: var(--el-text-color-placeholder);
+  }
+}
+
+@keyframes kpi-skeleton {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi__value-skeleton,
+  .kpi__viz-skeleton {
+    animation: none;
   }
 }
 

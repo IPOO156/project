@@ -10,6 +10,7 @@ import { getCurrentInstance, provide, ref } from 'vue'
 import { getActivities } from '@/shared/api/activities'
 import { ARCHIVE_TYPE_ALIASES, deriveRecordTitle, STATUS_MAP } from '@/shared/api/submission'
 import { scopedStorageKey } from '@/shared/utils/storageScope'
+import { toLocalDateString } from '@/shared/utils/time'
 
 /** 本地草稿记录的统一 id（草稿仅本地持久化，无后端草稿接口） */
 export const DRAFT_LOCAL_ID = 'draft-local'
@@ -28,7 +29,7 @@ export interface FormRecord {
   status?: string
   /** 本地草稿关联的后端草稿 id：用于列表去重与「编辑」时定位后端记录 */
   backendId?: number
-  [key: string]: any
+  [key: string]: unknown
 }
 
 /** 正数 id 归一化；非法值返回 undefined（不伪造 id） */
@@ -169,6 +170,11 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
           submitDate: ((a.submit_time ?? a.submitTime) || '').slice(0, 10),
           semester: a.semester_name ?? a.semesterName ?? '',
           status: STATUS_MAP[a.status] ?? 'pending',
+          // 后端权限开关（6.1）提为驼峰，记录表按钮优先据此显示；
+          // 缺省时回落到前端状态判定，兼容旧后端未下发该字段。
+          canEdit: a.can_edit ?? a.canEdit,
+          canDelete: a.can_delete ?? a.canDelete,
+          canWithdraw: a.can_withdraw ?? a.canWithdraw,
         }))
       let draft = readLocalDraft()
       if (draft) {
@@ -196,13 +202,13 @@ export function useFormRecords(type: string, draftStorageKey?: string) {
 
   loadRecords()
 
-  function addRecord(title: string, extra: Record<string, any> = {}) {
+  function addRecord(title: string, extra: Record<string, unknown> = {}) {
     records.value.unshift({
       id: genId(),
       type,
       typeLabel: label,
       title,
-      submitDate: new Date().toISOString().slice(0, 10),
+      submitDate: toLocalDateString(),
       // 学期以调用方传入的真实提交数据为准（extra 覆盖），缺失时留空，不编造学期
       semester: '',
       ...extra,

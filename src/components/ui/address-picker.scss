@@ -1,0 +1,281 @@
+.address-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 480px;
+  max-width: 100%;
+}
+
+.address-picker.is-small {
+  width: 100%;
+  gap: 6px;
+}
+
+.address-picker.is-small .address-trigger {
+  height: 32px;
+  padding: 0 32px 0 10px;
+  font-size: 13px;
+}
+
+.address-picker.is-small .address-trigger__icon {
+  right: 10px;
+  width: 14px;
+  height: 14px;
+}
+
+.address-picker.is-small .address-columns {
+  height: 220px;
+}
+
+.address-picker.is-small .address-option {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.address-picker.is-small .address-panel__foot {
+  padding: 6px 10px;
+}
+
+.address-paste {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.address-paste :deep(.el-input) {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+.address-paste__btn {
+  flex: none;
+}
+
+.address-region {
+  position: relative;
+}
+
+.address-trigger {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  padding: 0 36px 0 12px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+
+  &:hover {
+    border-color: var(--el-color-primary);
+  }
+
+  &:focus,
+  &.is-open {
+    outline: none;
+    border-color: var(--el-color-primary);
+    box-shadow: 0 0 0 3px var(--el-color-primary-light-8);
+  }
+
+  &.is-placeholder {
+    color: var(--el-text-color-placeholder);
+  }
+
+  &:disabled {
+    background: var(--el-fill-color-light);
+    color: var(--el-text-color-disabled);
+    cursor: not-allowed;
+  }
+}
+
+.address-trigger__text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.address-trigger__icon {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  color: var(--el-text-color-secondary);
+  transform: translateY(-50%);
+  transition: transform 0.18s ease;
+}
+
+.address-trigger.is-open .address-trigger__icon {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.address-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 10px;
+  box-shadow: var(--el-box-shadow-light);
+}
+
+.address-columns {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  height: 264px;
+}
+
+.address-column {
+  overflow-y: auto;
+  border-right: 1px solid var(--el-border-color-lighter);
+  scrollbar-color: var(--el-border-color) transparent;
+  scrollbar-width: thin;
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--el-border-color);
+    border-radius: 999px;
+  }
+}
+
+.address-column__title {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 9px 12px;
+  background: var(--el-fill-color-lighter);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+
+.address-option {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--el-fill-color-light);
+  }
+
+  &.is-active {
+    background: var(--el-color-primary-light-9);
+    color: var(--el-color-primary);
+    font-weight: 600;
+  }
+}
+
+.address-panel__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.address-clear {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--el-color-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.address-hint {
+  overflow: hidden;
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.address-detail {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .address-picker {
+    width: 100%;
+  }
+
+  // 窄屏改为底部弹层：原实现 absolute 在表单内只有触发框宽度，
+  // 四级列被压到 40~50px 且面板向下溢出视口，320 宽基本不可用。
+  .address-panel {
+    position: fixed;
+    top: auto;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    left: 8px;
+    z-index: 2000;
+    max-height: 74dvh;
+    border-radius: 14px;
+    box-shadow:
+      0 0 0 100vmax rgba(0, 0, 0, 0.3),
+      0 12px 40px rgba(0, 0, 0, 0.2);
+  }
+
+  .address-picker .address-columns {
+    height: min(44dvh, 280px);
+  }
+
+  .address-trigger {
+    height: 44px;
+  }
+
+  .address-option {
+    padding: 11px 12px;
+    font-size: 14px;
+  }
+
+  .address-panel__foot {
+    position: sticky;
+    bottom: 0;
+    background: var(--el-bg-color);
+  }
+}
+
+// 320/360 宽：四列改 2×2，单列从 76px 提升到约 150px，长地名可完整显示
+@media (max-width: 480px) {
+  .address-picker .address-columns {
+    display: grid;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: min(20dvh, 140px);
+    height: auto;
+    max-height: 44dvh;
+    overflow-y: auto;
+  }
+
+  .address-column {
+    max-height: min(20dvh, 140px);
+  }
+
+  // 只出现省列时占满整行，避免右侧留半屏空白
+  .address-column:only-child {
+    grid-column: 1 / -1;
+  }
+}

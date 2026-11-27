@@ -1,5 +1,13 @@
 import type { CareerPlanRecord } from '@/shared/types/types'
 import { downloadBlobFile } from '@/shared/utils/download'
+import {
+  asArray,
+  asNumber,
+  asOptionalNumber,
+  asOptionalText,
+  asRecord,
+  asText,
+} from '@/shared/utils/unknown'
 import { updateActivity } from './activities'
 import { getSemesters } from './common'
 import request from './request'
@@ -47,33 +55,39 @@ export async function getCareerPlans(): Promise<CareerPlanRecord[]> {
   return pages.flat().map(mapCareerPlan)
 }
 
-function fetchCareerPlanPage(page: number): Promise<{ list: any[]; total: number }> {
+function fetchCareerPlanPage(
+  page: number,
+): Promise<{ list: Record<string, unknown>[]; total: number }> {
   return request
     .get('/profile/career-plans', { params: { page, per_page: CAREER_PLAN_PAGE_SIZE } })
-    .then((res: any) => ({
-      list: Array.isArray(res?.list) ? res.list : [],
-      // 文档 4.3 的 total 位于 pagination 内，无顶层 total；兼容部分接口额外返回顶层 total
-      total: Number(res?.pagination?.total ?? res?.total) || 0,
-    }))
+    .then((res: unknown) => {
+      const data = asRecord(res)
+      const pagination = asRecord(data.pagination)
+      return {
+        list: asArray<Record<string, unknown>>(data.list),
+        // 文档 4.3 的 total 位于 pagination 内，无顶层 total；兼容部分接口额外返回顶层 total
+        total: asNumber(pagination.total ?? data.total),
+      }
+    })
 }
 
-function mapCareerPlan(p: any): CareerPlanRecord {
+function mapCareerPlan(plan: Record<string, unknown>): CareerPlanRecord {
   return {
-    id: String(p.id),
-    semesterId: typeof p.semesterId === 'number' ? p.semesterId : undefined,
-    semester: p.semesterName || '',
-    title: p.title,
-    submitDate: (p.submittedAt || '').slice(0, 10),
-    status: CAREER_PLAN_STATUS_MAP[p.status] ?? 'draft',
-    progressRate: p.progressRate,
-    statusLabel: p.statusLabel,
-    auditedAt: p.auditedAt || undefined,
-    currentVersion: p.currentVersion,
-    submitCount: p.submitCount,
-    rejectedReason: p.rejectedReason || undefined,
-    auditorName: p.auditorName || undefined,
-    teacherFeedback: p.teacherFeedback || undefined,
-    reflection: p.reflection || undefined,
+    id: asText(plan.id),
+    semesterId: asOptionalNumber(plan.semesterId),
+    semester: asText(plan.semesterName),
+    title: asText(plan.title),
+    submitDate: asText(plan.submittedAt).slice(0, 10),
+    status: CAREER_PLAN_STATUS_MAP[asNumber(plan.status)] ?? 'draft',
+    progressRate: asOptionalNumber(plan.progressRate),
+    statusLabel: asOptionalText(plan.statusLabel),
+    auditedAt: asOptionalText(plan.auditedAt),
+    currentVersion: asOptionalNumber(plan.currentVersion),
+    submitCount: asOptionalNumber(plan.submitCount),
+    rejectedReason: asOptionalText(plan.rejectedReason),
+    auditorName: asOptionalText(plan.auditorName),
+    teacherFeedback: asOptionalText(plan.teacherFeedback),
+    reflection: asOptionalText(plan.reflection),
   }
 }
 
@@ -95,7 +109,7 @@ export interface SubmitCareerPlanPayload {
   title: string
   content?: string
   requirement?: string
-  goals?: any[]
+  goals?: unknown[]
   evidenceFileIds?: number[]
 }
 
@@ -106,14 +120,14 @@ export interface SubmitCareerPlanPayload {
  */
 export function submitCareerPlan(data: SubmitCareerPlanPayload): Promise<CareerPlanRecord> {
   // id / submitDate 仅在后端未回传时兜底（后端已回 planId / submittedAt），非示例数据
-  const buildRecord = (id: string, res?: any): CareerPlanRecord => ({
+  const buildRecord = (id: string, res?: Record<string, unknown>): CareerPlanRecord => ({
     id,
     semester: data.semester,
     title: data.title,
-    submitDate: (res?.submittedAt || new Date().toISOString()).slice(0, 10),
+    submitDate: (asText(res?.submittedAt) || new Date().toISOString()).slice(0, 10),
     status: 'pending',
-    progressRate: res?.progressRate,
-    statusLabel: res?.statusLabel ?? '待审批',
+    progressRate: asOptionalNumber(res?.progressRate),
+    statusLabel: asText(res?.statusLabel, '待审批'),
   })
 
   return getSemesterIdByName(data.semester).then((semesterId) =>
@@ -127,7 +141,10 @@ export function submitCareerPlan(data: SubmitCareerPlanPayload): Promise<CareerP
         evidenceFileIds: data.evidenceFileIds,
         isDraft: 0,
       })
-      .then((res: any) => buildRecord(String(res.planId ?? nextId()), res)),
+      .then((res: unknown) => {
+        const data = asRecord(res)
+        return buildRecord(asText(data.planId) || String(nextId()), data)
+      }),
   )
 }
 
@@ -137,7 +154,7 @@ export interface SaveCareerPlanDraftPayload {
   title: string
   content?: string
   requirement?: string
-  goals?: any[]
+  goals?: unknown[]
   evidenceFileIds?: number[]
 }
 
@@ -170,7 +187,7 @@ export function submitCareerPlanRecord(
 }
 
 /** 获取职业规划详情（GET /profile/career-plans/{planId}） */
-export function getCareerPlanDetail(planId: number): Promise<any> {
+export function getCareerPlanDetail(planId: number): Promise<Record<string, unknown>> {
   return request.get(`/profile/career-plans/${planId}`)
 }
 

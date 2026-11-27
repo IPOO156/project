@@ -13,6 +13,7 @@ import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { ORGANIZATION_LEVELS, ROLE_OPTIONS } from '@/shared/constants/dict'
+import { asText } from '@/shared/utils/unknown'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
 
@@ -78,17 +79,17 @@ const REJECT_ITEMS = [
   '与已有记录重复，提交前的查重检测会拦截。',
 ]
 
-function handleEditClick(row: any) {
-  page.form.department = row.department || ''
-  page.form.organizationLevel = row.organizationLevel || ''
-  page.form.position = row.position || ''
-  page.form.startDate = row.startDate || ''
-  page.form.endDate = row.endDate || ''
-  page.form.semester = row.semester || ''
+function handleEditClick(row: Record<string, unknown>) {
+  page.form.department = asText(row.department)
+  page.form.organizationLevel = asText(row.organizationLevel)
+  page.form.position = asText(row.position)
+  page.form.startDate = asText(row.startDate)
+  page.form.endDate = asText(row.endDate)
+  page.form.semester = asText(row.semester)
   page.handleEditClick(row)
 }
 
-async function handleRemove(row: any) {
+async function handleRemove(row: { id: string }) {
   try {
     await ElMessageBox.confirm('确定删除该记录吗？删除后不可恢复。', '删除确认', {
       confirmButtonText: '确定删除',
