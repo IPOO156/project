@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
+import { AlertTriangle, CheckCircle2, Eye, Lightbulb, ListChecks } from 'lucide-vue-next'
 import { computed, unref } from 'vue'
 
 /**
@@ -99,26 +100,68 @@ const previewItems = computed(() => {
     </div>
 
     <aside class="app-form-side" aria-label="填写辅助">
-      <section class="side-card">
-        <h3 class="side-card__title">填写进度</h3>
+      <!-- 进度环 + 未填项 chip：把「还差什么」变成一眼可读的信息 -->
+      <section class="side-card side-card--progress">
+        <h3 class="side-card__title"><ListChecks :size="15" />填写进度</h3>
         <div class="side-progress">
-          <b>{{ requiredProgress.done }}</b>
-          <span>/ {{ requiredProgress.total }} 项必填</span>
+          <div class="side-progress__ring">
+            <svg
+              width="64"
+              height="64"
+              viewBox="0 0 64 64"
+              role="img"
+              :aria-label="`必填项完成 ${requiredProgress.percent}%`"
+            >
+              <circle
+                cx="32"
+                cy="32"
+                r="26"
+                fill="none"
+                stroke="var(--el-border-color)"
+                stroke-width="6"
+              />
+              <!-- 0% 时圆头描边会缩成一个孤立圆点，干脆不画进度弧，只留底环 -->
+              <circle
+                v-if="requiredProgress.percent > 0"
+                cx="32"
+                cy="32"
+                r="26"
+                fill="none"
+                :stroke="
+                  requiredProgress.percent === 100
+                    ? 'var(--el-color-success)'
+                    : 'var(--el-color-primary)'
+                "
+                stroke-width="6"
+                stroke-linecap="round"
+                pathLength="100"
+                :stroke-dasharray="`${requiredProgress.percent} ${100 - requiredProgress.percent}`"
+                transform="rotate(-90 32 32)"
+                class="side-progress__arc"
+              />
+            </svg>
+            <span class="side-progress__pct">{{ requiredProgress.percent }}%</span>
+          </div>
+          <div class="side-progress__info">
+            <p class="side-progress__count">
+              <b>{{ requiredProgress.done }}</b
+              ><span>/ {{ requiredProgress.total }} 项必填</span>
+            </p>
+            <p v-if="requiredProgress.missing.length" class="side-muted">
+              还差 {{ requiredProgress.missing.length }} 项
+            </p>
+            <p v-else class="side-progress__done">
+              <CheckCircle2 :size="14" />必填项已完成，可以提交
+            </p>
+          </div>
         </div>
-        <div class="side-progress__bar">
-          <i :style="{ width: `${requiredProgress.percent}%` }"></i>
-        </div>
-        <p class="side-muted">
-          {{
-            requiredProgress.missing.length
-              ? `还差：${requiredProgress.missing.join('、')}`
-              : '必填项已完成，可以提交'
-          }}
-        </p>
+        <ul v-if="requiredProgress.missing.length" class="side-progress__missing">
+          <li v-for="item in requiredProgress.missing" :key="item">{{ item }}</li>
+        </ul>
       </section>
 
       <section class="side-card">
-        <h3 class="side-card__title">实时预览</h3>
+        <h3 class="side-card__title"><Eye :size="15" />实时预览</h3>
         <ul v-if="previewItems.length" class="side-preview">
           <li v-for="item in previewItems" :key="item.label">
             <span>{{ item.label }}</span
@@ -128,15 +171,15 @@ const previewItems = computed(() => {
         <p v-else class="side-muted">填写后这里会同步显示摘要</p>
       </section>
 
-      <section class="side-card">
-        <h3 class="side-card__title">填写指引</h3>
-        <ul class="side-list">
+      <section class="side-card side-card--guide">
+        <h3 class="side-card__title"><Lightbulb :size="15" />填写指引</h3>
+        <ol class="side-list side-list--ordered">
           <li v-for="item in guideItems" :key="item">{{ item }}</li>
-        </ul>
+        </ol>
       </section>
 
-      <section class="side-card">
-        <h3 class="side-card__title">常见退回原因</h3>
+      <section class="side-card side-card--reject">
+        <h3 class="side-card__title"><AlertTriangle :size="15" />常见退回原因</h3>
         <ul class="side-list">
           <li v-for="item in rejectItems" :key="item">{{ item }}</li>
         </ul>
@@ -184,47 +227,118 @@ const previewItems = computed(() => {
 .side-card {
   padding: 14px 16px;
   border: 1px solid var(--el-border-color-lighter);
-  border-radius: 8px;
-  background: var(--el-fill-color-blank);
+  border-radius: $radius-lg;
+  background: var(--el-bg-color);
+
+  /* 进度卡是辅助栏的主信息：浅品牌底 + 品牌描边略作强调 */
+  &--progress {
+    border-color: var(--el-color-primary-light-8);
+    background: linear-gradient(135deg, var(--el-color-primary-light-9), var(--el-bg-color) 72%);
+  }
 
   &__title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     margin: 0 0 10px;
     font-size: 13px;
     font-weight: 600;
     line-height: 1.4;
     color: var(--el-text-color-primary);
+
+    svg {
+      flex-shrink: 0;
+      color: var(--el-color-primary);
+    }
+  }
+
+  &--guide &__title svg {
+    color: var(--el-color-warning);
+  }
+
+  &--reject &__title svg {
+    color: var(--el-color-danger);
   }
 }
 
 .side-progress {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  align-items: center;
+  gap: 14px;
 
-  b {
-    font-size: 22px;
-    line-height: 1.1;
-    color: var(--el-color-primary);
-  }
+  &__ring {
+    position: relative;
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
 
-  span {
-    font-size: 12px;
-    color: var(--el-text-color-secondary);
-  }
-
-  &__bar {
-    height: 6px;
-    margin: 8px 0 6px;
-    border-radius: 3px;
-    background: var(--el-fill-color);
-    overflow: hidden;
-
-    i {
+    svg {
       display: block;
-      height: 100%;
-      border-radius: inherit;
-      background: var(--el-color-primary);
-      transition: width 0.24s ease;
+    }
+  }
+
+  &__arc {
+    transition: stroke-dasharray 0.3s ease;
+  }
+
+  &__pct {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--el-text-color-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__info {
+    min-width: 0;
+  }
+
+  &__count {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin: 0;
+
+    b {
+      font-size: 22px;
+      font-weight: 600;
+      line-height: 1.1;
+      color: var(--el-color-primary);
+    }
+
+    span {
+      font-size: 12px;
+      color: var(--el-text-color-secondary);
+    }
+  }
+
+  &__done {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--el-color-success);
+  }
+
+  &__missing {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      padding: 0 8px;
+      border-radius: 999px;
+      background: var(--el-color-warning-light-9);
+      color: var(--el-color-warning);
+      font-size: 12px;
+      line-height: 18px;
     }
   }
 }
@@ -232,7 +346,6 @@ const previewItems = computed(() => {
 .side-preview {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -241,8 +354,21 @@ const previewItems = computed(() => {
     display: flex;
     justify-content: space-between;
     gap: 12px;
+    padding: 6px 0;
     font-size: 12px;
     line-height: 1.5;
+
+    &:first-child {
+      padding-top: 0;
+    }
+
+    &:last-child {
+      padding-bottom: 0;
+    }
+
+    & + li {
+      border-top: 1px dashed var(--el-border-color-lighter);
+    }
   }
 
   span {
@@ -268,6 +394,39 @@ const previewItems = computed(() => {
   font-size: 12px;
   line-height: 1.6;
   color: var(--el-text-color-regular);
+
+  /* 指引按步骤编号，弱化项目符号的「随手记」感 */
+  &--ordered {
+    padding-left: 0;
+    list-style: none;
+    counter-reset: side-step;
+
+    li {
+      position: relative;
+      padding-left: 22px;
+      counter-increment: side-step;
+
+      &::before {
+        content: counter(side-step);
+        position: absolute;
+        top: 2px;
+        left: 0;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--el-color-primary-light-9);
+        color: var(--el-color-primary);
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 16px;
+        text-align: center;
+      }
+    }
+  }
+}
+
+.side-card--reject .side-list li::marker {
+  color: var(--el-color-danger);
 }
 
 .side-muted {

@@ -2,63 +2,74 @@
 /**
  * AwardHub - 奖项中心
  *
- * 合并原「我的奖项」（奖项看板）与「奖项报名」（三类之星）两个菜单入口。
- * 默认进入「奖项看板」总览，看板页不展示页签，可经「参与度总览」的入口进入报名页；
- * 报名页顶部保留 4 张卡片页签，可互相切换或点「奖项看板」返回总览。
+ * 与申报中心同一页面结构：页头 → 审核进度 → 分类条 → 报名表单/记录。
+ * 三个之星分类平铺为顶部切换条，默认进入「竞赛之星」，不再插入奖项看板页。
+ *
+ * 分类计数与申报中心同源：读取 /activities 记录并按类型归入三个之星，
+ * 因此「退回 N / 待审 N / N 条 / 未报名」的展示优先级与申报中心完全一致。
  */
-import { GraduationCap, LayoutDashboard, Lightbulb, Trophy } from 'lucide-vue-next'
+import type { ApplicationType } from '@/shared/types/types'
+import { GraduationCap, Lightbulb, Trophy } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import SubmissionCategoryBar from '@/components/ui/SubmissionCategoryBar.vue'
+import SubmissionProgressBar from '@/components/ui/SubmissionProgressBar.vue'
 import { getAwardsOverview } from '@/shared/api/awards'
-import AwardReview from '@/views/school/approval/AwardReview.vue'
+import { ARCHIVE_TYPE_TO_KEY } from '@/shared/api/submission/archive-type'
+import { useSubmissionStore } from '@/stores/stores'
 import CompetitionStarList from './competition-star/CompetitionStarList.vue'
 import InnovationStarList from './innovation-star/InnovationStarList.vue'
 import ScientificStarList from './scientific-star/ScientificStarList.vue'
 
 const route = useRoute()
 const router = useRouter()
+const submissionStore = useSubmissionStore()
 
 const modules = [
-  {
-    key: 'award-review',
-    label: '奖项看板',
-    icon: LayoutDashboard,
-    component: AwardReview,
-    desc: '总览三类之星报名情况',
-  },
   {
     key: 'competition-star',
     label: '竞赛之星',
     icon: Trophy,
     component: CompetitionStarList,
-    desc: '学科竞赛类奖项报名',
   },
   {
     key: 'scientific-star',
     label: '科研之星',
     icon: GraduationCap,
     component: ScientificStarList,
-    desc: '科研项目、软著与论文',
   },
   {
     key: 'innovation-star',
     label: '双创之星',
     icon: Lightbulb,
     component: InnovationStarList,
-    desc: '创新创业项目与实践',
   },
 ] as const
 
-/** 看板页：只做总览，不展示页签卡片 */
-const BOARD_KEY = 'award-review'
-/** 无 tab 参数时落到奖项看板（2026-11-23 反馈：点开奖项中心需先看到看板） */
-const DEFAULT_KEY = 'award-review'
+/** 无 tab 参数时落到竞赛之星（与申报中心默认进入学科竞赛一致） */
+const DEFAULT_KEY = 'competition-star'
 
-/** 页签 key → /awards/overview 的 typeDistribution key */
-const COUNT_KEY_OF_MODULE: Record<string, string> = {
-  'competition-star': 'competition_star',
-  'scientific-star': 'research_star',
-  'innovation-star': 'innovation_star',
+/**
+ * 分类 key → /activities 记录类型。
+ * 科研之星由科研项目 / 软著 / 论文三类报名组成，计数时合并进同一个分类。
+ */
+const RECORD_TYPES_OF_MODULE: Record<string, ApplicationType[]> = {
+  'competition-star': ['competitionStar'],
+  'scientific-star': ['scientificProject', 'softwareCopyright', 'paper'],
+  'innovation-star': ['innovationStar'],
+}
+
+/** 记录 type → 模块 key：一次遍历即可把全部记录归类到各分类 */
+const MODULE_KEY_OF_TYPE: Record<string, string> = Object.fromEntries(
+  Object.entries(RECORD_TYPES_OF_MODULE).flatMap(([key, types]) =>
+    types.map((type) => [type, key] as const),
+  ),
+)
+
+/** 后端下划线别名 → 前端 type key（记录一般已归一化，这里兜底旧数据） */
+function normalizeType(type: string): ApplicationType {
+  return (ARCHIVE_TYPE_TO_KEY[type] ?? type) as ApplicationType
 }
 
 function resolveKeyFromRoute(tab: unknown): string {
@@ -69,21 +80,88 @@ function resolveKeyFromRoute(tab: unknown): string {
 const activeKey = ref(resolveKeyFromRoute(route.query.tab))
 const activeModule = computed(() => modules.find((item) => item.key === activeKey.value)!)
 
-/** 各页签的报名数量，用于卡片右上角徽标（与申报中心同一视觉口径） */
-const overview = ref<Awaited<ReturnType<typeof getAwardsOverview>> | null>(null)
-
-function countOf(key: string): number {
-  if (!overview.value) return 0
-  if (key === BOARD_KEY) return overview.value.totalSubmissions ?? 0
-  return overview.value.typeDistribution?.[COUNT_KEY_OF_MODULE[key]] ?? 0
+interface CategoryStat {
+  total: number
+  pending: number
+  approved: number
+  rejected: number
 }
 
-onMounted(async () => {
-  try {
-    overview.value = await getAwardsOverview()
-  } catch {
-    // 徽标属于辅助信息，失败时静默不展示，不影响报名流程
+/** 每个之星分类的报名统计：只遍历一次全量记录，避免模板里反复 filter */
+const categoryStats = computed(() => {
+  const map = new Map<string, CategoryStat>(
+    modules.map((item) => [item.key, { total: 0, pending: 0, approved: 0, rejected: 0 }]),
+  )
+  for (const record of submissionStore.records) {
+    const key = MODULE_KEY_OF_TYPE[normalizeType(record.type)]
+    const stat = key ? map.get(key) : undefined
+    if (!stat) continue
+    stat.total += 1
+    if (record.status === 'pending') stat.pending += 1
+    else if (record.status === 'approved') stat.approved += 1
+    else if (record.status === 'rejected') stat.rejected += 1
   }
+  return map
+})
+
+/**
+ * 分类条数据：状态优先级与申报中心一致（退回 > 待审 > 条数 > 未报名），
+ * 两个中心共用 SubmissionCategoryBar，样式自然统一。
+ */
+const categoryItems = computed(() =>
+  modules.map((item) => {
+    const stat = categoryStats.value.get(item.key)!
+    const state =
+      stat.rejected > 0
+        ? { text: `退回 ${stat.rejected}`, tone: 'danger' as const }
+        : stat.pending > 0
+          ? { text: `待审 ${stat.pending}`, tone: 'warning' as const }
+          : stat.total > 0
+            ? { text: `${stat.total} 条`, tone: 'count' as const }
+            : { text: '未报名', tone: 'muted' as const }
+    return { ...item, state }
+  }),
+)
+
+/** 有报名的分类数，口径对齐申报中心的「x/N 已填报」 */
+const filledCount = computed(
+  () => categoryItems.value.filter((item) => item.state.tone !== 'muted').length,
+)
+
+/** 审核进度：与申报中心同源同口径，均按记录状态汇总 */
+const progress = computed(() => {
+  let total = 0
+  let pending = 0
+  let approved = 0
+  let rejected = 0
+  for (const stat of categoryStats.value.values()) {
+    total += stat.total
+    pending += stat.pending
+    approved += stat.approved
+    rejected += stat.rejected
+  }
+  return { total, pending, approved, rejected }
+})
+
+/** 概览仅用于「本学期新增」补充说明，失败时静默不展示 */
+const overview = ref<Awaited<ReturnType<typeof getAwardsOverview>> | null>(null)
+
+const progressNote = computed(() =>
+  typeof overview.value?.newThisSemester === 'number'
+    ? `本学期新增 ${overview.value.newThisSemester} 项`
+    : undefined,
+)
+
+onMounted(() => {
+  // 计数与状态来自 /activities，与申报中心同源；store 内有 60s 缓存，避免重复请求
+  void submissionStore.fetchRecords()
+  getAwardsOverview()
+    .then((data) => {
+      overview.value = data
+    })
+    .catch(() => {
+      // 辅助说明失败不影响报名流程
+    })
 })
 
 watch(
@@ -103,28 +181,20 @@ function switchModule(key: string) {
 
 <template>
   <div class="award-hub">
-    <!-- 看板页保持「只看总览」；进入任一之星报名页后顶部才出现页签，可互相切换或回到看板 -->
-    <div v-if="activeKey !== BOARD_KEY" class="award-hub__grid">
-      <button
-        v-for="item in modules"
-        :key="item.key"
-        type="button"
-        class="award-hub__tab"
-        :class="{ 'is-active': item.key === activeKey }"
-        @click="switchModule(item.key)"
-      >
-        <div v-if="countOf(item.key) > 0" class="award-hub__tab-badge">
-          {{ countOf(item.key) }}
-        </div>
-        <div class="award-hub__tab-icon">
-          <component :is="item.icon" :size="18" />
-        </div>
-        <div class="award-hub__tab-body">
-          <div class="award-hub__tab-title">{{ item.label }}</div>
-          <div class="award-hub__tab-desc">{{ item.desc }}</div>
-        </div>
-      </button>
-    </div>
+    <PageHeader title="奖项中心" subtitle="选择奖项分类填写报名材料，提交后在下方跟踪审核进度" />
+
+    <!-- 审核进度：与申报中心同一条分段进度条 -->
+    <SubmissionProgressBar v-bind="progress" :note="progressNote" />
+
+    <!-- 分类切换条：与申报中心共用 SubmissionCategoryBar，状态优先级与样式完全一致 -->
+    <SubmissionCategoryBar
+      title="奖项分类"
+      :meta="`${filledCount}/${modules.length} 之星有报名`"
+      :items="categoryItems"
+      :active-key="activeKey"
+      :columns="3"
+      @select="switchModule"
+    />
 
     <section class="award-hub__panel">
       <Transition name="module-fade">
@@ -140,115 +210,7 @@ function switchModule(key: string) {
 .award-hub {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.award-hub__grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.award-hub__tab {
-  position: relative;
-  min-height: 84px;
-  padding: 14px 12px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
-  background: var(--el-bg-color);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.award-hub__tab:hover {
-  border-color: #d4a574;
-  box-shadow: 0 4px 12px rgba(30, 58, 95, 0.06);
-}
-
-.award-hub__tab.is-active {
-  border-color: var(--el-color-primary);
-  background: rgba(var(--el-color-primary-rgb, 30 58 95), 0.03);
-}
-
-.award-hub__tab.is-active .award-hub__tab-title {
-  color: var(--el-color-primary);
-}
-
-.award-hub__tab-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 10px;
-  background: var(--el-color-primary);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.award-hub__tab-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: rgba(var(--el-color-primary-rgb, 30 58 95), 0.06);
-  color: var(--el-color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.award-hub__tab-body {
-  min-width: 0;
-  flex: 1;
-}
-
-.award-hub__tab-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  transition: color 0.25s ease;
-}
-
-.award-hub__tab-desc {
-  margin-top: 3px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--el-text-color-secondary);
-}
-
-.award-hub__panel {
-  position: relative;
-  min-width: 0;
-  min-height: 55vh;
-  overflow: visible;
-}
-
-.award-hub__panel-item {
-  width: 100%;
-}
-
-@media (max-width: 1200px) {
-  .award-hub__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .award-hub__grid {
-    grid-template-columns: 1fr;
-  }
+  gap: 20px;
 }
 
 /* 原地交叉淡入：离场侧脱离文档流，进出可重叠，不再有 out-in 的纯空白帧 */

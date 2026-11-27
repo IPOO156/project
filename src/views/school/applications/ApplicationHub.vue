@@ -14,6 +14,10 @@ import {
 } from 'lucide-vue-next'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import SubmissionCategoryBar from '@/components/ui/SubmissionCategoryBar.vue'
+import SubmissionProgressBar from '@/components/ui/SubmissionProgressBar.vue'
+import { ARCHIVE_TYPE_TO_KEY } from '@/shared/api/submission/archive-type'
 import { useSubmissionStore } from '@/stores/stores'
 import BookReportList from './book-report/BookReportList.vue'
 import CertificateList from './certificate/CertificateList.vue'
@@ -103,6 +107,8 @@ const modules = [
   },
 ] as const
 
+const MODULE_KEYS = modules.map((item) => item.key)
+
 /**
  * 模块 key → 申报记录 type。
  * 菜单/页签用连字符（social-practice / book-report），记录类型为 camelCase，
@@ -111,16 +117,6 @@ const modules = [
 const RECORD_TYPE_OF_MODULE: Record<string, ApplicationType> = {
   'social-practice': 'socialPractice',
   'book-report': 'bookReport',
-}
-
-/**
- * 各分类已提交记录数，用于页签徽标。
- * 数据源与「我的申报 / 消息中心」一致，均为 useSubmissionStore 的 /activities 全量记录；
- * 徽标仅在 count > 0 时渲染（0 即隐藏，与顶栏消息徽标 :hidden="unreadBadge === 0" 同一口径）。
- */
-function countOf(key: string): number {
-  const recordType = RECORD_TYPE_OF_MODULE[key] ?? (key as ApplicationType)
-  return submissionStore.records.filter((r) => r.type === recordType).length
 }
 
 onMounted(() => {
@@ -149,31 +145,104 @@ function switchModule(key: string) {
   activeKey.value = key
   router.replace({ path: '/applications', query: { tab: key } }).catch(() => {})
 }
+
+/** 后端下划线别名 → 前端 type key（记录一般已归一化，这里兜底旧数据） */
+function normalizeType(type: string): ApplicationType {
+  return (ARCHIVE_TYPE_TO_KEY[type] ?? type) as ApplicationType
+}
+
+function recordTypeOf(key: string): ApplicationType {
+  return RECORD_TYPE_OF_MODULE[key] ?? (key as ApplicationType)
+}
+
+/** 记录 type → 模块 key：一次遍历即可把全部记录归类到左侧分类 */
+const MODULE_KEY_OF_TYPE: Record<string, string> = Object.fromEntries(
+  modules.map((item) => [recordTypeOf(item.key), item.key] as const),
+)
+
+interface CategoryStat {
+  total: number
+  pending: number
+  approved: number
+  rejected: number
+}
+
+/**
+ * 每个分类的申报计数（左侧导航与顶部概览共用）。
+ * 只遍历一次全量记录，避免在模板里对每个分类反复 filter。
+ */
+const categoryStats = computed(() => {
+  const map = new Map<string, CategoryStat>(
+    MODULE_KEYS.map((key) => [key, { total: 0, pending: 0, approved: 0, rejected: 0 }]),
+  )
+  for (const record of submissionStore.records) {
+    const key = MODULE_KEY_OF_TYPE[normalizeType(record.type)]
+    const stat = key ? map.get(key) : undefined
+    if (!stat) continue
+    stat.total += 1
+    if (record.status === 'pending') stat.pending += 1
+    else if (record.status === 'approved') stat.approved += 1
+    else if (record.status === 'rejected') stat.rejected += 1
+  }
+  return map
+})
+
+/** 左侧分类：图标 + 名称 + 一行状态（退回/待审优先，其次显示条数，未填报置灰） */
+const navItems = computed(() =>
+  modules.map((item) => {
+    const stat = categoryStats.value.get(item.key)!
+    const state =
+      stat.rejected > 0
+        ? { text: `退回 ${stat.rejected}`, tone: 'danger' as const }
+        : stat.pending > 0
+          ? { text: `待审 ${stat.pending}`, tone: 'warning' as const }
+          : stat.total > 0
+            ? { text: `${stat.total} 条`, tone: 'count' as const }
+            : { text: '未填报', tone: 'muted' as const }
+    return { ...item, state }
+  }),
+)
+
+const filledCount = computed(
+  () => navItems.value.filter((item) => item.state.tone !== 'muted').length,
+)
+
+/** 顶部概览：按状态汇总，供进度条与「已填报分类数」使用 */
+const overview = computed(() => {
+  let total = 0
+  let pending = 0
+  let approved = 0
+  let rejected = 0
+  for (const stat of categoryStats.value.values()) {
+    total += stat.total
+    pending += stat.pending
+    approved += stat.approved
+    rejected += stat.rejected
+  }
+  return { total, pending, approved, rejected }
+})
 </script>
 
 <template>
   <div class="application-hub">
-    <div class="application-hub__grid">
-      <button
-        v-for="item in modules"
-        :key="item.key"
-        type="button"
-        class="application-hub__tab"
-        :class="{ 'is-active': item.key === activeKey }"
-        @click="switchModule(item.key)"
-      >
-        <div v-if="countOf(item.key) > 0" class="application-hub__tab-badge">
-          {{ countOf(item.key) }}
-        </div>
-        <div class="application-hub__tab-icon">
-          <component :is="item.icon" :size="18" />
-        </div>
-        <div class="application-hub__tab-body">
-          <div class="application-hub__tab-title">{{ item.label }}</div>
-          <div class="application-hub__tab-desc">{{ item.desc }}</div>
-        </div>
-      </button>
-    </div>
+    <PageHeader title="申报中心" subtitle="选择申报分类填写材料，提交后在下方跟踪审核进度" />
+
+    <!-- 审核进度：一条分段进度条 + 图标图例，替代与首页重复的 4 张 KPI 卡 -->
+    <SubmissionProgressBar
+      :total="overview.total"
+      :pending="overview.pending"
+      :approved="overview.approved"
+      :rejected="overview.rejected"
+    />
+
+    <!-- 分类切换放在内容上方：不再与系统最左侧菜单并排成两条左栏，表单与记录保持同列 -->
+    <SubmissionCategoryBar
+      title="申报分类"
+      :meta="`${filledCount}/${modules.length} 已填报`"
+      :items="navItems"
+      :active-key="activeKey"
+      @select="switchModule"
+    />
 
     <section class="application-hub__panel">
       <Transition name="module-fade">
@@ -189,96 +258,7 @@ function switchModule(key: string) {
 .application-hub {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-
-  :deep(.page-container) {
-    user-select: none;
-  }
-}
-
-.application-hub__grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.application-hub__tab {
-  position: relative;
-  min-height: 84px;
-  padding: 14px 12px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 8px;
-  background: var(--el-bg-color);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.application-hub__tab:hover {
-  border-color: #d4a574;
-  box-shadow: 0 4px 12px rgba(30, 58, 95, 0.06);
-}
-
-.application-hub__tab.is-active {
-  border-color: var(--el-color-primary);
-  background: rgba(var(--el-color-primary-rgb, 30 58 95), 0.03);
-}
-
-.application-hub__tab.is-active .application-hub__tab-title {
-  color: var(--el-color-primary);
-}
-
-.application-hub__tab-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 10px;
-  background: var(--el-color-primary);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.application-hub__tab-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: rgba(var(--el-color-primary-rgb, 30 58 95), 0.06);
-  color: var(--el-color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.application-hub__tab-body {
-  min-width: 0;
-  flex: 1;
-}
-
-.application-hub__tab-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-  transition: color 0.25s ease;
-}
-
-.application-hub__tab-desc {
-  margin-top: 3px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--el-text-color-secondary);
+  gap: 20px;
 }
 
 .application-hub__panel {
@@ -290,24 +270,6 @@ function switchModule(key: string) {
 
 .application-hub__panel-item {
   width: 100%;
-}
-
-@media (max-width: 1200px) {
-  .application-hub__grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  .application-hub__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 480px) {
-  .application-hub__grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* 原地交叉淡入：离场侧脱离文档流，进出可重叠，不再有 out-in 的纯空白帧；不做位移 */

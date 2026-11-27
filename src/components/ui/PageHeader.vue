@@ -21,24 +21,18 @@ interface Props {
   subtitle?: string
   /** 字号级别 */
   size?: 'sm' | 'md' | 'lg'
-  /** 是否显示装饰条 */
-  decoration?: boolean
 }
 
 withDefaults(defineProps<Props>(), {
   subtitle: '',
   size: 'md',
-  decoration: true,
 })
 </script>
 
 <template>
-  <div class="page-header" :class="[`page-header--${size}`, { 'page-header--plain': !decoration }]">
+  <div class="page-header" :class="`page-header--${size}`">
     <div class="page-header__main">
-      <h2 class="page-header__title">
-        <span v-if="decoration" class="page-header__bar" aria-hidden="true" />
-        {{ title }}
-      </h2>
+      <h2 class="page-header__title">{{ title }}</h2>
       <p v-if="subtitle" class="page-header__subtitle">{{ subtitle }}</p>
     </div>
     <div v-if="$slots.actions" class="page-header__actions">
@@ -48,12 +42,15 @@ withDefaults(defineProps<Props>(), {
 </template>
 
 <style scoped lang="scss">
+/* 与「成长发展」页头同款：26px 标题 + 16px 副标题，底部 12px 留白与 1px 分隔线 */
 .page-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: $spacing-xl;
   flex-wrap: wrap;
+  padding-bottom: $spacing-md;
+  border-bottom: 1px solid $color-border;
 
   &__main {
     flex: 1 1 auto;
@@ -61,43 +58,28 @@ withDefaults(defineProps<Props>(), {
   }
 
   &__title {
-    display: flex;
-    align-items: center;
-    gap: $spacing-md;
-    margin: 0;
-    color: var(--el-text-color-primary);
-    font-weight: 600;
-    line-height: 1.4;
+    margin: 0 0 6px;
+    color: $color-text-primary;
+    font-size: $font-size-page-title;
+    font-weight: 700;
+    line-height: $line-height-title;
   }
 
   &--sm &__title {
-    font-size: $font-size-lg;
-  }
-  &--md &__title {
     font-size: $font-size-xl;
   }
-  &--lg &__title {
-    font-size: $font-size-2xl;
+  &--md &__title {
+    font-size: $font-size-page-title;
   }
-
-  &__bar {
-    display: inline-block;
-    width: 4px;
-    height: 1em;
-    background: linear-gradient(
-      180deg,
-      var(--el-color-primary) 0%,
-      var(--el-color-primary-light) 100%
-    );
-    border-radius: 2px;
-    flex-shrink: 0;
+  &--lg &__title {
+    font-size: $font-size-4xl;
   }
 
   &__subtitle {
-    margin: $spacing-sm 0 0;
-    color: var(--el-text-color-secondary);
-    font-size: $font-size-base;
-    line-height: 1.5;
+    margin: 0;
+    color: $color-text-secondary;
+    font-size: $font-size-lg;
+    line-height: $line-height-body;
   }
 
   &__actions {
@@ -106,10 +88,6 @@ withDefaults(defineProps<Props>(), {
     align-items: center;
     gap: $spacing-sm;
     flex-wrap: wrap;
-  }
-
-  &--plain &__bar {
-    display: none;
   }
 }
 </style>

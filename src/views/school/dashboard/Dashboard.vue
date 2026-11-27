@@ -115,7 +115,7 @@ const statsCards = computed(() => {
       foot: rate === null ? '通过率 --' : `通过率 ${rate}%`,
       icon: Award,
       color: '#10b981',
-      path: '/approval/pending',
+      path: '/applications',
     },
     {
       label: '待审批',
@@ -124,7 +124,7 @@ const statsCards = computed(() => {
       foot: s.pending === null || s.pending === 0 ? '暂无待审事项' : '查看待审事项',
       icon: Clock,
       color: '#d4a574',
-      path: '/approval/pending',
+      path: '/applications',
     },
     {
       label: '学期均绩',
@@ -255,11 +255,6 @@ onMounted(() => {
 
 <template>
   <div class="dashboard">
-    <header class="dashboard__head">
-      <h1 class="dashboard__title">首页</h1>
-      <span class="dashboard__sub">学生成长概览</span>
-    </header>
-
     <StatsOverview
       :cards="statsCards"
       :snapshot="kpiSnapshot"
@@ -317,26 +312,6 @@ onMounted(() => {
   // 撑满外壳可用高度：视口高 − 顶栏 − 内容区上下 padding（1440×900 下为 796px）。
   // 内容超出时自然增高并交给外壳滚动，不做 overflow 裁切。
   min-height: calc(100dvh - #{$header-height} - #{$spacing-xl} * 2);
-}
-
-.dashboard__head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  min-height: 30px;
-}
-
-.dashboard__title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--el-text-color-primary);
-}
-
-.dashboard__sub {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
 }
 
 // 第二带（画像）与第三带按剩余高度等比例长大，内容按自身尺寸兜底

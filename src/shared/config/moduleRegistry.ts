@@ -134,10 +134,9 @@ export const registeredModules: AppModule[] = [
     icon: FilePen,
     order: 30,
     routePrefix: '/applications',
-    description: '个人档案申报情况总览与档案完整度',
-    // 入口直接落到「申报看板」：/applications 是无 tab 参数的申报表单 hub，
-    // 会静默回落到首个分类（学科竞赛），点「申报中心」却进了竞赛填报页。
-    menuItems: [{ label: '申报中心', icon: FilePen, path: '/approval/pending' }],
+    description: '选择申报分类填写材料，并跟踪审核进度与驳回原因',
+    // 申报看板已并入申报中心页顶部概览，菜单只保留一个入口直达表单页
+    menuItems: [{ label: '申报中心', icon: FilePen, path: '/applications' }],
   },
   {
     id: 'awards',
@@ -145,9 +144,9 @@ export const registeredModules: AppModule[] = [
     icon: Star,
     order: 40,
     routePrefix: '/awards',
-    description: '奖项看板与三类之星报名',
-    // 与申报中心一致：菜单只保留一个入口，页内用 ?tab= 切换「奖项看板 / 三类之星」；
-    // 入口不带 tab，由 AwardHub 回落到默认的奖项看板，菜单高亮才能按 path 精确命中。
+    description: '三类之星报名',
+    // 与申报中心一致：菜单只保留一个入口，页内用 ?tab= 切换三类之星；
+    // 入口不带 tab，由 AwardHub 回落到默认的竞赛之星，菜单高亮才能按 path 精确命中。
     menuItems: [{ label: '奖项中心', icon: Star, path: '/awards' }],
   },
 ]
