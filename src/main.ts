@@ -18,7 +18,7 @@ import './assets/styles/controls.scss'
 import './assets/styles/containers.scss'
 import './assets/styles/feedback.scss'
 import './assets/styles/mobile.scss'
-// ECharts 按需注册由各图表组件自行完成（ProfileRadarCard / BoardCharts / PieChart / TrendChart），
+// ECharts 按需注册由图表组件自行完成（当前仅 src/views/school/dashboard/ProfileRadarCard.vue），
 // 不再从入口全局引入，避免 echarts 被打进入口 chunk 拖慢登录页与首页首屏。
 
 // 项目动画策略：始终启用，不受系统 prefers-reduced-motion 影响

@@ -3,7 +3,7 @@ import type { QuickEntry } from './composables/useQuickEntries'
 import type { HomeDashboard } from '@/shared/api/student'
 import { ElMessage } from 'element-plus'
 import { Award, Clock, FileText, TrendingUp } from 'lucide-vue-next'
-import { computed, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ScoreIndicatorDialog from '@/components/ui/ScoreIndicatorDialog.vue'
 import { useScoreIndicator } from '@/shared/composables/composables'
@@ -18,8 +18,13 @@ import QuickEntries from './components/QuickEntries.vue'
 import QuickEntrySettings from './components/QuickEntrySettings.vue'
 import StatsOverview from './components/StatsOverview.vue'
 import { useQuickEntries } from './composables/useQuickEntries'
-import ProfileRadarCard from './ProfileRadarCard.vue'
 import RecentActivitiesCard from './RecentActivitiesCard.vue'
+
+/**
+ * 雷达图依赖 echarts（体积约 500KB），改为异步组件：
+ * 首页 KPI/快捷入口先渲染，图表 chunk 到达后再挂载，避免整页首屏等待图表库。
+ */
+const ProfileRadarCard = defineAsyncComponent(() => import('./ProfileRadarCard.vue'))
 
 const router = useRouter()
 const activityStore = useActivityStore()

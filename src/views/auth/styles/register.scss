@@ -1,0 +1,270 @@
+/* ============================================================
+   注册页：办公表单风格，去掉登录页的极光/玻璃拟态装饰
+   ============================================================ */
+.login.login--register {
+  --register-card-bg: #ffffff;
+  --register-input-bg: #ffffff;
+  --register-border: #dbe3ec;
+  --register-border-strong: #c3cedb;
+  --register-muted: #64748b;
+  --register-section-line: #e8eef5;
+  --register-hover: #f5f8fc;
+
+  grid-template-columns: minmax(0, 1fr);
+  overflow-y: auto;
+  background: #f2f5f9;
+
+  .login__panel {
+    width: 100%;
+    padding: 64px 24px 56px;
+    align-items: flex-start;
+  }
+}
+
+.register-card {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 36px 40px 30px;
+  border-radius: 10px;
+  background: var(--register-card-bg);
+  border: 1px solid var(--register-border);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.register-head {
+  h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--login-text);
+  }
+
+  p {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--register-muted);
+  }
+}
+
+.register-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid #f0c98a;
+  background: #fdf6e9;
+  color: #92580b;
+  font-size: 13px;
+  line-height: 1.6;
+
+  &__retry {
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid #d9a44f;
+    background: #fff;
+    color: #92580b;
+    font-size: 12px;
+    cursor: pointer;
+
+    &:hover {
+      background: #fffaf0;
+    }
+  }
+}
+
+.register-form {
+  margin-top: 8px;
+}
+
+.register-section {
+  margin-top: 26px;
+
+  h2 {
+    margin: 0 0 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--register-section-line);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--login-text);
+  }
+}
+
+.register-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.register-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+
+  &--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.register-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--login-text);
+  opacity: 0.85;
+}
+
+.register-hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--register-muted);
+
+  &.is-error {
+    color: #dc2626;
+  }
+}
+
+.register-form :deep(.el-select) {
+  width: 100%;
+}
+
+.register-captcha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &__box {
+    flex-shrink: 0;
+    width: 132px;
+    height: 44px;
+    padding: 4px;
+    border-radius: 6px;
+    border: 1px solid var(--register-border);
+    background: var(--register-input-bg);
+    color: var(--register-muted);
+    font-size: 12px;
+    cursor: pointer;
+    overflow: hidden;
+
+    &:hover {
+      border-color: var(--register-border-strong);
+    }
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  }
+}
+
+/* 表单控件：统一圆角与边框，覆盖登录页的大圆角/发光样式 */
+.register-form {
+  :deep(.el-input__wrapper) {
+    min-height: 44px;
+    border-radius: 6px;
+    background: var(--register-input-bg);
+    box-shadow: 0 0 0 1px var(--register-border) inset;
+    transition:
+      box-shadow 0.2s ease,
+      border-color 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 0 0 1px var(--register-border-strong) inset;
+    }
+
+    &.is-focus {
+      box-shadow:
+        0 0 0 1px #2563eb inset,
+        0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+  }
+
+  :deep(.el-input__inner) {
+    color: var(--login-text);
+    font-size: 14px;
+
+    &::placeholder {
+      color: var(--register-muted);
+      opacity: 0.8;
+    }
+  }
+
+  :deep(.el-radio-group) {
+    min-height: 44px;
+    align-items: center;
+  }
+
+  :deep(.el-radio__label) {
+    color: var(--login-text);
+  }
+
+  :deep(.el-radio__input.is-checked + .el-radio__label) {
+    color: var(--login-text);
+  }
+}
+
+.register-submit {
+  width: 100%;
+  height: 46px;
+  margin-top: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: #1d4ed8 !important;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  &:hover {
+    background: #1a44bd !important;
+  }
+
+  &--success {
+    background: #15803d !important;
+    pointer-events: none;
+  }
+}
+
+.register-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 20px;
+  font-size: 13px;
+  color: var(--register-muted);
+
+  &__link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #1d4ed8;
+    font-size: 13px;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  .login.login--register .login__panel {
+    padding: 56px 14px 32px;
+  }
+
+  .register-card {
+    padding: 26px 20px 24px;
+  }
+
+  .register-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
