@@ -7,6 +7,7 @@ import {
   updateTimelineEvent,
 } from '@/shared/api/archive'
 import { getGrowthTimeline } from '@/shared/api/student'
+import { asArray, asNumber, asRecord, asText } from '@/shared/utils/unknown'
 import { mapTimelineEventType } from '../timelineConstants'
 
 /** 后端成长时间轴 summary；字段缺失/非法时为 null，表示「无数据」而不是 0 */
@@ -23,12 +24,15 @@ function sortExperiencesByDate(list: GrowthExperience[]): GrowthExperience[] {
 
 /** 能力项映射：列表与详情共用（后端字段为 dimensionCode/dimensionName/score） */
 function mapAbilities(raw: unknown): GrowthExperience['skills'] {
-  const abilities = Array.isArray(raw) ? raw : []
-  return abilities.map((a: any) => ({
-    name: a.dimensionName ?? a.dimensionCode ?? '',
-    growth: a.score ?? 0,
-    dimensionCode: a.dimensionCode ?? undefined,
-  }))
+  const abilities = asArray<unknown>(raw)
+  return abilities.map((item) => {
+    const a = asRecord(item)
+    return {
+      name: a.dimensionName == null ? asText(a.dimensionCode) : asText(a.dimensionName),
+      growth: asNumber(a.score),
+      dimensionCode: a.dimensionCode == null ? undefined : asText(a.dimensionCode),
+    }
+  })
 }
 
 /** 字符串数字（如 "63"、""）统一归一化为 number | null，避免 NaN 混入展示 */
@@ -67,23 +71,23 @@ function normalizeSummary(raw: unknown): GrowthSummary | null {
 }
 
 /** 将后端成长时间轴事件映射为前端 GrowthExperience 结构（eventName→title、content→description、eventAt→date、sourceId→recordId） */
-function mapBackendEvent(e: Record<string, any>): GrowthExperience {
+function mapBackendEvent(e: Record<string, unknown>): GrowthExperience {
   const eventType = typeof e.eventType === 'number' ? e.eventType : undefined
   return {
-    id: `backend-${e.id}`,
-    title: e.eventName ?? '',
-    description: e.content ?? '',
-    date: e.eventAt ?? '',
+    id: `backend-${asText(e.id)}`,
+    title: asText(e.eventName),
+    description: asText(e.content),
+    date: asText(e.eventAt),
     // 学期只认后端返回值（后端按 eventAt 归集 semester_id 后回传 semesterName），前端不推导
-    semester: e.semesterName ?? '',
+    semester: asText(e.semesterName),
     // tags 只保留用户自填标签：事件类型是独立只读字段，不能混进标签里展示
-    tags: [...new Set(Array.isArray(e.tags) ? e.tags : [])],
+    tags: [...new Set(asArray<string>(e.tags))],
     eventType,
     eventTypeLabel:
-      e.eventTypeLabel || (eventType != null ? mapTimelineEventType(eventType) : undefined),
+      asText(e.eventTypeLabel) || (eventType != null ? mapTimelineEventType(eventType) : undefined),
     skills: mapAbilities(e.abilityData),
     recordId: e.sourceId != null ? String(e.sourceId) : undefined,
-    statusLabel: e.statusLabel || undefined,
+    statusLabel: asText(e.statusLabel) || undefined,
   }
 }
 
@@ -126,7 +130,7 @@ export function useGrowthTimeline() {
    * 列表接口未下发 abilityData 时，按 4.2.2 详情接口补齐能力项。
    * 详情也为空则说明该事件本身没有能力记录，保持空状态。
    */
-  async function backfillMissingAbilities(rawTimeline: Record<string, any>[]) {
+  async function backfillMissingAbilities(rawTimeline: Array<Record<string, unknown>>) {
     const targets = rawTimeline
       .filter((raw) => !Array.isArray(raw.abilityData) || raw.abilityData.length === 0)
       .slice(0, 20)
@@ -135,7 +139,7 @@ export function useGrowthTimeline() {
     const results = await Promise.allSettled(
       targets.map(async (raw) => ({
         id: Number(raw.id),
-        skills: mapAbilities((await getTimelineEventDetail(raw.id))?.abilityData),
+        skills: mapAbilities((await getTimelineEventDetail(Number(raw.id)))?.abilityData),
       })),
     )
     const patched = new Map<number, GrowthExperience['skills']>()
@@ -212,7 +216,7 @@ export function useGrowthTimeline() {
         // 用后端返回的完整详情替换本地乐观记录：新增接口已回传学期、状态、
         // 事件类型标签由后端 abilityData 规则生成的能力项，若只改本地 id，
         // 卡片会停留在「缺学期/缺状态/无能力项」的过渡态，刷新后内容才补齐。
-        const mapped = mapBackendEvent(created as unknown as Record<string, any>)
+        const mapped = mapBackendEvent(created as unknown as Record<string, unknown>)
         localExperiences.value = localExperiences.value.filter((e) => e.id !== localId)
         backendExperiences.value = [
           ...backendExperiences.value.filter((e) => e.id !== mapped.id),
@@ -228,7 +232,11 @@ export function useGrowthTimeline() {
         await loadBackendTimeline()
         return
       }
-      done?.(true)
+      // 响应成功但没有 id：后端未真正落库，按失败处理并撤回本地乐观记录，
+      // 避免页面显示成功、刷新后记录消失（伪成功）
+      localExperiences.value = localExperiences.value.filter((e) => e.id !== localId)
+      rebuildExperiences()
+      done?.(false)
     } catch {
       // 保存失败：撤回本地乐观记录，避免「页面上有、刷新后消失」的假成功。
       // 具体错误信息由 request 拦截器提示。
@@ -262,7 +270,7 @@ export function useGrowthTimeline() {
         tags: payload.tags,
       })
       backendExperiences.value = backendExperiences.value.map((e) =>
-        e.id === id ? mapBackendEvent(updated as unknown as Record<string, any>) : e,
+        e.id === id ? mapBackendEvent(updated as unknown as Record<string, unknown>) : e,
       )
       rebuildExperiences()
       // 汇总（能力/标签统计）由列表接口返回，改动后重拉一次，避免右侧汇总与卡片不一致

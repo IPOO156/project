@@ -26,7 +26,8 @@
 - 组件文件：`PascalCase`（如 `UserProfile.vue`）
 - Composable：`camelCase` 且以 `use` 开头（如 `usePagination.ts`）
 - Store：`camelCase` 且以 `use` 开头，文件名 `useXxxStore.ts`（如 `useUserStore.ts`）
-- 非组件 TS 模块：`camelCase`（如 `timelineConstants.ts`、`reviewColumns.ts`），禁止 kebab-case
+- 非组件 TS 模块：`camelCase`（如 `timelineConstants.ts`、`reviewColumns.ts`）
+- `src/shared/api/` 下的接口模块沿用现有 `kebab-case`（如 `teacher-auth.ts`、`career-plan.ts`），与后端资源路径保持一致；该目录属规范例外，不再批量重命名
 - 类型模块：`src/shared/types/teacher/` 下与 API 模块同名的文件统一加 `-types.ts` 后缀
 
 ## 样式约定

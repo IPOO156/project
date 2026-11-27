@@ -1,5 +1,6 @@
 import type { Notification, NotificationFilters } from '@/shared/types/types'
 import { notificationCategoryLabel } from '@/shared/constants/dict'
+import { asArray, asNumber, asRecord, asText } from '@/shared/utils/unknown'
 import request from './request'
 
 /** 后端 GET /messages 的单页上限（MessageController 将 per_page 截断到 100） */
@@ -8,7 +9,7 @@ const MESSAGE_PAGE_SIZE = 100
 const MESSAGE_MAX_PAGES = 50
 
 interface MessagePage {
-  list: any[]
+  list: Record<string, unknown>[]
   total: number
 }
 
@@ -23,7 +24,7 @@ interface MessagePage {
  */
 export function getNotifications(filters?: NotificationFilters): Promise<Notification[]> {
   return fetchMessagePage(filters, 1).then(async (first) => {
-    const pages: any[][] = [first.list]
+    const pages: Record<string, unknown>[][] = [first.list]
     const totalPages = Math.min(Math.ceil(first.total / MESSAGE_PAGE_SIZE), MESSAGE_MAX_PAGES)
     if (Math.ceil(first.total / MESSAGE_PAGE_SIZE) > MESSAGE_MAX_PAGES) {
       console.warn(
@@ -44,7 +45,7 @@ function fetchMessagePage(
   filters: NotificationFilters | undefined,
   page: number,
 ): Promise<MessagePage> {
-  const params: Record<string, any> = {
+  const params: Record<string, string | number> = {
     page,
     per_page: MESSAGE_PAGE_SIZE,
   }
@@ -54,10 +55,13 @@ function fetchMessagePage(
   if (filters?.archived === true) params.isArchived = 1
   if (filters?.keyword) params.keyword = filters.keyword
 
-  return request.get('/messages', { params }).then((res: any) => ({
-    list: Array.isArray(res?.list) ? res.list : [],
-    total: Number(res?.total) || 0,
-  }))
+  return request.get('/messages', { params }).then((res: unknown) => {
+    const data = asRecord(res)
+    return {
+      list: asArray<Record<string, unknown>>(data.list),
+      total: asNumber(data.total),
+    }
+  })
 }
 
 /** 后端 isRead/isArchived 可能返回 0/1 或 boolean，统一归一为 0/1 供 UI 判断 */
@@ -65,29 +69,29 @@ function toBinaryFlag(value: unknown): 0 | 1 {
   return value === true || value === 1 || value === '1' ? 1 : 0
 }
 
-function mapMessage(m: any): Notification {
+function mapMessage(raw: Record<string, unknown>): Notification {
   return {
-    id: String(m.id),
-    category: m.category,
+    id: asText(raw.id),
+    category: asText(raw.category) as Notification['category'],
     // 后端可能把枚举键写进 categoryLabel：统一在此归一，UI 不再各自兜底
-    categoryLabel: notificationCategoryLabel(m.category, m.categoryLabel),
-    title: m.title,
-    content: m.content,
-    senderType: m.senderType,
-    senderTypeLabel: m.senderTypeLabel,
-    senderName: m.senderName ?? null,
-    isRead: toBinaryFlag(m.isRead),
-    readAt: m.readAt ?? null,
-    isImportant: toBinaryFlag(m.isImportant),
-    isArchived: toBinaryFlag(m.isArchived),
-    archivedAt: m.archivedAt ?? null,
-    deadline: m.deadline ?? null,
-    jumpUrl: m.jumpUrl ?? null,
-    sendChannel: m.sendChannel,
-    relatedType: m.relatedType ?? null,
-    relatedId: m.relatedId ?? null,
-    createdAt: m.createdAt,
-    isReadFlag: toBinaryFlag(m.isRead) === 1,
+    categoryLabel: notificationCategoryLabel(asText(raw.category), asText(raw.categoryLabel)),
+    title: asText(raw.title),
+    content: asText(raw.content),
+    senderType: raw.senderType == null ? undefined : asNumber(raw.senderType),
+    senderTypeLabel: raw.senderTypeLabel == null ? undefined : asText(raw.senderTypeLabel),
+    senderName: raw.senderName == null ? null : asText(raw.senderName),
+    isRead: toBinaryFlag(raw.isRead),
+    readAt: raw.readAt == null ? null : asText(raw.readAt),
+    isImportant: toBinaryFlag(raw.isImportant),
+    isArchived: toBinaryFlag(raw.isArchived),
+    archivedAt: raw.archivedAt == null ? null : asText(raw.archivedAt),
+    deadline: raw.deadline == null ? null : asText(raw.deadline),
+    jumpUrl: raw.jumpUrl == null ? null : asText(raw.jumpUrl),
+    sendChannel: raw.sendChannel == null ? undefined : asText(raw.sendChannel),
+    relatedType: raw.relatedType == null ? null : asText(raw.relatedType),
+    relatedId: raw.relatedId == null ? null : asNumber(raw.relatedId),
+    createdAt: asText(raw.createdAt),
+    isReadFlag: toBinaryFlag(raw.isRead) === 1,
   }
 }
 
@@ -104,25 +108,28 @@ export function markAsRead(messageId: string): Promise<void> {
 export function markAllAsRead(): Promise<{ markedCount: number }> {
   return request
     .put('/messages/read-all')
-    .then((res: any) => ({ markedCount: res?.markedCount ?? 0 }))
+    .then((res: unknown) => ({ markedCount: asNumber(asRecord(res).markedCount) }))
 }
 
 /** 选择多个已读（PUT /messages/batch-read） */
 export function batchReadMessages(messageIds: string[]): Promise<{ markedCount: number }> {
   return request
     .put('/messages/batch-read', { messageIds: messageIds.map(Number) })
-    .then((res: any) => ({ markedCount: res?.markedCount ?? 0 }))
+    .then((res: unknown) => ({ markedCount: asNumber(asRecord(res).markedCount) }))
 }
 
 /** 归档消息（PUT /messages/{messageId}/archive） */
 export function archiveMessage(
   messageId: string,
 ): Promise<{ messageId: string; isArchived: number; archivedAt: string }> {
-  return request.put(`/messages/${messageId}/archive`).then((res: any) => ({
-    messageId: String(res?.messageId ?? messageId),
-    isArchived: res?.isArchived ?? 1,
-    archivedAt: res?.archivedAt ?? '',
-  }))
+  return request.put(`/messages/${messageId}/archive`).then((res: unknown) => {
+    const data = asRecord(res)
+    return {
+      messageId: asText(data.messageId, messageId),
+      isArchived: asNumber(data.isArchived, 1),
+      archivedAt: asText(data.archivedAt),
+    }
+  })
 }
 
 /** 取消归档消息（PUT /messages/{messageId}/unarchive） */
@@ -139,7 +146,7 @@ export function deleteNotification(messageId: string): Promise<void> {
 export function batchDeleteMessages(messageIds: string[]): Promise<{ deletedCount: number }> {
   return request
     .delete('/messages/batch', { data: { messageIds: messageIds.map(Number) } })
-    .then((res: any) => ({ deletedCount: res?.deletedCount ?? 0 }))
+    .then((res: unknown) => ({ deletedCount: asNumber(asRecord(res).deletedCount) }))
 }
 
 /** 获取消息通知设置（GET /messages/settings） */
@@ -154,12 +161,19 @@ export function getMessageSettings(): Promise<
 > {
   // 不吞错误：接口失败必须让调用方区分「读取失败」与「没有任何设置项」，
   // 否则页面会把失败显示成「全部关闭/暂无设置」，用户可能据此误改通知配置。
-  return request.get('/messages/settings').then((res: any) =>
+  return request.get('/messages/settings').then((res: unknown) =>
     Array.isArray(res)
-      ? res.map((item: any) => ({
-          ...item,
-          categoryLabel: notificationCategoryLabel(item.category, item.categoryLabel),
-        }))
+      ? res.map((item) => {
+          const row = asRecord(item)
+          const category = asText(row.category)
+          return {
+            category,
+            categoryLabel: notificationCategoryLabel(category, asText(row.categoryLabel)),
+            emailEnabled: asNumber(row.emailEnabled),
+            smsEnabled: asNumber(row.smsEnabled),
+            pushEnabled: asNumber(row.pushEnabled),
+          }
+        })
       : [],
   )
 }

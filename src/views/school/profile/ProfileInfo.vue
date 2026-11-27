@@ -124,7 +124,7 @@ const gradeCourseMap = computed<Record<string, CourseGradeRow[]>>(() => {
   for (const s of semesters) {
     const key = s.semesterName || s.semester || '学期'
     if (!Array.isArray(s.courses) || s.courses.length === 0) continue
-    result[key] = s.courses.map((c: any) => ({
+    result[key] = s.courses.map((c) => ({
       courseCode: String(c.courseCode ?? ''),
       courseName: String(c.courseName ?? '未命名课程'),
       courseType: String(c.courseType ?? ''),

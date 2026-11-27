@@ -87,6 +87,9 @@ const kpiSnapshot = computed<KpiSnapshot>(() => {
   }
 })
 
+/** 首屏统计加载态：任一数据源在途即显示骨架，避免把「--」误读成 0 条 */
+const statsLoading = computed(() => homeStore.loading || submissionStore.loading)
+
 /** 通过率：仅在总数与通过数都真实存在时计算 */
 const passRate = computed<number | null>(() => {
   const { total, approved } = kpiSnapshot.value
@@ -143,7 +146,7 @@ const profileDimensions = computed(() => {
   const home: HomeDashboard | null = homeStore.data
   if (home?.radarChart?.dimensions && home.radarChart.dimensions.length > 0) {
     const { dimensions, current, target, previous } = home.radarChart
-    return dimensions.map((d: any, i: number) => {
+    return dimensions.map((d, i) => {
       // 距满分差值取后端 indicators[].gap（已按 DECIMAL(5,2) 取整），
       // 不在前端用 target - current 重算，避免浮点误差带出 3.3999999999999986 这类尾数
       const indicator = (home.indicators ?? []).find(
@@ -259,6 +262,7 @@ onMounted(() => {
       :cards="statsCards"
       :snapshot="kpiSnapshot"
       :meta="indicatorMeta"
+      :loading="statsLoading"
       @card-click="onStatCardClick"
     />
 

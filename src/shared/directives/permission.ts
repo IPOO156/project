@@ -14,8 +14,9 @@ import { usePermission } from '@/shared/composables/usePermission'
  * - 对象 `{ module }`：按 teacherModuleRegistry 的模块 id 判定
  * - admin 角色直通（与路由守卫、菜单同源）
  *
- * 采用 `hidden` 属性而非移除节点：权限数据由 /auth/me 异步下发，
- * 移除后无法在权限到达时恢复。
+ * 采用 `display: none` 而非 `hidden` 属性：权限数据由 /auth/me 异步下发，
+ * 移除节点后无法在权限到达时恢复；而 Element Plus 的 `.el-button { display: inline-flex }`
+ * 会覆盖 UA 的 `[hidden] { display: none }`，用 hidden 属性会导致无权限按钮仍可见。
  */
 export type PermissionValue = string | string[] | { module: string }
 
@@ -29,8 +30,8 @@ function isAllowed(value: PermissionValue): boolean {
 
 function apply(el: HTMLElement, value: PermissionValue): void {
   const allowed = isAllowed(value)
-  if (allowed) el.removeAttribute('hidden')
-  else el.setAttribute('hidden', '')
+  // 不写空字符串以外的方式恢复，避免覆盖组件自身的 display 样式
+  el.style.display = allowed ? '' : 'none'
 }
 
 export const vPermission: Directive<HTMLElement, PermissionValue> = {

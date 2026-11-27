@@ -50,7 +50,7 @@ export const useAwardReviewStore = defineStore('award-review', () => {
    * 重新提交奖项审核记录（对接 PUT /activities/{id}）。
    *  接口失败时错误向上抛出（拦截器已统一提示），禁止本地伪造 pending 状态与假成功提示
    */
-  async function resubmit(id: string, data: Record<string, any>): Promise<void> {
+  async function resubmit(id: string, data: Record<string, unknown>): Promise<void> {
     await resubmitActivity(id, 'award', data)
     applyResubmitted(allRecords.value, id, data)
   }

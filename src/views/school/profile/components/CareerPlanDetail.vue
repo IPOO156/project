@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TagProps } from 'element-plus'
+import type { FeedbackItem, ReflectionItem, VersionItem } from './careerPlanInsightsTypes'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 import { updateActivity } from '@/shared/api/activities'
@@ -24,6 +25,69 @@ interface Props {
   planId: number | null
 }
 
+/** 成果文件 / 里程碑佐证行 */
+interface PlanFile {
+  fileId?: number
+  fileName?: string
+}
+
+/** 里程碑行（行动下的 milestones） */
+interface CareerMilestoneRow {
+  id: number
+  milestoneTitle: string
+  milestoneDate?: string
+  isAchieved?: number
+  proofFileId?: number
+  proofFileName?: string
+}
+
+/** 行动行（目标下的 actions） */
+interface CareerActionRow {
+  id: number
+  actionTitle: string
+  actionDesc?: string
+  startDate?: string
+  endDate?: string
+  status: number
+  statusLabel?: string
+  completionRate?: number
+  files?: PlanFile[]
+  milestones?: CareerMilestoneRow[]
+}
+
+/** 目标行（详情接口的 goals） */
+interface CareerGoalRow {
+  id: number
+  goalTitle: string
+  goalDesc?: string
+  targetDate?: string
+  status: number
+  statusLabel?: string
+  actions?: CareerActionRow[]
+}
+
+/** 详情接口 /profile/career-plans/{id} 的返回结构（仅声明本页使用到的字段） */
+interface CareerPlanDetailModel {
+  id?: number
+  semesterId?: number
+  semesterName?: string
+  title?: string
+  content?: string
+  requirement?: string
+  progressRate?: number | null
+  status?: number | null
+  statusLabel?: string
+  sourceLabel?: string
+  submittedAt?: string
+  auditedAt?: string
+  auditorName?: string
+  rejectedReason?: string
+  goals?: CareerGoalRow[]
+  reflections?: ReflectionItem[]
+  feedbacks?: FeedbackItem[]
+  versionHistory?: VersionItem[]
+}
+
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
@@ -37,9 +101,12 @@ const STATUS_KEY_MAP = APPLICATION_STATUS_CODE_MAP
 const { getColor, getLabel } = useDict(APPLICATION_STATUS)
 
 const loading = ref(false)
-const detail = ref<any>(null)
+const detail = ref<CareerPlanDetailModel | null>(null)
 
-const statusKey = computed(() => STATUS_KEY_MAP[detail.value?.status] ?? 'draft')
+const statusKey = computed(() => {
+  const status = detail.value?.status
+  return status != null ? (STATUS_KEY_MAP[status] ?? 'draft') : 'draft'
+})
 const statusType = computed(() => (getColor(statusKey.value) as TagProps['type']) ?? 'info')
 const statusLabel = computed(() => detail.value?.statusLabel || getLabel(statusKey.value))
 /**
@@ -91,20 +158,20 @@ async function reload() {
 
 const editDialogRef = ref<InstanceType<typeof CareerPlanEditDialog> | null>(null)
 
-function openGoalDialog(goal?: any) {
+function openGoalDialog(goal?: CareerGoalRow) {
   editDialogRef.value?.open({ mode: 'goal', goal })
 }
 
-function openActionDialog(goal: any, action?: any) {
+function openActionDialog(goal: CareerGoalRow, action?: CareerActionRow) {
   editDialogRef.value?.open({ mode: 'action', goal, action })
 }
 
-function openMilestoneDialog(action: any, milestone?: any) {
+function openMilestoneDialog(action: CareerActionRow, milestone?: CareerMilestoneRow) {
   editDialogRef.value?.open({ mode: 'milestone', action, milestone })
 }
 
 /** 已通过规划：仅维护里程碑成果证明（不改标题/日期） */
-function openMilestoneProofDialog(action: any, milestone: any) {
+function openMilestoneProofDialog(action: CareerActionRow, milestone: CareerMilestoneRow) {
   editDialogRef.value?.open({ mode: 'milestone', action, milestone, proofOnly: true })
 }
 
@@ -113,7 +180,7 @@ function openMilestoneProofDialog(action: any, milestone: any) {
 const uploadDialogVisible = ref(false)
 const uploadTarget = ref<{ actionId: number } | null>(null)
 
-function openUploadDialog(action: any) {
+function openUploadDialog(action: CareerActionRow) {
   uploadTarget.value = { actionId: action.id }
   uploadDialogVisible.value = true
 }

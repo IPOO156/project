@@ -38,7 +38,7 @@ interface Props {
   form: CorrectionForm
   recordTitle?: string
   /** 纠错前的记录快照：用于列出可修改字段（字段名 → 中文标签） */
-  originalRecord?: Record<string, any> | null
+  originalRecord?: Record<string, unknown> | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -145,7 +145,7 @@ function labelOf(field: string) {
 }
 
 /** 变更前后展示：枚举码翻译成中文，未命中原样展示 */
-function displayOf(field: string, value: any) {
+function displayOf(field: string, value: unknown) {
   if (value === undefined || value === null || value === '') return '(空)'
   const options = FIELD_DISPLAY_OPTIONS[field]
   if (!options) return String(value)

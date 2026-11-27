@@ -8,6 +8,7 @@ import type { ChatMessage, ExportFormat } from '../ai-chat.types'
  * - 富文本消息通过 richToPlain 转纯文本，用户输入用 escapeHtml 转义防注入
  */
 import { ElMessage } from 'element-plus'
+import { revokeObjectUrlAfterDelay } from '@/shared/utils/download'
 import { richToPlain } from '../utils/richText'
 
 interface ExportRow {
@@ -133,7 +134,7 @@ function downloadBlob(content: string, mime: string, filename: string) {
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  revokeObjectUrlAfterDelay(url)
 }
 
 export function useChatExport() {

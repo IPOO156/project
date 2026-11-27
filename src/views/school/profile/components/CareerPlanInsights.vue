@@ -1,27 +1,8 @@
 <script setup lang="ts">
+import type { FeedbackItem, ReflectionItem, VersionItem } from './careerPlanInsightsTypes'
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
 import { addCareerReflection } from '@/shared/api/career-plan'
-
-interface ReflectionItem {
-  id: number
-  reflectionContent: string
-  createdAt: string
-}
-
-interface FeedbackItem {
-  id: number
-  teacherName: string
-  feedbackContent: string
-  createdAt: string
-}
-
-interface VersionItem {
-  version: number
-  status: number
-  statusLabel: string
-  createdAt: string
-}
 
 interface PlanInsights {
   reflections?: ReflectionItem[]

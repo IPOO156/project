@@ -13,6 +13,7 @@ import ScoreIndicatorDialog from '@/components/ui/ScoreIndicatorDialog.vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { ROLE_OPTIONS } from '@/shared/constants/dict'
+import { asNumber, asText } from '@/shared/utils/unknown'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
 
@@ -75,18 +76,18 @@ const REJECT_ITEMS = [
   '与已有记录重复，提交前的查重检测会拦截。',
 ]
 
-function handleEditClick(row: any) {
-  page.form.activityName = row.activityName || ''
-  page.form.location = row.location || ''
-  page.form.organization = row.organization || ''
-  page.form.startDate = row.startDate || ''
-  page.form.endDate = row.endDate || ''
-  page.form.volunteerHours = row.volunteerHours ?? 0
-  page.form.semester = row.semester || ''
+function handleEditClick(row: Record<string, unknown>) {
+  page.form.activityName = asText(row.activityName)
+  page.form.location = asText(row.location)
+  page.form.organization = asText(row.organization)
+  page.form.startDate = asText(row.startDate)
+  page.form.endDate = asText(row.endDate)
+  page.form.volunteerHours = asNumber(row.volunteerHours)
+  page.form.semester = asText(row.semester)
   page.handleEditClick(row)
 }
 
-async function handleRemove(row: any) {
+async function handleRemove(row: { id: string }) {
   try {
     await ElMessageBox.confirm('确定删除该记录吗？删除后不可恢复。', '删除确认', {
       confirmButtonText: '确定删除',

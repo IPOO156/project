@@ -13,6 +13,7 @@ import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { ROLE_OPTIONS } from '@/shared/constants/dict'
+import { asText } from '@/shared/utils/unknown'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
 
@@ -75,16 +76,16 @@ const REJECT_ITEMS = [
 
 const staggerActive = useFirstLoadStagger(() => page.records.length)
 
-function handleEditClick(row: any) {
-  page.form.journalName = row.journalName || ''
-  page.form.paperName = row.paperName || ''
-  page.form.ranking = row.ranking || ''
-  page.form.publishDate = row.publishDate || ''
-  page.form.semester = row.semester || ''
+function handleEditClick(row: Record<string, unknown>) {
+  page.form.journalName = asText(row.journalName)
+  page.form.paperName = asText(row.paperName)
+  page.form.ranking = asText(row.ranking)
+  page.form.publishDate = asText(row.publishDate)
+  page.form.semester = asText(row.semester)
   page.handleEditClick(row)
 }
 
-async function handleRemove(row: any) {
+async function handleRemove(row: { id: string }) {
   try {
     await ElMessageBox.confirm('确定删除该记录吗？删除后不可恢复。', '删除确认', {
       confirmButtonText: '确定删除',

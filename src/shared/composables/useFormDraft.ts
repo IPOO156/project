@@ -2,6 +2,7 @@ import type { ApplicationType } from '@/shared/types/types'
 import { ElMessageBox } from 'element-plus'
 import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
+import { deleteActivity } from '@/shared/api/activities'
 import { autosaveApplication } from '@/shared/api/applications'
 import { autosaveAward } from '@/shared/api/awards'
 import { activityCategoryOf, buildContractPayload, createDraft } from '@/shared/api/submission'
@@ -81,6 +82,14 @@ export function useFormDraft<T extends Record<string, unknown>>(
   // 本地草稿写入版本：后端保存是异步的，只有期间没有更新的本地内容时才允许删除本地副本，
   // 否则会把用户刚输入、尚未落后端的内容清掉
   let localDraftVersion = 0
+  // 后端保存串行化：同一时刻只允许一个 createDraft/autosave 在途。
+  // 慢网或连点时，后续保存合并为「当前请求结束后再存一次最新内容」，
+  // 避免首次 createDraft 尚未返回 id 时重复 POST 出多条草稿。
+  let backendSaveInFlight: Promise<boolean> | null = null
+  let queuedBackendSave: Promise<boolean> | null = null
+  // 草稿代次：clearDraft（提交成功/重置表单）后递增，使在途请求的响应失效，
+  // 防止提交后把已作废的草稿 id 回写进表单，留下孤儿草稿。
+  let draftEpoch = 0
 
   /**
    * 主表单 + 非空扩展字段：扩展信息独立于 form 维护，草稿与后端请求体都必须一并带上，
@@ -157,10 +166,11 @@ export function useFormDraft<T extends Record<string, unknown>>(
    * 接口失败静默降级，不打断用户输入（本地 localStorage 已兜底）。
    * 返回是否已把当前内容落到服务端（未开启/字段不齐/接口失败均为 false）。
    */
-  async function saveToBackend(): Promise<boolean> {
+  async function doSaveToBackend(): Promise<boolean> {
     const payload = collectPayload()
     if (!enableBackend || !isNonEmpty(payload)) return false
     const version = localDraftVersion
+    const epoch = draftEpoch
     try {
       const id = currentId()
       if (id == null) {
@@ -168,6 +178,15 @@ export function useFormDraft<T extends Record<string, unknown>>(
         if (minDraftFields?.some((k) => fieldEmpty(form[k]))) return false
         const created = await createDraft(applicationType, payload)
         if (created == null) return false
+        // 请求期间用户已提交/重置表单：这次新建的草稿已作废，尽力删除，避免孤儿记录
+        if (epoch !== draftEpoch) {
+          try {
+            await deleteActivity(created, category)
+          } catch {
+            /* 删除失败仅保留一条后端草稿，不阻断提交流程 */
+          }
+          return false
+        }
         setRecordId(created)
         // 后端草稿已生成：本地副本与其是同一份，删除后列表只剩后端这一条。
         // 若请求期间又有新的本地写入，保留本地副本，等下一次保存处理。
@@ -177,13 +196,48 @@ export function useFormDraft<T extends Record<string, unknown>>(
       const body = await buildContractPayload(applicationType, { ...payload, isDraft: 1 })
       if (category === 'award') await autosaveAward(id, body)
       else await autosaveApplication(id, body)
-      // 自动保存成功即后端已是最新内容，本地副本不再需要
+      // 自动保存成功即后端已是最新内容，本地副本不再需要；
+      // 若期间表单已被提交/重置，则只返回结果，不再触碰本地副本与 id。
+      if (epoch !== draftEpoch) return false
       if (localDraftVersion === version) removeLocalDraft()
       return true
     } catch {
       // 保存失败保留本地草稿兜底；列表按 __backendId 识别，不会与后端草稿重复展示
       return false
     }
+  }
+
+  function startBackendSave(run: () => Promise<boolean>): Promise<boolean> {
+    const task = run().finally(() => {
+      backendSaveInFlight = null
+    })
+    backendSaveInFlight = task
+    return task
+  }
+
+  /**
+   * 串行保存入口：在途时不再并发发起请求，而是排队等当前请求结束后补存一次最新内容。
+   * 返回的 Promise 在「本次内容已尝试落库」后结算，供 saveNow 等待。
+   * 代次在「请求发起时」捕获：若排队期间表单已被提交/重置，直接跳过，避免提交后又补建一条草稿。
+   */
+  function saveToBackend(): Promise<boolean> {
+    const epochAtRequest = draftEpoch
+    const run = () => {
+      if (epochAtRequest !== draftEpoch) return Promise.resolve(false)
+      return doSaveToBackend()
+    }
+    if (backendSaveInFlight) {
+      if (!queuedBackendSave) {
+        queuedBackendSave = backendSaveInFlight
+          .catch(() => false)
+          .then(() => {
+            queuedBackendSave = null
+            return startBackendSave(run)
+          })
+      }
+      return queuedBackendSave
+    }
+    return startBackendSave(run)
   }
   function save() {
     saveLocal()
@@ -193,6 +247,10 @@ export function useFormDraft<T extends Record<string, unknown>>(
   }
 
   async function clearDraft() {
+    // 作废在途保存：提交成功/重置后，晚到的 createDraft 响应不得再回写 id
+    draftEpoch += 1
+    clearTimeout(timer)
+    timer = undefined
     try {
       localStorage.removeItem(storageKey)
     } catch {

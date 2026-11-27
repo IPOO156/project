@@ -1,0 +1,151 @@
+/**
+ * 移动端专项适配层
+ *
+ * 只包含窄屏规则，桌面端零影响。覆盖：
+ *  1. 顶栏隐藏标签栏后的触控尺寸（HeaderBar 自身样式为主，这里补通用入口）
+ *  2. el-tabs 左右箭头可点击区域与签页密度
+ *  3. el-table 横向滑动的可见提示
+ *  4. 下拉框 placeholder 溢出省略
+ *  5. 申报长表单在窄屏改为顶部标签
+ *  6. 学生端输入/按钮触控高度（教师/管理员端仍由 controls.scss / _buttons.scss 管理）
+ */
+@media (max-width: 991px) {
+  // 签页左右箭头默认 20px 宽，320 宽下几乎点不中；同时被签页内容覆盖，补 z-index 与底色
+  #app .el-tabs__nav-prev,
+  #app .el-tabs__nav-next {
+    z-index: 6;
+    width: 40px;
+    height: 44px;
+    line-height: 44px;
+    background: var(--el-bg-color);
+  }
+
+  #app .el-tabs__nav-wrap.is-scrollable {
+    padding: 0 40px;
+  }
+
+  #app .el-tabs__item {
+    padding: 0 12px;
+  }
+
+  // 表格横向滚动条常驻：Element Plus 默认只在 hover 时显示，手机上无法发现可左右滑动
+  #app .el-table__body-wrapper .el-scrollbar__wrap {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #app .el-table__body-wrapper .el-scrollbar__bar.is-horizontal {
+    display: block !important;
+    height: 5px;
+    opacity: 1;
+  }
+
+  #app .el-table__body-wrapper .el-scrollbar__thumb {
+    opacity: 0.45;
+  }
+
+  // 固定列在 320/390 宽下宽度常大于表格容器（操作列 300~360px），
+  // sticky 右列会直接盖住其余所有列，导致只能看到「操作」。
+  // 窄屏改为普通列，跟随表格一起横向滚动。
+  #app .el-table .el-table-fixed-column--left,
+  #app .el-table .el-table-fixed-column--right {
+    position: static !important;
+    z-index: auto !important;
+    box-shadow: none !important;
+  }
+
+  #app .el-table .el-table-fixed-column--left::before,
+  #app .el-table .el-table-fixed-column--right::before {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  // 下拉框占位文案在 320/360 宽下会溢出触发框，统一省略
+  #app .el-select__placeholder {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  #app .el-select__placeholder > span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // 下拉选项触控高度（浮层 teleport 到 body，不能用 #app 前缀）
+  .el-select-dropdown__item {
+    min-height: 40px;
+    line-height: 40px;
+  }
+
+  // 表格操作列多为 24px 的文字链，移动端难以点中；抬高到 36px 并保留行内排布
+  #app .el-table .el-button.is-link {
+    min-height: 36px;
+    padding: 0 4px;
+  }
+
+  // 分页在 320 宽下会挤压，允许换行并保证按钮触控面积
+  #app .el-pagination {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+
+  #app .el-pagination .btn-prev,
+  #app .el-pagination .btn-next,
+  #app .el-pagination .el-pager li {
+    min-width: 40px;
+    height: 40px;
+  }
+
+  #app .el-checkbox,
+  #app .el-radio {
+    min-height: 36px;
+  }
+
+  // 长文本在窄屏会换行 4~6 行把行高撑大；仅对纯文本单元格限制 3 行（23px × 3），
+  // 含按钮/标签/头像的单元格不裁切，避免操作按钮或状态标签被隐藏；
+  // :has() 不被支持时整条规则自动失效，退化为原有换行行为，不影响功能
+  #app
+    .layout--mobile:not(.layout--teacher)
+    .el-table
+    .cell:not(:has(.el-button, .el-tag, .el-avatar, .el-switch, .el-progress)) {
+    max-height: 69px;
+    overflow: hidden;
+  }
+
+  // 学生端触控高度（教师/管理员端已有 40/44 档，不重复覆盖）
+  #app .layout--mobile:not(.layout--teacher) {
+    .el-button:not(.is-text):not(.is-link) {
+      min-height: 40px;
+    }
+
+    .el-input {
+      --el-input-height: 40px;
+    }
+
+    .el-select__wrapper {
+      min-height: 40px;
+    }
+  }
+}
+
+@media (max-width: 640px) {
+  // 申报/报名长表单：120px 左标签在 320 宽只剩约 160px 输入区，改为顶部标签
+  #app .app-form-layout .el-form-item {
+    display: block;
+  }
+
+  #app .app-form-layout .el-form-item__label {
+    display: flex;
+    justify-content: flex-start;
+    width: auto !important;
+    padding: 0 0 6px;
+    line-height: 1.4;
+  }
+
+  #app .app-form-layout .el-form-item__content {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+}

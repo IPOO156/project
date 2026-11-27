@@ -1,3 +1,4 @@
+import type { HomeDashboard } from '@/shared/api/student'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getHomeDashboard } from '@/shared/api/student'
@@ -7,7 +8,7 @@ import { getHomeDashboard } from '@/shared/api/student'
  * 对接后端 GET /home/dashboard（3.1），接口异常时保留空态（由各页面回退本地数据）。
  */
 export const useHomeStore = defineStore('home', () => {
-  const data = ref<any>(null)
+  const data = ref<HomeDashboard | null>(null)
   const loading = ref(false)
 
   let pendingFetch: Promise<void> | null = null

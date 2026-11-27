@@ -14,6 +14,7 @@ import { useFirstLoadStagger } from '@/shared/composables/useFirstLoadStagger'
 import { useRemoteDict } from '@/shared/composables/useRemoteDict'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { INDUSTRY_TYPES, ROLE_OPTIONS } from '@/shared/constants/dict'
+import { asText } from '@/shared/utils/unknown'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
 
@@ -86,16 +87,16 @@ const REJECT_ITEMS = [
 
 const staggerActive = useFirstLoadStagger(() => page.records.length)
 
-function handleEditClick(row: any) {
-  page.form.companyName = row.companyName || ''
-  page.form.industryType = row.industryType || ''
-  page.form.ranking = row.ranking || ''
-  page.form.registerDate = row.registerDate || ''
-  page.form.semester = row.semester || ''
+function handleEditClick(row: Record<string, unknown>) {
+  page.form.companyName = asText(row.companyName)
+  page.form.industryType = asText(row.industryType)
+  page.form.ranking = asText(row.ranking)
+  page.form.registerDate = asText(row.registerDate)
+  page.form.semester = asText(row.semester)
   page.handleEditClick(row)
 }
 
-async function handleRemove(row: any) {
+async function handleRemove(row: { id: string }) {
   try {
     await ElMessageBox.confirm('确定删除该记录吗？删除后不可恢复。', '删除确认', {
       confirmButtonText: '确定删除',

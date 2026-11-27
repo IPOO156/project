@@ -1,5 +1,6 @@
 import type { Activity, ActivityFilters } from '@/shared/types/types'
 import { ACTIVITY_FILTER_STATUS_VALUE, APPLICATION_STATUS_CODE_MAP } from '@/shared/constants/dict'
+import { asArray, asNumber, asRecord, asText } from '@/shared/utils/unknown'
 import request from './request'
 
 const ACTIVITY_PAGE_SIZE = 100
@@ -17,9 +18,12 @@ const ACTIVITY_MAX_PAGES = 50
  * 在第 51 条之后被截断；这里按 total 取完全部页再交给页面本地分页。
  */
 export async function getActivities(filters?: ActivityFilters): Promise<Activity[]> {
-  const params: Record<string, any> = { perPage: ACTIVITY_PAGE_SIZE }
+  const params: Record<string, string | number> = { perPage: ACTIVITY_PAGE_SIZE }
   if (filters?.keyword) params.keyword = filters.keyword
-  if (filters?.status) params.status = statusValue(filters.status)
+  if (filters?.status) {
+    const status = statusValue(filters.status)
+    if (status != null) params.status = status
+  }
 
   const first = await fetchActivityPage(params, 1)
   const totalPages = Math.min(Math.ceil(first.total / ACTIVITY_PAGE_SIZE), ACTIVITY_MAX_PAGES)
@@ -39,30 +43,34 @@ export async function getActivities(filters?: ActivityFilters): Promise<Activity
 }
 
 function fetchActivityPage(
-  params: Record<string, any>,
+  params: Record<string, string | number>,
   page: number,
-): Promise<{ list: any[]; total: number }> {
-  return request.get('/activities', { params: { ...params, page } }).then((res: any) => ({
-    list: Array.isArray(res?.list) ? res.list : [],
-    total: Number(res?.total) || 0,
-  }))
+): Promise<{ list: Record<string, unknown>[]; total: number }> {
+  return request.get('/activities', { params: { ...params, page } }).then((res: unknown) => {
+    const data = asRecord(res)
+    return {
+      list: asArray<Record<string, unknown>>(data.list),
+      total: asNumber(data.total),
+    }
+  })
 }
 
-function mapActivity(item: any): Activity {
+function mapActivity(item: Record<string, unknown>): Activity {
+  const statusCode = asNumber(item.status)
   return {
-    id: String(item.id),
+    id: asText(item.id),
     type:
-      item.status === 2
+      statusCode === 2
         ? 'approved'
-        : item.status === 3
+        : statusCode === 3
           ? 'rejected'
-          : item.status === 4
+          : statusCode === 4
             ? 'withdrawn'
             : 'submitted',
-    text: item.content || item.title,
+    text: asText(item.content) || asText(item.title),
     // 后端实测返回下划线字段 submit_time（见 activities.ts 接口注释），驼峰 submitTime 仅为历史兼容别名
-    time: ((item.submit_time ?? item.submitTime) || '').replace('T', ' ').slice(0, 16),
-    status: (APPLICATION_STATUS_CODE_MAP[item.status] as Activity['status']) ?? 'submitted',
+    time: (asText(item.submit_time) || asText(item.submitTime)).replace('T', ' ').slice(0, 16),
+    status: (APPLICATION_STATUS_CODE_MAP[statusCode] as Activity['status']) ?? 'submitted',
   }
 }
 

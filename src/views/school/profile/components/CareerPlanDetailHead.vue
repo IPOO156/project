@@ -5,9 +5,23 @@
 import type { TagProps } from 'element-plus'
 import { formatDateTime } from '@/shared/utils/time'
 
+/** /profile/career-plans/{id} 返回的详情对象（仅声明本组件展示到的字段） */
+interface PlanDetailHead {
+  title?: string
+  semesterName?: string
+  sourceLabel?: string
+  submittedAt?: string
+  auditedAt?: string
+  progressRate?: number | null
+  auditorName?: string
+  content?: string
+  requirement?: string
+  rejectedReason?: string
+}
+
 defineProps<{
   /** /profile/career-plans/{id} 返回的详情对象 */
-  detail: any
+  detail: PlanDetailHead
   /** 状态标签配色（父级按字典映射） */
   statusType: TagProps['type']
   /** 状态文案 */

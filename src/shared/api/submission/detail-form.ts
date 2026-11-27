@@ -1,4 +1,5 @@
 import type { ApplicationType } from '@/shared/types/types'
+import { asOptionalNumber, asRecord, asText } from '@/shared/utils/unknown'
 import { STAR_TYPES } from './record-utils'
 
 /* ===================== 详情逆向映射（GET /activities/{type}/{id} detail → 前端表单字段） ===================== */
@@ -140,13 +141,16 @@ const AWARD_SPECIFIC_DETAIL_MAP: Record<string, Record<string, string>> = {
  * @param type 前端申报类型 key（competition/scholarship/… / 奖项之星类）
  * @param detail GET /activities/{type}/{id} 返回的 ActivityDetailResponse 主体
  */
-export function mapDetailToForm(type: string, detail: any): Record<string, any> {
-  const nested = (detail?.detail ?? {}) as Record<string, any>
+export function mapDetailToForm(
+  type: string,
+  detail: Record<string, unknown>,
+): Record<string, unknown> {
+  const nested = asRecord(detail?.detail)
   // 奖项类 = 通用字段 + 星类专属字段（具体优先；issuingUnit 统一映射为扩展表单「发证单位」）
   const map = STAR_TYPES.includes(type as ApplicationType)
     ? { ...AWARD_DETAIL_GENERIC_MAP, ...(AWARD_SPECIFIC_DETAIL_MAP[type] ?? {}) }
     : (DETAIL_TO_FORM_MAP[type] ?? {})
-  const out: Record<string, any> = {}
+  const out: Record<string, unknown> = {}
   for (const [from, to] of Object.entries(map)) {
     // 兼容旧字段名：历史后端版本详情返回 obtainTime，接口文档统一为 obtainedTime；
     // 创新类注册时间历史字段为 registeredAt，契约字段为 registeredTime
@@ -174,13 +178,16 @@ export function mapDetailToForm(type: string, detail: any): Record<string, any> 
   // 无附件时也返回空数组，保证 handleEditClick 回填后 form.proofMaterials 恒为数组（el-upload 需要数组而非 ''）
   const rawFiles = detail?.evidence_files ?? detail?.evidenceFiles
   const files = Array.isArray(rawFiles) ? rawFiles : []
-  out.proofMaterials = files.map((f: any, idx: number) => ({
-    // uid 用大基数 + 索引，避免与 el-upload 自增 uid 冲突
-    uid: 1_000_000_000 + idx,
-    name: f.file_name ?? f.fileName ?? '',
-    url: f.file_url ?? f.fileUrl ?? '',
-    status: 'success' as const,
-    fileId: f.file_id ?? f.fileId,
-  }))
+  out.proofMaterials = files.map((rawFile: unknown, idx: number) => {
+    const f = asRecord(rawFile)
+    return {
+      // uid 用大基数 + 索引，避免与 el-upload 自增 uid 冲突
+      uid: 1_000_000_000 + idx,
+      name: asText(f.file_name) || asText(f.fileName),
+      url: asText(f.file_url) || asText(f.fileUrl),
+      status: 'success' as const,
+      fileId: asOptionalNumber(f.file_id ?? f.fileId),
+    }
+  })
   return out
 }

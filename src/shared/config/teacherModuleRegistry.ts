@@ -1,3 +1,4 @@
+import type { Component } from 'vue'
 import {
   Archive,
   BarChart3,
@@ -134,7 +135,7 @@ export function getBaselineModuleIds(roles: string[]): string[] {
 export interface TeacherNavGroup {
   key: string
   label: string
-  icon: any
+  icon: Component
   order: number
 }
 
@@ -153,7 +154,7 @@ export const teacherNavGroups: TeacherNavGroup[] = [
 /** 教师端菜单项 */
 export interface TeacherMenuItem {
   label: string
-  icon?: any
+  icon?: Component
   path?: string
   children?: TeacherMenuItem[]
   /** 所属侧栏分组（由注册表注入，菜单配置本身无需重复填写） */
@@ -166,7 +167,7 @@ export interface TeacherMenuItem {
 export interface TeacherModule {
   id: string
   label: string
-  icon: any
+  icon: Component
   order: number
   routePrefix: string
   /** 所属侧栏分组（见 teacherNavGroups） */

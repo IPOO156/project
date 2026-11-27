@@ -1,4 +1,4 @@
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { getCurrentInstance, onBeforeUnmount, ref, watch } from 'vue'
 
 /**
  * 首屏列表刷入开关：只在首次拿到非空数据时激活一次。
@@ -39,7 +39,9 @@ export function useFirstLoadStagger(count: () => number, cleanupMs = 2200) {
     { immediate: true, flush: 'post' },
   )
 
-  onBeforeUnmount(stop)
+  // 仅在组件 setup 内注册卸载清理；单测等无组件实例的场景调用时，
+  // 无条件 onBeforeUnmount 会触发 Vue 告警（4 条用例曾出现 no active component instance）
+  if (getCurrentInstance()) onBeforeUnmount(stop)
 
   return active
 }

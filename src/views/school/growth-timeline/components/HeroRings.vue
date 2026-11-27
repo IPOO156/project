@@ -135,6 +135,8 @@ const electrons = computed<ElectronItem[]>(() => {
 })
 
 let rafId: number | null = null
+/** 电子入场延时：组件卸载时需清理，避免定时器在销毁后改状态 */
+let electronsTimer: number | null = null
 
 function tick() {
   if (!props.paused) {
@@ -280,8 +282,9 @@ function handleElectronLeave() {
 
 onMounted(() => {
   rafId = requestAnimationFrame(tick)
-  setTimeout(() => {
+  electronsTimer = window.setTimeout(() => {
     electronsVisible.value = true
+    electronsTimer = null
   }, 2000)
   bindScroll()
   // 滚动联动动效（非 CSS keyframe）单独尊重系统的「减少动效」偏好：
@@ -298,6 +301,10 @@ onDeactivated(unbindScroll)
 onBeforeUnmount(() => {
   if (rafId) {
     cancelAnimationFrame(rafId)
+  }
+  if (electronsTimer != null) {
+    window.clearTimeout(electronsTimer)
+    electronsTimer = null
   }
   unbindScroll()
   motionQuery?.removeEventListener('change', syncReducedMotion)

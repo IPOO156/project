@@ -12,6 +12,11 @@ export interface GreetingInfo {
 
 const GREETING_STORAGE_KEY = 'greeting_last_shown_date'
 
+/** 按用户隔离的存储 key：共享电脑上第二个账号当天也应看到问候 */
+function scopedKey(scope: string): string {
+  return `${GREETING_STORAGE_KEY}:${scope}`
+}
+
 /** 今日日期字符串 (yyyy-MM-dd)，用于判断当天是否已展示过 */
 function todayKey(): string {
   const d = new Date()
@@ -19,20 +24,20 @@ function todayKey(): string {
 }
 
 /** 检查今天是否已展示过问候弹窗 */
-function hasShownToday(): boolean {
+function hasShownToday(scope: string): boolean {
   if (typeof window === 'undefined') return true
   try {
-    return localStorage.getItem(GREETING_STORAGE_KEY) === todayKey()
+    return localStorage.getItem(scopedKey(scope)) === todayKey()
   } catch {
     return false
   }
 }
 
 /** 标记今天已展示 */
-function markShownToday() {
+function markShownToday(scope: string) {
   if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(GREETING_STORAGE_KEY, todayKey())
+    localStorage.setItem(scopedKey(scope), todayKey())
   } catch {
     // 静默失败
   }
@@ -135,8 +140,13 @@ export function useGreeting() {
     }
   })
 
+  /** 问候展示记录按账号隔离，避免共享电脑上第二个账号当天看不到问候 */
+  function greetingScope(): string {
+    return userStore.userInfo?.id || userStore.userName || 'anonymous'
+  }
+
   function checkAndShow() {
-    if (hasShownToday()) return
+    if (hasShownToday(greetingScope())) return
     if (!userStore.isLoggedIn) return
     // 给一个微小延迟，让页面先渲染完成再弹出
     setTimeout(() => {
@@ -160,7 +170,7 @@ export function useGreeting() {
   function dismiss() {
     clearAutoCloseTimer()
     dismissing.value = true
-    markShownToday()
+    markShownToday(greetingScope())
     setTimeout(() => {
       visible.value = false
       dismissing.value = false

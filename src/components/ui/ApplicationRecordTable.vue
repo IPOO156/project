@@ -1,12 +1,12 @@
 <script setup lang="ts" generic="T">
 import type { ApplicationType } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ClipboardList } from 'lucide-vue-next'
 import { computed, h, inject, ref, watch } from 'vue'
 import { getApplicationGuide, getApplicationVersions } from '@/shared/api/applications'
 import { getAwardGuide, getAwardVersions } from '@/shared/api/awards'
 import { activityCategoryOf } from '@/shared/api/submission'
 import { FORM_RECORDS_LOADING } from '@/shared/composables/useFormRecords'
+import { asText } from '@/shared/utils/unknown'
 import StatusTag from './StatusTag.vue'
 import VersionHistoryDrawer from './VersionHistoryDrawer.vue'
 
@@ -54,25 +54,47 @@ watch(
   },
 )
 
-function getRecordStatus(record: any): string {
-  return record.status || props.status || 'draft'
+function getRecordStatus(record: Record<string, unknown>): string {
+  return asText(record.status) || props.status || 'draft'
 }
-function canEdit(s: string) {
+/**
+ * 后端 6.1 返回 can_edit / can_delete / can_withdraw（下划线，驼峰为文档别名）。
+ * 有明确布尔值时以后端为准（权限收紧后前端不再显示点不通的按钮）；
+ * 旧数据/本地草稿没有该字段时回落到状态判定。
+ */
+function backendFlag(
+  row: Record<string, unknown>,
+  camel: string,
+  snake: string,
+): boolean | undefined {
+  const value = row?.[camel] ?? row?.[snake]
+  return typeof value === 'boolean' ? value : undefined
+}
+function canEditStatus(s: string) {
   return s === 'draft' || !s || s === 'rejected'
 }
 // 与后端 ActivityService.checkDeletable 对齐：草稿 / 已退回 / 已撤回可删除（最终以后端校验为准）
-function canDelete(s: string) {
+function canDeleteStatus(s: string) {
   return s === 'draft' || !s || s === 'rejected' || s === 'withdrawn'
 }
-function canWithdraw(s: string) {
+function canWithdrawStatus(s: string) {
   return s === 'pending'
+}
+function canEditRow(row: Record<string, unknown>): boolean {
+  return backendFlag(row, 'canEdit', 'can_edit') ?? canEditStatus(getRecordStatus(row))
+}
+function canDeleteRow(row: Record<string, unknown>): boolean {
+  return backendFlag(row, 'canDelete', 'can_delete') ?? canDeleteStatus(getRecordStatus(row))
+}
+function canWithdrawRow(row: Record<string, unknown>): boolean {
+  return backendFlag(row, 'canWithdraw', 'can_withdraw') ?? canWithdrawStatus(getRecordStatus(row))
 }
 /**
  * 申请更正仅适用于档案类记录。
  * 后端只有 POST /applications/{archiveId}/correction（ApplicationService 从 archive 表取数），
  * 奖项类没有对应接口；此前奖项行也显示该按钮，会把奖项 id 当作档案 id 提交。
  */
-function canRequestCorrection(row: any) {
+function canRequestCorrection(row: Record<string, unknown>) {
   return (
     getRecordStatus(row) === 'approved' &&
     activityCategoryOf(row?.type as ApplicationType) === 'archive'
@@ -99,11 +121,11 @@ const versionsData = ref<{ currentVersion: number; versions: VersionItem[] }>({
 })
 
 /** 版本历史入口仅对真实记录开放（本地草稿 draft-local / 临时 rec- 无后端版本记录） */
-function canViewVersions(row: any): boolean {
+function canViewVersions(row: Record<string, unknown>): boolean {
   const id = row?.id
   return id !== undefined && id !== null && /^\d+$/.test(String(id))
 }
-async function openVersions(row: any) {
+async function openVersions(row: Record<string, unknown>) {
   const id = Number(row.id)
   if (!id) return
   versionsVisible.value = true
@@ -164,15 +186,17 @@ interface GuideData {
 }
 
 /** 前端类型 → 评选说明接口真实类型（按 archive/award 区分），未知类型返回 null */
-function resolveGuideType(rowType: any): { category: 'archive' | 'award'; type: string } | null {
+function resolveGuideType(
+  rowType: unknown,
+): { category: 'archive' | 'award'; type: string } | null {
   // activityCategoryOf 返回 ActivityType（含 career_plan），本组件仅申报/奖项记录，非 award 一律归 archive
   const category: 'archive' | 'award' =
     activityCategoryOf(rowType as ApplicationType) === 'award' ? 'award' : 'archive'
-  const type = (category === 'award' ? AWARD_GUIDE_TYPES : ARCHIVE_GUIDE_TYPES)[rowType]
+  const type = (category === 'award' ? AWARD_GUIDE_TYPES : ARCHIVE_GUIDE_TYPES)[asText(rowType)]
   return type ? { category, type } : null
 }
 
-function canViewGuide(row: any): boolean {
+function canViewGuide(row: Record<string, unknown>): boolean {
   return resolveGuideType(row?.type) !== null
 }
 
@@ -250,7 +274,7 @@ function buildGuideVNode(data: GuideData) {
   ])
 }
 
-async function openGuide(row: any) {
+async function openGuide(row: Record<string, unknown>) {
   const target = resolveGuideType(row?.type)
   if (!target) return
   try {
@@ -269,27 +293,20 @@ async function openGuide(row: any) {
 
 <template>
   <el-card v-if="showRecords" class="record-card">
-    <template #header>
-      <div class="record-card__head">
-        <span class="record-card__head-icon"><ClipboardList :size="16" /></span>
-        <span class="card-title">申报记录</span>
-        <span v-if="!recordsLoading" class="card-title__count">共 {{ records.length }} 条</span>
-      </div>
-    </template>
+    <template #header
+      ><span class="card-title">申报记录</span
+      ><span v-if="!recordsLoading" class="card-title__count"
+        >共 {{ records.length }} 条</span
+      ></template
+    >
     <!-- 加载中用静态骨架占住记录区高度：不做循环扫光，避免长驻动态抢注意力 -->
     <div v-if="recordsLoading" class="record-card__skeleton" aria-busy="true">
       <el-skeleton :rows="4" />
     </div>
-    <!-- 空态直接指向页面上方的表单，回答「填完在哪里看」 -->
-    <div v-else-if="!records.length" class="record-card__empty">
-      <span class="record-card__empty-icon"><ClipboardList :size="26" /></span>
-      <p class="record-card__empty-title">还没有申报记录</p>
-      <p class="record-card__empty-desc">完成上方「填写申报信息」并提交后，记录会显示在这里</p>
-    </div>
-    <!-- pagedRecords 为泛型 T[]，el-table data 要求 DefaultRow[]（Record<PropertyKey, any>），双重断言显式收窄 -->
+    <!-- pagedRecords 为泛型 T[]，el-table data 要求 DefaultRow[]（Record<PropertyKey, unknown>），双重断言显式收窄 -->
     <!-- 外层 min-height 对齐骨架高度，加载完成前后记录区不塌陷 -->
     <div v-else class="record-card__table">
-      <el-table :data="pagedRecords as unknown as Record<PropertyKey, any>[]" stripe>
+      <el-table :data="pagedRecords as unknown as Record<PropertyKey, unknown>[]" stripe>
         <slot name="columns" />
         <el-table-column label="状态" width="100" align="center"
           ><template #default="{ row }"
@@ -301,7 +318,7 @@ async function openGuide(row: any) {
               >查看</el-button
             >
             <el-button
-              v-if="canEdit(getRecordStatus(row))"
+              v-if="canEditRow(row)"
               size="small"
               type="primary"
               link
@@ -309,7 +326,7 @@ async function openGuide(row: any) {
               >编辑</el-button
             >
             <el-button
-              v-if="canDelete(getRecordStatus(row))"
+              v-if="canDeleteRow(row)"
               size="small"
               type="danger"
               link
@@ -317,7 +334,7 @@ async function openGuide(row: any) {
               >删除</el-button
             >
             <el-button
-              v-if="canWithdraw(getRecordStatus(row))"
+              v-if="canWithdrawRow(row)"
               size="small"
               type="warning"
               link
@@ -345,7 +362,7 @@ async function openGuide(row: any) {
               size="small"
               type="info"
               link
-              @click="openVersions(row as T)"
+              @click="openVersions(row)"
               >版本</el-button
             >
             <el-button
@@ -353,7 +370,7 @@ async function openGuide(row: any) {
               size="small"
               type="info"
               link
-              @click="openGuide(row as T)"
+              @click="openGuide(row)"
               >评选说明</el-button
             >
           </template>
@@ -381,54 +398,8 @@ async function openGuide(row: any) {
 </template>
 
 <style scoped lang="scss">
-.record-card__head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.record-card__head-icon {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: var(--el-fill-color);
-  color: var(--el-text-color-secondary);
-}
 .card-title {
   font-weight: 600;
-}
-/* 空态：与骨架同高，切换时不产生高度跳动 */
-.record-card__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 136px;
-  padding: 16px;
-  text-align: center;
-}
-.record-card__empty-icon {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 2px;
-  border-radius: 12px;
-  background: var(--el-fill-color-light);
-  color: var(--el-text-color-placeholder);
-}
-.record-card__empty-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--el-text-color-regular);
-}
-.record-card__empty-desc {
-  margin: 0;
-  font-size: 12px;
-  color: var(--el-text-color-placeholder);
 }
 .record-card__pagination {
   display: flex;

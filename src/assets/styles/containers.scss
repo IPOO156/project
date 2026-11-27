@@ -5,8 +5,7 @@
  * 不做：el-dialog / el-drawer / el-descriptions / el-switch / el-tooltip / el-alert
  *
  * 接入要求：
- *   1. 本文件必须排在 teacher-console.scss 之后引入，建议 main.ts 第 18 行：
- *      import './assets/styles/containers.scss'   // 放在 echarts-setup 之前
+ *   1. 本文件必须排在 teacher-console.scss 之后引入（main.ts 中位于 controls.scss 与 feedback.scss 之间）。
  *   2. 不在本文件里声明任何根级 --el-*；EP 变量全部下压到组件根节点。
  *   3. 仅复用 themes.css 已存在的 --mc-btn-* / --mc-ctl-* token，不新增全局变量。
  *

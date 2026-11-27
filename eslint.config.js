@@ -12,6 +12,8 @@ export default antfu({
     'node/prefer-global/process': 'off',
     'style/max-statements-per-line': 'off',
     'ts/no-empty-object-type': 'off',
+    // 禁止显式 any：动态后端字段用 unknown + @/shared/utils/unknown 的 asRecord/asText 等收窄
+    'ts/no-explicit-any': 'error',
     // Prettier 会把 `if (x)\n  return` 合并成一行，与 antfu/if-newline 冲突
     'antfu/if-newline': 'off',
   },
