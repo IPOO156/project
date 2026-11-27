@@ -49,7 +49,7 @@ function escapeHtml(value: unknown): string {
 const option = computed(() => ({
   tooltip: {
     trigger: 'axis' as const,
-    formatter: (params: any) => {
+    formatter: (params: Array<{ name?: unknown; value?: unknown }>) => {
       const p = params?.[0]
       const name = escapeHtml(formatSemester(String(p?.name ?? '')))
       const value = escapeHtml(p?.value ?? '')

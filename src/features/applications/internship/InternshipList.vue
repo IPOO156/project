@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import type { FormRecord } from '@/shared/composables/useFormRecords'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { onMounted, reactive } from 'vue'
+import { defineAsyncComponent, onMounted, reactive } from 'vue'
 import { useApplicationPage } from '@/shared/composables/useApplicationPage'
 import { useSemesters } from '@/shared/composables/useSemesters'
 import { ROLE_OPTIONS } from '@/shared/constants/dict'
-import AddressPicker from '@/shared/ui/AddressPicker.vue'
 import ApplicationExtendedFields from '@/shared/ui/ApplicationExtendedFields.vue'
 import ApplicationFormLayout from '@/shared/ui/ApplicationFormLayout.vue'
 import ApplicationFormRecord from '@/shared/ui/ApplicationFormRecord.vue'
@@ -13,6 +12,10 @@ import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
 import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
+import { asText } from '@/shared/utils/unknown'
+
+// 地址选择器异步加载；组件内部的 655KB 行政区划数据在首次打开面板/回填已有地址时才下载
+const AddressPicker = defineAsyncComponent(() => import('@/shared/ui/AddressPicker.vue'))
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
 
@@ -72,17 +75,28 @@ const REJECT_ITEMS = [
   '与已有记录重复，提交前的查重检测会拦截。',
 ]
 
-function handleEditClick(row: any) {
-  page.form.company = row.company || ''
-  page.form.location = row.location || ''
-  page.form.position = row.position || ''
-  page.form.startDate = row.startDate || ''
-  page.form.endDate = row.endDate || ''
-  page.form.semester = row.semester || ''
+/** 结束时间不得早于开始时间：禁用早于开始日期的天 */
+function disabledEndDate(date: Date) {
+  const start: unknown = page.form.startDate
+  if (!start) return false
+  const s = start instanceof Date ? start : new Date(String(start))
+  if (Number.isNaN(s.getTime())) return false
+  const day = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const startDay = new Date(s.getFullYear(), s.getMonth(), s.getDate())
+  return day < startDay
+}
+
+function handleEditClick(row: Record<string, unknown>) {
+  page.form.company = asText(row.company)
+  page.form.location = asText(row.location)
+  page.form.position = asText(row.position)
+  page.form.startDate = asText(row.startDate)
+  page.form.endDate = asText(row.endDate)
+  page.form.semester = asText(row.semester)
   page.handleEditClick(row)
 }
 
-async function handleRemove(row: any) {
+async function handleRemove(row: { id: string }) {
   try {
     await ElMessageBox.confirm('确定删除该记录吗？删除后不可恢复。', '删除确认', {
       confirmButtonText: '确定删除',
@@ -109,6 +123,7 @@ onMounted(() => {
     :show-records="true"
     :records="page.records"
     :submitting="page.submitting"
+    :saving="page.draftSaving"
     :is-editing="page.isEditing"
     :status="page.currentStatus"
     :rejection-reason="page.rejectionReason"
@@ -148,7 +163,11 @@ onMounted(() => {
             ><el-date-picker v-model="page.form.startDate" type="date" placeholder="例：2025-07-01"
           /></el-form-item>
           <el-form-item label="结束时间" required
-            ><el-date-picker v-model="page.form.endDate" type="date" placeholder="例：2025-08-31"
+            ><el-date-picker
+              v-model="page.form.endDate"
+              type="date"
+              placeholder="例：2025-08-31"
+              :disabled-date="disabledEndDate"
           /></el-form-item>
           <el-form-item label="学期" required>
             <el-select

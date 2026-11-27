@@ -16,12 +16,18 @@ import {
 } from 'lucide-vue-next'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
-  ACHIEVEMENT_MAX_PAGE_SIZE,
   ACHIEVEMENT_MAX_PAGES,
   createAchievement,
   getAchievements,
 } from '@/shared/api/achievements'
 import { CATEGORY_LABELS } from '../composables/useAchievementWall'
+import {
+  fileSizeText,
+  isFutureDate,
+  isImageFile as isImage,
+  moveFile,
+  validateAchievementFiles,
+} from './achievementUploadRules'
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -60,55 +66,13 @@ const submitError = ref('')
 const duplicate = ref<AchievementListItem | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
-/** 获得日期不允许选未来（保留原生 date 输入时的 max=today 行为） */
-function isFutureDate(date: Date): boolean {
-  const endOfToday = new Date()
-  endOfToday.setHours(23, 59, 59, 999)
-  return date.getTime() > endOfToday.getTime()
-}
-
 const categoryOptions = computed(() =>
   UPLOAD_CATEGORIES.map((value) => ({ value, label: CATEGORY_LABELS[value] })),
 )
 
-function extOf(name: string): string {
-  return name.slice(name.lastIndexOf('.') + 1).toLowerCase()
-}
-
-function isImage(file: File): boolean {
-  return file.type.startsWith('image/') || ['jpg', 'jpeg', 'png'].includes(extOf(file.name))
-}
-
-function fileSizeText(size: number): string {
-  if (size >= 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`
-  return `${Math.max(1, Math.round(size / 1024))} KB`
-}
-
-function validateFiles(): string {
-  if (files.value.length === 0) return '请至少添加一页证书'
-  if (files.value.length > ACHIEVEMENT_MAX_PAGES) {
-    return `一份证书最多 ${ACHIEVEMENT_MAX_PAGES} 页，请删减后再保存`
-  }
-  for (const file of files.value) {
-    const ext = extOf(file.name)
-    if (!['jpg', 'jpeg', 'png', 'pdf'].includes(ext)) {
-      return `「${file.name}」格式不支持，仅支持 jpg / png / pdf`
-    }
-    if (file.size > ACHIEVEMENT_MAX_PAGE_SIZE) {
-      return `「${file.name}」超过 5MB，请压缩到单页 5MB 以内`
-    }
-  }
-  return ''
-}
-
 /** 手动调整页序：第一页自动作封面 */
 function movePage(index: number, delta: number) {
-  const target = index + delta
-  if (target < 0 || target >= files.value.length) return
-  const next = [...files.value]
-  const [moved] = next.splice(index, 1)
-  next.splice(target, 0, moved)
-  files.value = next
+  files.value = moveFile(files.value, index, delta)
 }
 
 function handleFiles(event: Event) {
@@ -131,7 +95,7 @@ function validate(): boolean {
   if (!title.value.trim()) next.title = '请填写证书名称'
   if (!issuer.value.trim()) next.issuer = '请填写颁发单位'
   if (!eventAt.value) next.eventAt = '请选择获得日期'
-  const fileError = validateFiles()
+  const fileError = validateAchievementFiles(files.value)
   if (fileError) next.file = fileError
   errors.value = next
   return Object.keys(next).length === 0

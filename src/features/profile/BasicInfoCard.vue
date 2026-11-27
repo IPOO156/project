@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ProfileInfo } from '@/shared/api/student'
 /**
  * 基本资料卡片（档案概览页左列）。
  * 数据来自 useUserStore（账号信息/头像）与 useArchiveStore（/profile/info 的学籍与联系方式），
@@ -6,15 +7,20 @@
  */
 import { ElMessage } from 'element-plus'
 import { Edit2, Info } from 'lucide-vue-next'
-import { computed, ref } from 'vue'
-import { useArchiveStore, useUserStore } from '@/app/stores/stores'
+import { computed, defineAsyncComponent, ref } from 'vue'
+import { useAppStore, useArchiveStore, useUserStore } from '@/app/stores/stores'
 import { updateBirthDate } from '@/shared/api/student'
-import AddressPicker from '@/shared/ui/AddressPicker.vue'
 import { isValidEmail } from '@/shared/utils/validateEmail'
 import AvatarUploader from './components/AvatarUploader.vue'
 
+// 地址选择器内置 670KB 行政区划数据，改为异步组件：仅在进入编辑态时下载
+const AddressPicker = defineAsyncComponent(() => import('@/shared/ui/AddressPicker.vue'))
+
 const archiveStore = useArchiveStore()
 const userStore = useUserStore()
+const appStore = useAppStore()
+/** 窄屏下基本资料改成单列，避免两列描述项在 320/360 宽度下换行挤压 */
+const descColumns = computed(() => (appStore.isMobile ? 1 : 2))
 
 // ── 基本资料编辑 ──
 // 学籍字段（学号/年级/专业/班级/姓名/学历层次/政治面貌/学生状态）属学术身份信息，
@@ -46,7 +52,9 @@ interface ProfileEditForm {
 // 不进入编辑字段、不随保存提交。
 const formData = ref<Partial<ProfileEditForm>>({})
 /** /profile/info 中的学籍信息（学历层次/政治面貌/学生状态的展示标签来自后端返回的 *Label 字段） */
-const academicInfo = computed(() => archiveStore.profileData?.academicInfo ?? {})
+const academicInfo = computed(
+  () => archiveStore.profileData?.academicInfo ?? ({} as ProfileInfo['academicInfo']),
+)
 /** 学历层次只读展示文本：后端标签优先，缺标签时回退原始值 */
 const degreeTypeText = computed(
   () => academicInfo.value.degreeTypeLabel ?? academicInfo.value.degreeType ?? '-',
@@ -282,7 +290,13 @@ async function handleAvatarUpload(base64: string) {
         </p>
       </div>
     </div>
-    <el-descriptions v-if="!isEditing" :column="2" border class="profile-desc" size="small">
+    <el-descriptions
+      v-if="!isEditing"
+      :column="descColumns"
+      border
+      class="profile-desc"
+      size="small"
+    >
       <el-descriptions-item label="姓名">{{ userStore.userName || '-' }}</el-descriptions-item>
       <el-descriptions-item label="学号">{{ userStore.studentId || '-' }}</el-descriptions-item>
       <el-descriptions-item label="年级">{{
@@ -479,6 +493,33 @@ async function handleAvatarUpload(base64: string) {
   margin-left: 4px;
   font-size: 12px;
   color: var(--el-text-color-secondary);
+}
+
+// ─── 窄屏：编辑表单改为单列 + 顶部标签，避免 112px 标签挤压输入框 ───
+@media (max-width: 640px) {
+  .profile-form {
+    :deep(.el-col-12) {
+      max-width: 100%;
+      flex: 0 0 100%;
+    }
+
+    :deep(.el-form-item) {
+      display: block;
+    }
+
+    :deep(.el-form-item__label) {
+      display: flex;
+      justify-content: flex-start;
+      width: auto !important;
+      padding: 0 0 6px;
+      line-height: 1.4;
+    }
+
+    :deep(.el-form-item__content) {
+      width: 100%;
+      margin-left: 0 !important;
+    }
+  }
 }
 
 // ─── 夜间模式适配 ───

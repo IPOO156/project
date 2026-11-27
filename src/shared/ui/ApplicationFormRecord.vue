@@ -4,17 +4,28 @@ import RejectionBanner from './RejectionBanner.vue'
 import StatusTag from './StatusTag.vue'
 import StudentInfoBar from './StudentInfoBar.vue'
 
+/** 学籍信息：与 StudentInfoBar 展示字段一致 */
+interface EnrollmentInfo {
+  grade?: string
+  className?: string
+  major?: string
+  studentId?: string
+  college?: string
+}
+
 interface Props {
   alertTitle: string
   alertDescription: string
   isEditing?: boolean
   submitting?: boolean
+  /** 保存草稿进行中：按钮 loading + 禁用，避免连点重复建草稿 */
+  saving?: boolean
   records?: T[]
   showAlert?: boolean
   showRecords?: boolean
   status?: string
   rejectionReason?: string
-  enrollmentInfo?: Record<string, any>
+  enrollmentInfo?: EnrollmentInfo
   submitText?: string
 }
 
@@ -23,6 +34,7 @@ withDefaults(defineProps<Props>(), {
   showAlert: true,
   showRecords: true,
   status: '',
+  saving: false,
   rejectionReason: '',
   enrollmentInfo: undefined,
   submitText: '提交报名',
@@ -68,7 +80,13 @@ function canEdit(s: string) {
       <slot name="form" />
 
       <div class="form-actions">
-        <el-button v-if="canEdit(status)" @click="emit('saveDraft')">保存草稿</el-button>
+        <el-button
+          v-if="canEdit(status)"
+          :loading="saving"
+          :disabled="saving"
+          @click="emit('saveDraft')"
+          >保存草稿</el-button
+        >
         <el-button v-if="isEditing && canEdit(status)" @click="emit('cancel')">取消</el-button>
         <el-button
           v-if="canEdit(status)"

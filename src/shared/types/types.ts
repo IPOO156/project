@@ -1,5 +1,5 @@
 // 通用响应结构
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   code: number
   message: string
   data: T
@@ -9,11 +9,11 @@ export interface ApiResponse<T = any> {
 export interface PaginationParams {
   page: number
   per_page: number
-  [key: string]: any
+  [key: string]: unknown
 }
 
 // 分页响应结构（兼容后端 pagination 对象与平铺 total）
-export interface PaginatedData<T = any> {
+export interface PaginatedData<T = unknown> {
   list: T[]
   total?: number
   pagination?: {
@@ -159,7 +159,7 @@ export interface ReviewRecord {
   semester: string
   status: string // draft | submitted | approved | rejected
   proofMaterials: string[]
-  [key: string]: any
+  [key: string]: unknown
 }
 
 // 奖项审核记录（之星报名：竞赛之星/科研之星/双创之星）

@@ -104,6 +104,11 @@ export function useAIChat() {
   let lastUserText = ''
   /** 最近一条可重新生成的助手消息（在线模式下后端的 messageId） */
   let lastAssistantMessageId: number | null = null
+  /**
+   * 会话代次：发送/重生成请求发起时捕获，响应写回前校验。
+   * 清空、新建、切换会话都会递增，晚到的旧回复直接丢弃，避免落进新会话。
+   */
+  let conversationEpoch = 0
 
   /** 追加用户消息气泡 */
   function pushUserMessage(text: string) {
@@ -151,7 +156,6 @@ export function useAIChat() {
     }
     const res: AISendMessageResult = await sendAIMessage(cid, text)
     offlineMode.value = false
-    lastAssistantMessageId = res.messageId
     // 后端返回结构化富文本时优先按块渲染；未返回或 blocks 为空再退回本地 markdown 解析
     const richContent = res.richContent?.blocks?.length
       ? res.richContent
@@ -167,28 +171,37 @@ export function useAIChat() {
 
   /** 请求 AI 回复并写入消息列表；成功/离线回退清除错误状态，真实业务错误展示错误气泡 */
   async function requestAIReply(text: string) {
+    const epoch = conversationEpoch
     loading.value = true
     try {
-      messages.value.push(await requestOnlineReply(text))
+      const reply = await requestOnlineReply(text)
+      if (epoch !== conversationEpoch) return
+      lastAssistantMessageId = Number(reply.id) || null
+      messages.value.push(reply)
       error.value = false
     } catch (err) {
+      if (epoch !== conversationEpoch) return
       if (isBackendUnavailable(err)) {
-        messages.value.push(await requestOfflineReply(text))
+        const reply = await requestOfflineReply(text)
+        if (epoch !== conversationEpoch) return
+        messages.value.push(reply)
         lastAssistantMessageId = null
         error.value = false
       } else {
         pushErrorMessage()
       }
     } finally {
-      loading.value = false
+      if (epoch === conversationEpoch) loading.value = false
     }
   }
 
   /** 重新生成：调用后端 regenerateAIMessage，失败时按同样策略回退 */
   async function requestRegenerate(cid: number, messageId: number) {
+    const epoch = conversationEpoch
     loading.value = true
     try {
       const res: AIRegenerateResult = await regenerateAIMessage(cid, messageId)
+      if (epoch !== conversationEpoch) return
       offlineMode.value = false
       lastAssistantMessageId = res.messageId
       const richContent = res.richContent?.blocks?.length
@@ -203,15 +216,18 @@ export function useAIChat() {
       })
       error.value = false
     } catch (err) {
+      if (epoch !== conversationEpoch) return
       if (isBackendUnavailable(err)) {
-        messages.value.push(await requestOfflineReply(lastUserText))
+        const reply = await requestOfflineReply(lastUserText)
+        if (epoch !== conversationEpoch) return
+        messages.value.push(reply)
         lastAssistantMessageId = null
         error.value = false
       } else {
         pushErrorMessage()
       }
     } finally {
-      loading.value = false
+      if (epoch === conversationEpoch) loading.value = false
     }
   }
 
@@ -254,6 +270,8 @@ export function useAIChat() {
    * 旧会话本身仍保留在历史列表中，可手动删除。
    */
   function clearMessages() {
+    // 递增代次：清空后在途回复不再写回
+    conversationEpoch += 1
     messages.value = createWelcomeMessages()
     loading.value = false
     error.value = false
@@ -277,6 +295,7 @@ export function useAIChat() {
 
   /** 新建对话：重置为欢迎语；会话由后端在首条消息发送时按需创建 */
   function createConversation(): null {
+    conversationEpoch += 1
     currentConversationId.value = null
     lastAssistantMessageId = null
     messages.value = createWelcomeMessages()
@@ -288,12 +307,17 @@ export function useAIChat() {
   async function switchConversation(id: number) {
     const conv = conversations.value.find((c) => c.id === id)
     if (!conv) return
+    // 切换会话即作废在途请求：晚到的旧回复不得落入本次会话
+    conversationEpoch += 1
+    const epoch = conversationEpoch
     currentConversationId.value = id
     lastAssistantMessageId = null
     loading.value = false
     error.value = false
     try {
       const detail = await getAIConversationMessages(id)
+      // 快速连点多个会话：只有仍是本次选择时才应用结果
+      if (epoch !== conversationEpoch || currentConversationId.value !== id) return
       const list: AIConversationMessage[] = detail.messages
       const lastAssistant = [...list].reverse().find((m) => m.role === 'assistant')
       lastAssistantMessageId = lastAssistant ? lastAssistant.id : null
@@ -315,7 +339,9 @@ export function useAIChat() {
         }
       })
     } catch {
-      messages.value = createWelcomeMessages()
+      if (epoch === conversationEpoch && currentConversationId.value === id) {
+        messages.value = createWelcomeMessages()
+      }
     }
   }
 
@@ -331,6 +357,7 @@ export function useAIChat() {
     }
     conversations.value.splice(idx, 1)
     if (currentConversationId.value === id) {
+      conversationEpoch += 1
       currentConversationId.value = null
       lastAssistantMessageId = null
       messages.value = createWelcomeMessages()

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Component } from 'vue'
 import type { Notification, NotificationCategory } from '@/shared/types/types'
 import { ElMessage } from 'element-plus'
 import { Archive, Bell, Bot, ChevronRight, Mail, MailOpen, MessageSquare } from 'lucide-vue-next'
@@ -46,7 +47,7 @@ function categoryStyle(category: NotificationCategory) {
 }
 
 function getCategoryIcon(category: NotificationCategory) {
-  const icons: Record<NotificationCategory, any> = {
+  const icons: Record<NotificationCategory, Component> = {
     audit_remind: Mail,
     dynamic_remind: Bot,
     private_message: MessageSquare,

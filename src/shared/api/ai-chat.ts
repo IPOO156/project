@@ -35,7 +35,7 @@ export function submitFeedback(
 /** 创建对话会话（POST /ai/conversations） */
 export function createAIConversation(payload?: {
   title?: string
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 }): Promise<{
   conversationId: number
   title: string

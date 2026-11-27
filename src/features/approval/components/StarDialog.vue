@@ -31,7 +31,7 @@ const { semesterOptions, load: loadSemesters } = useSemesters()
 // 学期下拉：模块级缓存，此处触发一次拉取（失败/为空时下拉为空并提示，不再回退本地列表）
 loadSemesters()
 
-const editForm = reactive<Record<string, any>>({})
+const editForm = reactive<Record<string, string>>({})
 const saving = ref(false)
 
 const statusLabel: Record<string, string> = {
@@ -168,7 +168,7 @@ async function handleSave() {
               ? editForm.paperName
               : editForm.companyName
 
-    const payload: Record<string, any> = { ...editForm, semester: editForm.semester }
+    const payload: Record<string, string> = { ...editForm, semester: editForm.semester }
     if (titleField) payload.title = titleField + suffix
 
     await awardReviewStore.resubmit(props.record.id, payload)

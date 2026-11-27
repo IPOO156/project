@@ -98,7 +98,7 @@ function simulateAIReply(userText: string): Promise<{ plain: string; rich: RichC
 export function sendMessage(
   text: string,
   conversationId?: string,
-  _context?: Record<string, any>,
+  _context?: Record<string, unknown>,
 ): Promise<SendMessageResult> {
   return new Promise((resolve) => {
     setTimeout(async () => {

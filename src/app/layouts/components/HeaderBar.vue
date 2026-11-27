@@ -51,6 +51,11 @@ const commandVisible = ref(false)
 const { roleLabel } = useTeacherAuthz()
 const isGrowthTimeline = computed(() => route.path.startsWith('/growth-timeline'))
 const isTeacher = computed(() => userStore.isTeacher)
+/** 移动端顶栏标题：标签栏在窄屏隐藏，用当前页面标题替代，避免只剩一排截断的标签 */
+const pageTitle = computed(() => {
+  const title = route.meta?.title
+  return typeof title === 'string' ? title : ''
+})
 
 // 铃铛角标：学生端取学生消息 Store；教师端取 /teacher/messages 的未读总数
 const unreadBadge = computed(() =>
@@ -129,7 +134,10 @@ async function switchToStudent() {
           <kbd>Ctrl K</kbd>
         </button>
       </template>
-      <NavTabs v-else />
+      <template v-else>
+        <NavTabs v-if="!appStore.isMobile" />
+        <span v-else class="header__page-title">{{ pageTitle }}</span>
+      </template>
     </div>
 
     <div class="header__right">
@@ -164,7 +172,7 @@ async function switchToStudent() {
       >
         <el-button
           text
-          class="header__action"
+          class="header__action header__action--cursor"
           :class="{ 'header__action--on': cursorStore.enabled }"
           :aria-label="cursorStore.enabled ? '关闭书册光标' : '开启书册光标'"
           :aria-pressed="cursorStore.enabled"
@@ -175,7 +183,7 @@ async function switchToStudent() {
       </el-tooltip>
 
       <el-dropdown trigger="click">
-        <span class="header__user">
+        <span class="header__user" role="button" tabindex="0" aria-label="账号菜单">
           <el-avatar :size="32" :src="userStore.avatar" :icon="User" />
           <span class="header__user-name">{{ userStore.userName || '用户' }}</span>
           <el-tag v-if="isTeacher" size="small" type="info" effect="light" class="header__role-tag">
@@ -353,13 +361,53 @@ async function switchToStudent() {
   .header__user-name {
     display: none;
   }
+  .header__user {
+    gap: 0;
+    margin-left: 0;
+    padding: 4px;
+    min-width: 40px;
+    min-height: 40px;
+    justify-content: center;
+  }
+  .header__role-tag {
+    display: none;
+  }
   .header__right {
-    padding-left: $spacing-md;
+    padding-left: $spacing-sm;
+    gap: 0;
+  }
+  .header__right :deep(.el-button) {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    padding: 0;
+  }
+  .header__action--cursor {
+    display: none;
+  }
+  .header__menu-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    padding: 0;
+  }
+  .header__page-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--el-text-color-primary);
+    font-size: 16px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .header__search {
-    width: 34px;
+    width: 40px;
+    height: 40px;
     justify-content: center;
     padding: 0;
+    border-color: transparent;
+    background: transparent;
 
     &-text,
     kbd {
@@ -376,7 +424,7 @@ async function switchToStudent() {
     gap: $spacing-sm;
   }
   .header__right {
-    padding-left: $spacing-sm;
+    padding-left: $spacing-xs;
   }
 }
 

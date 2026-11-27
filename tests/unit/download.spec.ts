@@ -83,18 +83,26 @@ describe('downloadFromUrl', () => {
 
 describe('downloadBlobFile', () => {
   it('以 blob 方式请求，优先使用调用方指定文件名', async () => {
-    get.mockResolvedValue({
-      data: new Blob(['x']),
-      headers: { 'content-disposition': 'attachment; filename="server.pdf"' },
-    })
+    vi.useFakeTimers()
+    try {
+      get.mockResolvedValue({
+        data: new Blob(['x']),
+        headers: { 'content-disposition': 'attachment; filename="server.pdf"' },
+      })
 
-    await downloadBlobFile('/files/1', 'fallback.pdf', '指定.pdf', { timeout: 5000 })
+      await downloadBlobFile('/files/1', 'fallback.pdf', '指定.pdf', { timeout: 5000 })
 
-    expect(get).toHaveBeenCalledWith('/files/1', { timeout: 5000, responseType: 'blob' })
-    expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
-    expect(clicked[0]).toMatchObject({ href: 'blob:mock-url', download: '指定.pdf' })
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
-    expect(document.body.querySelector('a')).toBeNull()
+      expect(get).toHaveBeenCalledWith('/files/1', { timeout: 5000, responseType: 'blob' })
+      expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+      expect(clicked[0]).toMatchObject({ href: 'blob:mock-url', download: '指定.pdf' })
+      // 延迟回收：click 后立即 revoke 会让 Firefox/Safari 大文件下载失败
+      expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+      vi.advanceTimersByTime(10_000)
+      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url')
+      expect(document.body.querySelector('a')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('未指定文件名时取响应头，响应头缺失再回退默认名', async () => {

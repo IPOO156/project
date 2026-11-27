@@ -28,9 +28,17 @@ import { FIELD_LABELS } from '@/shared/constants/fieldLabels'
  *  - status 经 APPLICATION_STATUS 字典转中文（草稿/待审核/已驳回/已通过/已撤销）；
  *  - 数组字段（如 proofMaterials 证明材料）以「、」分隔，对象字段 JSON 序列化。
  */
+/** 详情记录：业务字段由后端动态返回，此处仅约定弹窗内部使用的展示字段 */
+interface DetailRecord extends Record<string, unknown> {
+  type?: string
+  status?: string
+  __detailUnavailable?: boolean
+  __detailUnavailableText?: string
+}
+
 interface Props {
   visible: boolean
-  record?: Record<string, any> | null
+  record?: DetailRecord | null
   /** 加载详情数据中的 loading 态（真实后端记录需先拉详情接口） */
   loading?: boolean
 }

@@ -6,6 +6,7 @@ import { markMustChangePassword } from '@/shared/utils/forcePasswordChange'
 import { clearCurrentUserScopedStorage } from '@/shared/utils/storageScope'
 import {
   clearAuth,
+  getAuthEpoch,
   getRefreshToken,
   getToken,
   writeTokenPreservingSource,
@@ -100,13 +101,23 @@ const FORCE_PASSWORD_CHANGE_NOTIFY_WINDOW_MS = 1000
 // ── 401 令牌刷新：并发去重，单飞（singleton）──
 let refreshPromise: Promise<string | null> | null = null
 
+/**
+ * 刷新期间会话已变化（用户登出或换了账号）的哨兵值。
+ * 与 null（刷新失败，需要强制登出）区分：此时旧响应直接丢弃，
+ * 既不能回写 token，也不能 clearAuth/forceLogout，否则会把新会话踢掉。
+ */
+const STALE_REFRESH = '__auth_session_changed__'
+
 function tryRefreshToken(): Promise<string | null> {
   const refreshToken = getRefreshToken()
   if (!refreshToken) return Promise.resolve(null)
   if (!refreshPromise) {
+    const epoch = getAuthEpoch()
     refreshPromise = request
       .post('/auth/refresh', { refreshToken })
       .then((data) => {
+        // 响应到达前已登出/换账号：丢弃本次刷新结果
+        if (epoch !== getAuthEpoch()) return STALE_REFRESH
         // 响应拦截器已解包 res.data，静态类型仍为 AxiosResponse，按真实形状取值
         const tokenResult = data as unknown as {
           accessToken?: string
@@ -121,6 +132,8 @@ function tryRefreshToken(): Promise<string | null> {
         return null
       })
       .catch(() => {
+        // 失败也不能误清新会话：仅当代次未变（仍是发起刷新时的会话）才清本地令牌
+        if (epoch !== getAuthEpoch()) return STALE_REFRESH
         clearAuth()
         return null
       })
@@ -217,6 +230,11 @@ request.interceptors.response.use(
         const retryConfig = error.config as { refreshCount?: number }
         if ((retryConfig.refreshCount || 0) < 3) {
           return tryRefreshToken().then((token) => {
+            // 刷新期间已登出/换账号：旧会话的刷新结果无效，原请求直接失败，
+            // 不强制登出（否则会清掉新登录的会话）
+            if (token === STALE_REFRESH) {
+              return Promise.reject(error)
+            }
             if (!token) {
               forceLogout()
               return Promise.reject(error)

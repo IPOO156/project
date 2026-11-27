@@ -48,7 +48,7 @@ export function getAwardsOverview(): Promise<{
 /** 奖项草稿自动保存（PUT /awards/{applicationId}/autosave） */
 export function autosaveAward(
   applicationId: number,
-  payload: Record<string, any>,
+  payload: Record<string, unknown>,
 ): Promise<{
   applicationId: number
   status: number

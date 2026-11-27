@@ -29,6 +29,7 @@ export default defineConfig({
         'src/shared/utils/**/*.ts',
         'src/shared/constants/**/*.ts',
         'src/shared/composables/**/*.ts',
+        'src/shared/api/submission/**/*.ts',
         'src/features/**/*.ts',
       ],
       exclude: ['src/features/**/*.types.ts', 'src/features/**/data/**'],

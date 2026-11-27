@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import type { CityMap, DistrictMap, RegionTree } from './addressPickerHelpers'
 import { ElMessage } from 'element-plus'
 import { ChevronDown } from 'lucide-vue-next'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { createAIConversation, deleteAIConversation, sendAIMessage } from '@/shared/api/ai-chat'
-import regionData from '@/shared/data/china-regions.json'
+import {
+  findName,
+  municipalityCityName,
+  parseAddress,
+  readAIReply,
+  sanitizeForAI,
+} from './addressPickerHelpers'
 
 defineOptions({ name: 'AddressPicker' })
 
@@ -25,16 +32,26 @@ interface Props {
   size?: 'default' | 'small'
 }
 
-type DistrictMap = Record<string, string[]>
-type CityMap = Record<string, DistrictMap>
-interface ProvinceNode {
-  municipality?: boolean
-  cities: CityMap
-}
-type RegionTree = Record<string, ProvinceNode>
+// 行政区划数据约 655KB：改为首次真正需要时（打开选择面板 / 回填已有地址 / AI 识别）再动态加载。
+// 组件本身被申报页常驻渲染，静态 import 会让首屏直接下载整份数据。
+const regions = shallowRef<RegionTree | null>(null)
+let regionsLoading: Promise<void> | null = null
 
-const regions = regionData as unknown as RegionTree
-const provinces = Object.keys(regions)
+async function ensureRegions(): Promise<void> {
+  if (regions.value) return
+  if (!regionsLoading) {
+    regionsLoading = import('@/shared/data/china-regions.json')
+      .then((mod) => {
+        regions.value = mod.default as unknown as RegionTree
+      })
+      .finally(() => {
+        regionsLoading = null
+      })
+  }
+  await regionsLoading
+}
+
+const provinces = computed(() => (regions.value ? Object.keys(regions.value) : []))
 
 const rootRef = ref<HTMLElement | null>(null)
 const panelOpen = ref(false)
@@ -57,7 +74,7 @@ function markInteraction() {
 }
 let hydrating = false
 
-const provinceNode = computed(() => (province.value ? regions[province.value] : undefined))
+const provinceNode = computed(() => (province.value ? regions.value?.[province.value] : undefined))
 const isMunicipality = computed(() => Boolean(provinceNode.value?.municipality))
 const cityMap = computed<CityMap>(() => provinceNode.value?.cities ?? {})
 const cityNames = computed(() => Object.keys(cityMap.value))
@@ -104,14 +121,9 @@ watch(
   () => props.modelValue,
   (value) => {
     if (hydrating) return
-    hydrate(value ?? '')
+    void hydrate(value ?? '')
   },
 )
-
-function municipalityCityName(name: string): string {
-  const node = regions[name]
-  return Object.keys(node?.cities ?? {})[0] ?? ''
-}
 
 function commitSelection(mutate: () => void) {
   hydrating = true
@@ -128,7 +140,10 @@ function selectProvince(name: string) {
     }
     unparsedOriginal.value = ''
     province.value = name
-    city.value = regions[name]?.municipality ? municipalityCityName(name) : ''
+    city.value =
+      regions.value && regions.value[name]?.municipality
+        ? municipalityCityName(regions.value, name)
+        : ''
     district.value = ''
     street.value = ''
   })
@@ -168,169 +183,6 @@ function clear() {
   emit('update:modelValue', '')
 }
 
-/** 取最长的前缀匹配，避免“东莞市”被“东城街道”之类短名误匹配 */
-function matchPrefix(value: string, names: string[]): string {
-  const text = value.trim()
-  if (!text) return ''
-  let matched = ''
-  for (const name of names) {
-    if (name && text.startsWith(name) && name.length > matched.length) matched = name
-  }
-  return matched
-}
-
-interface ParsedAddress {
-  province: string
-  city: string
-  district: string
-  street: string
-  detail: string
-}
-
-/**
- * 把已保存的地址串拆成四级 + 详细地址（报告 #2）。
- * 匹配不到省份时整串作为详细地址，保证旧数据不丢。
- */
-function parseAddress(value: string): ParsedAddress {
-  const text = (value ?? '').trim()
-  if (!text) return { province: '', city: '', district: '', street: '', detail: '' }
-  const provinceName = matchPrefix(text, provinces)
-  if (!provinceName) return { province: '', city: '', district: '', street: '', detail: text }
-
-  const node = regions[provinceName]
-  let rest = text.slice(provinceName.length)
-  const cityName = node.municipality
-    ? municipalityCityName(provinceName)
-    : matchPrefix(rest, Object.keys(node.cities ?? {}))
-  if (!cityName) return { province: provinceName, city: '', district: '', street: '', detail: rest }
-  if (!node.municipality) rest = rest.slice(cityName.length)
-
-  const districtNamesInCity = Object.keys(node.cities?.[cityName] ?? {})
-  const districtName = matchPrefix(rest, districtNamesInCity)
-  if (districtName) {
-    rest = rest.slice(districtName.length)
-  } else if (districtNamesInCity.length === 1) {
-    // 省直辖县级市：区县层只有“市辖区”或与市同名，街道名可能带市名前缀
-    const onlyDistrict = districtNamesInCity[0]
-    const withoutCityPrefix = rest.startsWith(cityName) ? rest.slice(cityName.length) : rest
-    const streetCandidate = matchPrefix(
-      withoutCityPrefix,
-      node.cities?.[cityName]?.[onlyDistrict] ?? [],
-    )
-    if (streetCandidate) {
-      return {
-        province: provinceName,
-        city: cityName,
-        district: onlyDistrict,
-        street: streetCandidate,
-        detail: withoutCityPrefix.slice(streetCandidate.length),
-      }
-    }
-  }
-
-  const streetName = districtName
-    ? matchPrefix(rest, node.cities?.[cityName]?.[districtName] ?? [])
-    : ''
-  if (streetName) rest = rest.slice(streetName.length)
-  return {
-    province: provinceName,
-    city: cityName,
-    district: districtName,
-    street: streetName,
-    detail: rest,
-  }
-}
-
-/** 送 AI 前剥离手机号、身份证号、邮箱等个人信息（报告 #6） */
-function sanitizeForAI(text: string): string {
-  return (
-    text
-      // “姓名：张三” / “姓名:张三”
-      .replace(/姓名[：:]?\s*[\u4E00-\u9FA5]{2,4}/g, '')
-      // 开头“张三13800138000…”：仅当 2-4 个汉字紧邻手机号时按姓名剥离，避免误伤地址
-      .replace(/^[\u4E00-\u9FA5]{2,4}\s*(?=1[3-9]\d{9})/, '')
-      .replace(/1[3-9]\d{9}/g, '')
-      .replace(/\b\d{17}[\dX]\b/i, '')
-      .replace(/\w[\w.%+-]*@[\w.-]+\.[a-z]{2,}/gi, '')
-      .trim()
-  )
-}
-
-function extractJson(content: string): Record<string, unknown> | null {
-  const fenced = content.match(/```(?:json)?([\s\S]*?)```/i)
-  const raw = fenced ? fenced[1].trim() : content
-  const start = raw.indexOf('{')
-  const end = raw.lastIndexOf('}')
-  if (start < 0 || end <= start) return null
-  try {
-    const parsed = JSON.parse(raw.slice(start, end + 1))
-    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null
-  } catch {
-    return null
-  }
-}
-
-function pickString(obj: Record<string, unknown>, keys: string[]): string {
-  for (const key of keys) {
-    const value = obj[key]
-    if (typeof value === 'string' && value.trim()) return value.trim()
-  }
-  return ''
-}
-
-/** 把 AI 返回的名称对齐到本地行政区划数据（允许 AI 少写“省/市/区”后缀） */
-function findName(candidate: string, names: string[]): string {
-  const text = candidate.trim()
-  if (!text) return ''
-  if (names.includes(text)) return text
-  const suffixes = [
-    '特别行政区',
-    '自治区',
-    '自治州',
-    '地区',
-    '街道',
-    '省',
-    '市',
-    '区',
-    '县',
-    '镇',
-    '乡',
-    '盟',
-    '旗',
-  ]
-  for (const suffix of suffixes) {
-    if (text.endsWith(suffix) && names.includes(text.slice(0, -suffix.length))) {
-      return text.slice(0, -suffix.length)
-    }
-  }
-  return names.find((name) => name.startsWith(text)) ?? ''
-}
-
-function unwrapAIJson(json: Record<string, unknown>): Record<string, unknown> {
-  if (json.data && typeof json.data === 'object') return json.data as Record<string, unknown>
-  if (json.address && typeof json.address === 'object')
-    return json.address as Record<string, unknown>
-  return json
-}
-
-function readAIReply(content: string): {
-  provinceRaw: string
-  cityRaw: string
-  districtRaw: string
-  streetRaw: string
-  detailRaw: string
-} | null {
-  const json = extractJson(content)
-  if (!json) return null
-  const data = unwrapAIJson(json)
-  const provinceRaw = pickString(data, ['province', 'provinceName', '省', '省份'])
-  const cityRaw = pickString(data, ['city', 'cityName', '市', '城市'])
-  const districtRaw = pickString(data, ['district', 'districtName', '区', '区县', '县'])
-  const streetRaw = pickString(data, ['street', 'streetName', '街道', '镇', '乡镇'])
-  const detailRaw = pickString(data, ['detail', 'detailAddress', '详细地址', '地址'])
-  return provinceRaw ? { provinceRaw, cityRaw, districtRaw, streetRaw, detailRaw } : null
-}
-
 async function parsePaste() {
   const text = pasteText.value.trim()
   if (!text) {
@@ -338,6 +190,13 @@ async function parsePaste() {
     return
   }
   if (parsing.value || props.disabled) return
+  // AI 识别结果需要行政区划表做名称匹配：先确保数据已加载
+  try {
+    await ensureRegions()
+  } catch {
+    ElMessage.error('行政区划数据加载失败，请检查网络后重试')
+    return
+  }
 
   // 姓名/手机号/身份证/邮箱等个人信息不发送给 AI（报告 #6）
   const safeText = sanitizeForAI(text)
@@ -373,16 +232,21 @@ async function parsePaste() {
 
     const { provinceRaw, cityRaw, districtRaw, streetRaw, detailRaw } = result
 
-    const provinceName = findName(provinceRaw, provinces)
+    const provinceName = findName(provinceRaw, provinces.value)
     if (!provinceName) {
       ElMessage.warning('AI 没有识别出省份，请手动选择')
       return
     }
 
-    const node = regions[provinceName]
+    const tree = regions.value
+    const node = tree?.[provinceName]
+    if (!tree || !node) {
+      ElMessage.warning('行政区划数据未加载，请手动选择')
+      return
+    }
     const isMuni = Boolean(node.municipality)
     let cityName = isMuni
-      ? municipalityCityName(provinceName)
+      ? municipalityCityName(tree, provinceName)
       : findName(cityRaw, Object.keys(node.cities ?? {}))
     let districtName = cityName
       ? findName(districtRaw, Object.keys(node.cities?.[cityName] ?? {}))
@@ -468,10 +332,18 @@ async function parsePaste() {
   }
 }
 
-function hydrate(value: string) {
+async function hydrate(value: string) {
   const next = value ?? ''
   if (next === fullAddress.value) return
-  const parsed = parseAddress(next)
+  // 已有地址需要行政区划表才能拆级；空值不触发下载
+  if (next.trim()) {
+    try {
+      await ensureRegions()
+    } catch {
+      /* 加载失败时按整串详细地址回填，用户仍可手动选择 */
+    }
+  }
+  const parsed = parseAddress(next, regions.value)
   hydrating = true
   province.value = parsed.province
   city.value = parsed.city
@@ -483,8 +355,16 @@ function hydrate(value: string) {
   markInteraction()
 }
 
-function togglePanel() {
+async function togglePanel() {
   if (props.disabled) return
+  if (!panelOpen.value) {
+    try {
+      await ensureRegions()
+    } catch {
+      ElMessage.error('行政区划数据加载失败，请检查网络后重试')
+      return
+    }
+  }
   panelOpen.value = !panelOpen.value
 }
 
@@ -500,7 +380,7 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 onMounted(() => {
-  hydrate(props.modelValue ?? '')
+  void hydrate(props.modelValue ?? '')
   document.addEventListener('click', onDocumentClick)
   window.addEventListener('keydown', onKeydown)
 })
@@ -631,233 +511,4 @@ onBeforeUnmount(() => {
   </div>
 </template>
 
-<style scoped lang="scss">
-.address-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 480px;
-  max-width: 100%;
-}
-
-.address-picker.is-small {
-  width: 100%;
-  gap: 6px;
-}
-
-.address-picker.is-small .address-trigger {
-  height: 32px;
-  padding: 0 32px 0 10px;
-  font-size: 13px;
-}
-
-.address-picker.is-small .address-trigger__icon {
-  right: 10px;
-  width: 14px;
-  height: 14px;
-}
-
-.address-picker.is-small .address-columns {
-  height: 220px;
-}
-
-.address-picker.is-small .address-option {
-  padding: 7px 10px;
-  font-size: 12px;
-}
-
-.address-picker.is-small .address-panel__foot {
-  padding: 6px 10px;
-}
-
-.address-paste {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.address-paste :deep(.el-input) {
-  flex: 1;
-  width: auto;
-  min-width: 0;
-}
-
-.address-paste__btn {
-  flex: none;
-}
-
-.address-region {
-  position: relative;
-}
-
-.address-trigger {
-  position: relative;
-  width: 100%;
-  height: 40px;
-  padding: 0 36px 0 12px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 8px;
-  background: var(--el-bg-color);
-  color: var(--el-text-color-primary);
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
-
-  &:hover {
-    border-color: var(--el-color-primary);
-  }
-
-  &:focus,
-  &.is-open {
-    outline: none;
-    border-color: var(--el-color-primary);
-    box-shadow: 0 0 0 3px var(--el-color-primary-light-8);
-  }
-
-  &.is-placeholder {
-    color: var(--el-text-color-placeholder);
-  }
-
-  &:disabled {
-    background: var(--el-fill-color-light);
-    color: var(--el-text-color-disabled);
-    cursor: not-allowed;
-  }
-}
-
-.address-trigger__text {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.address-trigger__icon {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  color: var(--el-text-color-secondary);
-  transform: translateY(-50%);
-  transition: transform 0.18s ease;
-}
-
-.address-trigger.is-open .address-trigger__icon {
-  transform: translateY(-50%) rotate(180deg);
-}
-
-.address-panel {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 6px);
-  right: 0;
-  left: 0;
-  overflow: hidden;
-  background: var(--el-bg-color);
-  border: 1px solid var(--el-border-color-light);
-  border-radius: 10px;
-  box-shadow: var(--el-box-shadow-light);
-}
-
-.address-columns {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  height: 264px;
-}
-
-.address-column {
-  overflow-y: auto;
-  border-right: 1px solid var(--el-border-color-lighter);
-  scrollbar-color: var(--el-border-color) transparent;
-  scrollbar-width: thin;
-
-  &:last-child {
-    border-right: none;
-  }
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--el-border-color);
-    border-radius: 999px;
-  }
-}
-
-.address-column__title {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  padding: 9px 12px;
-  background: var(--el-fill-color-lighter);
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-}
-
-.address-option {
-  display: block;
-  width: 100%;
-  padding: 9px 12px;
-  border: none;
-  background: transparent;
-  color: var(--el-text-color-regular);
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--el-fill-color-light);
-  }
-
-  &.is-active {
-    background: var(--el-color-primary-light-9);
-    color: var(--el-color-primary);
-    font-weight: 600;
-  }
-}
-
-.address-panel__foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-
-.address-clear {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--el-color-primary);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.address-hint {
-  overflow: hidden;
-  color: var(--el-text-color-placeholder);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.address-detail {
-  width: 100%;
-}
-
-@media (max-width: 768px) {
-  .address-picker {
-    width: 100%;
-  }
-
-  .address-columns {
-    height: 220px;
-  }
-}
-</style>
+<style scoped lang="scss" src="./address-picker.scss"></style>

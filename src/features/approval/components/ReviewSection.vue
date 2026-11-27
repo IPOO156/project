@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TypeColumnConfig } from './reviewColumns'
+import type { ReviewRecord } from '@/shared/types/types'
 import { CheckCircle, Clock, Search, XCircle } from 'lucide-vue-next'
 // ReviewSection - 个人档案信息申报状态
 // Tab形式展示10个申报类型，查看/编辑弹窗支持修改后重新提交
@@ -28,7 +29,7 @@ function canEdit(status: string): boolean {
 // ── 详情/编辑弹窗 ──
 const dialogVisible = ref(false)
 const dialogMode = ref<'view' | 'edit'>('view')
-const dialogRecord = ref<any>(null)
+const dialogRecord = ref<ReviewRecord | null>(null)
 const tableKey = ref(0)
 const successPulse = ref(false)
 // 刷入只播一次：首屏数据到达后即上锁，翻页 / 筛选 / 切页签都不再重播
@@ -47,14 +48,14 @@ function triggerSuccessPulse() {
   }, 520)
 }
 
-function handleView(row: any) {
-  dialogRecord.value = row
+function handleView(row: Record<string, unknown>) {
+  dialogRecord.value = row as unknown as ReviewRecord
   dialogMode.value = 'view'
   dialogVisible.value = true
 }
 
-function handleEdit(row: any) {
-  dialogRecord.value = row
+function handleEdit(row: Record<string, unknown>) {
+  dialogRecord.value = row as unknown as ReviewRecord
   dialogMode.value = 'edit'
   dialogVisible.value = true
 }
@@ -119,7 +120,7 @@ const keyword = ref('')
 const typeFilter = ref('')
 const statusFilter = ref('')
 const dateRange = ref<[string, string] | null>(null)
-const dynamicFilters = ref<Record<string, any>>({})
+const dynamicFilters = ref<Record<string, string>>({})
 
 // 分页
 const pageNum = ref(1)

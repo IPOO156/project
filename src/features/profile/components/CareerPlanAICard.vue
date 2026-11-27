@@ -15,6 +15,7 @@ import { analyzeCareer } from '@/features/ai-chat/composables/useCareerAnalysis'
 import { getAISuggestions } from '@/shared/api/ai-chat'
 import { aiAddCareerPlan, getSemesterIdByName } from '@/shared/api/career-plan'
 import { useSemesters } from '@/shared/composables/useSemesters'
+import { emptySuggestionText, toDisplaySuggestions } from './careerPlanAIDisplay'
 
 const props = defineProps<{
   /** 最新一条规划的 id（后端建议以它为 sourceId）；无记录时为 null */
@@ -35,22 +36,8 @@ const suggestionsLoading = ref(false)
 /** 卡片内联分析加载态（不再跳转 AI 抽屉） */
 const analyzing = ref(false)
 /** 后端建议展示形状：模板只读加工后字段，避免复杂表达式 */
-const displaySuggestions = computed(() =>
-  backendSuggestions.value.map((s) => ({
-    key: s.suggestionId,
-    content: s.content,
-    warning: s.aiWarning ?? '',
-    status: s.teacherActionLabel ?? '',
-    sources: s.sourceArchives?.map((a) => a.title).join('、') ?? '',
-  })),
-)
-const emptyText = computed(() =>
-  analyzing.value
-    ? '正在分析你的档案数据…'
-    : suggestionsLoading.value
-      ? '正在加载 AI 建议…'
-      : '点击「开始分析」获取个性化改进建议',
-)
+const displaySuggestions = computed(() => toDisplaySuggestions(backendSuggestions.value))
+const emptyText = computed(() => emptySuggestionText(analyzing.value, suggestionsLoading.value))
 
 /** 拉取最新规划的后端 AI 建议；后端不可用时清空，回退现有本地分析 */
 async function loadAISuggestions() {

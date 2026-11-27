@@ -101,7 +101,7 @@ export function useLoginFlow(options: LoginFlowOptions) {
   const router = useRouter()
   const userStore = useUserStore()
   const themeStore = useThemeStore()
-  const { refresh: refreshTeacherMe } = useTeacherMe()
+  const { refresh: refreshTeacherMe, clear: clearTeacherMe } = useTeacherMe()
 
   // ── 登录：后端验证码（学生端与管理员端共用 /auth/captcha）──
   const isAdminLogin = computed(() => loginType.value === 'admin')
@@ -159,6 +159,8 @@ export function useLoginFlow(options: LoginFlowOptions) {
           const hadCode = !!loginForm.captcha
           backendCaptcha.value = res
           captchaKey = res.key
+          // 换图后递增 key，强制 <img> 重新渲染；否则同一 data URL 可能命中缓存/复用旧节点
+          captchaRefreshKey.value += 1
           // 换图后旧码必然失配，清空输入框；因过期被动换图且用户已输入时，说明原因
           loginForm.captcha = ''
           if (opts.notifyExpired && hadCode) {
@@ -279,6 +281,12 @@ export function useLoginFlow(options: LoginFlowOptions) {
       // token 存储遵循「记住我」：默认仅当前会话（sessionStorage），勾选记住我才持久化
       userStore.setToken(res.accessToken, loginForm.remember)
       setRefreshToken(res.refreshToken ?? '', loginForm.remember)
+
+      // 登录即切换到新会话：先清空上一会话的教师身份缓存（模块级 ref + localStorage）。
+      // 教师会话异常结束（关浏览器/崩溃/401 已回登录页）后直接登录学生账号时，
+      // 若不清空，HeaderBar 的 roleLabel / isAdmin 会沿用上一个教师的 /auth/me 数据。
+      // 管理员登录随后会通过 refreshTeacherMe() 重新拉取。
+      clearTeacherMe()
 
       // ── 首次登录强制改密 ──
       // 后端 must_change_password=1 时仅放行改密/身份/登出接口，直接进首页会连发 403、

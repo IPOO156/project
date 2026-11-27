@@ -5,6 +5,8 @@ import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 import { useSubmissionStore } from '@/app/stores/stores'
 import { activityCategoryOf } from '@/shared/api/submission'
+import { useSemesters } from '@/shared/composables/useSemesters'
+import { toLocalDateString as toLocalDateText } from '@/shared/utils/time'
 
 interface Props {
   visible: boolean
@@ -31,6 +33,7 @@ interface FormState {
 }
 
 const submissionStore = useSubmissionStore()
+const { semesterOptions, load: loadSemesters } = useSemesters()
 const form = reactive<FormState>({
   title: '',
   date: '',
@@ -104,11 +107,24 @@ function prefill(experience: GrowthExperience) {
   form.sourceKey = ''
 }
 
-/** 发生日期不得晚于今天（文档 4.2.1；学期上界仍由后端校验）（报告 #18） */
+/**
+ * 发生日期上界：今天与「已开始的最新学期结束日」取较早者（文档 4.2.1，报告 #18）。
+ *
+ * 只拦未来日期时，寒暑假（学期已结束、下一学期未开始）仍能提交学期结束后的日期。
+ * 这里显式收口到学期结束日；学期数据缺失时不收紧，避免老后端/空数据误伤选择器。
+ */
+const experienceDateUpperBound = computed(() => {
+  const today = toLocalDateText(new Date())
+  const latestStarted = semesterOptions.value
+    .filter((s) => Boolean(s.startDate) && (s.startDate ?? '') <= today)
+    .sort((a, b) => ((a.startDate ?? '') < (b.startDate ?? '') ? 1 : -1))[0]
+  const endDate = latestStarted?.endDate
+  return endDate && endDate < today ? endDate : today
+})
+
+/** 发生日期不得晚于上界（今天 / 当前学期结束日） */
 function disabledExperienceDate(date: Date): boolean {
-  const now = new Date()
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-  return date.getTime() > endOfToday.getTime()
+  return toLocalDateText(date) > experienceDateUpperBound.value
 }
 
 async function handleSubmit() {
@@ -120,6 +136,17 @@ async function handleSubmit() {
   }
   const valid = await formRef.value?.validate().catch(() => false)
   if (!valid) return
+
+  // 选择器禁用态可被手输绕过，提交前再校验一次上界
+  const upperBound = experienceDateUpperBound.value
+  if (form.date > upperBound) {
+    ElMessage.warning(
+      upperBound < toLocalDateText(new Date())
+        ? `发生日期不能晚于 ${upperBound}（当前学期已结束）`
+        : `发生日期不能晚于 ${upperBound}`,
+    )
+    return
+  }
 
   const selected = sourceOptions.value.find((o) => o.key === form.sourceKey)
   submitting.value = true
@@ -156,6 +183,8 @@ watch(
     } else {
       reset()
     }
+    // 日期上界依赖学期结束日；缓存命中时立即返回，不阻塞弹窗
+    await loadSemesters()
     if (!props.editing && submissionStore.records.length === 0) {
       // 打开弹窗时确保来源记录已加载（成长时间轴页本身不拉申报列表）
       await submissionStore.fetchRecords()

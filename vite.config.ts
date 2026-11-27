@@ -27,9 +27,11 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        api: 'legacy',
+        // modern-compiler 走 Sass 现代 API，消除 legacy API 的弃用告警；
+        // 现代 API 的加载路径选项为 loadPaths（includePaths 只属于 legacy API）
+        api: 'modern-compiler',
         additionalData: `@use "variables.scss" as *;\n`,
-        includePaths: [resolve(__dirname, 'src/assets/styles')],
+        loadPaths: [resolve(__dirname, 'src/assets/styles')],
       },
     },
   },
@@ -53,9 +55,10 @@ export default defineConfig({
         // 注意：element-plus 为按需引入，分包名只影响落地位置，不改变引入方式。
         manualChunks: {
           vue: ['vue', 'vue-router', 'pinia'],
-          'element-plus': ['element-plus', '@element-plus/icons-vue'],
-          echarts: ['echarts', 'vue-echarts'],
-          pdf: ['jspdf', 'html2canvas'],
+          // echarts / pdf / element-plus 不单独列 manualChunks：
+          // 一旦列入，Vite 会在 index.html 为它们注入 modulepreload，
+          // 登录页/首页也会被迫下载图表、导出库与全量组件库。
+          // 交给路由级动态 import 与 Rollup 自动分包按需加载，移动端首屏更轻。
         },
       },
     },

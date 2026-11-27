@@ -62,10 +62,41 @@ function clearProofState() {
   removeProof.value = false
 }
 
+/** 目标反显字段（弹窗只读取展示字段） */
+interface EditGoalFields {
+  id?: number
+  goalTitle?: string
+  goalDesc?: string
+  targetDate?: string
+}
+
+/** 行动反显字段 */
+interface EditActionFields {
+  id?: number
+  actionTitle?: string
+  actionDesc?: string
+  startDate?: string
+  endDate?: string
+}
+
+/** 里程碑反显字段 */
+interface EditMilestoneFields {
+  id?: number
+  milestoneTitle?: string
+  milestoneDate?: string
+  proofFileId?: number
+  proofFileName?: string
+}
+
 type OpenPayload =
-  | { mode: 'goal'; goal?: any }
-  | { mode: 'action'; goal: any; action?: any }
-  | { mode: 'milestone'; action: any; milestone?: any; proofOnly?: boolean }
+  | { mode: 'goal'; goal?: EditGoalFields }
+  | { mode: 'action'; goal: EditActionFields; action?: EditActionFields }
+  | {
+      mode: 'milestone'
+      action: EditActionFields
+      milestone?: EditMilestoneFields
+      proofOnly?: boolean
+    }
 
 /** 打开编辑弹窗：父组件通过 ref 调用（编辑/新增 目标、行动、里程碑） */
 function open(payload: OpenPayload) {
@@ -78,14 +109,14 @@ function open(payload: OpenPayload) {
     goalForm.goalDesc = payload.goal?.goalDesc ?? ''
     goalForm.targetDate = payload.goal?.targetDate ?? ''
   } else if (payload.mode === 'action') {
-    contextGoalId = payload.goal.id
+    contextGoalId = payload.goal.id ?? null
     editingId.value = payload.action?.id ?? null
     actionForm.actionTitle = payload.action?.actionTitle ?? ''
     actionForm.actionDesc = payload.action?.actionDesc ?? ''
     actionForm.startDate = payload.action?.startDate ?? ''
     actionForm.endDate = payload.action?.endDate ?? ''
   } else {
-    contextActionId = payload.action.id
+    contextActionId = payload.action.id ?? null
     editingId.value = payload.milestone?.id ?? null
     milestoneForm.milestoneTitle = payload.milestone?.milestoneTitle ?? ''
     milestoneForm.milestoneDate = payload.milestone?.milestoneDate ?? ''

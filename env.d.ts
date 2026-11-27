@@ -5,7 +5,7 @@ export {}
 declare module 'vue-echarts' {
   import type { DefineComponent } from 'vue'
 
-  const component: DefineComponent<any, any, any>
+  const component: DefineComponent
   export default component
 }
 

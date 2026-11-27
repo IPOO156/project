@@ -1,22 +1,23 @@
 import type { ActivityType } from '../activities'
 import type { ApplicationType, SubmissionRecordType } from '@/shared/types/types'
+import { asText } from '@/shared/utils/unknown'
 
 /** 从表单数据推导申报标题（各类型主名称字段），无匹配时返回空串 */
-export function deriveRecordTitle(data: Record<string, any>): string {
-  return (
+export function deriveRecordTitle(data: Record<string, unknown>): string {
+  return asText(
     data.competitionName ||
-    data.projectName ||
-    data.activityName ||
-    data.bookName ||
-    data.awardName ||
-    data.certName ||
-    data.companyName ||
-    data.company || // 实习经历（表单字段为 company）
-    data.softName || // 科研之星-软著
-    data.paperName || // 科研之星-论文
-    data.department ||
-    data.title ||
-    ''
+      data.projectName ||
+      data.activityName ||
+      data.bookName ||
+      data.awardName ||
+      data.certName ||
+      data.companyName ||
+      data.company || // 实习经历（表单字段为 company）
+      data.softName || // 科研之星-软著
+      data.paperName || // 科研之星-论文
+      data.department ||
+      data.title ||
+      '',
   )
 }
 

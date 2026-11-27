@@ -431,6 +431,12 @@ function handleMenuSelect(index: string) {
   .sidebar:not(.sidebar--collapsed) {
     transform: translateX(0);
   }
+
+  // 触屏菜单项不低于 46px，避免抽屉展开后仍按桌面密度排列
+  .sidebar :deep(.el-menu-item) {
+    height: 46px;
+    line-height: 46px;
+  }
 }
 
 // 折叠动画

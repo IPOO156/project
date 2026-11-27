@@ -3,6 +3,7 @@ import type { ReviewRecord } from '@/shared/types/types'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getActivities } from '@/shared/api/activity'
+import { asText } from '@/shared/utils/unknown'
 import { applyResubmitted, mapActivityBase, resubmitActivity } from './reviewRecordShared'
 
 /**
@@ -41,7 +42,7 @@ export const useReviewStore = defineStore('review', () => {
     loading.value = true
     pendingFetch = (async () => {
       try {
-        const params: Record<string, any> = {}
+        const params: Record<string, unknown> = {}
         if (filters?.keyword) params.keyword = filters.keyword
         if (filters?.status) params.status = Number(filters.status)
         const activities = await getActivities(params)
@@ -76,7 +77,7 @@ export const useReviewStore = defineStore('review', () => {
   /** 按类型加载审核记录（对接 /activities，按类型过滤） */
   async function fetchByType(
     type: string,
-    _filters?: Record<string, any>,
+    _filters?: Record<string, unknown>,
   ): Promise<ReviewRecord[]> {
     // 同一个 type 已经在飞了，共享同一个 Promise
     const existing = pendingByType.get(type)
@@ -115,11 +116,11 @@ export const useReviewStore = defineStore('review', () => {
    * 重新提交审核记录（对接 PUT /activities/{id}，6.3）。
    *  接口失败时错误向上抛出（拦截器已统一提示），禁止本地伪造 pending 状态与假成功提示
    */
-  async function resubmit(id: string, data: Record<string, any>): Promise<void> {
+  async function resubmit(id: string, data: Record<string, unknown>): Promise<void> {
     await resubmitActivity(id, 'archive', data)
 
     applyResubmitted(allRecords.value, id, data)
-    const type = (data.type || allRecords.value.find((r) => r.id === id)?.type) as string
+    const type = asText(data.type) || allRecords.value.find((r) => r.id === id)?.type || ''
     if (type && typeRecords.value[type]) applyResubmitted(typeRecords.value[type], id, data)
   }
 

@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import type { ColumnDef, TypeColumnConfig } from './reviewColumns'
+import type { ReviewRecord } from '@/shared/types/types'
 import { computed, reactive, ref, watch } from 'vue'
 import { useReviewStore } from '@/app/stores/stores'
 import StatusTag from '@/shared/ui/StatusTag.vue'
+import { asText } from '@/shared/utils/unknown'
 import { REVIEW_COLUMNS } from './reviewColumns'
 
 interface Props {
   modelValue: boolean
-  record: any | null
+  record: ReviewRecord | null
   mode: 'view' | 'edit'
 }
 
@@ -20,7 +22,7 @@ const emit = defineEmits<{
 
 const reviewStore = useReviewStore()
 
-const editForm = reactive<Record<string, any>>({})
+const editForm = reactive<Record<string, string | number>>({})
 const saving = ref(false)
 
 function getConfigForType(type: string): TypeColumnConfig | null {
@@ -63,8 +65,9 @@ watch(
       const config = getConfigForType(props.record.type)
       if (config) {
         for (const c of config.columns) {
-          if (c.prop !== 'status' && props.record[c.prop] !== undefined) {
-            editForm[c.prop] = props.record[c.prop]
+          const value = props.record[c.prop]
+          if (c.prop !== 'status' && value !== undefined && value !== null) {
+            editForm[c.prop] = typeof value === 'number' ? value : asText(value)
           }
         }
       }

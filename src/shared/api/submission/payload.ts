@@ -104,6 +104,8 @@ export async function resolveSemesterId(value: unknown): Promise<number | undefi
     const map: Record<string, number> = {}
     try {
       const list = await getSemesters()
+      // 空列表不写缓存：后端配置暂未就绪时缓存 {} 会让整个会话都解析不到学期 ID
+      if (!list || list.length === 0) return undefined
       for (const s of list) {
         if (s.name) map[s.name] = s.value
         map[String(s.value)] = s.value
@@ -120,7 +122,7 @@ export async function resolveSemesterId(value: unknown): Promise<number | undefi
 }
 
 /** 通用可选字段（契约 7.x / 8.x 均含：participantRole / certificateNo / issuingUnit / validUntil），非空才带上 */
-function appendCommonFields(payload: Record<string, any>, data: Record<string, any>): void {
+function appendCommonFields(payload: Record<string, unknown>, data: Record<string, unknown>): void {
   const role = normalizeRole(data.role)
   if (role) payload.participantRole = role
   if (data.certNumber) payload.certificateNo = String(data.certNumber)
@@ -135,12 +137,12 @@ function appendCommonFields(payload: Record<string, any>, data: Record<string, a
 /** 构建契约 payload：字段重命名 + 日期归一化 + 学期解析 + 通用字段 */
 export async function buildContractPayload(
   type: string,
-  data: Record<string, any>,
-): Promise<Record<string, any>> {
+  data: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const contract = APPLICATION_CONTRACTS[type]
   if (!contract) throw new Error(`未配置申报类型契约：${type}`)
 
-  const payload: Record<string, any> = {
+  const payload: Record<string, unknown> = {
     semesterId: await resolveSemesterId(data.semester),
     isDraft: data.isDraft ?? 0,
     evidenceFileIds: toEvidenceFileIds(data.proofMaterials),
@@ -176,12 +178,12 @@ export async function buildContractPayload(
  */
 export async function buildCorrectionPayload(
   type: string,
-  changed: Record<string, any>,
-): Promise<Record<string, any>> {
+  changed: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   const contract = APPLICATION_CONTRACTS[type]
   if (!contract) throw new Error(`未配置申报类型契约：${type}`)
 
-  const payload: Record<string, any> = {}
+  const payload: Record<string, unknown> = {}
 
   if ('semester' in changed) {
     const semesterId = await resolveSemesterId(changed.semester)

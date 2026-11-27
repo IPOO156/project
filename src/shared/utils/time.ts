@@ -36,3 +36,16 @@ export function formatDateOnly(iso: string | null | undefined): string {
   }
   return iso.slice(0, 10) || '-'
 }
+
+/**
+ * 本地时区的 YYYY-MM-DD。
+ * `new Date().toISOString()` 是 UTC 时间，UTC+8 的 00:00–07:59 会被截成前一天，
+ * 提交日期/新增记录日期统一走本函数。
+ */
+export function toLocalDateString(date: Date = new Date()): string {
+  if (Number.isNaN(date.getTime())) return ''
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}

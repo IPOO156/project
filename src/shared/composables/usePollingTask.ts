@@ -68,6 +68,8 @@ export function usePollingTask<T>(options: PollingTaskOptions<T>): UsePollingTas
   const timers = new Map<number, ReturnType<typeof setInterval>>()
   /** 每个任务的连续失败次数；成功一次即清零 */
   const failures = new Map<number, number>()
+  /** 请求在途的任务：接口慢于轮询间隔时跳过本轮，避免并发请求叠加 */
+  const inFlight = new Set<number>()
   const interval = options.interval ?? DEFAULT_INTERVAL
   const maxFailures = options.maxFailures ?? DEFAULT_MAX_FAILURES
 
@@ -96,6 +98,9 @@ export function usePollingTask<T>(options: PollingTaskOptions<T>): UsePollingTas
     timers.set(
       id,
       setInterval(async () => {
+        // 上一轮请求还没返回（接口慢于 3s）时跳过本轮，防止同一任务并发叠加
+        if (inFlight.has(id)) return
+        inFlight.add(id)
         try {
           const data = await options.fetch(id)
           // 任务已从列表中消失（如被删除）：终止轮询。
@@ -120,6 +125,8 @@ export function usePollingTask<T>(options: PollingTaskOptions<T>): UsePollingTas
             return
           }
           failures.set(id, count)
+        } finally {
+          inFlight.delete(id)
         }
       }, interval),
     )

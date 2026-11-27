@@ -13,6 +13,7 @@ import CorrectionDialog from '@/shared/ui/CorrectionDialog.vue'
 import ProofUpload from '@/shared/ui/ProofUpload.vue'
 import RecordDetailDialog from '@/shared/ui/RecordDetailDialog.vue'
 import ScoreIndicatorDialog from '@/shared/ui/ScoreIndicatorDialog.vue'
+import { asText } from '@/shared/utils/unknown'
 
 const { semesterOptions, load: loadSemesters } = useSemesters()
 
@@ -71,15 +72,15 @@ const REJECT_ITEMS = [
   '与已有记录重复，提交前的查重检测会拦截。',
 ]
 
-function handleEditClick(row: any) {
-  page.form.certName = row.certName || ''
-  page.form.certType = row.certType || ''
-  page.form.certDate = row.certDate || ''
-  page.form.semester = row.semester || ''
+function handleEditClick(row: Record<string, unknown>) {
+  page.form.certName = asText(row.certName)
+  page.form.certType = asText(row.certType)
+  page.form.certDate = asText(row.certDate)
+  page.form.semester = asText(row.semester)
   page.handleEditClick(row)
 }
 
-async function handleRemove(row: any) {
+async function handleRemove(row: { id: string }) {
   try {
     await ElMessageBox.confirm('确定删除该记录吗？删除后不可恢复。', '删除确认', {
       confirmButtonText: '确定删除',
@@ -107,6 +108,7 @@ onMounted(() => {
     :show-records="true"
     :records="page.records"
     :submitting="page.submitting"
+    :saving="page.draftSaving"
     :is-editing="page.isEditing"
     :status="page.currentStatus"
     :rejection-reason="page.rejectionReason"

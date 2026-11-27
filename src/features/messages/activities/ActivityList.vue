@@ -160,7 +160,7 @@ const submissionPaginated = computed(() => {
 
 function handleActivitySearch() {
   activityPageNum.value = 1
-  const filters: any = {}
+  const filters: Record<string, string> = {}
   if (activityKeyword.value) filters.keyword = activityKeyword.value
   if (activityStatus.value) filters.status = activityStatus.value
   activityStore.fetchActivities(filters)
@@ -277,13 +277,14 @@ function canEditSubmission(row: SubmissionRecord): boolean {
 }
 
 /**
- * 删除操作：以后端 6.1 返回的 canDelete 开关为准（false 强制隐藏），
- * 未返回开关（本地/临时记录）时回退状态判断——已通过的记录不可删除。
- * 已撤回（withdrawn）记录允许删除（撤回后仅可查看/删除，不可编辑）。
+ * 删除操作：以后端 6.1 返回的 canDelete 开关为准（false 强制隐藏）。
+ * 未返回开关（本地/临时记录）时回退状态判断——已通过的记录不可删除；
+ * 已撤回（withdrawn）在回退口径下可删除（撤回后仅可查看/删除，不可编辑），
+ * 但不再无条件覆盖后端开关，后端收紧权限时前端立即生效。
  */
 function canDeleteSubmission(row: SubmissionRecord): boolean {
-  if (row.status === 'withdrawn') return true
-  return row.canDelete !== undefined ? row.canDelete : row.status !== 'approved'
+  if (row.canDelete !== undefined) return row.canDelete
+  return row.status !== 'approved'
 }
 
 function formatSemester(semester: string) {
