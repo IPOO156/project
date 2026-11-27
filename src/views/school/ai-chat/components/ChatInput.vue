@@ -438,4 +438,11 @@ function handleVoiceClick() {
   opacity: 0;
   transform: translateY(-4px);
 }
+
+@media (max-width: 768px) {
+  /* 输入栏贴视口底部，补上 iPhone 全面屏底部安全区，避免发送按钮被横条压住 */
+  .ci {
+    padding-bottom: calc(#{$spacing-lg} + env(safe-area-inset-bottom, 0px));
+  }
+}
 </style>

@@ -60,6 +60,12 @@
 }
 
 @media (max-width: 768px) {
+  // el-message 默认 top:16px，会压住 56px 的吸顶栏（表现为提示条盖住页面标题）。
+  // 用 margin 整体下移：每条消息的 inline top 各自独立，margin 不会破坏多条消息的堆叠间距
+  body .el-message {
+    margin-top: 48px;
+  }
+
   // 下拉框占位文案在 320/360 宽下会溢出触发框，统一省略
   #app .el-select__placeholder {
     min-width: 0;

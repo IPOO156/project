@@ -288,6 +288,8 @@ onMounted(() => {
     z-index: 2;
     margin-top: 0;
     padding: 10px 0;
+    /* 吸底条贴视口底部，需避开 iPhone 全面屏底部横条 */
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
     background: var(--el-bg-color);
     border-top: 1px solid var(--el-border-color-lighter);
   }

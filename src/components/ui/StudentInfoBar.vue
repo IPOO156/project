@@ -93,4 +93,41 @@ withDefaults(defineProps<Props>(), {
   color: var(--el-text-color-primary);
   font-weight: 500;
 }
+
+@media (max-width: 768px) {
+  /* 窄屏下 5 项纯 flex 换行会变成 4+1，末项孤零零一行。
+     改为「图标 + 仅限查看」占首行、信息项 2 列网格，学院独占整行，行行齐平 */
+  .student-info-bar {
+    align-items: flex-start;
+    row-gap: 10px;
+  }
+
+  .student-info-bar__icon {
+    order: 1;
+  }
+
+  /* 用 order 把标签提到信息项之前，避免它被整行宽的 items 挤到第三行 */
+  .student-info-bar > .el-tag {
+    order: 2;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .student-info-bar__items {
+    order: 3;
+    flex: 0 0 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+  }
+
+  .student-info-bar__item {
+    min-width: 0;
+  }
+
+  /* 学院名称通常最长，独占整行，避免被截断或撑乱 2 列网格 */
+  .student-info-bar__item:last-child {
+    grid-column: 1 / -1;
+  }
+}
 </style>

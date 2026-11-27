@@ -231,6 +231,8 @@ const noticeOpen = ref(false)
   /* 控件改为 100% 后按钮跟随表单左缘 */
   .form-actions {
     padding-left: var(--el-card-padding);
+    /* 吸底条贴在视口底部，需避开 iPhone 全面屏底部横条 */
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
   .form-card :deep(.el-form) .el-input,
   .form-card :deep(.el-form) .el-select,
