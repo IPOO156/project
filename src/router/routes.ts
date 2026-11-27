@@ -188,15 +188,14 @@ const routes: RouteRecordRaw[] = [
         path: 'approval',
         children: [
           {
+            // 申报看板已并入申报中心（/applications）顶部概览，保留旧地址重定向避免书签/快捷入口悬空
             path: 'pending',
-            name: 'ApprovalPending',
-            component: () => import('@/views/school/approval/PendingApproval.vue'),
-            meta: { title: '申报看板' },
+            redirect: '/applications',
           },
           {
-            // 奖项看板已并入「奖项中心」，保留旧地址重定向避免书签/快捷入口悬空
+            // 奖项看板已移除，奖项中心改为与申报中心同构的报名页；旧地址落到默认分类
             path: 'award-review',
-            redirect: (to) => ({ path: '/awards', query: { ...to.query, tab: 'award-review' } }),
+            redirect: '/awards',
           },
         ],
       },

@@ -7,7 +7,7 @@ import { MOCK_ACTIVITY, mockApi } from './helpers/mockApi'
  *
  * 与 student.spec.ts 的区别：那份用例依赖真实后端，只能在本机联调环境跑；
  * 本文件用 mockApi 把 /api/v1/** 全部接管，可在本地与 CI 稳定执行。
- * 覆盖：登录 → 首页 → 申报看板 → 404 兜底。
+ * 覆盖：登录 → 首页 → 申报中心（旧看板地址重定向）→ 404 兜底。
  */
 test.describe('学生端主链路（mock）', () => {
   // 首次访问时 Vite 需现场编译页面，默认 10s 动作超时在冷启动时会误判失败
@@ -30,12 +30,14 @@ test.describe('学生端主链路（mock）', () => {
     await expect(page.getByText(MOCK_ACTIVITY.title).first()).toBeVisible({ timeout: 15000 })
   })
 
-  test('申报看板统计包含 mock 记录', async ({ page }) => {
+  test('旧申报看板地址重定向到申报中心', async ({ page }) => {
     await login(page, 'student', { userNo: '202401002', password: 'mock-password' })
     await page.goto('/approval/pending')
 
-    // 看板是聚合视图，不逐条展示标题；断言总数与分类卡片即可证明数据已流入
-    await expect(page.getByText('申报总数')).toBeVisible({ timeout: 15000 })
+    // 申报看板已并入申报中心：旧地址落到 /applications，页面直接展示进度与分类条
+    await expect(page).toHaveURL(/\/applications/)
+    await expect(page.getByRole('heading', { name: '申报中心' })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText('审核进度', { exact: true })).toBeVisible()
     await expect(page.getByText('学科竞赛').first()).toBeVisible()
   })
 

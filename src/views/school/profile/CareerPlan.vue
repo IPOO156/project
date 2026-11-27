@@ -180,20 +180,20 @@ onMounted(() => {
 }
 
 .gd-header {
-  padding-bottom: 12px;
-  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: $spacing-md;
+  border-bottom: 1px solid $color-border;
 }
 
 .gd-header__title {
-  font-size: 26px;
+  font-size: $font-size-page-title;
   font-weight: 700;
-  color: #1e293b;
+  color: $color-text-primary;
   margin: 0 0 6px;
 }
 
 .gd-header__subtitle {
-  font-size: 16px;
-  color: #64748b;
+  font-size: $font-size-lg;
+  color: $color-text-secondary;
   margin: 0;
 }
 

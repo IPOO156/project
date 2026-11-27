@@ -347,22 +347,23 @@ async function handleExportResume() {
 }
 
 // 页面头部
+/* 与「成长发展」页头统一：26px 标题 + 16px 副标题，底部 12px 留白与 1px 分隔线 */
 .page-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding-bottom: 16px;
-  border-bottom: 1px solid $color-bg;
+  padding-bottom: $spacing-md;
+  border-bottom: 1px solid $color-border;
 }
 .page-head__title {
-  font-size: 20px;
+  font-size: $font-size-page-title;
   font-weight: 700;
   color: $color-text-primary;
-  margin: 0 0 2px;
+  margin: 0 0 6px;
 }
 .page-head__desc {
-  font-size: 14px;
-  color: #94a3b8;
+  font-size: $font-size-lg;
+  color: $color-text-secondary;
   margin: 0;
 }
 .page-head__actions {

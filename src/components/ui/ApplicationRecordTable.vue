@@ -1,6 +1,7 @@
 <script setup lang="ts" generic="T">
 import type { ApplicationType } from '@/shared/types/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ClipboardList } from 'lucide-vue-next'
 import { computed, h, inject, ref, watch } from 'vue'
 import { getApplicationGuide, getApplicationVersions } from '@/shared/api/applications'
 import { getAwardGuide, getAwardVersions } from '@/shared/api/awards'
@@ -268,15 +269,22 @@ async function openGuide(row: any) {
 
 <template>
   <el-card v-if="showRecords" class="record-card">
-    <template #header
-      ><span class="card-title">申报记录</span
-      ><span v-if="!recordsLoading" class="card-title__count"
-        >共 {{ records.length }} 条</span
-      ></template
-    >
+    <template #header>
+      <div class="record-card__head">
+        <span class="record-card__head-icon"><ClipboardList :size="16" /></span>
+        <span class="card-title">申报记录</span>
+        <span v-if="!recordsLoading" class="card-title__count">共 {{ records.length }} 条</span>
+      </div>
+    </template>
     <!-- 加载中用静态骨架占住记录区高度：不做循环扫光，避免长驻动态抢注意力 -->
     <div v-if="recordsLoading" class="record-card__skeleton" aria-busy="true">
       <el-skeleton :rows="4" />
+    </div>
+    <!-- 空态直接指向页面上方的表单，回答「填完在哪里看」 -->
+    <div v-else-if="!records.length" class="record-card__empty">
+      <span class="record-card__empty-icon"><ClipboardList :size="26" /></span>
+      <p class="record-card__empty-title">还没有申报记录</p>
+      <p class="record-card__empty-desc">完成上方「填写申报信息」并提交后，记录会显示在这里</p>
     </div>
     <!-- pagedRecords 为泛型 T[]，el-table data 要求 DefaultRow[]（Record<PropertyKey, any>），双重断言显式收窄 -->
     <!-- 外层 min-height 对齐骨架高度，加载完成前后记录区不塌陷 -->
@@ -373,8 +381,54 @@ async function openGuide(row: any) {
 </template>
 
 <style scoped lang="scss">
+.record-card__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.record-card__head-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--el-fill-color);
+  color: var(--el-text-color-secondary);
+}
 .card-title {
   font-weight: 600;
+}
+/* 空态：与骨架同高，切换时不产生高度跳动 */
+.record-card__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 136px;
+  padding: 16px;
+  text-align: center;
+}
+.record-card__empty-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 2px;
+  border-radius: 12px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-placeholder);
+}
+.record-card__empty-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-regular);
+}
+.record-card__empty-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
 }
 .record-card__pagination {
   display: flex;
